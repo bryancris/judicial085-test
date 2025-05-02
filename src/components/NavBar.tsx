@@ -60,7 +60,10 @@ const NavBar: React.FC = () => {
           <a href="#" className="font-medium hover:text-brand-burgundy transition-colors">Pricing</a>
           <a href="#" className="font-medium hover:text-brand-burgundy transition-colors">Contact</a>
           {session && (
-            <Link to="/clients" className="font-medium hover:text-brand-burgundy transition-colors">Clients</Link>
+            <>
+              <Link to="/clients" className="font-medium hover:text-brand-burgundy transition-colors">Clients</Link>
+              <Link to="/knowledge" className="font-medium hover:text-brand-burgundy transition-colors">Knowledge</Link>
+            </>
           )}
         </nav>
         
