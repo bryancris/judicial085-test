@@ -83,13 +83,20 @@ const Knowledge = () => {
         return;
       }
 
+      console.log('Fetched metadata:', metadataData);
+
       // Next, fetch document content for each document
       const documentsWithContent: DocumentWithContent[] = await Promise.all(
         metadataData.map(async (metadata: DocumentMetadata) => {
+          console.log(`Fetching content for document ${metadata.id}`);
+          
+          // Debug the format of the ID to ensure it matches what's in the database
+          console.log('Document ID format:', metadata.id);
+          
           const { data: documentData, error: documentError } = await supabase
             .from('documents')
             .select('*')
-            .filter('metadata->file_id', 'eq', metadata.id);
+            .filter('metadata->>file_id', 'eq', metadata.id);
           
           if (documentError) {
             console.error(`Error fetching content for document ${metadata.id}:`, documentError);
@@ -98,6 +105,8 @@ const Knowledge = () => {
               contents: []
             };
           }
+          
+          console.log(`Content for document ${metadata.id}:`, documentData);
           
           return {
             ...metadata,
