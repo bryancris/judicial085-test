@@ -12,25 +12,20 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
 
-// Type definitions for our document data
+// Updated type definitions for our document data
 interface DocumentMetadata {
   id: string;
-  title: string;
+  title: string | null;
   url: string | null;
-  created_at: string;
+  created_at: string | null;
   schema: string | null;
 }
 
 interface DocumentContent {
   id: number;
-  content: string;
-  metadata: {
-    file_title?: string;
-    source?: string;
-    location?: {
-      page?: number;
-    };
-  };
+  content: string | null;
+  metadata: any; // Using 'any' for metadata since it can have various structures
+  embedding?: string | null;
 }
 
 interface DocumentWithContent extends DocumentMetadata {
@@ -139,12 +134,13 @@ const Knowledge = () => {
     doc.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     doc.contents.some(content => 
       content.content?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      content.metadata?.file_title?.toLowerCase().includes(searchTerm.toLowerCase())
+      (content.metadata?.file_title && 
+       content.metadata.file_title.toLowerCase().includes(searchTerm.toLowerCase()))
     )
   );
 
   // Format date for display
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Unknown date';
     
     const date = new Date(dateString);
@@ -153,6 +149,14 @@ const Knowledge = () => {
       month: 'short', 
       day: 'numeric' 
     });
+  };
+
+  // Extract page number from metadata if available
+  const getPageNumber = (content: DocumentContent) => {
+    if (content.metadata?.location?.page) {
+      return content.metadata.location.page;
+    }
+    return 'N/A';
   };
 
   // If not authenticated, redirect to auth page
@@ -251,7 +255,7 @@ const Knowledge = () => {
                                 {doc.contents.map((content, idx) => (
                                   <TableRow key={idx}>
                                     <TableCell>
-                                      {content.metadata?.location?.page || 'N/A'}
+                                      {getPageNumber(content)}
                                     </TableCell>
                                     <TableCell className="max-w-xs truncate">
                                       {content.content || 'No content available'}
