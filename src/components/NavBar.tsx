@@ -1,9 +1,45 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { LogIn } from "lucide-react";
+import { LogIn, LogOut } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const NavBar: React.FC = () => {
+  const [session, setSession] = useState<any>(null);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: "Logged out successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error logging out",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <header className="w-full bg-gray-200 py-4">
       <div className="container mx-auto px-4 flex justify-between items-center">
@@ -15,7 +51,7 @@ const NavBar: React.FC = () => {
             <line x1="10" y1="1" x2="10" y2="4"></line>
             <line x1="14" y1="1" x2="14" y2="4"></line>
           </svg>
-          <h1 className="text-xl font-bold">Judicial Junction</h1>
+          <Link to="/" className="text-xl font-bold">Judicial Junction</Link>
         </div>
         
         <nav className="hidden md:flex items-center space-x-8">
@@ -25,10 +61,23 @@ const NavBar: React.FC = () => {
           <a href="#" className="font-medium hover:text-brand-burgundy transition-colors">Contact</a>
         </nav>
         
-        <Button className="bg-brand-burgundy hover:bg-brand-burgundy/90 text-white flex items-center gap-2">
-          <LogIn className="h-4 w-4" />
-          Log In
-        </Button>
+        {session ? (
+          <Button 
+            onClick={handleLogout}
+            className="bg-brand-burgundy hover:bg-brand-burgundy/90 text-white flex items-center gap-2"
+          >
+            <LogOut className="h-4 w-4" />
+            Log Out
+          </Button>
+        ) : (
+          <Button 
+            onClick={() => navigate('/auth')}
+            className="bg-brand-burgundy hover:bg-brand-burgundy/90 text-white flex items-center gap-2"
+          >
+            <LogIn className="h-4 w-4" />
+            Log In
+          </Button>
+        )}
       </div>
     </header>
   );
