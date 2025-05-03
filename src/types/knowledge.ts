@@ -17,4 +17,5 @@ export interface DocumentContent {
 
 export interface DocumentWithContent extends DocumentMetadata {
   contents: DocumentContent[];
+  fetchError?: string | null; // Track if there was an error fetching content
 }

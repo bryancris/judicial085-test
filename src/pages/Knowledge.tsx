@@ -16,7 +16,11 @@ const Knowledge = () => {
     setSearchTerm,
     isSearching,
     handleSearch,
-    clearSearch
+    clearSearch,
+    loadMore,
+    hasMore,
+    isLoadingMore,
+    hasError
   } = useDocuments();
 
   // If not authenticated, redirect to auth page
@@ -42,12 +46,16 @@ const Knowledge = () => {
           handleSearch={handleSearch}
         />
 
-        {/* Document List */}
+        {/* Document List with pagination */}
         <DocumentList 
           loading={loading}
           documents={documents}
           searchTerm={searchTerm}
           clearSearch={clearSearch}
+          loadMore={loadMore}
+          hasMore={hasMore}
+          isLoadingMore={isLoadingMore}
+          hasError={hasError}
         />
       </main>
     </div>
