@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -50,12 +51,12 @@ export const useDocuments = () => {
       const from = pageIndex * pageSize;
       const to = from + pageSize - 1;
       
-      // First, get document metadata with pagination
+      // First, get document metadata with pagination, now sorted by title
       const { data: metadataData, error: metadataError } = await supabase
         .from('document_metadata')
         .select('*')
-        .range(from, to)
-        .order('created_at', { ascending: false });
+        .order('title', { ascending: true }) // Sort alphabetically by title
+        .range(from, to);
       
       if (metadataError) {
         throw metadataError;
