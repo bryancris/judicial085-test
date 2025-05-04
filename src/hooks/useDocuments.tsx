@@ -68,12 +68,22 @@ export const useDocuments = () => {
     isMounted: searchMounted
   } = useDocumentSearch(documents, fetchDocuments);
   
-  // Load more documents - fixed implementation
+  // Fixed loadMore function implementation that properly handles pagination
   const loadMore = async () => {
-    console.log("loadMore called in useDocuments", hasMore, isLoadingMore);
+    console.log("loadMore called in useDocuments", { hasMore, isLoadingMore });
+    
     if (hasMore && !isLoadingMore) {
-      // Pass the fetchDocuments function directly with correct page handling
-      await paginationLoadMore((page) => fetchDocuments(page, false));
+      try {
+        // Use a wrapper function to call fetchDocuments with the correct arguments
+        await paginationLoadMore(async (nextPage) => {
+          console.log(`useDocuments: Calling fetchDocuments with page ${nextPage}`);
+          return await fetchDocuments(nextPage, false);
+        });
+      } catch (error) {
+        console.error("Error in loadMore:", error);
+      }
+    } else {
+      console.log("Cannot load more: ", { hasMore, isLoadingMore });
     }
   };
 

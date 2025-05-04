@@ -7,24 +7,25 @@ export const useDocumentPagination = () => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const isMounted = useRef(true);
   
-  // Load more function with improved error handling
+  // Fix the loadMore function to properly handle the page state
   const loadMore = useCallback(async (fetchDocuments: (page: number) => Promise<{ hasMore: boolean }>) => {
     if (!isLoadingMore && hasMore) {
       const nextPage = page + 1;
+      console.log(`Pagination: Loading page ${nextPage}, current state:`, { page, hasMore, isLoadingMore });
       
       try {
         if (isMounted.current) {
           setIsLoadingMore(true);
         }
-        console.log(`Loading page ${nextPage}`);
         
+        // Call fetchDocuments with the next page number
         const { hasMore: moreAvailable } = await fetchDocuments(nextPage);
         
         if (isMounted.current) {
-          setHasMore(moreAvailable);
-          // Update page after successful fetch
+          // Important: Update the page state ONLY after successful fetch
           setPage(nextPage);
-          console.log(`Page updated to ${nextPage}, more available: ${moreAvailable}`);
+          setHasMore(moreAvailable);
+          console.log(`Pagination: Page updated to ${nextPage}, more available: ${moreAvailable}`);
         }
       } catch (error) {
         console.error("Error in loadMore:", error);
@@ -36,6 +37,8 @@ export const useDocumentPagination = () => {
           setIsLoadingMore(false);
         }
       }
+    } else {
+      console.log("Pagination: Can't load more", { hasMore, isLoadingMore });
     }
   }, [hasMore, isLoadingMore, page]);
 

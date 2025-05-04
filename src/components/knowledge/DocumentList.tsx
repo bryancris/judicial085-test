@@ -46,21 +46,20 @@ const DocumentList: React.FC<DocumentListProps> = ({
         </Alert>
       )}
       
-      {/* Document grid - updated for more compact display */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-4">
+      {/* Document grid - updated for even more compact display */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-4">
         {loading && !documents.length ? (
-          // Loading skeletons when initially loading - more compact
-          Array.from({ length: 8 }).map((_, i) => (
+          // Smaller loading skeletons
+          Array.from({ length: 10 }).map((_, i) => (
             <Card key={i} className="shadow-sm">
-              <CardHeader className="py-2 px-3">
-                <Skeleton className="h-4 w-3/4 mb-1" />
-                <Skeleton className="h-3 w-1/2" />
+              <CardHeader className="py-2 px-2">
+                <Skeleton className="h-3 w-3/4 mb-1" />
               </CardHeader>
-              <CardContent className="py-2 px-3">
-                <Skeleton className="h-12 w-full" />
+              <CardContent className="py-1 px-2">
+                <Skeleton className="h-8 w-full" />
               </CardContent>
-              <CardFooter className="py-2 px-3">
-                <Skeleton className="h-3 w-1/3" />
+              <CardFooter className="py-1 px-2">
+                <Skeleton className="h-2 w-1/3" />
               </CardFooter>
             </Card>
           ))
@@ -75,7 +74,7 @@ const DocumentList: React.FC<DocumentListProps> = ({
         )}
       </div>
       
-      {/* Load more button */}
+      {/* Load more button - added debug info */}
       {documents.length > 0 && hasMore && (
         <div className="flex justify-center mt-4">
           <Button 
@@ -93,6 +92,13 @@ const DocumentList: React.FC<DocumentListProps> = ({
               'Load More Documents'
             )}
           </Button>
+        </div>
+      )}
+
+      {/* Debug info for load more */}
+      {!hasMore && documents.length > 0 && (
+        <div className="text-center text-sm text-gray-500 mt-2">
+          All documents loaded
         </div>
       )}
     </div>

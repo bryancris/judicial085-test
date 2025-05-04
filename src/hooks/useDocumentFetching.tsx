@@ -2,7 +2,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { DocumentWithContent, DocumentMetadata, DocumentMetadataDetail } from '@/types/knowledge';
+import { DocumentWithContent, DocumentMetadata } from '@/types/knowledge';
 
 export const useDocumentFetching = (pageSize: number) => {
   const [documents, setDocuments] = useState<DocumentWithContent[]>([]);
@@ -47,56 +47,12 @@ export const useDocumentFetching = (pageSize: number) => {
 
       console.log(`Received ${metadataData?.length || 0} metadata records`);
       
+      // Determine if there are more records to fetch
+      const hasMore = metadataData && metadataData.length === pageSize;
+      console.log(`Has more documents: ${hasMore}`);
+      
       if (!metadataData || metadataData.length === 0) {
-        console.log("No document metadata found, trying direct document fetch");
-        
-        const { data: directDocuments, error: directError } = await supabase
-          .from('documents')
-          .select('id, content, metadata')
-          .limit(pageSize);
-          
-        if (directError) {
-          console.error("Error fetching documents directly:", directError);
-          if (isMounted.current) {
-            setHasError(true);
-            setLoading(false);
-          }
-          return { hasMore: false };
-        }
-        
-        if (directDocuments && directDocuments.length > 0) {
-          console.log(`Found ${directDocuments.length} documents directly`);
-          
-          // Transform documents data
-          const transformedDocs: DocumentWithContent[] = directDocuments.map(doc => {
-            const metadata = doc.metadata as DocumentMetadataDetail;
-            const title = metadata?.title || 'Untitled Document';
-            
-            return {
-              id: `doc-${doc.id}`,
-              title: title,
-              url: null,
-              created_at: new Date().toISOString(),
-              schema: null,
-              contents: [{
-                id: doc.id,
-                content: doc.content,
-                metadata: doc.metadata
-              }]
-            };
-          });
-          
-          if (isMounted.current) {
-            if (resetResults) {
-              setDocuments(transformedDocs);
-            } else {
-              setDocuments(prev => [...prev, ...transformedDocs]);
-            }
-            setLoading(false);
-          }
-          
-          return { hasMore: directDocuments.length === pageSize };
-        }
+        console.log("No document metadata found");
         
         if (resetResults && isMounted.current) {
           setDocuments([]);
@@ -107,9 +63,6 @@ export const useDocumentFetching = (pageSize: number) => {
         return { hasMore: false };
       }
 
-      // We have metadata, now fetch content
-      const hasMore = metadataData.length === pageSize;
-      
       // Create document stubs with metadata
       const documentStubs: DocumentWithContent[] = metadataData.map((metadata: DocumentMetadata) => ({
         ...metadata,
@@ -169,6 +122,7 @@ export const useDocumentFetching = (pageSize: number) => {
         setLoading(false);
       }
       
+      // Critical: Return the hasMore status
       return { hasMore };
     } catch (error) {
       console.error('Error in fetchDocuments:', error);
