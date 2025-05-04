@@ -2,7 +2,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { DocumentWithContent, DocumentMetadata } from '@/types/knowledge';
+import { DocumentWithContent, DocumentMetadata, DocumentMetadataDetail } from '@/types/knowledge';
 
 export const useDocumentFetching = (pageSize: number) => {
   const [documents, setDocuments] = useState<DocumentWithContent[]>([]);
@@ -78,16 +78,19 @@ export const useDocumentFetching = (pageSize: number) => {
             
             // Transform documents data to match our expected format
             const transformedDocs: DocumentWithContent[] = directDocuments.map(doc => {
+              // Use type assertion to access metadata properties safely
+              const metadata = doc.metadata as DocumentMetadataDetail;
+              
               // Extract title from metadata if available
-              const title = doc.metadata?.file_title || 
-                           doc.metadata?.title || 
-                           (doc.metadata?.file_id ? `Document ${doc.metadata.file_id}` : `Document ${doc.id}`);
+              const title = metadata?.file_title || 
+                           metadata?.title || 
+                           (metadata?.file_id ? `Document ${metadata.file_id}` : `Document ${doc.id}`);
                            
               return {
-                id: doc.metadata?.file_id || `doc-${doc.id}`,
+                id: metadata?.file_id || `doc-${doc.id}`,
                 title: title,
-                url: doc.metadata?.file_path || null,
-                created_at: doc.metadata?.created_at || new Date().toISOString(),
+                url: metadata?.file_path || null,
+                created_at: metadata?.created_at || new Date().toISOString(),
                 schema: null,
                 contents: [{
                   id: doc.id,
