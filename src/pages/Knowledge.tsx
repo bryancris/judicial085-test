@@ -1,16 +1,18 @@
 
 import React, { useEffect, useState } from 'react';
 import NavBar from '@/components/NavBar';
-import { BookOpen, AlertCircle, Loader2 } from 'lucide-react';
+import { BookOpen, AlertCircle, Loader2, Database } from 'lucide-react';
 import SearchBar from '@/components/knowledge/SearchBar';
 import DocumentList from '@/components/knowledge/DocumentList';
 import { useDocuments } from '@/hooks/useDocuments';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
 
 const Knowledge = () => {
   const [hasError, setHasError] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [debugMode, setDebugMode] = useState(false);
   
   const {
     session,
@@ -66,14 +68,29 @@ const Knowledge = () => {
     loadingProgress
   });
 
+  const toggleDebugMode = () => {
+    setDebugMode(!debugMode);
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <NavBar />
       <main className="flex-grow container mx-auto px-4 py-8">
-        <div className="flex items-center gap-2 mb-6">
-          <BookOpen className="h-8 w-8 text-brand-burgundy" />
-          <h1 className="text-3xl font-bold">Knowledge Base</h1>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <BookOpen className="h-8 w-8 text-brand-burgundy" />
+            <h1 className="text-3xl font-bold">Knowledge Base</h1>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={toggleDebugMode}
+            className="text-xs"
+          >
+            {debugMode ? "Hide Debug" : "Debug Mode"}
+          </Button>
         </div>
+        
         <p className="text-lg mb-6">Access legal references, precedents, and resources from our vector database.</p>
         
         {hasError && (
@@ -81,6 +98,18 @@ const Knowledge = () => {
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               There was an error loading the knowledge base. Please try refreshing the page.
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {debugMode && (
+          <Alert className="mb-6 bg-gray-100">
+            <Database className="h-4 w-4" />
+            <AlertDescription className="font-mono text-xs">
+              <div>Auth: {session ? "Authenticated" : "Not Authenticated"}</div>
+              <div>Loading: {loading ? "True" : "False"}</div>
+              <div>Documents Count: {documents.length}</div>
+              <div>Initial Fetch: {initialFetchAttempted ? "Attempted" : "Not Attempted"}</div>
             </AlertDescription>
           </Alert>
         )}
@@ -121,6 +150,28 @@ const Knowledge = () => {
             isLoadingMore={isLoadingMore}
             hasError={documentsError}
           />
+        )}
+
+        {!loading && initialFetchAttempted && documents.length === 0 && !searchTerm && (
+          <div className="mt-8 p-6 bg-gray-100 rounded-lg text-center">
+            <AlertCircle className="h-12 w-12 mx-auto text-amber-500 mb-4" />
+            <h3 className="text-xl font-medium">No Documents Available</h3>
+            <p className="text-gray-600 mt-2">
+              There are no documents available in the knowledge base or you may not have permission to view them.
+            </p>
+            {debugMode && (
+              <div className="mt-4 p-2 bg-gray-200 rounded text-xs font-mono text-left">
+                <p>Status: Initial fetch completed without documents</p>
+                <p>Auth status: {session ? "Authenticated" : "Not authenticated"}</p>
+                <p>If documents exist but aren't showing, check:</p>
+                <ul className="list-disc pl-5">
+                  <li>Database connection status</li>
+                  <li>Row Level Security (RLS) policies</li>
+                  <li>Table permissions</li>
+                </ul>
+              </div>
+            )}
+          </div>
         )}
       </main>
     </div>

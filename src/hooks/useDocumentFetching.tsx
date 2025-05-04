@@ -51,7 +51,7 @@ export const useDocumentFetching = (pageSize: number) => {
         return { hasMore: false };
       }
 
-      console.log(`Received metadata: ${metadataData ? metadataData.length : 0} items`);
+      console.log(`Received metadata:`, metadataData);
       
       if (!metadataData || metadataData.length === 0) {
         console.log("No metadata found or empty results");
@@ -75,7 +75,7 @@ export const useDocumentFetching = (pageSize: number) => {
 
       // Update documents based on whether we're resetting or appending
       if (resetResults && isMounted.current) {
-        console.log("Resetting documents with new stubs");
+        console.log("Resetting documents with new stubs", documentsWithStubs);
         setDocuments(documentsWithStubs);
       } else if (isMounted.current) {
         console.log("Appending new documents to existing ones");
