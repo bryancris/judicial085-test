@@ -1,5 +1,5 @@
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { DocumentWithContent } from '@/types/knowledge';
 
 export const useDocumentSearch = (documents: DocumentWithContent[], fetchDocuments: (page: number, reset: boolean) => void) => {
@@ -8,7 +8,7 @@ export const useDocumentSearch = (documents: DocumentWithContent[], fetchDocumen
   const isMounted = useRef(true);
 
   // Handle search
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     console.log(`Searching for: "${searchTerm}"`);
     
@@ -24,17 +24,17 @@ export const useDocumentSearch = (documents: DocumentWithContent[], fetchDocumen
         }
       }, 300); // Small delay to show loading state
     }
-  };
+  }, [searchTerm]);
 
   // Clear search
-  const clearSearch = () => {
+  const clearSearch = useCallback(() => {
     console.log("Clearing search");
     if (isMounted.current) {
       setSearchTerm('');
       // Reset pagination when clearing search
       fetchDocuments(0, true);
     }
-  };
+  }, [fetchDocuments]);
 
   // Filter documents based on search term
   const filteredDocuments = searchTerm ? documents.filter(doc => 

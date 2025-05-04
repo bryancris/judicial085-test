@@ -35,11 +35,21 @@ export const useDocumentFetching = (pageSize: number) => {
         .from('document_metadata')
         .select('*')
         .order('title', { ascending: true }) 
-        .range(from, to);
+        .range(from, to)
+        .timeout(10000); // Add timeout to prevent long-running queries
       
       if (metadataError) {
         console.error("Metadata fetch error:", metadataError);
-        throw metadataError;
+        if (isMounted.current) {
+          setHasError(true);
+          setLoading(false);
+          toast({
+            title: "Error fetching documents",
+            description: metadataError.message,
+            variant: "destructive",
+          });
+        }
+        return { hasMore: false };
       }
 
       console.log(`Received metadata: ${metadataData ? metadataData.length : 0} items`);
@@ -78,22 +88,24 @@ export const useDocumentFetching = (pageSize: number) => {
         });
       }
 
-      // Fetch document content for the first N documents only (to avoid timeouts)
-      const maxDocsToFetchContent = 3; // Limit content fetch to improve performance
+      // We'll load content for just 2 documents to avoid timeouts
+      const maxDocsToFetchContent = 2; 
       const docsToFetchContent = documentsWithStubs.slice(0, maxDocsToFetchContent);
       
       console.log(`Fetching content for ${docsToFetchContent.length} documents out of ${documentsWithStubs.length}`);
       
+      // Use Promise.allSettled to handle individual content fetch failures
       const contentPromises = docsToFetchContent.map(async (docStub) => {
         try {
           console.log(`Fetching content for document ${docStub.id}`);
           
-          // Limit to 5 content items per document to avoid large payloads
+          // Limit to 3 content items per document to avoid large payloads
           const { data: documentData, error: documentError } = await supabase
             .from('documents')
             .select('*')
             .filter('metadata->>file_id', 'eq', docStub.id)
-            .limit(5); 
+            .limit(3)
+            .timeout(5000); // Add timeout to prevent long-running queries
           
           if (documentError) {
             console.error(`Error fetching content for document ${docStub.id}:`, documentError);
@@ -123,7 +135,18 @@ export const useDocumentFetching = (pageSize: number) => {
         }
       });
       
-      const updatedDocuments = await Promise.all(contentPromises);
+      const contentResults = await Promise.allSettled(contentPromises);
+      const updatedDocuments = contentResults.map((result, index) => {
+        if (result.status === 'fulfilled') {
+          return result.value;
+        } else {
+          return {
+            ...docsToFetchContent[index],
+            contents: [],
+            fetchError: result.reason || 'Failed to fetch content'
+          };
+        }
+      });
       
       // Create a map of documents with content + documents without content
       const remainingStubs = documentsWithStubs.slice(maxDocsToFetchContent).map(doc => ({

@@ -13,7 +13,9 @@ export const useDocumentPagination = () => {
       const nextPage = page + 1;
       
       try {
-        setIsLoadingMore(true);
+        if (isMounted.current) {
+          setIsLoadingMore(true);
+        }
         console.log(`Loading page ${nextPage}`);
         
         const { hasMore: moreAvailable } = await fetchDocuments(nextPage);
