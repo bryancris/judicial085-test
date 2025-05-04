@@ -35,8 +35,7 @@ export const useDocumentFetching = (pageSize: number) => {
         .from('document_metadata')
         .select('*')
         .order('title', { ascending: true }) 
-        .range(from, to)
-        .timeout(10000); // Add timeout to prevent long-running queries
+        .range(from, to);
       
       if (metadataError) {
         console.error("Metadata fetch error:", metadataError);
@@ -104,8 +103,7 @@ export const useDocumentFetching = (pageSize: number) => {
             .from('documents')
             .select('*')
             .filter('metadata->>file_id', 'eq', docStub.id)
-            .limit(3)
-            .timeout(5000); // Add timeout to prevent long-running queries
+            .limit(3);
           
           if (documentError) {
             console.error(`Error fetching content for document ${docStub.id}:`, documentError);
