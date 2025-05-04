@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DocumentWithContent, DocumentMetadata } from '@/types/knowledge';
@@ -8,14 +8,17 @@ export const useDocumentFetching = (pageSize: number) => {
   const [documents, setDocuments] = useState<DocumentWithContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const isMounted = useRef(true);
   const { toast } = useToast();
 
   const fetchDocuments = useCallback(async (pageIndex: number, resetResults: boolean = false) => {
     try {
-      if (resetResults) {
+      if (resetResults && isMounted.current) {
         setLoading(true);
       }
-      setHasError(false);
+      if (isMounted.current) {
+        setHasError(false);
+      }
       
       // Calculate offset for pagination
       const from = pageIndex * pageSize;
@@ -35,10 +38,12 @@ export const useDocumentFetching = (pageSize: number) => {
       }
 
       if (!metadataData || metadataData.length === 0) {
-        if (resetResults) {
+        if (resetResults && isMounted.current) {
           setDocuments([]);
         }
-        setLoading(false);
+        if (isMounted.current) {
+          setLoading(false);
+        }
         return { hasMore: false };
       }
 
@@ -52,9 +57,9 @@ export const useDocumentFetching = (pageSize: number) => {
       }));
 
       // Update documents based on whether we're resetting or appending
-      if (resetResults) {
+      if (resetResults && isMounted.current) {
         setDocuments(documentsWithStubs);
-      } else {
+      } else if (isMounted.current) {
         setDocuments(prev => {
           // Filter out any duplicates
           const existingIds = new Set(prev.map(doc => doc.id));
@@ -102,30 +107,36 @@ export const useDocumentFetching = (pageSize: number) => {
       );
 
       // Update the documents state with the fetched content
-      setDocuments(prev => {
-        if (resetResults) {
-          return updatedDocuments;
-        } else {
-          // Create a map of existing documents not being updated
-          const existingDocs = prev.filter(doc => 
-            !updatedDocuments.some(updatedDoc => updatedDoc.id === doc.id)
-          );
-          return [...existingDocs, ...updatedDocuments];
-        }
-      });
+      if (isMounted.current) {
+        setDocuments(prev => {
+          if (resetResults) {
+            return updatedDocuments;
+          } else {
+            // Create a map of existing documents not being updated
+            const existingDocs = prev.filter(doc => 
+              !updatedDocuments.some(updatedDoc => updatedDoc.id === doc.id)
+            );
+            return [...existingDocs, ...updatedDocuments];
+          }
+        });
+      }
 
       return { hasMore };
     } catch (error) {
       console.error('Error fetching documents:', error);
-      setHasError(true);
-      toast({
-        title: "Error fetching documents",
-        description: "Could not retrieve document information",
-        variant: "destructive",
-      });
+      if (isMounted.current) {
+        setHasError(true);
+        toast({
+          title: "Error fetching documents",
+          description: "Could not retrieve document information",
+          variant: "destructive",
+        });
+      }
       return { hasMore: false };
     } finally {
-      setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
   }, [pageSize, toast]);
 
@@ -135,6 +146,7 @@ export const useDocumentFetching = (pageSize: number) => {
     loading,
     setLoading,
     hasError,
-    fetchDocuments
+    fetchDocuments,
+    isMounted
   };
 };

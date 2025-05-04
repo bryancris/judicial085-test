@@ -1,11 +1,13 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 export const useDocumentPagination = () => {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const isMounted = useRef(true);
   
+  // Set up cleanup function to prevent state updates after unmount
   const loadMore = useCallback((fetchDocuments: (page: number) => Promise<{ hasMore: boolean }>) => {
     if (!isLoadingMore && hasMore) {
       const nextPage = page + 1;
@@ -13,13 +15,17 @@ export const useDocumentPagination = () => {
       
       fetchDocuments(nextPage)
         .then(({ hasMore: moreAvailable }) => {
-          setHasMore(moreAvailable);
+          if (isMounted.current) {
+            setHasMore(moreAvailable);
+          }
         })
         .catch(error => {
           console.error("Error loading more documents:", error);
         })
         .finally(() => {
-          setIsLoadingMore(false);
+          if (isMounted.current) {
+            setIsLoadingMore(false);
+          }
         });
       
       // Update page after starting the fetch
@@ -28,9 +34,11 @@ export const useDocumentPagination = () => {
   }, [hasMore, isLoadingMore, page]);
 
   const resetPagination = useCallback(() => {
-    setPage(0);
-    setHasMore(true);
-    setIsLoadingMore(false);
+    if (isMounted.current) {
+      setPage(0);
+      setHasMore(true);
+      setIsLoadingMore(false);
+    }
   }, []);
 
   return {
@@ -41,6 +49,7 @@ export const useDocumentPagination = () => {
     isLoadingMore,
     setIsLoadingMore,
     loadMore,
-    resetPagination
+    resetPagination,
+    isMounted
   };
 };

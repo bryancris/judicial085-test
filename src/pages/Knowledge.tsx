@@ -1,13 +1,16 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import NavBar from '@/components/NavBar';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, AlertCircle } from 'lucide-react';
 import SearchBar from '@/components/knowledge/SearchBar';
 import DocumentList from '@/components/knowledge/DocumentList';
 import { useDocuments } from '@/hooks/useDocuments';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const Knowledge = () => {
+  const [hasError, setHasError] = useState(false);
+  
   const {
     session,
     loading,
@@ -20,8 +23,15 @@ const Knowledge = () => {
     loadMore,
     hasMore,
     isLoadingMore,
-    hasError
+    hasError: documentsError
   } = useDocuments();
+
+  // Track errors from the hook
+  useEffect(() => {
+    if (documentsError) {
+      setHasError(true);
+    }
+  }, [documentsError]);
 
   // If not authenticated, redirect to auth page
   if (!loading && !session) {
@@ -37,6 +47,15 @@ const Knowledge = () => {
           <h1 className="text-3xl font-bold">Knowledge Base</h1>
         </div>
         <p className="text-lg mb-6">Access legal references, precedents, and resources from our vector database.</p>
+        
+        {hasError && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              There was an error loading the knowledge base. Please try refreshing the page.
+            </AlertDescription>
+          </Alert>
+        )}
         
         {/* Search Bar */}
         <SearchBar 
@@ -55,7 +74,7 @@ const Knowledge = () => {
           loadMore={loadMore}
           hasMore={hasMore}
           isLoadingMore={isLoadingMore}
-          hasError={hasError}
+          hasError={documentsError}
         />
       </main>
     </div>

@@ -1,26 +1,35 @@
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { DocumentWithContent } from '@/types/knowledge';
 
 export const useDocumentSearch = (documents: DocumentWithContent[], fetchDocuments: (page: number, reset: boolean) => void) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const isMounted = useRef(true);
 
   // Handle search
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSearching(true);
-    
-    // For now, we'll just implement client-side filtering
-    // In a production app, you would want to implement server-side search
-    setIsSearching(false);
+    if (isMounted.current) {
+      setIsSearching(true);
+      
+      // For now, we'll just implement client-side filtering
+      // In a production app, you would want to implement server-side search
+      setTimeout(() => {
+        if (isMounted.current) {
+          setIsSearching(false);
+        }
+      }, 300); // Small delay to show loading state
+    }
   };
 
   // Clear search
   const clearSearch = () => {
-    setSearchTerm('');
-    // Reset pagination when clearing search
-    fetchDocuments(0, true);
+    if (isMounted.current) {
+      setSearchTerm('');
+      // Reset pagination when clearing search
+      fetchDocuments(0, true);
+    }
   };
 
   // Filter documents based on search term
@@ -39,6 +48,7 @@ export const useDocumentSearch = (documents: DocumentWithContent[], fetchDocumen
     isSearching,
     handleSearch,
     clearSearch,
-    filteredDocuments
+    filteredDocuments,
+    isMounted
   };
 };

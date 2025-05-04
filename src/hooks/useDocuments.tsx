@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useDocumentAuth } from '@/hooks/useDocumentAuth';
 import { useDocumentFetching } from '@/hooks/useDocumentFetching';
 import { useDocumentPagination } from '@/hooks/useDocumentPagination';
@@ -7,6 +7,7 @@ import { useDocumentSearch } from '@/hooks/useDocumentSearch';
 
 export const useDocuments = () => {
   const pageSize = 6; // Number of documents per page
+  const effectRan = useRef(false);
   
   // Use smaller, specialized hooks
   const { session, loading: authLoading, setLoading } = useDocumentAuth();
@@ -14,7 +15,8 @@ export const useDocuments = () => {
     documents, 
     loading: fetchLoading, 
     hasError, 
-    fetchDocuments
+    fetchDocuments,
+    isMounted: fetchMounted
   } = useDocumentFetching(pageSize);
   
   const { 
@@ -22,22 +24,34 @@ export const useDocuments = () => {
     hasMore, 
     isLoadingMore, 
     loadMore: paginationLoadMore, 
-    resetPagination 
+    resetPagination,
+    isMounted: paginationMounted
   } = useDocumentPagination();
   
   // Use a separate effect to fetch documents after authentication is complete
   useEffect(() => {
-    if (session && !fetchLoading) {
-      // Only fetch documents if we haven't already or if we're on page 0
-      if (documents.length === 0 || page === 0) {
-        fetchDocuments(0, true);
+    // This prevents double-fetching in React 18's StrictMode during development
+    if (effectRan.current === false) {
+      if (session && !fetchLoading) {
+        // Only fetch documents if we haven't already or if we're on page 0
+        if (documents.length === 0 || page === 0) {
+          fetchDocuments(0, true);
+        }
+        // Set authLoading to false once we've initialized document fetching
+        if (authLoading) {
+          setLoading(false);
+        }
       }
-      // Set authLoading to false once we've initialized document fetching
-      if (authLoading) {
-        setLoading(false);
-      }
+      
+      effectRan.current = true;
     }
-  }, [session, fetchLoading, authLoading, documents.length, page, fetchDocuments, setLoading]);
+    
+    // Cleanup function
+    return () => {
+      fetchMounted.current = false;
+      paginationMounted.current = false;
+    };
+  }, [session, fetchLoading, authLoading, documents.length, page, fetchDocuments, setLoading, fetchMounted, paginationMounted]);
   
   const { 
     searchTerm, 
