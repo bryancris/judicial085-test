@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,8 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, LogIn, UserPlus } from "lucide-react";
+import { Mail, LogIn, UserPlus, AlertTriangle } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 // Define form schema
 const formSchema = z.object({
@@ -24,22 +25,39 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
   const [session, setSession] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const isMounted = useRef(true);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   // Check for existing session
-  React.useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+  useEffect(() => {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (isMounted.current) {
+        setSession(session);
+      }
     });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+    // THEN check for existing session
+    const checkSession = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (isMounted.current) {
+          setSession(data.session);
+        }
+      } catch (err) {
+        console.error("Session check error:", err);
+      }
+    };
 
-    return () => subscription.unsubscribe();
+    checkSession();
+
+    // Cleanup function
+    return () => {
+      isMounted.current = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Redirect if already logged in
@@ -58,6 +76,8 @@ const Auth = () => {
 
   const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
+    setError(null);
+    
     try {
       let response;
       
@@ -83,30 +103,43 @@ const Auth = () => {
       }
 
       if (isLogin) {
-        toast({
-          title: "Login successful",
-          description: "Welcome back!",
-        });
-        navigate("/");
+        if (response.data.session) {
+          toast({
+            title: "Login successful",
+            description: "Welcome back!",
+          });
+          navigate("/");
+        } else {
+          setError("No session created. Please check your credentials and try again.");
+        }
       } else {
-        toast({
-          title: "Signup successful",
-          description: "Please check your email for verification instructions",
-        });
+        if (response.data.user) {
+          toast({
+            title: "Signup successful",
+            description: "Please check your email for verification instructions",
+          });
+        } else {
+          setError("Account creation failed. Please try again.");
+        }
       }
     } catch (error: any) {
+      console.error("Auth error:", error);
+      setError(error.message);
       toast({
         title: "Authentication error",
         description: error.message,
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
     }
   };
 
   const toggleAuthMode = () => {
     setIsLogin(!isLogin);
+    setError(null);
     form.reset();
   };
 
@@ -122,6 +155,14 @@ const Auth = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -183,6 +224,7 @@ const Auth = () => {
             className="w-full" 
             type="button"
             onClick={toggleAuthMode}
+            disabled={isLoading}
           >
             {isLogin 
               ? "Don't have an account? Sign Up" 

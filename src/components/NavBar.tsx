@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { LogIn, LogOut } from "lucide-react";
@@ -8,35 +8,73 @@ import { useToast } from "@/hooks/use-toast";
 
 const NavBar: React.FC = () => {
   const [session, setSession] = useState<any>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const isMounted = useRef(true);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (isMounted.current) {
+        setSession(session);
+      }
     });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+    // THEN check for existing session
+    const checkSession = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error("Error fetching session:", error.message);
+          return;
+        }
+        if (isMounted.current) {
+          setSession(data.session);
+        }
+      } catch (err) {
+        console.error("Unexpected error checking session:", err);
+      }
+    };
 
-    return () => subscription.unsubscribe();
+    checkSession();
+
+    // Cleanup function
+    return () => {
+      isMounted.current = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleLogout = async () => {
+    if (isLoggingOut) return;
+    
     try {
-      await supabase.auth.signOut();
-      toast({
-        title: "Logged out successfully",
-      });
+      setIsLoggingOut(true);
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      if (isMounted.current) {
+        toast({
+          title: "Logged out successfully",
+        });
+      }
     } catch (error: any) {
-      toast({
-        title: "Error logging out",
-        description: error.message,
-        variant: "destructive",
-      });
+      console.error("Logout error:", error);
+      if (isMounted.current) {
+        toast({
+          title: "Error logging out",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+    } finally {
+      if (isMounted.current) {
+        setIsLoggingOut(false);
+      }
     }
   };
 
@@ -71,9 +109,19 @@ const NavBar: React.FC = () => {
           <Button 
             onClick={handleLogout}
             className="bg-brand-burgundy hover:bg-brand-burgundy/90 text-white flex items-center gap-2"
+            disabled={isLoggingOut}
           >
-            <LogOut className="h-4 w-4" />
-            Log Out
+            {isLoggingOut ? (
+              <span className="flex items-center gap-2">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
+                Logging out...
+              </span>
+            ) : (
+              <>
+                <LogOut className="h-4 w-4" />
+                Log Out
+              </>
+            )}
           </Button>
         ) : (
           <Button 
