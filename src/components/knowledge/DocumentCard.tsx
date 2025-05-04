@@ -36,61 +36,61 @@ const DocumentCard: React.FC<DocumentCardProps> = ({ document }) => {
   const hasError = 'fetchError' in document && document.fetchError;
 
   return (
-    <Card className="shadow-md">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <FileText className="h-5 w-5 text-brand-burgundy" /> 
+    <Card className="shadow-sm h-full">
+      <CardHeader className="py-3 px-4">
+        <CardTitle className="text-base flex items-center gap-1.5 mb-1">
+          <FileText className="h-4 w-4 text-brand-burgundy" /> 
           {document.title || "Untitled Document"}
         </CardTitle>
-        <CardDescription className="flex items-center gap-1">
-          <Calendar className="h-3.5 w-3.5" /> 
+        <CardDescription className="text-xs flex items-center gap-1">
+          <Calendar className="h-3 w-3" /> 
           {formatDate(document.created_at)}
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="py-2 px-4 text-sm">
         {hasError ? (
-          <Alert variant="destructive" className="py-2">
-            <AlertCircle className="h-4 w-4" />
+          <Alert variant="destructive" className="py-1 px-2">
+            <AlertCircle className="h-3 w-3" />
             <AlertDescription className="text-xs">
               Content could not be loaded due to timeout. This document may be too large.
             </AlertDescription>
           </Alert>
         ) : (
-          <p className="text-sm text-muted-foreground mb-2">
+          <p className="text-xs text-muted-foreground mb-1">
             {document.contents.length} content segments available
           </p>
         )}
         {document.url && (
-          <div className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800">
-            <ExternalLink className="h-3.5 w-3.5" />
+          <div className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800">
+            <ExternalLink className="h-3 w-3" />
             <a href={document.url} target="_blank" rel="noopener noreferrer">
               Source Link
             </a>
           </div>
         )}
       </CardContent>
-      <CardFooter>
+      <CardFooter className="py-2 px-4">
         {!hasError && (
           <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="content">
-              <AccordionTrigger>View Content</AccordionTrigger>
+            <AccordionItem value="content" className="border-b-0">
+              <AccordionTrigger className="py-1 text-xs">View Content</AccordionTrigger>
               <AccordionContent>
-                <div className="max-h-60 overflow-y-auto">
+                <div className="max-h-40 overflow-y-auto">
                   {document.contents.length > 0 ? (
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Page</TableHead>
-                          <TableHead>Content</TableHead>
+                          <TableHead className="py-1 text-xs">Page</TableHead>
+                          <TableHead className="py-1 text-xs">Content</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {document.contents.map((content, idx) => (
                           <TableRow key={idx}>
-                            <TableCell>
+                            <TableCell className="py-1 text-xs">
                               {getPageNumber(content)}
                             </TableCell>
-                            <TableCell className="max-w-xs truncate">
+                            <TableCell className="py-1 text-xs max-w-xs truncate">
                               {content.content || 'No content available'}
                             </TableCell>
                           </TableRow>
@@ -98,7 +98,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({ document }) => {
                       </TableBody>
                     </Table>
                   ) : (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       No content available for this document.
                     </p>
                   )}

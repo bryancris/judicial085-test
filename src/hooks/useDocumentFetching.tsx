@@ -87,7 +87,11 @@ export const useDocumentFetching = (pageSize: number) => {
           });
           
           if (isMounted.current) {
-            setDocuments(transformedDocs);
+            if (resetResults) {
+              setDocuments(transformedDocs);
+            } else {
+              setDocuments(prev => [...prev, ...transformedDocs]);
+            }
             setLoading(false);
           }
           
@@ -116,6 +120,7 @@ export const useDocumentFetching = (pageSize: number) => {
       if (resetResults && isMounted.current) {
         setDocuments(documentStubs);
       } else if (isMounted.current) {
+        // Make sure we don't add duplicates
         setDocuments(prev => {
           const existingIds = new Set(prev.map(doc => doc.id));
           const newDocs = documentStubs.filter(doc => !existingIds.has(doc.id));

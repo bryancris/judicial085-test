@@ -68,10 +68,12 @@ export const useDocuments = () => {
     isMounted: searchMounted
   } = useDocumentSearch(documents, fetchDocuments);
   
-  // Load more documents
+  // Load more documents - fixed implementation
   const loadMore = async () => {
+    console.log("loadMore called in useDocuments", hasMore, isLoadingMore);
     if (hasMore && !isLoadingMore) {
-      await paginationLoadMore(fetchDocuments);
+      // Pass the fetchDocuments function directly with correct page handling
+      await paginationLoadMore((page) => fetchDocuments(page, false));
     }
   };
 

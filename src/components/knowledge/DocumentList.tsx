@@ -32,12 +32,13 @@ const DocumentList: React.FC<DocumentListProps> = ({
 }) => {
   // Log document data for debugging
   console.log("DocumentList received documents:", documents.length, documents);
+  console.log("DocumentList hasMore:", hasMore, "isLoadingMore:", isLoadingMore);
   
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Error message */}
       {hasError && (
-        <Alert variant="destructive" className="mb-6">
+        <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             There was an error loading documents. Please try refreshing the page.
@@ -45,21 +46,21 @@ const DocumentList: React.FC<DocumentListProps> = ({
         </Alert>
       )}
       
-      {/* Document grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+      {/* Document grid - updated for more compact display */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-4">
         {loading && !documents.length ? (
-          // Loading skeletons when initially loading
-          Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} className="shadow-md">
-              <CardHeader>
-                <Skeleton className="h-5 w-3/4 mb-2" />
-                <Skeleton className="h-4 w-1/2" />
+          // Loading skeletons when initially loading - more compact
+          Array.from({ length: 8 }).map((_, i) => (
+            <Card key={i} className="shadow-sm">
+              <CardHeader className="py-2 px-3">
+                <Skeleton className="h-4 w-3/4 mb-1" />
+                <Skeleton className="h-3 w-1/2" />
               </CardHeader>
-              <CardContent>
-                <Skeleton className="h-20 w-full" />
+              <CardContent className="py-2 px-3">
+                <Skeleton className="h-12 w-full" />
               </CardContent>
-              <CardFooter>
-                <Skeleton className="h-4 w-1/3" />
+              <CardFooter className="py-2 px-3">
+                <Skeleton className="h-3 w-1/3" />
               </CardFooter>
             </Card>
           ))
@@ -68,17 +69,20 @@ const DocumentList: React.FC<DocumentListProps> = ({
             <DocumentCard key={doc.id} document={doc} />
           ))
         ) : (
-          <EmptyState searchTerm={searchTerm} clearSearch={clearSearch} />
+          <div className="col-span-full">
+            <EmptyState searchTerm={searchTerm} clearSearch={clearSearch} />
+          </div>
         )}
       </div>
       
       {/* Load more button */}
       {documents.length > 0 && hasMore && (
-        <div className="flex justify-center mt-6">
+        <div className="flex justify-center mt-4">
           <Button 
             onClick={loadMore}
             disabled={isLoadingMore}
             className="min-w-[200px]"
+            variant="outline"
           >
             {isLoadingMore ? (
               <>
