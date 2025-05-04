@@ -30,6 +30,9 @@ const DocumentList: React.FC<DocumentListProps> = ({
   isLoadingMore,
   hasError
 }) => {
+  // Log document data for debugging
+  console.log("DocumentList received documents:", documents.length, documents);
+  
   return (
     <div className="space-y-6">
       {/* Error message */}
@@ -37,7 +40,7 @@ const DocumentList: React.FC<DocumentListProps> = ({
         <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            There was an error loading documents. Some documents might be too large to retrieve in one request.
+            There was an error loading documents. Please try refreshing the page.
           </AlertDescription>
         </Alert>
       )}
