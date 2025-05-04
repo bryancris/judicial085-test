@@ -37,9 +37,9 @@ export const useDocuments = () => {
     console.log(`Auth state changed: session=${!!session}, authLoading=${authLoading}`);
     
     const performInitialFetch = async () => {
-      // Only proceed if we have a session and auth loading is complete
-      if (session && !initialFetchDone.current) {
-        console.log("Session available, attempting fetch");
+      // Proceed with fetch regardless of auth status - public documents can be viewed by anyone
+      if (!initialFetchDone.current) {
+        console.log("Attempting to fetch documents regardless of auth status");
         try {
           console.log("Performing initial fetch with page 0");
           initialFetchDone.current = true; // Set this first to prevent multiple attempts
@@ -54,15 +54,13 @@ export const useDocuments = () => {
         } finally {
           setFetchLoading(false);
         }
-      } else if (!session && !authLoading) {
-        // No session but auth is not loading, we can mark fetch attempted
-        console.log("No session and auth loading complete");
-        setInitialFetchAttempted(true);
-        setFetchLoading(false);
       }
     };
     
-    performInitialFetch();
+    // Only attempt to fetch documents once auth state is determined
+    if (!authLoading) {
+      performInitialFetch();
+    }
     
     // Cleanup function
     return () => {

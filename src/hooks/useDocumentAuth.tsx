@@ -14,19 +14,20 @@ export const useDocumentAuth = () => {
     // Component mount indicator
     isMounted.current = true;
 
+    console.log("Setting up auth state listener in useDocumentAuth");
+    
     // Set up the auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+      console.log("Auth state changed:", _event, !!currentSession);
       if (isMounted.current) {
         setSession(currentSession);
-        if (!currentSession) {
-          setLoading(false);
-        }
       }
     });
 
     // Check for existing session
     const checkSession = async () => {
       try {
+        console.log("Checking for existing session");
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -37,14 +38,16 @@ export const useDocumentAuth = () => {
               description: "Could not retrieve session information. Please try again.",
               variant: "destructive",
             });
-            setLoading(false);
           }
-          return;
+        } else {
+          console.log("Session check completed. Session exists:", !!data.session);
+          if (isMounted.current) {
+            setSession(data.session);
+          }
         }
         
+        // Always set loading to false after session check completes
         if (isMounted.current) {
-          setSession(data.session);
-          // Always set loading to false after session check completes
           setLoading(false);
         }
       } catch (err) {
@@ -59,6 +62,7 @@ export const useDocumentAuth = () => {
 
     // Cleanup function
     return () => {
+      console.log("Cleaning up auth state listener");
       isMounted.current = false;
       subscription.unsubscribe();
     };

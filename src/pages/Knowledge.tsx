@@ -1,6 +1,5 @@
 
 import React, { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
 import NavBar from '@/components/NavBar';
 import { BookOpen, AlertCircle, Loader2 } from 'lucide-react';
 import SearchBar from '@/components/knowledge/SearchBar';
@@ -66,12 +65,6 @@ const Knowledge = () => {
     initialFetchAttempted,
     loadingProgress
   });
-
-  // If not authenticated, redirect to auth page
-  if (initialFetchAttempted && !loading && !session) {
-    console.log("Not authenticated, redirecting to auth page");
-    return <Navigate to="/auth" />;
-  }
 
   return (
     <div className="min-h-screen flex flex-col">
