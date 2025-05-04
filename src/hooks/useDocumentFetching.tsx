@@ -24,7 +24,7 @@ export const useDocumentFetching = (pageSize: number) => {
         setHasError(false);
       }
       
-      // Calculate offset for pagination (Reducing page size for better performance)
+      // Calculate offset for pagination (Increasing page size for better performance)
       const from = pageIndex * pageSize;
       const to = from + pageSize - 1;
       
@@ -34,7 +34,7 @@ export const useDocumentFetching = (pageSize: number) => {
       const { data: metadataData, error: metadataError } = await supabase
         .from('document_metadata')
         .select('*')
-        .order('title', { ascending: true }) 
+        .order('title', { ascending: true })
         .range(from, to);
       
       if (metadataError) {
@@ -55,6 +55,57 @@ export const useDocumentFetching = (pageSize: number) => {
       
       if (!metadataData || metadataData.length === 0) {
         console.log("No metadata found or empty results");
+        
+        // If no metadata is found but we're on the first page, try to fetch from documents table directly
+        if (pageIndex === 0) {
+          console.log("Attempting to fetch documents directly from documents table");
+          const { data: directDocuments, error: directError } = await supabase
+            .from('documents')
+            .select('id, content, metadata')
+            .limit(pageSize);
+            
+          if (directError) {
+            console.error("Direct documents fetch error:", directError);
+            if (isMounted.current) {
+              setHasError(true);
+              setLoading(false);
+            }
+            return { hasMore: false };
+          }
+          
+          if (directDocuments && directDocuments.length > 0) {
+            console.log(`Found ${directDocuments.length} documents directly in documents table`);
+            
+            // Transform documents data to match our expected format
+            const transformedDocs: DocumentWithContent[] = directDocuments.map(doc => {
+              // Extract title from metadata if available
+              const title = doc.metadata?.file_title || 
+                           doc.metadata?.title || 
+                           (doc.metadata?.file_id ? `Document ${doc.metadata.file_id}` : `Document ${doc.id}`);
+                           
+              return {
+                id: doc.metadata?.file_id || `doc-${doc.id}`,
+                title: title,
+                url: doc.metadata?.file_path || null,
+                created_at: doc.metadata?.created_at || new Date().toISOString(),
+                schema: null,
+                contents: [{
+                  id: doc.id,
+                  content: doc.content,
+                  metadata: doc.metadata
+                }]
+              };
+            });
+            
+            if (isMounted.current) {
+              setDocuments(transformedDocs);
+              setLoading(false);
+            }
+            
+            return { hasMore: directDocuments.length === pageSize };
+          }
+        }
+        
         if (resetResults && isMounted.current) {
           setDocuments([]);
         }
@@ -87,8 +138,8 @@ export const useDocumentFetching = (pageSize: number) => {
         });
       }
 
-      // We'll load content for more documents (increased from 2 to 4)
-      const maxDocsToFetchContent = 4; 
+      // We'll load content for more documents (increase from 4 to 6)
+      const maxDocsToFetchContent = 6; 
       const docsToFetchContent = documentsWithStubs.slice(0, maxDocsToFetchContent);
       
       console.log(`Fetching content for ${docsToFetchContent.length} documents out of ${documentsWithStubs.length}`);
@@ -98,38 +149,77 @@ export const useDocumentFetching = (pageSize: number) => {
         try {
           console.log(`Fetching content for document ${docStub.id}`);
           
-          // Try multiple JSONB query approaches
+          // Try multiple query approaches to find content
           let documentData = null;
           let documentError = null;
           
-          // First attempt with ->> operator for text extraction
-          const { data: data1, error: error1 } = await supabase
-            .from('documents')
-            .select('*')
-            .eq('metadata->>file_id', docStub.id)
-            .limit(5);
-          
-          if (error1) {
-            console.log(`First query approach failed, trying alternative: ${error1.message}`);
-            // Second attempt with -> operator for JSON object
+          // Try different approaches to query the documents
+          const attemptQueries = async () => {
+            // First attempt: Using double arrow operator for text extraction
+            const { data: data1, error: error1 } = await supabase
+              .from('documents')
+              .select('*')
+              .eq('metadata->>file_id', docStub.id)
+              .limit(10);
+            
+            if (!error1 && data1 && data1.length > 0) {
+              console.log(`Query 1 succeeded for ${docStub.id}, found ${data1.length} items`);
+              return { data: data1, error: null };
+            }
+            
+            console.log(`Query 1 failed or returned no results for ${docStub.id}, trying next approach`);
+            
+            // Second attempt: Using filter with contains
             const { data: data2, error: error2 } = await supabase
               .from('documents')
               .select('*')
               .filter('metadata', 'contains', { file_id: docStub.id })
-              .limit(5);
+              .limit(10);
               
-            if (error2) {
-              console.log(`Second query approach failed: ${error2.message}`);
-              documentError = error2;
-            } else {
-              documentData = data2;
+            if (!error2 && data2 && data2.length > 0) {
+              console.log(`Query 2 succeeded for ${docStub.id}, found ${data2.length} items`);
+              return { data: data2, error: null };
             }
-          } else {
-            documentData = data1;
-          }
+            
+            console.log(`Query 2 failed or returned no results for ${docStub.id}, trying next approach`);
+            
+            // Third attempt: Using like operator
+            const { data: data3, error: error3 } = await supabase
+              .from('documents')
+              .select('*')
+              .like('content', `%${docStub.id}%`)
+              .limit(10);
+              
+            if (!error3 && data3 && data3.length > 0) {
+              console.log(`Query 3 succeeded for ${docStub.id}, found ${data3.length} items`);
+              return { data: data3, error: null };
+            }
+            
+            // If we get here, all attempts failed or returned no data
+            if (error1) {
+              return { data: null, error: error1 };
+            } else if (error2) {
+              return { data: null, error: error2 };
+            } else if (error3) {
+              return { data: null, error: error3 };
+            } else {
+              return { 
+                data: null, 
+                error: { message: "No document content found for document ID " + docStub.id } 
+              };
+            }
+          };
           
-          // Log the query results for debugging
-          console.log(`Document content query results for ${docStub.id}:`, documentData);
+          const result = await attemptQueries();
+          documentData = result.data;
+          documentError = result.error;
+          
+          // Log the query results
+          if (documentData) {
+            console.log(`Document content query results for ${docStub.id}:`, documentData.length);
+          } else {
+            console.log(`No document content found for ${docStub.id}`);
+          }
           
           if (documentError) {
             console.error(`Error fetching content for document ${docStub.id}:`, documentError);
@@ -138,10 +228,6 @@ export const useDocumentFetching = (pageSize: number) => {
               contents: [],
               fetchError: documentError.message
             };
-          }
-          
-          if (documentData) {
-            console.log(`Fetched ${documentData.length} content items for document ${docStub.id}`);
           }
           
           return {
