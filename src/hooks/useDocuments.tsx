@@ -10,6 +10,8 @@ export const useDocuments = () => {
   const pageSize = 4;
   const initialFetchDone = useRef(false);
   const [initialFetchAttempted, setInitialFetchAttempted] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 2;
   
   // Use smaller, specialized hooks
   const { session, loading: authLoading, setLoading: setAuthLoading } = useDocumentAuth();
@@ -73,9 +75,17 @@ export const useDocuments = () => {
           console.log("Performing initial fetch with page 0");
           initialFetchDone.current = true; // Set this first to prevent multiple attempts
           setFetchLoading(true);
-          await fetchDocuments(0, true);
+          const result = await fetchDocuments(0, true);
           setInitialFetchAttempted(true);
-          console.log("Initial fetch completed");
+          console.log("Initial fetch completed with result:", result);
+          
+          // If no documents are found and we haven't hit retry limit, try again with a different approach
+          if (documents.length === 0 && retryCount < maxRetries) {
+            console.log(`No documents found, retrying with different approach (retry ${retryCount + 1}/${maxRetries})`);
+            setRetryCount(prev => prev + 1);
+            initialFetchDone.current = false; // Reset so we can try again
+            setTimeout(() => performInitialFetch(), 1000); // Delay a bit before retrying
+          }
         } catch (error) {
           console.error("Error during initial fetch:", error);
           initialFetchDone.current = false; // Reset so we can try again
@@ -97,7 +107,7 @@ export const useDocuments = () => {
       fetchMounted.current = false;
       paginationMounted.current = false;
     };
-  }, [session, authLoading, fetchDocuments, setFetchLoading, fetchMounted, paginationMounted]);
+  }, [session, authLoading, fetchDocuments, setFetchLoading, fetchMounted, paginationMounted, documents.length, retryCount]);
   
   // Use document search functionality
   const { 
@@ -138,7 +148,8 @@ export const useDocuments = () => {
     documentsCount: documents.length,
     filteredCount: filteredDocuments.length,
     hasMore,
-    initialFetchAttempted
+    initialFetchAttempted,
+    retryCount
   });
 
   return {

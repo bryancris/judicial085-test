@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import NavBar from '@/components/NavBar';
-import { BookOpen, AlertCircle, Loader2, Database } from 'lucide-react';
+import { BookOpen, AlertCircle, Loader2, Database, FileText } from 'lucide-react';
 import SearchBar from '@/components/knowledge/SearchBar';
 import DocumentList from '@/components/knowledge/DocumentList';
 import { useDocuments } from '@/hooks/useDocuments';
@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 const Knowledge = () => {
   const [hasError, setHasError] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
-  const [debugMode, setDebugMode] = useState(false);
+  const [debugMode, setDebugMode] = useState(true); // Default to true for debugging
   
   const {
     session,
@@ -110,6 +110,14 @@ const Knowledge = () => {
               <div>Loading: {loading ? "True" : "False"}</div>
               <div>Documents Count: {documents.length}</div>
               <div>Initial Fetch: {initialFetchAttempted ? "Attempted" : "Not Attempted"}</div>
+              {documents.length > 0 && (
+                <div className="mt-2 p-2 bg-gray-200 rounded">
+                  <div className="font-semibold">First Document:</div>
+                  <div>Title: {documents[0].title || 'No title'}</div>
+                  <div>ID: {documents[0].id}</div>
+                  <div>Content Items: {documents[0].contents?.length || 0}</div>
+                </div>
+              )}
             </AlertDescription>
           </Alert>
         )}
@@ -166,11 +174,41 @@ const Knowledge = () => {
                 <p>If documents exist but aren't showing, check:</p>
                 <ul className="list-disc pl-5">
                   <li>Database connection status</li>
-                  <li>Row Level Security (RLS) policies</li>
-                  <li>Table permissions</li>
+                  <li>Table structure and relationships</li>
+                  <li>
+                    JSONB Query: Using <code>eq('metadata->>file_id', docId)</code> instead of <code>filter('metadata->>file_id', 'eq', docId)</code>
+                  </li>
+                  <li>Content exists in the documents table with correct metadata</li>
                 </ul>
+                <div className="mt-3 p-2 bg-gray-300 rounded">
+                  <p>Run this query in Supabase SQL Editor to check documents:</p>
+                  <pre className="text-[10px] overflow-x-auto">
+                    SELECT * FROM documents LIMIT 5;
+                  </pre>
+                </div>
               </div>
             )}
+          </div>
+        )}
+
+        {debugMode && documents.length > 0 && (
+          <div className="mt-8 p-4 bg-gray-100 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <FileText className="h-4 w-4" />
+              <h3 className="font-medium">Document Debug Info</h3>
+            </div>
+            <div className="text-xs font-mono overflow-x-auto">
+              {documents.slice(0, 2).map((doc, index) => (
+                <div key={index} className="mb-3 p-2 bg-white rounded">
+                  <div><strong>ID:</strong> {doc.id}</div>
+                  <div><strong>Title:</strong> {doc.title}</div>
+                  <div><strong>Content Items:</strong> {doc.contents?.length || 0}</div>
+                  {doc.fetchError && (
+                    <div className="text-red-500"><strong>Error:</strong> {doc.fetchError}</div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </main>

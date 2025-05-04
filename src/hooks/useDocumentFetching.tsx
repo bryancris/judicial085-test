@@ -87,8 +87,8 @@ export const useDocumentFetching = (pageSize: number) => {
         });
       }
 
-      // We'll load content for just 2 documents to avoid timeouts
-      const maxDocsToFetchContent = 2; 
+      // We'll load content for more documents (increased from 2 to 4)
+      const maxDocsToFetchContent = 4; 
       const docsToFetchContent = documentsWithStubs.slice(0, maxDocsToFetchContent);
       
       console.log(`Fetching content for ${docsToFetchContent.length} documents out of ${documentsWithStubs.length}`);
@@ -98,12 +98,16 @@ export const useDocumentFetching = (pageSize: number) => {
         try {
           console.log(`Fetching content for document ${docStub.id}`);
           
-          // Limit to 3 content items per document to avoid large payloads
+          // FIX: Use correct Supabase JSONB query syntax
+          // Increase content items per document from 3 to 5
           const { data: documentData, error: documentError } = await supabase
             .from('documents')
             .select('*')
-            .filter('metadata->>file_id', 'eq', docStub.id)
-            .limit(3);
+            .eq('metadata->>file_id', docStub.id)
+            .limit(5);
+          
+          // Log the query results for debugging
+          console.log(`Document content query results for ${docStub.id}:`, documentData);
           
           if (documentError) {
             console.error(`Error fetching content for document ${docStub.id}:`, documentError);
