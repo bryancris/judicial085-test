@@ -98,13 +98,35 @@ export const useDocumentFetching = (pageSize: number) => {
         try {
           console.log(`Fetching content for document ${docStub.id}`);
           
-          // FIX: Use correct Supabase JSONB query syntax
-          // Increase content items per document from 3 to 5
-          const { data: documentData, error: documentError } = await supabase
+          // Try multiple JSONB query approaches
+          let documentData = null;
+          let documentError = null;
+          
+          // First attempt with ->> operator for text extraction
+          const { data: data1, error: error1 } = await supabase
             .from('documents')
             .select('*')
             .eq('metadata->>file_id', docStub.id)
             .limit(5);
+          
+          if (error1) {
+            console.log(`First query approach failed, trying alternative: ${error1.message}`);
+            // Second attempt with -> operator for JSON object
+            const { data: data2, error: error2 } = await supabase
+              .from('documents')
+              .select('*')
+              .filter('metadata', 'contains', { file_id: docStub.id })
+              .limit(5);
+              
+            if (error2) {
+              console.log(`Second query approach failed: ${error2.message}`);
+              documentError = error2;
+            } else {
+              documentData = data2;
+            }
+          } else {
+            documentData = data1;
+          }
           
           // Log the query results for debugging
           console.log(`Document content query results for ${docStub.id}:`, documentData);
