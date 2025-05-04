@@ -176,7 +176,7 @@ const Knowledge = () => {
                   <li>Database connection status</li>
                   <li>Table structure and relationships</li>
                   <li>
-                    JSONB Query: Using <code>eq(&apos;metadata-{&apos;&gt;&apos;}file_id&apos;, docId)</code> instead of <code>filter(&apos;metadata-{&apos;&gt;&apos;}file_id&apos;, &apos;eq&apos;, docId)</code>
+                    JSONB Query: Using <code>{`eq('metadata->file_id', docId)`}</code> instead of <code>{`filter('metadata->file_id', 'eq', docId)`}</code>
                   </li>
                   <li>Content exists in the documents table with correct metadata</li>
                 </ul>
