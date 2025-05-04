@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import NavBar from '@/components/NavBar';
-import { BookOpen, AlertCircle } from 'lucide-react';
+import { BookOpen, AlertCircle, Loader2 } from 'lucide-react';
 import SearchBar from '@/components/knowledge/SearchBar';
 import DocumentList from '@/components/knowledge/DocumentList';
 import { useDocuments } from '@/hooks/useDocuments';
@@ -23,7 +23,8 @@ const Knowledge = () => {
     loadMore,
     hasMore,
     isLoadingMore,
-    hasError: documentsError
+    hasError: documentsError,
+    initialFetchAttempted
   } = useDocuments();
 
   // Track errors from the hook
@@ -33,8 +34,18 @@ const Knowledge = () => {
     }
   }, [documentsError]);
 
+  // Log component state for debugging
+  console.log("Knowledge page render:", {
+    hasSession: !!session,
+    loading,
+    documentsCount: documents.length,
+    hasError,
+    initialFetchAttempted
+  });
+
   // If not authenticated, redirect to auth page
-  if (!loading && !session) {
+  if (initialFetchAttempted && !loading && !session) {
+    console.log("Not authenticated, redirecting to auth page");
     return <Navigate to="/auth" />;
   }
 
@@ -65,17 +76,27 @@ const Knowledge = () => {
           handleSearch={handleSearch}
         />
 
+        {/* Initial loading state */}
+        {loading && !documents.length && (
+          <div className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="h-12 w-12 text-brand-burgundy animate-spin mb-4" />
+            <p className="text-lg">Loading knowledge base...</p>
+          </div>
+        )}
+
         {/* Document List with pagination */}
-        <DocumentList 
-          loading={loading}
-          documents={documents}
-          searchTerm={searchTerm}
-          clearSearch={clearSearch}
-          loadMore={loadMore}
-          hasMore={hasMore}
-          isLoadingMore={isLoadingMore}
-          hasError={documentsError}
-        />
+        {(documents.length > 0 || !loading) && (
+          <DocumentList 
+            loading={loading}
+            documents={documents}
+            searchTerm={searchTerm}
+            clearSearch={clearSearch}
+            loadMore={loadMore}
+            hasMore={hasMore}
+            isLoadingMore={isLoadingMore}
+            hasError={documentsError}
+          />
+        )}
       </main>
     </div>
   );

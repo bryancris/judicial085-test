@@ -7,34 +7,39 @@ export const useDocumentPagination = () => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const isMounted = useRef(true);
   
-  // Set up cleanup function to prevent state updates after unmount
-  const loadMore = useCallback((fetchDocuments: (page: number) => Promise<{ hasMore: boolean }>) => {
+  // Load more function with improved error handling
+  const loadMore = useCallback(async (fetchDocuments: (page: number) => Promise<{ hasMore: boolean }>) => {
     if (!isLoadingMore && hasMore) {
       const nextPage = page + 1;
-      setIsLoadingMore(true);
       
-      fetchDocuments(nextPage)
-        .then(({ hasMore: moreAvailable }) => {
-          if (isMounted.current) {
-            setHasMore(moreAvailable);
-          }
-        })
-        .catch(error => {
-          console.error("Error loading more documents:", error);
-        })
-        .finally(() => {
-          if (isMounted.current) {
-            setIsLoadingMore(false);
-          }
-        });
-      
-      // Update page after starting the fetch
-      setPage(nextPage);
+      try {
+        setIsLoadingMore(true);
+        console.log(`Loading page ${nextPage}`);
+        
+        const { hasMore: moreAvailable } = await fetchDocuments(nextPage);
+        
+        if (isMounted.current) {
+          setHasMore(moreAvailable);
+          // Update page after successful fetch
+          setPage(nextPage);
+          console.log(`Page updated to ${nextPage}, more available: ${moreAvailable}`);
+        }
+      } catch (error) {
+        console.error("Error in loadMore:", error);
+        if (isMounted.current) {
+          setHasMore(false);
+        }
+      } finally {
+        if (isMounted.current) {
+          setIsLoadingMore(false);
+        }
+      }
     }
   }, [hasMore, isLoadingMore, page]);
 
   const resetPagination = useCallback(() => {
     if (isMounted.current) {
+      console.log("Pagination reset");
       setPage(0);
       setHasMore(true);
       setIsLoadingMore(false);

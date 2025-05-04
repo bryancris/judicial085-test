@@ -10,6 +10,8 @@ export const useDocumentSearch = (documents: DocumentWithContent[], fetchDocumen
   // Handle search
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log(`Searching for: "${searchTerm}"`);
+    
     if (isMounted.current) {
       setIsSearching(true);
       
@@ -18,6 +20,7 @@ export const useDocumentSearch = (documents: DocumentWithContent[], fetchDocumen
       setTimeout(() => {
         if (isMounted.current) {
           setIsSearching(false);
+          console.log("Search complete");
         }
       }, 300); // Small delay to show loading state
     }
@@ -25,6 +28,7 @@ export const useDocumentSearch = (documents: DocumentWithContent[], fetchDocumen
 
   // Clear search
   const clearSearch = () => {
+    console.log("Clearing search");
     if (isMounted.current) {
       setSearchTerm('');
       // Reset pagination when clearing search
@@ -41,6 +45,8 @@ export const useDocumentSearch = (documents: DocumentWithContent[], fetchDocumen
        content.metadata.file_title.toLowerCase().includes(searchTerm.toLowerCase()))
     )
   ) : documents;
+
+  console.log(`Documents filtered: ${documents.length} → ${filteredDocuments.length}`);
 
   return {
     searchTerm,
