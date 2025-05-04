@@ -1,4 +1,5 @@
 
+import { useEffect } from 'react';
 import { useDocumentAuth } from '@/hooks/useDocumentAuth';
 import { useDocumentFetching } from '@/hooks/useDocumentFetching';
 import { useDocumentPagination } from '@/hooks/useDocumentPagination';
@@ -13,7 +14,7 @@ export const useDocuments = () => {
     documents, 
     loading: fetchLoading, 
     hasError, 
-    fetchDocuments: fetchDocumentsBase
+    fetchDocuments
   } = useDocumentFetching(pageSize);
   
   const { 
@@ -24,17 +25,19 @@ export const useDocuments = () => {
     resetPagination 
   } = useDocumentPagination();
   
-  // Wrapper for fetchDocuments to maintain compatibility and integrate with pagination
-  const fetchDocuments = async (pageIndex: number, resetResults: boolean = false) => {
-    const result = await fetchDocumentsBase(pageIndex, resetResults);
-    return result;
-  };
-  
-  // Initialize documents if session exists
-  if (session && authLoading && !fetchLoading) {
-    fetchDocuments(0, true);
-    setLoading(false);
-  }
+  // Use a separate effect to fetch documents after authentication is complete
+  useEffect(() => {
+    if (session && !fetchLoading) {
+      // Only fetch documents if we haven't already or if we're on page 0
+      if (documents.length === 0 || page === 0) {
+        fetchDocuments(0, true);
+      }
+      // Set authLoading to false once we've initialized document fetching
+      if (authLoading) {
+        setLoading(false);
+      }
+    }
+  }, [session, fetchLoading, authLoading, documents.length, page, fetchDocuments, setLoading]);
   
   const { 
     searchTerm, 

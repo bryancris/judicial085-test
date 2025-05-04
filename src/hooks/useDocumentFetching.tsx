@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DocumentWithContent, DocumentMetadata } from '@/types/knowledge';
@@ -9,20 +10,24 @@ export const useDocumentFetching = (pageSize: number) => {
   const [hasError, setHasError] = useState(false);
   const { toast } = useToast();
 
-  const fetchDocuments = async (pageIndex: number, resetResults: boolean = false) => {
+  const fetchDocuments = useCallback(async (pageIndex: number, resetResults: boolean = false) => {
     try {
-      setLoading(resetResults ? true : false);
+      if (resetResults) {
+        setLoading(true);
+      }
       setHasError(false);
       
       // Calculate offset for pagination
       const from = pageIndex * pageSize;
       const to = from + pageSize - 1;
       
-      // First, get document metadata with pagination, now sorted by title
+      console.log(`Fetching documents from ${from} to ${to}`);
+      
+      // First, get document metadata with pagination
       const { data: metadataData, error: metadataError } = await supabase
         .from('document_metadata')
         .select('*')
-        .order('title', { ascending: true }) // Sort alphabetically by title
+        .order('title', { ascending: true }) 
         .range(from, to);
       
       if (metadataError) {
@@ -38,7 +43,7 @@ export const useDocumentFetching = (pageSize: number) => {
       }
 
       const hasMore = metadataData.length === pageSize;
-      console.log('Fetched metadata:', metadataData);
+      console.log('Fetched metadata:', metadataData.length, 'documents');
 
       // Create document stubs with metadata but empty content initially
       const documentsWithStubs: DocumentWithContent[] = metadataData.map((metadata: DocumentMetadata) => ({
@@ -46,16 +51,19 @@ export const useDocumentFetching = (pageSize: number) => {
         contents: []
       }));
 
-      // If we're resetting results, replace the documents array
-      // Otherwise append to existing documents
+      // Update documents based on whether we're resetting or appending
       if (resetResults) {
         setDocuments(documentsWithStubs);
       } else {
-        setDocuments(prev => [...prev, ...documentsWithStubs]);
+        setDocuments(prev => {
+          // Filter out any duplicates
+          const existingIds = new Set(prev.map(doc => doc.id));
+          const newDocs = documentsWithStubs.filter(doc => !existingIds.has(doc.id));
+          return [...prev, ...newDocs];
+        });
       }
 
       // Then fetch document content for each document separately
-      // This prevents one large query that might timeout
       const updatedDocuments = await Promise.all(
         documentsWithStubs.map(async (docStub) => {
           try {
@@ -66,19 +74,16 @@ export const useDocumentFetching = (pageSize: number) => {
               .from('documents')
               .select('*')
               .filter('metadata->>file_id', 'eq', docStub.id)
-              .limit(20); // Limit to prevent timeout
+              .limit(20); 
             
             if (documentError) {
               console.error(`Error fetching content for document ${docStub.id}:`, documentError);
-              // Continue with empty contents instead of failing the whole request
               return {
                 ...docStub,
                 contents: [],
                 fetchError: documentError.message
               };
             }
-            
-            console.log(`Content for document ${docStub.id}:`, documentData ? documentData.length : 0, 'segments');
             
             return {
               ...docStub,
@@ -101,7 +106,7 @@ export const useDocumentFetching = (pageSize: number) => {
         if (resetResults) {
           return updatedDocuments;
         } else {
-          // Replace the stub documents with the updated ones, keeping any existing docs
+          // Create a map of existing documents not being updated
           const existingDocs = prev.filter(doc => 
             !updatedDocuments.some(updatedDoc => updatedDoc.id === doc.id)
           );
@@ -122,7 +127,7 @@ export const useDocumentFetching = (pageSize: number) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pageSize, toast]);
 
   return {
     documents,

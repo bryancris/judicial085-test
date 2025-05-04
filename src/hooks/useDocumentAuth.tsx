@@ -9,19 +9,22 @@ export const useDocumentAuth = () => {
   const isMounted = useRef(true);
   const { toast } = useToast();
 
-  // Authentication check
+  // Set up effect cleanup
   useEffect(() => {
-    // Set up the auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Component mount indicator
+    isMounted.current = true;
+
+    // Set up the auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
       if (isMounted.current) {
-        setSession(session);
-        if (!session) {
+        setSession(currentSession);
+        if (!currentSession) {
           setLoading(false);
         }
       }
     });
 
-    // THEN check for existing session
+    // Check for existing session
     const checkSession = async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
@@ -41,9 +44,8 @@ export const useDocumentAuth = () => {
         
         if (isMounted.current) {
           setSession(data.session);
-          if (!data.session) {
-            setLoading(false);
-          }
+          // Always set loading to false after session check completes
+          setLoading(false);
         }
       } catch (err) {
         console.error("Unexpected error checking session:", err);

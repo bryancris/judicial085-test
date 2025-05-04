@@ -1,31 +1,37 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 export const useDocumentPagination = () => {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   
-  const loadMore = (fetchDocuments: (page: number) => Promise<{ hasMore: boolean }>) => {
+  const loadMore = useCallback((fetchDocuments: (page: number) => Promise<{ hasMore: boolean }>) => {
     if (!isLoadingMore && hasMore) {
       const nextPage = page + 1;
-      setPage(nextPage);
       setIsLoadingMore(true);
       
       fetchDocuments(nextPage)
         .then(({ hasMore: moreAvailable }) => {
           setHasMore(moreAvailable);
         })
+        .catch(error => {
+          console.error("Error loading more documents:", error);
+        })
         .finally(() => {
           setIsLoadingMore(false);
         });
+      
+      // Update page after starting the fetch
+      setPage(nextPage);
     }
-  };
+  }, [hasMore, isLoadingMore, page]);
 
-  const resetPagination = () => {
+  const resetPagination = useCallback(() => {
     setPage(0);
     setHasMore(true);
-  };
+    setIsLoadingMore(false);
+  }, []);
 
   return {
     page,

@@ -14,14 +14,17 @@ const NavBar: React.FC = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Component mount indicator
+    isMounted.current = true;
+    
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
       if (isMounted.current) {
-        setSession(session);
+        setSession(currentSession);
       }
     });
 
-    // THEN check for existing session
+    // Check for existing session
     const checkSession = async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
@@ -61,6 +64,8 @@ const NavBar: React.FC = () => {
         toast({
           title: "Logged out successfully",
         });
+        // Redirect to home page after logout
+        navigate('/');
       }
     } catch (error: any) {
       console.error("Logout error:", error);
