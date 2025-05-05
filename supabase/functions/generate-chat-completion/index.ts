@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
@@ -19,6 +18,7 @@ serve(async (req) => {
     const { messages, clientId } = await req.json();
 
     if (!openAIApiKey) {
+      console.error('OpenAI API key is not configured');
       return new Response(
         JSON.stringify({ error: "OpenAI API key is not configured" }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -29,8 +29,8 @@ serve(async (req) => {
     console.log(`Processing chat completion for client: ${clientId}`);
     console.log(`Messages length: ${messages.length}`);
 
-    // We no longer need this endpoint for client simulation
-    // Just return a simple response to indicate success
+    // We're not generating client responses anymore, just keeping this endpoint
+    // for backward compatibility
     return new Response(
       JSON.stringify({ text: "This endpoint is no longer used for client simulation" }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

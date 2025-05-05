@@ -1,4 +1,6 @@
+
 import { supabase } from "@/integrations/supabase/client";
+import { ChatMessageProps } from "@/components/clients/chat/ChatMessage";
 
 export type MessageRole = "system" | "assistant" | "user";
 
@@ -31,7 +33,7 @@ export const generateChatCompletion = async (
 
 export const generateLegalAnalysis = async (
   clientId: string, 
-  conversation: Message[]
+  conversation: ChatMessageProps[]
 ): Promise<{ analysis: string; error?: string }> => {
   try {
     const { data, error } = await supabase.functions.invoke("generate-legal-analysis", {

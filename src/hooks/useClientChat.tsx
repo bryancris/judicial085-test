@@ -70,13 +70,8 @@ export const useClientChat = (clientId: string) => {
     setIsAnalysisLoading(true);
     
     try {
-      // Convert chat messages to OpenAI format
-      const conversation: OpenAIMessage[] = currentMessages.map(msg => ({
-        role: "user",
-        content: `${msg.role.toUpperCase()}: ${msg.content}`
-      } as OpenAIMessage));
-
-      const { analysis, error } = await generateLegalAnalysis(clientId, conversation);
+      // Send the conversation to generate legal analysis
+      const { analysis, error } = await generateLegalAnalysis(clientId, currentMessages);
       
       if (error) {
         console.error("Error generating analysis:", error);

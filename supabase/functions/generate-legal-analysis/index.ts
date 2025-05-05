@@ -19,6 +19,7 @@ serve(async (req) => {
     const { clientId, conversation } = await req.json();
 
     if (!openAIApiKey) {
+      console.error('OpenAI API key is not configured');
       return new Response(
         JSON.stringify({ error: "OpenAI API key is not configured" }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -31,7 +32,7 @@ serve(async (req) => {
 
     // Create improved system prompt for legal analysis
     const systemPrompt = `
-You are a legal expert assistant for attorneys in Texas. Based on the client intake conversation provided, 
+You are a legal expert assistant for attorneys in Texas. Based on the attorney-client conversation provided, 
 generate a concise legal analysis with the following sections:
 
 1. **RELEVANT TEXAS LAW:** Identify and briefly explain Texas laws, statutes, or precedents that apply to this case.
@@ -45,10 +46,18 @@ generate a concise legal analysis with the following sections:
 Format your response in Markdown with bold section headers.
 `;
 
+    // Format the conversation for the API request
+    const formattedConversation = conversation.map(msg => ({
+      role: "user", 
+      content: `${msg.role.toUpperCase()}: ${msg.content}`
+    }));
+
     const messages = [
       { role: "system", content: systemPrompt },
-      { role: "user", content: `Here is the attorney-client conversation for analysis:\n\n${JSON.stringify(conversation)}` }
+      { role: "user", content: "Here is the attorney-client conversation for analysis:\n\n" + formattedConversation.map(msg => msg.content).join("\n\n") }
     ];
+
+    console.log("Sending request to OpenAI with messages:", JSON.stringify(messages));
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -75,6 +84,7 @@ Format your response in Markdown with bold section headers.
     }
 
     const analysis = data.choices[0]?.message?.content || '';
+    console.log("Legal analysis generated successfully");
 
     return new Response(
       JSON.stringify({ analysis }),
