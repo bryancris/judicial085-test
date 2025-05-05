@@ -1,7 +1,6 @@
-
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { User, Edit, Trash, Search } from "lucide-react";
+import { User, Search, View } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -73,29 +72,14 @@ const ClientList = () => {
     }
   };
 
-  const handleDeleteClient = async (id: string, name: string) => {
-    if (!window.confirm(`Are you sure you want to delete client ${name}?`)) {
-      return;
-    }
-
-    try {
-      const { error } = await supabase.from("clients").delete().eq("id", id);
-      
-      if (error) throw error;
-      
-      setClients(clients.filter((client) => client.id !== id));
-      toast({
-        title: "Client deleted",
-        description: `${name} has been removed from your client list.`,
-      });
-    } catch (error: any) {
-      console.error("Error deleting client:", error);
-      toast({
-        title: "Error deleting client",
-        description: error.message || "There was a problem deleting the client.",
-        variant: "destructive",
-      });
-    }
+  const handleViewClient = (id: string, name: string) => {
+    // Placeholder for view client action
+    toast({
+      title: "Viewing client",
+      description: `Now viewing ${name}'s details.`,
+    });
+    // This could later redirect to a client details page
+    console.log(`View client with ID: ${id}`);
   };
 
   // Loading state
@@ -171,22 +155,19 @@ const ClientList = () => {
                     {[client.city, client.state].filter(Boolean).join(", ") || "-"}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" title="Edit">
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                    <div className="flex justify-end">
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        title="Delete"
+                        title="View"
                         onClick={() => 
-                          handleDeleteClient(
+                          handleViewClient(
                             client.id, 
                             `${client.first_name} ${client.last_name}`
                           )
                         }
                       >
-                        <Trash className="h-4 w-4" />
+                        <View className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
