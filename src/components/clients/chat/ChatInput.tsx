@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useState, useEffect, useRef } from "react";
 import { Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,12 +20,18 @@ const ChatInput = ({
   prefilledMessage = "" 
 }: ChatInputProps) => {
   const [message, setMessage] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Update message when prefilledMessage changes
   useEffect(() => {
-    if (prefilledMessage) {
+    if (prefilledMessage && prefilledMessage.trim() !== "") {
+      console.log("Setting prefilled message:", prefilledMessage);
       setMessage(prefilledMessage);
-      console.log("Prefilled message set:", prefilledMessage);
+      
+      // Focus the textarea when prefilled message changes
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
     }
   }, [prefilledMessage]);
 
@@ -68,6 +75,7 @@ const ChatInput = ({
       </div>
       <div className="flex">
         <Textarea
+          ref={textareaRef}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}

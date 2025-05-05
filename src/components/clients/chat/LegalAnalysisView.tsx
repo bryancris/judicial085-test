@@ -1,6 +1,6 @@
 
 import React, { useEffect, useRef } from "react";
-import { Loader2, ArrowRight } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 interface AnalysisItem {
   content: string;
@@ -23,11 +23,31 @@ const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalA
     }
   }, [analysisItems]);
 
-  // Render markdown with special handling for followup questions
+  // Set up the global click handler for the follow-up questions
+  useEffect(() => {
+    if (onQuestionClick) {
+      // Add a global function that the onClick handlers can call
+      window.handleQuestionClick = (question: string) => {
+        console.log("Question clicked:", question);
+        onQuestionClick(question);
+      };
+    }
+    
+    // Cleanup when component is unmounted
+    return () => {
+      if (window.handleQuestionClick) {
+        delete window.handleQuestionClick;
+      }
+    };
+  }, [onQuestionClick]);
+
+  // Render markdown with special handling for follow-up questions
   const renderMarkdown = (content: string) => {
-    // Regular markdown rendering
+    console.log("Rendering markdown content");
+    
+    // Convert the content to HTML first (basic markdown conversion)
     let html = content
-      // Convert headers
+      // Convert headers (both # style and ** style)
       .replace(/^### (.*$)/gim, '<h3 class="text-lg font-bold mt-4 mb-2">$1</h3>')
       .replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold mt-4 mb-2">$1</h2>')
       .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-4 mb-2">$1</h1>')
@@ -38,74 +58,107 @@ const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalA
       // Convert line breaks
       .replace(/\n/g, '<br />');
 
-    // Process lists specially to handle follow-up questions
+    // Process the content line by line for follow-up questions
     const lines = content.split('\n');
     let inQuestionSection = false;
+    let questionsFound = false;
     
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
+      const line = lines[i].trim();
       
-      // Detect the recommended follow-up questions section (case insensitive with flexible spacing/formatting)
-      if (line.match(/^#+\s*RECOMMENDED\s+FOLLOW[-\s]UP\s+QUESTIONS/i)) {
+      // Detect the recommended follow-up questions section using multiple patterns
+      // Match both hash-style headers and bold-text style headers
+      if (
+        line.match(/^#+\s*RECOMMENDED\s+FOLLOW[\s-]UP\s+QUESTIONS/i) || 
+        line.match(/^\*\*RECOMMENDED\s+FOLLOW[\s-]UP\s+QUESTIONS.*\*\*/i)
+      ) {
         inQuestionSection = true;
-        console.log("Found questions section at line:", line);
+        questionsFound = true;
+        console.log(`Found questions section at line ${i}:`, line);
         continue;
-      } else if (inQuestionSection && line.match(/^#+\s/)) {
-        // If we hit another header, we're out of the questions section
+      } 
+      // Check if we've hit another header to end the questions section
+      else if (inQuestionSection && (line.match(/^#+\s/) || line.match(/^\*\*.*\*\*$/))) {
         inQuestionSection = false;
+        console.log("Exiting questions section at line:", line);
       }
       
       // Make list items in the questions section clickable
-      if (inQuestionSection && (line.match(/^\s*\d+\.\s/) || line.match(/^\s*\-\s/))) {
+      if (inQuestionSection && (line.match(/^\s*\d+\.\s/) || line.match(/^\s*\-\s/) || line.match(/^\s*\*\s/))) {
         // Extract the question text (remove the list marker)
-        const questionText = line.replace(/^\s*(\d+\.|\-)\s/, '').trim();
+        const questionText = line.replace(/^\s*(\d+\.|\-|\*)\s/, '').trim();
         
-        // Replace the normal list rendering with a clickable version
-        if (onQuestionClick) {
-          // Use inline SVG instead of React component for the arrow
-          const arrowSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 ml-1"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>';
+        if (questionText && onQuestionClick) {
+          // Create the clickable element with a unique identifier
+          const uniqueId = `question-${i}-${Date.now()}`;
+          const safeQuestion = questionText.replace(/'/g, "\\'").replace(/"/g, '\\"');
           
-          const clickableItem = `<div 
-            class="list-item ml-6 mb-2 p-2 px-3 rounded bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-800 cursor-pointer flex items-center" 
-            style="color: #1EAEDB; transition: all 0.2s ease; border: 1px solid rgba(30, 174, 219, 0.2);" 
-            onclick="window.handleQuestionClick('${questionText.replace(/'/g, "\\'")}')"
-          >${questionText} ${arrowSvg}</div>`;
+          // Define the clickable HTML with inline event handler
+          const clickableHtml = `
+            <div 
+              id="${uniqueId}"
+              class="list-item ml-6 mb-3 p-2 px-3 rounded text-[#1EAEDB] bg-blue-50 hover:bg-blue-100 hover:text-blue-800 cursor-pointer flex items-center transition-all duration-200 border border-[#1EAEDB30]" 
+              style="color: #1EAEDB; border: 1px solid rgba(30, 174, 219, 0.2);"
+              onclick="window.handleQuestionClick('${safeQuestion}')"
+            >
+              ${questionText}
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 ml-1">
+                <path d="M5 12h14"></path>
+                <path d="m12 5 7 7-7 7"></path>
+              </svg>
+            </div>
+          `;
           
-          html = html.replace(`${line}<br />`, clickableItem);
-          console.log("Added clickable item for:", questionText);
-        } else {
-          const regularItem = `<div class="list-item ml-6 mb-2">${questionText}</div>`;
-          html = html.replace(`${line}<br />`, regularItem);
+          // Replace the original line in the HTML
+          html = html.replace(`${line}<br />`, clickableHtml);
+          console.log(`Added clickable question at line ${i}:`, questionText);
         }
-      } else if (line.match(/^\s*\d+\.\s/)) {
-        // Process regular numbered lists
-        html = html.replace(`${line}<br />`, `<ol class="list-decimal ml-6 mb-2"><li>${line.replace(/^\s*\d+\.\s/, '')}</li></ol>`);
-      } else if (line.match(/^\s*\-\s/)) {
-        // Process regular bullet lists
-        html = html.replace(`${line}<br />`, `<ul class="list-disc ml-6 mb-2"><li>${line.replace(/^\s*\-\s/, '')}</li></ul>`);
       }
+      // Process regular numbered and bullet lists outside question section
+      else if (!inQuestionSection) {
+        if (line.match(/^\s*\d+\.\s/)) {
+          // Regular numbered list item
+          const listText = line.replace(/^\s*\d+\.\s/, '').trim();
+          html = html.replace(`${line}<br />`, `<div class="list-decimal ml-6 mb-2">${listText}</div>`);
+        } 
+        else if (line.match(/^\s*[\-\*]\s/)) {
+          // Regular bullet list item
+          const listText = line.replace(/^\s*[\-\*]\s/, '').trim();
+          html = html.replace(`${line}<br />`, `<div class="list-disc ml-6 mb-2">${listText}</div>`);
+        }
+      }
+    }
+    
+    if (questionsFound) {
+      console.log("Found and processed follow-up questions section");
+    } else {
+      console.log("No follow-up questions section found in content");
     }
     
     return html;
   };
 
-  // Create global function for the onclick handler - ensure it's properly set up
+  // Add client-side script to ensure click handler works after hydration
   useEffect(() => {
-    if (onQuestionClick) {
-      // Add a global function that the onClick can call
-      window.handleQuestionClick = (question: string) => {
-        console.log("Question clicked:", question);
-        onQuestionClick(question);
-      };
-    }
-    
-    // Cleanup
-    return () => {
-      if (window.handleQuestionClick) {
-        delete window.handleQuestionClick;
+    // Function to add click handlers directly to DOM elements
+    const setupClickHandlers = () => {
+      if (onQuestionClick) {
+        // Find all question elements and attach event listeners directly
+        document.querySelectorAll('[id^="question-"]').forEach(element => {
+          element.addEventListener('click', (e) => {
+            // Extract the question text from the element (minus the arrow icon)
+            const questionText = element.textContent?.trim().slice(0, -1) || '';
+            console.log("Direct DOM click on question:", questionText);
+            onQuestionClick(questionText);
+          });
+        });
       }
     };
-  }, [onQuestionClick]);
+    
+    // Run setup after a short delay to ensure DOM is fully rendered
+    const timer = setTimeout(setupClickHandlers, 100);
+    return () => clearTimeout(timer);
+  }, [analysisItems, onQuestionClick]);
 
   return (
     <div className="flex-grow overflow-y-auto p-4 bg-card">

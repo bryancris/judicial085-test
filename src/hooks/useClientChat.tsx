@@ -120,7 +120,7 @@ export const useClientChat = (clientId: string) => {
   };
 
   const handleFollowUpQuestionClick = (question: string) => {
-    console.log("Follow-up question clicked:", question);
+    console.log("Follow-up question clicked in hook:", question);
     setActiveTab("attorney");
     setPrefilledMessage(question);
   };
