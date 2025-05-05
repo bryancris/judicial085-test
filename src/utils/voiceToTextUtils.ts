@@ -16,8 +16,8 @@ export const useSpeechRecognition = () => {
     }
 
     // Use the appropriate speech recognition API
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
+    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognitionAPI();
     
     // Configure recognition
     recognition.continuous = true;
@@ -26,7 +26,7 @@ export const useSpeechRecognition = () => {
     
     let finalTranscript = '';
     
-    recognition.onresult = (event) => {
+    recognition.onresult = (event: any) => {
       let interimTranscript = '';
       
       for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -43,7 +43,7 @@ export const useSpeechRecognition = () => {
       }
     };
     
-    recognition.onerror = (event) => {
+    recognition.onerror = (event: any) => {
       console.error("Speech recognition error", event.error);
       onErrorCallback(`Error: ${event.error}`);
     };
