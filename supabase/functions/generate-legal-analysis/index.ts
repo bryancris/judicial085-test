@@ -43,9 +43,20 @@ generate a concise legal analysis with the following sections:
 
 4. **RECOMMENDED FOLLOW-UP QUESTIONS:** Suggest 3-5 specific questions the attorney should ask next to gather important information for the case.
 
-Format your response in Markdown with bold section headers. Always format the follow-up questions as a numbered list under a clear "**RECOMMENDED FOLLOW-UP QUESTIONS**" header. Each question must begin with a number followed by a period (e.g., "1. Question text").
+Format your response in Markdown with bold section headers. Under the "**RECOMMENDED FOLLOW-UP QUESTIONS**" section, 
+format each question as a numbered list with the exact format:
 
-After the numbered questions, don't add any additional content or new headers that could break the questions section formatting.
+1. First question text
+2. Second question text
+3. Third question text
+
+Make sure each question:
+- Starts with a number followed by a period and a space (e.g. "1. ")
+- Is clear and specific
+- Is directly relevant to the case
+- Is on its own line
+
+After the last follow-up question, don't add any additional content or new sections.
 `;
 
     // Format the conversation for the API request
