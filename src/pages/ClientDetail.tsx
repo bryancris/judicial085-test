@@ -1,7 +1,6 @@
-
 import React from "react";
 import { useParams, Navigate, Link } from "react-router-dom";
-import { ArrowLeft, FileText, BookOpen, FileSearch, Video, FileChart } from "lucide-react";
+import { ArrowLeft, FileText, BookOpen, FileSearch, Video, FileChartLine } from "lucide-react";
 import NavBar from "@/components/NavBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -101,7 +100,7 @@ const ClientDetail = () => {
               <Video className="h-4 w-4" /> Deposition
             </TabsTrigger>
             <TabsTrigger value="case-analysis" className="flex items-center gap-2">
-              <FileChart className="h-4 w-4" /> Case Analysis
+              <FileChartLine className="h-4 w-4" /> Case Analysis
             </TabsTrigger>
           </TabsList>
           
