@@ -6,26 +6,12 @@ import NavBar from '@/components/NavBar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { User, UserPlus } from 'lucide-react';
+import ClientForm from '@/components/clients/ClientForm';
+import ClientList from '@/components/clients/ClientList';
+import { useDocumentAuth } from '@/hooks/useDocumentAuth';
 
 const Clients = () => {
-  const [session, setSession] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const { session, loading } = useDocumentAuth();
 
   // If not authenticated, redirect to auth page
   if (!loading && !session) {
@@ -58,8 +44,7 @@ const Clients = () => {
                 <CardDescription>View and manage your existing clients</CardDescription>
               </CardHeader>
               <CardContent>
-                <p>Your client list will appear here.</p>
-                {/* Client list will be implemented in future updates */}
+                <ClientList />
               </CardContent>
             </Card>
           </TabsContent>
@@ -71,8 +56,7 @@ const Clients = () => {
                 <CardDescription>Enter client information to add them to your system</CardDescription>
               </CardHeader>
               <CardContent>
-                <p>Client registration form will appear here.</p>
-                {/* Add client form will be implemented in future updates */}
+                <ClientForm />
               </CardContent>
             </Card>
           </TabsContent>
