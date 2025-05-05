@@ -28,7 +28,7 @@ const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalA
     if (onQuestionClick) {
       // Add a global function that the onClick handlers can call
       window.handleQuestionClick = (question: string) => {
-        console.log("Question clicked:", question);
+        console.log("Question clicked via global handler:", question);
         onQuestionClick(question);
       };
     }
@@ -41,10 +41,31 @@ const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalA
     };
   }, [onQuestionClick]);
 
+  // Add client-side script to ensure click handler works after hydration
+  useEffect(() => {
+    // Function to add click handlers directly to DOM elements
+    const setupClickHandlers = () => {
+      if (onQuestionClick) {
+        // Find all question elements and attach event listeners directly
+        document.querySelectorAll('[id^="question-"]').forEach(element => {
+          console.log("Setting up direct click handler for:", element.textContent);
+          element.addEventListener('click', (e) => {
+            // Extract the question text from the element (minus the arrow icon)
+            const questionText = element.textContent?.trim().slice(0, -1) || '';
+            console.log("Direct DOM click on question:", questionText);
+            onQuestionClick(questionText);
+          });
+        });
+      }
+    };
+    
+    // Run setup after a short delay to ensure DOM is fully rendered
+    const timer = setTimeout(setupClickHandlers, 100);
+    return () => clearTimeout(timer);
+  }, [analysisItems, onQuestionClick]);
+
   // Render markdown with special handling for follow-up questions
   const renderMarkdown = (content: string) => {
-    console.log("Rendering markdown content");
-    
     // Convert the content to HTML first (basic markdown conversion)
     let html = content
       // Convert headers (both # style and ** style)
@@ -63,11 +84,12 @@ const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalA
     let inQuestionSection = false;
     let questionsFound = false;
     
+    console.log("Processing content with", lines.length, "lines");
+    
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
       
       // Detect the recommended follow-up questions section using multiple patterns
-      // Match both hash-style headers and bold-text style headers
       if (
         line.match(/^#+\s*RECOMMENDED\s+FOLLOW[\s-]UP\s+QUESTIONS/i) || 
         line.match(/^\*\*RECOMMENDED\s+FOLLOW[\s-]UP\s+QUESTIONS.*\*\*/i)
@@ -77,28 +99,37 @@ const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalA
         console.log(`Found questions section at line ${i}:`, line);
         continue;
       } 
-      // Check if we've hit another header to end the questions section
-      else if (inQuestionSection && (line.match(/^#+\s/) || line.match(/^\*\*.*\*\*$/))) {
-        inQuestionSection = false;
+
+      // Only end the question section if we hit a major header (not a list item or regular text)
+      // This prevents premature ending of the questions section
+      else if (inQuestionSection && 
+        line.match(/^#+\s+(?!RECOMMENDED)/i) && // Header but not a RECOMMENDED header
+        !line.match(/^\d+\.\s/) // Not a numbered list
+      ) {
         console.log("Exiting questions section at line:", line);
+        inQuestionSection = false;
       }
       
-      // Make list items in the questions section clickable
-      if (inQuestionSection && (line.match(/^\s*\d+\.\s/) || line.match(/^\s*\-\s/) || line.match(/^\s*\*\s/))) {
+      // Make ANY numbered or bulleted list items in the questions section clickable
+      if (inQuestionSection && 
+         (line.match(/^\s*\d+\.\s/) || line.match(/^\s*[\-\*]\s/))) {
+        
         // Extract the question text (remove the list marker)
-        const questionText = line.replace(/^\s*(\d+\.|\-|\*)\s/, '').trim();
+        let questionText = line.replace(/^\s*(\d+\.|\-|\*)\s/, '').trim();
         
         if (questionText && onQuestionClick) {
+          console.log("Processing question item:", questionText);
+          
           // Create the clickable element with a unique identifier
           const uniqueId = `question-${i}-${Date.now()}`;
           const safeQuestion = questionText.replace(/'/g, "\\'").replace(/"/g, '\\"');
           
-          // Define the clickable HTML with inline event handler
+          // Define the clickable HTML with inline event handler and strong styling
           const clickableHtml = `
             <div 
               id="${uniqueId}"
               class="list-item ml-6 mb-3 p-2 px-3 rounded text-[#1EAEDB] bg-blue-50 hover:bg-blue-100 hover:text-blue-800 cursor-pointer flex items-center transition-all duration-200 border border-[#1EAEDB30]" 
-              style="color: #1EAEDB; border: 1px solid rgba(30, 174, 219, 0.2);"
+              style="color: #1EAEDB !important; border: 1px solid rgba(30, 174, 219, 0.2) !important; cursor: pointer !important; background-color: #EBF8FC !important;"
               onclick="window.handleQuestionClick('${safeQuestion}')"
             >
               ${questionText}
@@ -109,7 +140,7 @@ const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalA
             </div>
           `;
           
-          // Replace the original line in the HTML
+          // Replace the original line in the HTML with stronger styling
           html = html.replace(`${line}<br />`, clickableHtml);
           console.log(`Added clickable question at line ${i}:`, questionText);
         }
@@ -137,28 +168,6 @@ const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalA
     
     return html;
   };
-
-  // Add client-side script to ensure click handler works after hydration
-  useEffect(() => {
-    // Function to add click handlers directly to DOM elements
-    const setupClickHandlers = () => {
-      if (onQuestionClick) {
-        // Find all question elements and attach event listeners directly
-        document.querySelectorAll('[id^="question-"]').forEach(element => {
-          element.addEventListener('click', (e) => {
-            // Extract the question text from the element (minus the arrow icon)
-            const questionText = element.textContent?.trim().slice(0, -1) || '';
-            console.log("Direct DOM click on question:", questionText);
-            onQuestionClick(questionText);
-          });
-        });
-      }
-    };
-    
-    // Run setup after a short delay to ensure DOM is fully rendered
-    const timer = setTimeout(setupClickHandlers, 100);
-    return () => clearTimeout(timer);
-  }, [analysisItems, onQuestionClick]);
 
   return (
     <div className="flex-grow overflow-y-auto p-4 bg-card">

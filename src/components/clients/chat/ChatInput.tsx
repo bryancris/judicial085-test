@@ -31,6 +31,10 @@ const ChatInput = ({
       // Focus the textarea when prefilled message changes
       if (textareaRef.current) {
         textareaRef.current.focus();
+        
+        // Set cursor at the end of the text
+        const length = prefilledMessage.length;
+        textareaRef.current.setSelectionRange(length, length);
       }
     }
   }, [prefilledMessage]);
