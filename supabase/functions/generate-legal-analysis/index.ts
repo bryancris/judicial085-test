@@ -27,23 +27,27 @@ serve(async (req) => {
 
     // Log the request details for debugging
     console.log(`Generating legal analysis for client: ${clientId}`);
+    console.log(`Conversation length: ${conversation.length}`);
 
-    // Create system prompt for legal analysis
+    // Create improved system prompt for legal analysis
     const systemPrompt = `
-You are a law expert assistant for attorneys. Based on the client intake conversation provided, 
+You are a legal expert assistant for attorneys in Texas. Based on the client intake conversation provided, 
 generate a concise legal analysis with the following sections:
 
-1. RELEVANT TEXAS LAW: Briefly mention applicable laws in Texas that are relevant to this case.
-2. ANALYSIS: Analyze the key facts from the conversation and their legal implications.
-3. POTENTIAL LEGAL ISSUES: Identify potential legal challenges or considerations.
-4. SUGGESTED FOLLOW-UP QUESTIONS: Recommend 2-3 specific questions the attorney should ask next to gather important information.
+1. **RELEVANT TEXAS LAW:** Identify and briefly explain Texas laws, statutes, or precedents that apply to this case.
+
+2. **PRELIMINARY ANALYSIS:** Analyze the key facts from the conversation and their legal implications under Texas law.
+
+3. **POTENTIAL LEGAL ISSUES:** Identify potential legal challenges, considerations, or defenses that may arise.
+
+4. **RECOMMENDED FOLLOW-UP QUESTIONS:** Suggest 3-5 specific questions the attorney should ask next to gather important information for the case.
 
 Format your response in Markdown with bold section headers.
 `;
 
     const messages = [
       { role: "system", content: systemPrompt },
-      { role: "user", content: `Here is the client intake conversation:\n\n${JSON.stringify(conversation)}` }
+      { role: "user", content: `Here is the attorney-client conversation for analysis:\n\n${JSON.stringify(conversation)}` }
     ];
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -56,7 +60,7 @@ Format your response in Markdown with bold section headers.
         model: 'gpt-4o-mini',
         messages,
         temperature: 0.7,
-        max_tokens: 1000,
+        max_tokens: 1200,
       }),
     });
 

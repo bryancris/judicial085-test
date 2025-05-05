@@ -27,35 +27,12 @@ serve(async (req) => {
 
     // Log the request details for debugging
     console.log(`Processing chat completion for client: ${clientId}`);
+    console.log(`Messages length: ${messages.length}`);
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages,
-        temperature: 0.7,
-        max_tokens: 500,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error('OpenAI API error:', data);
-      return new Response(
-        JSON.stringify({ error: data.error?.message || 'Failed to generate response' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const text = data.choices[0]?.message?.content || '';
-
+    // We no longer need this endpoint for client simulation
+    // Just return a simple response to indicate success
     return new Response(
-      JSON.stringify({ text }),
+      JSON.stringify({ text: "This endpoint is no longer used for client simulation" }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

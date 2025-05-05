@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { generateChatCompletion, generateLegalAnalysis, Message as OpenAIMessage } from "@/utils/openaiService";
+import { generateLegalAnalysis, Message as OpenAIMessage } from "@/utils/openaiService";
 import { ChatMessageProps } from "@/components/clients/chat/ChatMessage";
 
 export interface AnalysisItem {
@@ -40,76 +40,51 @@ export const useClientChat = (clientId: string) => {
 
       // Add user message to chat
       setMessages(prev => [...prev, newMessage]);
-
-      if (activeTab === "attorney") {
-        // Generate AI response for attorney questions
-        setIsLoading(true);
-        
-        try {
-          // Convert chat messages to OpenAI format
-          const openAIMessages: OpenAIMessage[] = [
-            {
-              role: "system",
-              content: "You are a legal assistant helping an attorney conduct a client intake interview. Respond as if you are the client answering the attorney's questions based on previous context. Keep responses concise and conversational."
-            },
-            ...messages.map(msg => ({
-              role: msg.role === "attorney" ? "user" : "assistant",
-              content: msg.content
-            } as OpenAIMessage)),
-            {
-              role: "user",
-              content: message
-            }
-          ];
-
-          const { text, error } = await generateChatCompletion(openAIMessages, clientId);
-          
-          if (error) {
-            toast({
-              title: "Error",
-              description: "Failed to generate response. Please try again.",
-              variant: "destructive",
-            });
-          } else if (text) {
-            // Add AI response to chat
-            const aiResponse: ChatMessageProps = {
-              content: text,
-              timestamp: formatTimestamp(),
-              role: "client"
-            };
-            setMessages(prev => [...prev, aiResponse]);
-            
-            // Generate legal analysis after new exchange
-            generateAnalysis([...messages, newMessage, aiResponse]);
-          }
-        } catch (err: any) {
-          console.error("Error in chat completion:", err);
-          toast({
-            title: "Error",
-            description: "An unexpected error occurred. Please try again.",
-            variant: "destructive",
-          });
-        } finally {
-          setIsLoading(false);
-        }
+      
+      try {
+        // Generate legal analysis after new message is added
+        const updatedMessages = [...messages, newMessage];
+        await generateAnalysis(updatedMessages);
+      } catch (err: any) {
+        console.error("Error processing message:", err);
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
       }
     }
   };
 
   const generateAnalysis = async (currentMessages: ChatMessageProps[]) => {
+    // Only run analysis if we have at least one message from both attorney and client
+    const hasAttorneyMessages = currentMessages.some(msg => msg.role === "attorney");
+    const hasClientMessages = currentMessages.some(msg => msg.role === "client");
+    
+    if (!hasAttorneyMessages || !hasClientMessages) {
+      return; // Don't generate analysis until we have both sides of the conversation
+    }
+    
     setIsAnalysisLoading(true);
     
     try {
       // Convert chat messages to OpenAI format
       const conversation: OpenAIMessage[] = currentMessages.map(msg => ({
-        role: msg.role === "attorney" ? "user" : "assistant",
-        content: msg.content
+        role: "user",
+        content: `${msg.role.toUpperCase()}: ${msg.content}`
       } as OpenAIMessage));
 
       const { analysis, error } = await generateLegalAnalysis(clientId, conversation);
       
       if (error) {
         console.error("Error generating analysis:", error);
+        toast({
+          title: "Analysis Error",
+          description: "Failed to generate legal analysis. Please try again.",
+          variant: "destructive",
+        });
       } else if (analysis) {
         setLegalAnalysis(prev => [
           ...prev,
@@ -121,6 +96,11 @@ export const useClientChat = (clientId: string) => {
       }
     } catch (err: any) {
       console.error("Error generating legal analysis:", err);
+      toast({
+        title: "Analysis Error",
+        description: "An unexpected error occurred while generating legal analysis.",
+        variant: "destructive",
+      });
     } finally {
       setIsAnalysisLoading(false);
     }

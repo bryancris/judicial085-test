@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export type MessageRole = "system" | "assistant" | "user";
@@ -8,6 +7,7 @@ export interface Message {
   content: string;
 }
 
+// Keep this function for backward compatibility
 export const generateChatCompletion = async (
   messages: Message[],
   clientId: string

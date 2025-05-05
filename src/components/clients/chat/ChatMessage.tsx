@@ -17,11 +17,11 @@ const ChatMessage = ({ content, timestamp, role }: ChatMessageProps) => {
   return (
     <div className={cn(
       "flex mb-4",
-      isAttorney ? "justify-start" : "justify-start"
+      isAttorney ? "justify-start" : "justify-end"
     )}>
       <div className={cn(
         "flex flex-col max-w-[80%]",
-        isAttorney ? "items-start" : "items-start"
+        isAttorney ? "items-start" : "items-end"
       )}>
         <div className="flex items-center mb-1">
           <Avatar className="h-6 w-6 mr-2">
@@ -38,7 +38,7 @@ const ChatMessage = ({ content, timestamp, role }: ChatMessageProps) => {
         
         <div className={cn(
           "rounded-lg px-4 py-3",
-          isAttorney ? "bg-muted text-foreground" : "bg-muted text-foreground",
+          isAttorney ? "bg-muted text-foreground" : "bg-primary/10 text-foreground",
           "border border-border"
         )}>
           <p className="whitespace-pre-wrap break-words">{content}</p>

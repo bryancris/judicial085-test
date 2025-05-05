@@ -38,7 +38,7 @@ const ChatInput = ({ onSendMessage, isLoading, activeTab, onTabChange }: ChatInp
           onClick={() => onTabChange("attorney")}
         >
           <span className="flex items-center gap-1">
-            Attorney Question
+            Attorney
           </span>
         </Button>
         <Button 
@@ -48,7 +48,7 @@ const ChatInput = ({ onSendMessage, isLoading, activeTab, onTabChange }: ChatInp
           onClick={() => onTabChange("client")}
         >
           <span className="flex items-center gap-1">
-            Client Response
+            Client
           </span>
         </Button>
       </div>
@@ -57,7 +57,7 @@ const ChatInput = ({ onSendMessage, isLoading, activeTab, onTabChange }: ChatInp
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={`Enter your ${activeTab === "attorney" ? "question to the client" : "response as client"}...`}
+          placeholder={`Enter ${activeTab === "attorney" ? "attorney's question" : "client's response"}...`}
           className="min-h-[80px] resize-none flex-grow"
           disabled={isLoading}
         />
@@ -71,7 +71,7 @@ const ChatInput = ({ onSendMessage, isLoading, activeTab, onTabChange }: ChatInp
           ) : (
             <Send className="h-4 w-4 mr-1" />
           )}
-          {activeTab === "attorney" ? "Ask Question" : "Send Response"}
+          Send as {activeTab === "attorney" ? "Attorney" : "Client"}
         </Button>
       </div>
     </div>

@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import ChatMessage, { ChatMessageProps } from "./ChatMessage";
 
@@ -9,21 +9,33 @@ interface ChatViewProps {
 }
 
 const ChatView = ({ messages, isLoading }: ChatViewProps) => {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Scroll to bottom when messages change
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
+
   return (
     <div className="flex-grow overflow-y-auto p-4 bg-card">
       {messages.length === 0 ? (
         <div className="flex items-center justify-center h-full text-muted-foreground">
-          No messages yet. Start the interview by asking a question.
+          Start the interview by asking a question as the attorney or providing a response as the client.
         </div>
       ) : (
-        messages.map((msg, index) => (
-          <ChatMessage key={index} {...msg} />
-        ))
+        <div>
+          {messages.map((msg, index) => (
+            <ChatMessage key={index} {...msg} />
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
       )}
       {isLoading && (
         <div className="flex items-center gap-2 text-muted-foreground mt-4">
           <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Client is typing...</span>
+          <span>Loading...</span>
         </div>
       )}
     </div>
