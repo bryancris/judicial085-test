@@ -9,5 +9,9 @@ export interface Client {
   city: string | null;
   state: string | null;
   zip_code: string | null;
+  case_number: string | null;
+  case_types: string[] | null;
+  referred_by: string | null;
+  case_notes: string | null;
   created_at: string;
 }
