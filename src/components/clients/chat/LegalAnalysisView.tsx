@@ -56,132 +56,90 @@ const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalA
       // Convert line breaks
       .replace(/\n/g, '<br />');
 
-    // Second pass: Identify and enhance the follow-up questions section
-    const contentLines = content.split('\n');
-    let processedHtml = html;
-    let questionSectionStartIndex = -1;
-    let questionSectionEndIndex = -1;
+    // Modified section to handle follow-up questions better
+    // Split content into lines for better processing
+    const lines = content.split('\n');
+    let inQuestionSection = false;
+    let processedLines = [];
+    
+    // Flag to limit questions to 4
+    let questionCount = 0;
+    const MAX_QUESTIONS = 4;
 
-    // First, locate the RECOMMENDED FOLLOW-UP QUESTIONS section
-    for (let i = 0; i < contentLines.length; i++) {
-      const line = contentLines[i].trim();
-      // Match various forms of the header (with ** or # formatting)
-      if (
-        line.match(/^#+\s*RECOMMENDED\s+FOLLOW[\s\-]UP\s+QUESTIONS/i) || 
-        line.match(/^\*\*RECOMMENDED\s+FOLLOW[\s\-]UP\s+QUESTIONS.*\*\*/i)
-      ) {
-        questionSectionStartIndex = i;
-        break;
-      }
-    }
-
-    // If we found the section, process it
-    if (questionSectionStartIndex >= 0) {
-      // Find the end of the questions section (next header or end of content)
-      for (let i = questionSectionStartIndex + 1; i < contentLines.length; i++) {
-        const line = contentLines[i].trim();
-        // Look for the next major section header (only level 1 or 2)
-        if (
-          (line.match(/^#{1,2}\s+[^0-9]/i) && !line.match(/FOLLOW[\s\-]UP\s+QUESTIONS/i)) || 
-          line.match(/^\*\*[^*]+\*\*$/) // Bold text that could be a new section header
-        ) {
-          questionSectionEndIndex = i - 1;
-          break;
-        }
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      
+      // Detect when we enter the recommended follow-up questions section
+      if (/RECOMMENDED\s+FOLLOW[\s\-]*UP\s+QUESTIONS/i.test(line)) {
+        inQuestionSection = true;
+        processedLines.push(line);
+        continue;
       }
       
-      // If we didn't find an end, it goes to the end of the content
-      if (questionSectionEndIndex === -1) {
-        questionSectionEndIndex = contentLines.length - 1;
-      }
-
-      // Now process all the question items in this section
-      for (let i = questionSectionStartIndex + 1; i <= questionSectionEndIndex; i++) {
-        const line = contentLines[i].trim();
+      // If we're in the questions section, process numbered questions
+      if (inQuestionSection) {
+        const questionMatch = line.match(/^(\d+)\.\s+(.*)/);
         
-        // Look for numbered list items (allowing for different spacing)
-        const questionMatch = line.match(/^\s*(\d+)\.\s+(.*)/);
-        if (questionMatch && questionMatch[2]) {
-          const questionNumber = questionMatch[1];
-          const questionText = questionMatch[2].trim();
-          
-          if (questionText && onQuestionClick) {
-            // Create a unique ID for this question
-            const uniqueId = `question-${i}-${Date.now()}`;
+        if (questionMatch && questionMatch[1] && questionMatch[2]) {
+          // Only process up to 4 questions
+          if (questionCount < MAX_QUESTIONS) {
+            const questionNumber = questionMatch[1];
+            const questionText = questionMatch[2].trim();
             
-            // Escape the question text for use in JavaScript
-            const safeQuestion = questionText
-              .replace(/'/g, "\\'")
-              .replace(/"/g, '\\"');
-            
-            // Create the HTML for a styled, clickable question item
-            const clickableHtml = `
+            // Create clickable question elements
+            const clickableQuestion = `
               <div 
-                id="${uniqueId}"
-                class="list-item ml-6 mb-3 p-2 px-3 rounded bg-blue-50 hover:bg-blue-100 cursor-pointer flex items-center transition-all duration-200 border border-blue-200"
-                style="color: #1EAEDB !important; cursor: pointer !important; background-color: #EBF8FC !important; border: 1px solid rgba(30, 174, 219, 0.3) !important;"
-                onclick="window.handleQuestionClick('${safeQuestion}')"
-              >
+                class="question-item my-2 p-3 rounded bg-blue-50 hover:bg-blue-100 cursor-pointer border border-blue-200 flex items-center"
+                style="color: #1E40AF; cursor: pointer; background-color: #EFF6FF; border: 1px solid #BFDBFE;"
+                onclick="window.handleQuestionClick('${questionText.replace(/'/g, "\\'").replace(/"/g, '\\"')}')">
                 <span class="mr-2 font-medium">${questionNumber}.</span>
                 <span>${questionText}</span>
                 <span class="ml-auto text-blue-500">➡</span>
               </div>
             `;
             
-            // Replace the original line in the HTML
-            // First, try to replace the exact HTML that would have been generated for this line
-            const lineHtml = `${questionNumber}. ${questionText}<br />`;
-            const lineRegex = new RegExp(lineHtml.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-            
-            if (processedHtml.includes(lineHtml)) {
-              processedHtml = processedHtml.replace(lineRegex, clickableHtml);
-            } else {
-              // Fallback: Try a more flexible match
-              const flexRegex = new RegExp(`\\s*${questionNumber}\\.\\s*${questionText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*<br\\s*\\/?>`, 'i');
-              processedHtml = processedHtml.replace(flexRegex, clickableHtml);
-            }
+            processedLines.push(clickableQuestion);
+            questionCount++;
           }
+        } else if (line.trim() === '' || (line.trim().startsWith('5.') && questionCount >= 4)) {
+          // Skip empty lines and the 5th question if we already have 4
+          continue;
+        } else if (/^[A-Za-z]+:/.test(line) || /^#{1,3}\s+/.test(line) || /^\*\*[^*]+\*\*$/.test(line)) {
+          // Detect new section headers to exit question section
+          inQuestionSection = false;
+          processedLines.push(line);
+        } else {
+          // Any other content in the question section that's not a question or new header
+          processedLines.push(line);
         }
+      } else {
+        // Not in question section, just pass through
+        processedLines.push(line);
       }
     }
-
-    return processedHtml;
+    
+    // Join lines back together
+    return processedLines.join('<br />');
   };
 
   // Add direct DOM manipulation after rendering to ensure clickable elements work
   useEffect(() => {
     if (!onQuestionClick) return;
     
-    // Function to add click handlers to all question elements
+    // Function to add click handlers to question elements
     const setupClickHandlers = () => {
-      const questionElements = document.querySelectorAll('[id^="question-"]');
-      console.log(`Found ${questionElements.length} question elements to set up handlers for`);
+      const questionElements = document.querySelectorAll('.question-item');
       
       questionElements.forEach(element => {
-        // Remove any existing handlers to prevent duplicates
-        const clone = element.cloneNode(true);
-        element.parentNode?.replaceChild(clone, element);
-        
-        // Get the question text (everything except the arrow)
-        let questionText = '';
-        const textNodes = Array.from(clone.childNodes)
-          .filter(node => node.nodeType === Node.TEXT_NODE || (node as Element).tagName !== 'SPAN' || !(node as Element).classList.contains('ml-auto'));
-        
-        textNodes.forEach(node => {
-          questionText += node.textContent || '';
+        element.addEventListener('click', (e) => {
+          // Find the question text (skip the number and the arrow)
+          const questionText = element.querySelector('span:nth-child(2)')?.textContent || '';
+          if (questionText) {
+            console.log(`Question clicked: ${questionText}`);
+            onQuestionClick(questionText);
+          }
+          e.stopPropagation();
         });
-        
-        questionText = questionText.trim();
-        if (questionText) {
-          // Extract the question without the number prefix
-          const cleanQuestion = questionText.replace(/^\d+\.\s*/, '');
-          
-          // Add click handler
-          clone.addEventListener('click', () => {
-            console.log(`Question clicked: ${cleanQuestion}`);
-            onQuestionClick(cleanQuestion);
-          });
-        }
       });
     };
     

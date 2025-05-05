@@ -30,7 +30,7 @@ serve(async (req) => {
     console.log(`Generating legal analysis for client: ${clientId}`);
     console.log(`Conversation length: ${conversation.length}`);
 
-    // Create improved system prompt for legal analysis
+    // Create improved system prompt for legal analysis - modified to request exactly 4 follow-up questions
     const systemPrompt = `
 You are a legal expert assistant for attorneys in Texas. Based on the attorney-client conversation provided, 
 generate a concise legal analysis with the following sections:
@@ -41,7 +41,7 @@ generate a concise legal analysis with the following sections:
 
 3. **POTENTIAL LEGAL ISSUES:** Identify potential legal challenges, considerations, or defenses that may arise.
 
-4. **RECOMMENDED FOLLOW-UP QUESTIONS:** Suggest 3-5 specific questions the attorney should ask next to gather important information for the case.
+4. **RECOMMENDED FOLLOW-UP QUESTIONS:** Suggest exactly 4 specific questions the attorney should ask next to gather important information for the case.
 
 Format your response in Markdown with bold section headers. Under the "**RECOMMENDED FOLLOW-UP QUESTIONS**" section, 
 format each question as a numbered list with the exact format:
@@ -49,6 +49,7 @@ format each question as a numbered list with the exact format:
 1. First question text
 2. Second question text
 3. Third question text
+4. Fourth question text
 
 Make sure each question:
 - Starts with a number followed by a period and a space (e.g. "1. ")
@@ -56,7 +57,7 @@ Make sure each question:
 - Is directly relevant to the case
 - Is on its own line
 
-After the last follow-up question, don't add any additional content or new sections.
+After the last follow-up question, don't add any additional content, comments, or new sections. Generate exactly 4 follow-up questions, no more and no less.
 `;
 
     // Format the conversation for the API request
