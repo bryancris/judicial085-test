@@ -67,18 +67,17 @@ const ClientDetail = () => {
     <div className="min-h-screen flex flex-col">
       <NavBar />
       <main className="flex-grow container mx-auto px-4 py-8">
-        <div className="mb-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">
+            {client.first_name} {client.last_name}
+          </h1>
           <Link to="/clients">
-            <Button variant="ghost" className="pl-0 flex items-center gap-2">
+            <Button variant="outline" className="flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" />
               Back to Clients
             </Button>
           </Link>
         </div>
-
-        <h1 className="text-3xl font-bold mb-6">
-          {client.first_name} {client.last_name}
-        </h1>
 
         <div className="mb-8">
           <ClientInformationAccordion 
