@@ -1,7 +1,13 @@
 
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { generateLegalAnalysis, Message as OpenAIMessage } from "@/utils/openaiService";
+import { 
+  generateLegalAnalysis, 
+  saveMessage, 
+  saveLegalAnalysis,
+  getClientMessages,
+  getClientLegalAnalyses
+} from "@/utils/openaiService";
 import { ChatMessageProps } from "@/components/clients/chat/ChatMessage";
 
 export interface AnalysisItem {
@@ -15,6 +21,7 @@ export const useClientChat = (clientId: string) => {
   const [legalAnalysis, setLegalAnalysis] = useState<AnalysisItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const { toast } = useToast();
 
   const formatTimestamp = (): string => {
@@ -23,14 +30,52 @@ export const useClientChat = (clientId: string) => {
   };
 
   useEffect(() => {
-    // In a real app, you would load chat history from the database
-    // For now, we'll use empty arrays
-    setMessages([]);
-    setLegalAnalysis([]);
-  }, [clientId]);
+    const loadChatHistory = async () => {
+      setIsLoadingHistory(true);
+      try {
+        // Load messages
+        const { messages: chatMessages, error: messagesError } = await getClientMessages(clientId);
+        if (messagesError) {
+          toast({
+            title: "Error loading messages",
+            description: messagesError,
+            variant: "destructive",
+          });
+        } else {
+          setMessages(chatMessages);
+        }
+
+        // Load legal analyses
+        const { analyses: legalAnalyses, error: analysesError } = await getClientLegalAnalyses(clientId);
+        if (analysesError) {
+          toast({
+            title: "Error loading legal analyses",
+            description: analysesError,
+            variant: "destructive",
+          });
+        } else {
+          setLegalAnalysis(legalAnalyses);
+        }
+      } catch (err: any) {
+        console.error("Error loading chat history:", err);
+        toast({
+          title: "Error",
+          description: "Failed to load chat history. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
+
+    if (clientId) {
+      loadChatHistory();
+    }
+  }, [clientId, toast]);
 
   const handleSendMessage = async (message: string) => {
     if (message.trim()) {
+      setIsLoading(true);
       const timestamp = formatTimestamp();
       const newMessage: ChatMessageProps = {
         content: message,
@@ -40,6 +85,17 @@ export const useClientChat = (clientId: string) => {
 
       // Add user message to chat
       setMessages(prev => [...prev, newMessage]);
+      
+      // Save message to database
+      const { success, error } = await saveMessage(clientId, message, activeTab, timestamp);
+      
+      if (!success) {
+        toast({
+          title: "Error Saving Message",
+          description: error || "Failed to save message to database.",
+          variant: "destructive",
+        });
+      }
       
       try {
         // Generate legal analysis after new message is added
@@ -81,13 +137,26 @@ export const useClientChat = (clientId: string) => {
           variant: "destructive",
         });
       } else if (analysis) {
-        setLegalAnalysis(prev => [
-          ...prev,
-          {
-            content: analysis,
-            timestamp: formatTimestamp()
-          }
-        ]);
+        const timestamp = formatTimestamp();
+        
+        // Add analysis to state
+        const newAnalysis = {
+          content: analysis,
+          timestamp
+        };
+        
+        setLegalAnalysis(prev => [...prev, newAnalysis]);
+        
+        // Save analysis to database
+        const { success, error: saveError } = await saveLegalAnalysis(clientId, analysis, timestamp);
+        
+        if (!success) {
+          toast({
+            title: "Error Saving Analysis",
+            description: saveError || "Failed to save analysis to database.",
+            variant: "destructive",
+          });
+        }
       }
     } catch (err: any) {
       console.error("Error generating legal analysis:", err);
@@ -108,6 +177,7 @@ export const useClientChat = (clientId: string) => {
     legalAnalysis,
     isLoading,
     isAnalysisLoading,
+    isLoadingHistory,
     handleSendMessage,
     formatTimestamp
   };
