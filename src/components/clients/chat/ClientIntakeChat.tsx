@@ -60,7 +60,7 @@ const ClientIntakeChat = ({ clientId }: ClientIntakeChatProps) => {
             ...messages.map(msg => ({
               role: msg.role === "attorney" ? "user" : "assistant",
               content: msg.content
-            })),
+            } as OpenAIMessage)),
             {
               role: "user",
               content: message
@@ -109,7 +109,7 @@ const ClientIntakeChat = ({ clientId }: ClientIntakeChatProps) => {
       const conversation: OpenAIMessage[] = currentMessages.map(msg => ({
         role: msg.role === "attorney" ? "user" : "assistant",
         content: msg.content
-      }));
+      } as OpenAIMessage));
 
       const { analysis, error } = await generateLegalAnalysis(clientId, conversation);
       
