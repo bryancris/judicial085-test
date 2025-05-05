@@ -1,6 +1,6 @@
 
 import React, { useEffect, useRef } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowRight } from "lucide-react";
 
 interface AnalysisItem {
   content: string;
@@ -61,7 +61,7 @@ const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalA
         
         // Replace the normal list rendering with a clickable version
         const clickableItem = onQuestionClick ? 
-          `<div class="list-item ml-6 mb-2 p-1 px-2 rounded hover:bg-muted cursor-pointer text-primary hover:underline" onclick="window.handleQuestionClick('${questionText.replace(/'/g, "\\'")}')">${questionText}</div>` : 
+          `<div class="list-item ml-6 mb-2 p-1 px-2 rounded hover:bg-blue-100 text-[#1EAEDB] hover:underline cursor-pointer flex items-center" onclick="window.handleQuestionClick('${questionText.replace(/'/g, "\\'")}')">${questionText} <span class="ml-1"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span></div>` : 
           `<div class="list-item ml-6 mb-2">${questionText}</div>`;
         
         html = html.replace(`${line}<br />`, clickableItem);
@@ -78,7 +78,7 @@ const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalA
     return html;
   };
 
-  // Create global function for the onclick handler
+  // Create global function for the onclick handler - ensure it's properly set up
   useEffect(() => {
     if (onQuestionClick) {
       // Add a global function that the onClick can call
