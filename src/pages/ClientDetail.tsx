@@ -1,12 +1,13 @@
 
 import React from "react";
 import { useParams, Navigate, Link } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronDown } from "lucide-react";
 import NavBar from "@/components/NavBar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useClientDetail } from "@/hooks/useClientDetail";
 import ClientDetailSkeleton from "@/components/clients/ClientDetailSkeleton";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 
 const ClientDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -68,50 +69,57 @@ const ClientDetail = () => {
           {client.first_name} {client.last_name}
         </h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Contact Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <dl className="space-y-4">
-                <div>
-                  <dt className="text-sm font-medium text-muted-foreground">Email</dt>
-                  <dd className="mt-1">{client.email}</dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-muted-foreground">Phone</dt>
-                  <dd className="mt-1">{client.phone}</dd>
-                </div>
-              </dl>
-            </CardContent>
-          </Card>
+        <div className="mb-8">
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="client-info">
+              <AccordionTrigger className="bg-background hover:bg-muted px-4 py-3 rounded-md border text-lg font-medium">
+                Client Information
+              </AccordionTrigger>
+              <AccordionContent className="pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card>
+                    <CardContent className="pt-6">
+                      <h3 className="text-lg font-semibold mb-4">Contact Information</h3>
+                      <dl className="space-y-4">
+                        <div>
+                          <dt className="text-sm font-medium text-muted-foreground">Email</dt>
+                          <dd className="mt-1">{client.email}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm font-medium text-muted-foreground">Phone</dt>
+                          <dd className="mt-1">{client.phone}</dd>
+                        </div>
+                      </dl>
+                    </CardContent>
+                  </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Address</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <dl className="space-y-4">
-                <div>
-                  <dt className="text-sm font-medium text-muted-foreground">Street Address</dt>
-                  <dd className="mt-1">{client.address || "Not provided"}</dd>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <h3 className="text-lg font-semibold mb-4">Address</h3>
+                      <dl className="space-y-4">
+                        <div>
+                          <dt className="text-sm font-medium text-muted-foreground">Street Address</dt>
+                          <dd className="mt-1">{client.address || "Not provided"}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm font-medium text-muted-foreground">City</dt>
+                          <dd className="mt-1">{client.city || "Not provided"}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm font-medium text-muted-foreground">State</dt>
+                          <dd className="mt-1">{client.state || "Not provided"}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm font-medium text-muted-foreground">ZIP Code</dt>
+                          <dd className="mt-1">{client.zip_code || "Not provided"}</dd>
+                        </div>
+                      </dl>
+                    </CardContent>
+                  </Card>
                 </div>
-                <div>
-                  <dt className="text-sm font-medium text-muted-foreground">City</dt>
-                  <dd className="mt-1">{client.city || "Not provided"}</dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-muted-foreground">State</dt>
-                  <dd className="mt-1">{client.state || "Not provided"}</dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-muted-foreground">ZIP Code</dt>
-                  <dd className="mt-1">{client.zip_code || "Not provided"}</dd>
-                </div>
-              </dl>
-            </CardContent>
-          </Card>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
       </main>
     </div>
