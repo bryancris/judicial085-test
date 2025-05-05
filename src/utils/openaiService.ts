@@ -1,6 +1,6 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { ChatMessageProps } from "@/components/clients/chat/ChatMessage";
+import { SimilarCase } from "@/components/case-analysis/SimilarCasesDialog";
 
 export type MessageRole = "system" | "assistant" | "user";
 
@@ -49,6 +49,27 @@ export const generateLegalAnalysis = async (
   } catch (err: any) {
     console.error("Error generating legal analysis:", err);
     return { analysis: "", error: err.message };
+  }
+};
+
+// New function to search for similar cases
+export const searchSimilarCases = async (
+  clientId: string
+): Promise<{ similarCases: SimilarCase[]; error?: string }> => {
+  try {
+    const { data, error } = await supabase.functions.invoke("search-similar-cases", {
+      body: { clientId },
+    });
+
+    if (error) {
+      console.error("Error searching for similar cases:", error);
+      return { similarCases: [], error: error.message };
+    }
+
+    return { similarCases: data.similarCases || [] };
+  } catch (err: any) {
+    console.error("Error searching for similar cases:", err);
+    return { similarCases: [], error: err.message };
   }
 };
 

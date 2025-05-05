@@ -1,14 +1,18 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RefreshCwIcon } from "lucide-react";
 import { useCaseAnalysis } from "@/hooks/useCaseAnalysis";
 import CaseOutcomePrediction from "./CaseOutcomePrediction";
 import DetailedLegalAnalysis from "./DetailedLegalAnalysis";
 import CaseStrengthsWeaknesses from "./CaseStrengthsWeaknesses";
+import SearchSimilarCasesButton from "./SearchSimilarCasesButton";
+import SimilarCasesDialog from "./SimilarCasesDialog";
 import ConversationSummary from "./ConversationSummary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { searchSimilarCases } from "@/utils/openaiService";
+import { SimilarCase } from "./SimilarCasesDialog";
 
 interface CaseAnalysisContainerProps {
   clientId: string;
@@ -16,12 +20,61 @@ interface CaseAnalysisContainerProps {
 
 const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({ clientId }) => {
   const { analysisData, isLoading, error, generateNewAnalysis } = useCaseAnalysis(clientId);
+  const [isSearchingCases, setIsSearchingCases] = useState(false);
+  const [similarCases, setSimilarCases] = useState<SimilarCase[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const handleRefreshAnalysis = () => {
     if (isLoading) return;
     
     generateNewAnalysis();
+  };
+
+  const handleSearchSimilarCases = async () => {
+    if (isSearchingCases) return;
+    
+    setIsSearchingCases(true);
+    setIsDialogOpen(true);
+    setSearchError(null);
+    
+    try {
+      const { similarCases, error } = await searchSimilarCases(clientId);
+      
+      if (error) {
+        setSearchError(error);
+        toast({
+          title: "Search Failed",
+          description: error,
+          variant: "destructive",
+        });
+      } else {
+        setSimilarCases(similarCases);
+        
+        if (similarCases.length === 0) {
+          toast({
+            title: "No Similar Cases Found",
+            description: "We couldn't find any cases with similar facts or legal issues.",
+          });
+        } else {
+          toast({
+            title: "Similar Cases Found",
+            description: `Found ${similarCases.length} cases with similar facts or legal issues.`,
+          });
+        }
+      }
+    } catch (err: any) {
+      console.error("Error searching for similar cases:", err);
+      setSearchError(err.message || "An unexpected error occurred");
+      toast({
+        title: "Search Error",
+        description: err.message || "An unexpected error occurred while searching for similar cases.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearchingCases(false);
+    }
   };
 
   if (isLoading) {
@@ -97,10 +150,25 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({ clientId 
             isLoading={isLoading}
           />
 
+          {/* Add the Search Similar Cases button here */}
+          <SearchSimilarCasesButton 
+            onClick={handleSearchSimilarCases}
+            isLoading={isSearchingCases}
+          />
+
           <ConversationSummary 
             summary={analysisData.conversationSummary}
             isLoading={isLoading}
             clientId={clientId}
+          />
+
+          {/* Add the Similar Cases Dialog */}
+          <SimilarCasesDialog 
+            isOpen={isDialogOpen}
+            onClose={() => setIsDialogOpen(false)}
+            similarCases={similarCases}
+            isLoading={isSearchingCases}
+            error={searchError}
           />
         </>
       )}

@@ -1,1 +1,12 @@
+
 project_id = "ghpljdgecjmhkwkfctgy"
+[api]
+enabled = true
+[db]
+enabled = true
+[functions]
+enabled = true
+[realtime]
+enabled = true
+[storage]
+enabled = true
