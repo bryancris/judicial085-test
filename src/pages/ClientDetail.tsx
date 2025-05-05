@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useParams, Navigate, Link } from "react-router-dom";
 import { ArrowLeft, FileText, BookOpen, FileSearch, Video, FileChartLine } from "lucide-react";
@@ -9,6 +10,7 @@ import { useClientDetail } from "@/hooks/useClientDetail";
 import ClientDetailSkeleton from "@/components/clients/ClientDetailSkeleton";
 import ClientInformationAccordion from "@/components/clients/ClientInformationAccordion";
 import ClientIntakeChat from "@/components/clients/chat/ClientIntakeChat";
+import CaseAnalysisContainer from "@/components/case-analysis/CaseAnalysisContainer";
 import { useToast } from "@/hooks/use-toast";
 
 const ClientDetail = () => {
@@ -148,10 +150,7 @@ const ClientDetail = () => {
           <TabsContent value="case-analysis" className="py-4">
             <Card>
               <CardContent className="pt-6">
-                <h2 className="text-xl font-semibold mb-4">Case Analysis</h2>
-                <p className="text-muted-foreground">
-                  Comprehensive case analysis and legal strategy will be displayed here.
-                </p>
+                <CaseAnalysisContainer clientId={client.id} />
               </CardContent>
             </Card>
           </TabsContent>
