@@ -51,7 +51,7 @@ const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalA
           console.log("Setting up direct click handler for:", element.textContent);
           element.addEventListener('click', (e) => {
             // Extract the question text from the element (minus the arrow icon)
-            const questionText = element.textContent?.trim().slice(0, -1) || '';
+            const questionText = element.textContent?.replace("➡", "").trim() || '';
             console.log("Direct DOM click on question:", questionText);
             onQuestionClick(questionText);
           });
@@ -79,7 +79,7 @@ const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalA
       // Convert line breaks
       .replace(/\n/g, '<br />');
 
-    // Process the content line by line for follow-up questions
+    // Process the content for follow-up questions section
     const lines = content.split('\n');
     let inQuestionSection = false;
     let questionsFound = false;
@@ -99,23 +99,22 @@ const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalA
         console.log(`Found questions section at line ${i}:`, line);
         continue;
       } 
-
-      // Only end the question section if we hit a major header (not a list item or regular text)
-      // This prevents premature ending of the questions section
+      // Check if we're starting a completely new major section (not just a sub-header)
       else if (inQuestionSection && 
-        line.match(/^#+\s+(?!RECOMMENDED)/i) && // Header but not a RECOMMENDED header
-        !line.match(/^\d+\.\s/) // Not a numbered list
+               line.match(/^#+\s+(?!RECOMMENDED|FOLLOW)/i) && 
+               !line.match(/^#+\s+\d+\./) // Not a numbered header
       ) {
-        console.log("Exiting questions section at line:", line);
-        inQuestionSection = false;
+        // Only exit if it's a major new section (level 1 or 2 header)
+        if (line.match(/^#{1,2}\s/)) {
+          console.log("Exiting questions section at line:", line);
+          inQuestionSection = false;
+        }
       }
       
-      // Make ANY numbered or bulleted list items in the questions section clickable
-      if (inQuestionSection && 
-         (line.match(/^\s*\d+\.\s/) || line.match(/^\s*[\-\*]\s/))) {
-        
+      // Process numbered list items in the questions section
+      if (inQuestionSection && line.match(/^\s*\d+\.\s/)) {
         // Extract the question text (remove the list marker)
-        let questionText = line.replace(/^\s*(\d+\.|\-|\*)\s/, '').trim();
+        let questionText = line.replace(/^\s*\d+\.\s/, '').trim();
         
         if (questionText && onQuestionClick) {
           console.log("Processing question item:", questionText);
@@ -124,7 +123,7 @@ const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalA
           const uniqueId = `question-${i}-${Date.now()}`;
           const safeQuestion = questionText.replace(/'/g, "\\'").replace(/"/g, '\\"');
           
-          // Define the clickable HTML with inline event handler and strong styling
+          // Define the clickable HTML with inline event handler and styling
           const clickableHtml = `
             <div 
               id="${uniqueId}"
@@ -133,29 +132,20 @@ const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalA
               onclick="window.handleQuestionClick('${safeQuestion}')"
             >
               ${questionText}
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 ml-1">
-                <path d="M5 12h14"></path>
-                <path d="m12 5 7 7-7 7"></path>
-              </svg>
+              <span style="margin-left: 4px;">➡</span>
             </div>
           `;
           
-          // Replace the original line in the HTML with stronger styling
-          html = html.replace(`${line}<br />`, clickableHtml);
-          console.log(`Added clickable question at line ${i}:`, questionText);
-        }
-      }
-      // Process regular numbered and bullet lists outside question section
-      else if (!inQuestionSection) {
-        if (line.match(/^\s*\d+\.\s/)) {
-          // Regular numbered list item
-          const listText = line.replace(/^\s*\d+\.\s/, '').trim();
-          html = html.replace(`${line}<br />`, `<div class="list-decimal ml-6 mb-2">${listText}</div>`);
-        } 
-        else if (line.match(/^\s*[\-\*]\s/)) {
-          // Regular bullet list item
-          const listText = line.replace(/^\s*[\-\*]\s/, '').trim();
-          html = html.replace(`${line}<br />`, `<div class="list-disc ml-6 mb-2">${listText}</div>`);
+          // Replace the original line in the HTML
+          const lineWithBr = `${line}<br />`;
+          if (html.includes(lineWithBr)) {
+            html = html.replace(lineWithBr, clickableHtml);
+            console.log(`Styled question at line ${i}:`, questionText);
+          } else {
+            // Fallback if exact match not found - look for the numbered item
+            const pattern = new RegExp(`\\d+\\.\\s+${questionText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}<br />`, 'i');
+            html = html.replace(pattern, clickableHtml);
+          }
         }
       }
     }
