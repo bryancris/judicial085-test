@@ -45,10 +45,26 @@ const ClientForm = () => {
   async function onSubmit(data: ClientFormValues) {
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from('clients').insert({
-        ...data,
-        user_id: (await supabase.auth.getUser()).data.user?.id,
-      });
+      const user = (await supabase.auth.getUser()).data.user;
+      
+      if (!user) {
+        throw new Error("You must be logged in to add a client");
+      }
+      
+      // Ensure all required fields are present with their proper types
+      const clientData = {
+        user_id: user.id,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        email: data.email,
+        phone: data.phone,
+        address: data.address || null,
+        city: data.city || null,
+        state: data.state || null,
+        zip_code: data.zip_code || null
+      };
+      
+      const { error } = await supabase.from('clients').insert(clientData);
       
       if (error) throw error;
       
