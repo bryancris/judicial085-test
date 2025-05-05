@@ -15,7 +15,7 @@ interface ClientInformationAccordionProps {
 
 const ClientInformationAccordion = ({ client, onEditClick }: ClientInformationAccordionProps) => {
   return (
-    <Accordion type="single" collapsible defaultValue="client-info" className="w-full">
+    <Accordion type="single" collapsible className="w-full">
       <AccordionItem value="client-info">
         <div className="flex justify-between items-center">
           <AccordionTrigger className="bg-background hover:bg-muted px-4 py-3 rounded-md border text-lg font-medium flex-grow">
