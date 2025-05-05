@@ -22,6 +22,7 @@ export const useClientChat = (clientId: string) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [prefilledMessage, setPrefilledMessage] = useState("");
   const { toast } = useToast();
 
   const formatTimestamp = (): string => {
@@ -114,6 +115,11 @@ export const useClientChat = (clientId: string) => {
     }
   };
 
+  const handleFollowUpQuestionClick = (question: string) => {
+    setActiveTab("attorney");
+    setPrefilledMessage(question);
+  };
+
   const generateAnalysis = async (currentMessages: ChatMessageProps[]) => {
     // Only run analysis if we have at least one message from both attorney and client
     const hasAttorneyMessages = currentMessages.some(msg => msg.role === "attorney");
@@ -178,7 +184,9 @@ export const useClientChat = (clientId: string) => {
     isLoading,
     isAnalysisLoading,
     isLoadingHistory,
+    prefilledMessage,
     handleSendMessage,
+    handleFollowUpQuestionClick,
     formatTimestamp
   };
 };

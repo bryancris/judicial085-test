@@ -10,9 +10,10 @@ interface AnalysisItem {
 interface LegalAnalysisViewProps {
   analysisItems: AnalysisItem[];
   isLoading: boolean;
+  onQuestionClick?: (question: string) => void;
 }
 
-const LegalAnalysisView = ({ analysisItems, isLoading }: LegalAnalysisViewProps) => {
+const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalAnalysisViewProps) => {
   const analysisEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -22,9 +23,10 @@ const LegalAnalysisView = ({ analysisItems, isLoading }: LegalAnalysisViewProps)
     }
   }, [analysisItems]);
 
-  // Convert markdown to HTML for rendering
+  // Render markdown with special handling for followup questions
   const renderMarkdown = (content: string) => {
-    return content
+    // Regular markdown rendering
+    let html = content
       // Convert headers
       .replace(/^### (.*$)/gim, '<h3 class="text-lg font-bold mt-4 mb-2">$1</h3>')
       .replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold mt-4 mb-2">$1</h2>')
@@ -33,12 +35,65 @@ const LegalAnalysisView = ({ analysisItems, isLoading }: LegalAnalysisViewProps)
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       // Convert italics
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      // Convert lists
-      .replace(/^\s*\d+\.\s(.*$)/gim, '<ol class="list-decimal ml-6 mb-2"><li>$1</li></ol>')
-      .replace(/^\s*\-\s(.*$)/gim, '<ul class="list-disc ml-6 mb-2"><li>$1</li></ul>')
       // Convert line breaks
       .replace(/\n/g, '<br />');
+
+    // Process lists specially to handle follow-up questions
+    const lines = content.split('\n');
+    let inQuestionSection = false;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      // Detect the recommended follow-up questions section
+      if (line.match(/^#+\s*RECOMMENDED FOLLOW-UP QUESTIONS/i)) {
+        inQuestionSection = true;
+        continue;
+      } else if (inQuestionSection && line.match(/^#+\s/)) {
+        // If we hit another header, we're out of the questions section
+        inQuestionSection = false;
+      }
+      
+      // Make list items in the questions section clickable
+      if (inQuestionSection && (line.match(/^\s*\d+\.\s/) || line.match(/^\s*\-\s/))) {
+        // Extract the question text (remove the list marker)
+        const questionText = line.replace(/^\s*(\d+\.|\-)\s/, '').trim();
+        
+        // Replace the normal list rendering with a clickable version
+        const clickableItem = onQuestionClick ? 
+          `<div class="list-item ml-6 mb-2 p-1 px-2 rounded hover:bg-muted cursor-pointer text-primary hover:underline" onclick="window.handleQuestionClick('${questionText.replace(/'/g, "\\'")}')">${questionText}</div>` : 
+          `<div class="list-item ml-6 mb-2">${questionText}</div>`;
+        
+        html = html.replace(`${line}<br />`, clickableItem);
+      } else {
+        // Process regular lists
+        if (line.match(/^\s*\d+\.\s/)) {
+          html = html.replace(`${line}<br />`, `<ol class="list-decimal ml-6 mb-2"><li>${line.replace(/^\s*\d+\.\s/, '')}</li></ol>`);
+        } else if (line.match(/^\s*\-\s/)) {
+          html = html.replace(`${line}<br />`, `<ul class="list-disc ml-6 mb-2"><li>${line.replace(/^\s*\-\s/, '')}</li></ul>`);
+        }
+      }
+    }
+    
+    return html;
   };
+
+  // Create global function for the onclick handler
+  useEffect(() => {
+    if (onQuestionClick) {
+      // Add a global function that the onClick can call
+      window.handleQuestionClick = (question: string) => {
+        onQuestionClick(question);
+      };
+    }
+    
+    // Cleanup
+    return () => {
+      if (window.handleQuestionClick) {
+        delete window.handleQuestionClick;
+      }
+    };
+  }, [onQuestionClick]);
 
   return (
     <div className="flex-grow overflow-y-auto p-4 bg-card">
@@ -53,9 +108,11 @@ const LegalAnalysisView = ({ analysisItems, isLoading }: LegalAnalysisViewProps)
           {analysisItems.map((item, index) => (
             <div key={index} className="mb-6 border-b pb-4 last:border-b-0">
               <div className="prose prose-sm max-w-none">
-                <div dangerouslySetInnerHTML={{ 
-                  __html: renderMarkdown(item.content)
-                }} />
+                <div 
+                  dangerouslySetInnerHTML={{ 
+                    __html: renderMarkdown(item.content)
+                  }} 
+                />
               </div>
               <div className="text-xs text-muted-foreground mt-3">{item.timestamp}</div>
             </div>
@@ -72,5 +129,12 @@ const LegalAnalysisView = ({ analysisItems, isLoading }: LegalAnalysisViewProps)
     </div>
   );
 };
+
+// Add the global handleQuestionClick to the Window interface
+declare global {
+  interface Window {
+    handleQuestionClick: (question: string) => void;
+  }
+}
 
 export default LegalAnalysisView;

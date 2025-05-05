@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,10 +9,24 @@ interface ChatInputProps {
   isLoading: boolean;
   activeTab: "attorney" | "client";
   onTabChange: (tab: "attorney" | "client") => void;
+  prefilledMessage?: string;
 }
 
-const ChatInput = ({ onSendMessage, isLoading, activeTab, onTabChange }: ChatInputProps) => {
+const ChatInput = ({ 
+  onSendMessage, 
+  isLoading, 
+  activeTab, 
+  onTabChange,
+  prefilledMessage = "" 
+}: ChatInputProps) => {
   const [message, setMessage] = useState("");
+  
+  // Update message when prefilledMessage changes
+  useEffect(() => {
+    if (prefilledMessage) {
+      setMessage(prefilledMessage);
+    }
+  }, [prefilledMessage]);
 
   const handleSendMessage = () => {
     if (message.trim()) {

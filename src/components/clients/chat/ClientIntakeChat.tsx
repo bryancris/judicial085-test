@@ -19,7 +19,9 @@ const ClientIntakeChat = ({ clientId }: ClientIntakeChatProps) => {
     isLoading,
     isAnalysisLoading,
     isLoadingHistory,
+    prefilledMessage,
     handleSendMessage,
+    handleFollowUpQuestionClick,
     formatTimestamp
   } = useClientChat(clientId);
 
@@ -73,6 +75,7 @@ const ClientIntakeChat = ({ clientId }: ClientIntakeChatProps) => {
           isLoading={isLoading}
           activeTab={activeTab}
           onTabChange={setActiveTab}
+          prefilledMessage={prefilledMessage}
         />
       </div>
 
@@ -86,6 +89,7 @@ const ClientIntakeChat = ({ clientId }: ClientIntakeChatProps) => {
         <LegalAnalysisView 
           analysisItems={legalAnalysis}
           isLoading={isAnalysisLoading}
+          onQuestionClick={handleFollowUpQuestionClick}
         />
       </div>
     </div>
