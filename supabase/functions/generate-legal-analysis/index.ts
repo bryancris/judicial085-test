@@ -30,7 +30,7 @@ serve(async (req) => {
     console.log(`Generating legal analysis for client: ${clientId}`);
     console.log(`Conversation length: ${conversation.length}`);
 
-    // Create improved system prompt for legal analysis - modified to request exactly 4 follow-up questions
+    // Create improved system prompt for legal analysis - explicitly requesting exactly 4 follow-up questions
     const systemPrompt = `
 You are a legal expert assistant for attorneys in Texas. Based on the attorney-client conversation provided, 
 generate a concise legal analysis with the following sections:
