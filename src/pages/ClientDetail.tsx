@@ -1,7 +1,7 @@
 
 import React from "react";
 import { useParams, Navigate, Link } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Edit } from "lucide-react";
 import NavBar from "@/components/NavBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,10 +10,12 @@ import ClientDetailSkeleton from "@/components/clients/ClientDetailSkeleton";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 const ClientDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { client, loading, error, session } = useClientDetail(id);
+  const { toast } = useToast();
 
   // If not authenticated, redirect to auth page
   if (!session && !loading) {
@@ -67,6 +69,13 @@ const ClientDetail = () => {
     { id: "employment", label: "Employment" }
   ];
 
+  const handleEditClick = () => {
+    toast({
+      title: "Edit mode",
+      description: "Client editing functionality coming soon.",
+    });
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <NavBar />
@@ -87,9 +96,20 @@ const ClientDetail = () => {
         <div className="mb-8">
           <Accordion type="single" collapsible defaultValue="client-info" className="w-full">
             <AccordionItem value="client-info">
-              <AccordionTrigger className="bg-background hover:bg-muted px-4 py-3 rounded-md border text-lg font-medium">
-                Client Information
-              </AccordionTrigger>
+              <div className="flex justify-between items-center">
+                <AccordionTrigger className="bg-background hover:bg-muted px-4 py-3 rounded-md border text-lg font-medium flex-grow">
+                  Client Information
+                </AccordionTrigger>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="ml-2 flex items-center gap-1"
+                  onClick={handleEditClick}
+                >
+                  <Edit className="h-4 w-4" />
+                  Edit
+                </Button>
+              </div>
               <AccordionContent className="pt-6">
                 <div className="space-y-8">
                   {/* Personal Information Section */}
