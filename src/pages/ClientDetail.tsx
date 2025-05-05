@@ -1,7 +1,7 @@
 
 import React from "react";
 import { useParams, Navigate, Link } from "react-router-dom";
-import { ArrowLeft, FileText, BookOpen, FileSearch, Video } from "lucide-react";
+import { ArrowLeft, FileText, BookOpen, FileSearch, Video, FileChart } from "lucide-react";
 import NavBar from "@/components/NavBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -87,7 +87,7 @@ const ClientDetail = () => {
         </div>
 
         <Tabs defaultValue="client-intake" className="w-full">
-          <TabsList className="w-full grid grid-cols-4 mb-6">
+          <TabsList className="w-full grid grid-cols-5 mb-6">
             <TabsTrigger value="client-intake" className="flex items-center gap-2">
               <FileText className="h-4 w-4" /> Client Intake
             </TabsTrigger>
@@ -99,6 +99,9 @@ const ClientDetail = () => {
             </TabsTrigger>
             <TabsTrigger value="deposition" className="flex items-center gap-2">
               <Video className="h-4 w-4" /> Deposition
+            </TabsTrigger>
+            <TabsTrigger value="case-analysis" className="flex items-center gap-2">
+              <FileChart className="h-4 w-4" /> Case Analysis
             </TabsTrigger>
           </TabsList>
           
@@ -138,6 +141,17 @@ const ClientDetail = () => {
                 <h2 className="text-xl font-semibold mb-4">Deposition</h2>
                 <p className="text-muted-foreground">
                   Deposition recordings and transcripts will be displayed here.
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="case-analysis" className="py-4">
+            <Card>
+              <CardContent className="pt-6">
+                <h2 className="text-xl font-semibold mb-4">Case Analysis</h2>
+                <p className="text-muted-foreground">
+                  Comprehensive case analysis and legal strategy will be displayed here.
                 </p>
               </CardContent>
             </Card>
