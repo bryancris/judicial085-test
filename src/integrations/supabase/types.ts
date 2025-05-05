@@ -12,6 +12,9 @@ export type Database = {
       clients: {
         Row: {
           address: string | null
+          case_notes: string | null
+          case_number: string | null
+          case_types: string[] | null
           city: string | null
           created_at: string
           email: string
@@ -19,6 +22,7 @@ export type Database = {
           id: string
           last_name: string
           phone: string
+          referred_by: string | null
           state: string | null
           updated_at: string
           user_id: string
@@ -26,6 +30,9 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          case_notes?: string | null
+          case_number?: string | null
+          case_types?: string[] | null
           city?: string | null
           created_at?: string
           email: string
@@ -33,6 +40,7 @@ export type Database = {
           id?: string
           last_name: string
           phone: string
+          referred_by?: string | null
           state?: string | null
           updated_at?: string
           user_id: string
@@ -40,6 +48,9 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          case_notes?: string | null
+          case_number?: string | null
+          case_types?: string[] | null
           city?: string | null
           created_at?: string
           email?: string
@@ -47,6 +58,7 @@ export type Database = {
           id?: string
           last_name?: string
           phone?: string
+          referred_by?: string | null
           state?: string | null
           updated_at?: string
           user_id?: string
