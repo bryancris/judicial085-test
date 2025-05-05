@@ -45,7 +45,7 @@ const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalA
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       
-      // Detect the recommended follow-up questions section (case insensitive)
+      // Detect the recommended follow-up questions section (case insensitive with flexible spacing/formatting)
       if (line.match(/^#+\s*RECOMMENDED\s+FOLLOW[-\s]UP\s+QUESTIONS/i)) {
         inQuestionSection = true;
         console.log("Found questions section at line:", line);
@@ -62,11 +62,14 @@ const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalA
         
         // Replace the normal list rendering with a clickable version
         if (onQuestionClick) {
-          // Use direct onclick handler with inline JS for reliability
+          // Use inline SVG instead of React component for the arrow
+          const arrowSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 ml-1"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>';
+          
           const clickableItem = `<div 
-            class="list-item ml-6 mb-2 p-2 px-3 rounded bg-blue-50 hover:bg-blue-100 text-[#1EAEDB] hover:underline cursor-pointer flex items-center" 
+            class="list-item ml-6 mb-2 p-2 px-3 rounded bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-800 cursor-pointer flex items-center" 
+            style="color: #1EAEDB; transition: all 0.2s ease; border: 1px solid rgba(30, 174, 219, 0.2);" 
             onclick="window.handleQuestionClick('${questionText.replace(/'/g, "\\'")}')"
-          >${questionText} <ArrowRight class="h-4 w-4 ml-1" /></div>`;
+          >${questionText} ${arrowSvg}</div>`;
           
           html = html.replace(`${line}<br />`, clickableItem);
           console.log("Added clickable item for:", questionText);
@@ -74,13 +77,12 @@ const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalA
           const regularItem = `<div class="list-item ml-6 mb-2">${questionText}</div>`;
           html = html.replace(`${line}<br />`, regularItem);
         }
-      } else {
-        // Process regular lists
-        if (line.match(/^\s*\d+\.\s/)) {
-          html = html.replace(`${line}<br />`, `<ol class="list-decimal ml-6 mb-2"><li>${line.replace(/^\s*\d+\.\s/, '')}</li></ol>`);
-        } else if (line.match(/^\s*\-\s/)) {
-          html = html.replace(`${line}<br />`, `<ul class="list-disc ml-6 mb-2"><li>${line.replace(/^\s*\-\s/, '')}</li></ul>`);
-        }
+      } else if (line.match(/^\s*\d+\.\s/)) {
+        // Process regular numbered lists
+        html = html.replace(`${line}<br />`, `<ol class="list-decimal ml-6 mb-2"><li>${line.replace(/^\s*\d+\.\s/, '')}</li></ol>`);
+      } else if (line.match(/^\s*\-\s/)) {
+        // Process regular bullet lists
+        html = html.replace(`${line}<br />`, `<ul class="list-disc ml-6 mb-2"><li>${line.replace(/^\s*\-\s/, '')}</li></ul>`);
       }
     }
     
