@@ -100,6 +100,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({ clientId 
           <ConversationSummary 
             summary={analysisData.conversationSummary}
             isLoading={isLoading}
+            clientId={clientId}
           />
         </>
       )}
