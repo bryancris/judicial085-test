@@ -8,7 +8,8 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Clients from "./pages/Clients";
-import Knowledge from "./pages/Knowledge"; // Add import for Knowledge page
+import ClientDetail from "./pages/ClientDetail";
+import Knowledge from "./pages/Knowledge";
 
 const queryClient = new QueryClient();
 
@@ -22,7 +23,8 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/clients" element={<Clients />} />
-          <Route path="/knowledge" element={<Knowledge />} /> {/* Add knowledge route */}
+          <Route path="/clients/:id" element={<ClientDetail />} />
+          <Route path="/knowledge" element={<Knowledge />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Client } from "@/types/client";
@@ -10,6 +11,7 @@ export const useClients = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchClients();
@@ -56,13 +58,11 @@ export const useClients = () => {
   };
 
   const handleViewClient = (id: string, name: string) => {
-    // Placeholder for view client action
     toast({
       title: "Viewing client",
       description: `Now viewing ${name}'s details.`,
     });
-    // This could later redirect to a client details page
-    console.log(`View client with ID: ${id}`);
+    navigate(`/clients/${id}`);
   };
 
   return {
