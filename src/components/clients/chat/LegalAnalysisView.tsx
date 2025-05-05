@@ -25,24 +25,6 @@ const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalA
     }
   }, [analysisItems]);
 
-  // Set up the global click handler for the follow-up questions
-  useEffect(() => {
-    if (onQuestionClick) {
-      // Add a global function that the onClick handlers can call
-      window.handleQuestionClick = (question: string) => {
-        console.log("Question clicked via global handler:", question);
-        onQuestionClick(question);
-      };
-    }
-    
-    // Cleanup when component is unmounted
-    return () => {
-      if (window.handleQuestionClick) {
-        delete window.handleQuestionClick;
-      }
-    };
-  }, [onQuestionClick]);
-
   return (
     <div className="flex-grow overflow-y-auto p-4 bg-card">
       {analysisItems.length === 0 ? (
@@ -64,12 +46,5 @@ const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalA
     </div>
   );
 };
-
-// Add the global handleQuestionClick to the Window interface
-declare global {
-  interface Window {
-    handleQuestionClick: (question: string) => void;
-  }
-}
 
 export default LegalAnalysisView;

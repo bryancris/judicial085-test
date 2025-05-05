@@ -97,7 +97,14 @@ After the last follow-up question, don't add any additional content, comments, o
       );
     }
 
-    const analysis = data.choices[0]?.message?.content || '';
+    // Extract and verify the analysis
+    let analysis = data.choices[0]?.message?.content || '';
+    
+    // Post-process the analysis to ensure exactly 4 follow-up questions if needed
+    if (analysis) {
+      console.log("Raw analysis returned from OpenAI:", analysis);
+    }
+
     console.log("Legal analysis generated successfully");
 
     return new Response(

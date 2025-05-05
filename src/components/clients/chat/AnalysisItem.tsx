@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { renderMarkdown } from "@/utils/markdownProcessor";
 
 interface AnalysisItemProps {
@@ -9,18 +9,20 @@ interface AnalysisItemProps {
 }
 
 const AnalysisItem: React.FC<AnalysisItemProps> = ({ content, timestamp, onQuestionClick }) => {
+  const contentRef = useRef<HTMLDivElement>(null);
+
   // Set up click handler for the follow-up questions when they're rendered
   useEffect(() => {
-    if (!onQuestionClick) return;
+    if (!onQuestionClick || !contentRef.current) return;
     
     // Function to add click handlers to question elements
     const setupClickHandlers = () => {
-      const questionElements = document.querySelectorAll('.question-item');
+      const questionElements = contentRef.current?.querySelectorAll('.question-item');
+      console.log(`Found ${questionElements?.length} question elements to attach handlers to`);
       
-      questionElements.forEach(element => {
+      questionElements?.forEach(element => {
         element.addEventListener('click', (e) => {
-          // Find the question text (skip the number and the arrow)
-          const questionText = element.querySelector('span:nth-child(2)')?.textContent || '';
+          const questionText = element.getAttribute('data-question');
           if (questionText) {
             console.log(`Question clicked: ${questionText}`);
             onQuestionClick(questionText);
@@ -31,14 +33,22 @@ const AnalysisItem: React.FC<AnalysisItemProps> = ({ content, timestamp, onQuest
     };
     
     // Run setup after rendering completes
-    const timer = setTimeout(setupClickHandlers, 100);
-    return () => clearTimeout(timer);
+    setupClickHandlers();
+    
+    // Cleanup function to remove event listeners
+    return () => {
+      const questionElements = contentRef.current?.querySelectorAll('.question-item');
+      questionElements?.forEach(element => {
+        element.replaceWith(element.cloneNode(true)); // Remove all event listeners
+      });
+    };
   }, [content, onQuestionClick]);
 
   return (
     <div className="mb-6 border-b pb-4 last:border-b-0">
       <div className="prose prose-sm max-w-none">
         <div 
+          ref={contentRef}
           dangerouslySetInnerHTML={{ 
             __html: renderMarkdown(content)
           }} 

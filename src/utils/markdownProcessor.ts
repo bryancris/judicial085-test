@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for processing markdown and handling follow-up questions
  */
@@ -6,7 +5,6 @@
 /**
  * Processes markdown content and enhances follow-up questions
  * @param content The raw markdown content to process
- * @param onQuestionClick Optional callback for when a question is clicked
  * @returns Processed HTML content
  */
 export const processMarkdown = (content: string): string => {
@@ -36,18 +34,16 @@ export const processFollowUpQuestions = (content: string, MAX_QUESTIONS = 4): st
   // Split content into lines for better processing
   const lines = content.split('\n');
   let inQuestionSection = false;
-  let processedLines = [];
-  
-  // Flag to limit questions
   let questionCount = 0;
-
+  let result = '';
+  
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     
     // Detect when we enter the recommended follow-up questions section
     if (/RECOMMENDED\s+FOLLOW[\s\-]*UP\s+QUESTIONS/i.test(line)) {
       inQuestionSection = true;
-      processedLines.push(line);
+      result += line + '\n';
       continue;
     }
     
@@ -61,40 +57,34 @@ export const processFollowUpQuestions = (content: string, MAX_QUESTIONS = 4): st
           const questionNumber = questionMatch[1];
           const questionText = questionMatch[2].trim();
           
-          // Create clickable question elements
-          const clickableQuestion = `
-            <div 
-              class="question-item my-2 p-3 rounded bg-blue-50 hover:bg-blue-100 cursor-pointer border border-blue-200 flex items-center"
-              style="color: #1E40AF; cursor: pointer; background-color: #EFF6FF; border: 1px solid #BFDBFE;"
-              onclick="window.handleQuestionClick('${questionText.replace(/'/g, "\\'").replace(/"/g, '\\"')}')">
-              <span class="mr-2 font-medium">${questionNumber}.</span>
-              <span>${questionText}</span>
-              <span class="ml-auto text-blue-500">➡</span>
-            </div>
-          `;
+          // Create clickable question elements with data attributes instead of inline JS
+          const clickableQuestion = `<div class="question-item my-2 p-3 rounded bg-blue-50 hover:bg-blue-100 cursor-pointer border border-blue-200 flex items-center" data-question="${questionText.replace(/"/g, '&quot;')}" style="color: #1E40AF; background-color: #EFF6FF; border: 1px solid #BFDBFE;">
+            <span class="mr-2 font-medium">${questionNumber}.</span>
+            <span>${questionText}</span>
+            <span class="ml-auto text-blue-500">➡</span>
+          </div>\n`;
           
-          processedLines.push(clickableQuestion);
+          result += clickableQuestion;
           questionCount++;
         }
-      } else if (line.trim() === '' || (line.trim().startsWith('5.') && questionCount >= MAX_QUESTIONS)) {
-        // Skip empty lines and the 5th question if we already have 4
-        continue;
+      } else if (line.trim() === '') {
+        // Keep empty lines
+        result += '\n';
       } else if (/^[A-Za-z]+:/.test(line) || /^#{1,3}\s+/.test(line) || /^\*\*[^*]+\*\*$/.test(line)) {
         // Detect new section headers to exit question section
         inQuestionSection = false;
-        processedLines.push(line);
+        result += line + '\n';
       } else {
         // Any other content in the question section that's not a question or new header
-        processedLines.push(line);
+        result += line + '\n';
       }
     } else {
       // Not in question section, just pass through
-      processedLines.push(line);
+      result += line + '\n';
     }
   }
   
-  // Join lines back together
-  return processedLines.join('<br />');
+  return result;
 };
 
 /**
