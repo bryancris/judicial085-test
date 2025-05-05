@@ -99,9 +99,13 @@ export const useClientChat = (clientId: string) => {
       }
       
       try {
-        // Generate legal analysis after new message is added
+        // Only generate legal analysis after client responds (not when attorney asks questions)
         const updatedMessages = [...messages, newMessage];
-        await generateAnalysis(updatedMessages);
+        
+        // Check if this was a client message, and if so, generate an analysis
+        if (activeTab === "client") {
+          await generateAnalysis(updatedMessages);
+        }
       } catch (err: any) {
         console.error("Error processing message:", err);
         toast({
