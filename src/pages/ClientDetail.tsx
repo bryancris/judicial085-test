@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useClientDetail } from "@/hooks/useClientDetail";
 import ClientDetailSkeleton from "@/components/clients/ClientDetailSkeleton";
 import ClientInformationAccordion from "@/components/clients/ClientInformationAccordion";
+import ClientIntakeChat from "@/components/clients/chat/ClientIntakeChat";
 import { useToast } from "@/hooks/use-toast";
 
 const ClientDetail = () => {
@@ -105,10 +106,7 @@ const ClientDetail = () => {
           <TabsContent value="client-intake" className="py-4">
             <Card>
               <CardContent className="pt-6">
-                <h2 className="text-xl font-semibold mb-4">Client Intake</h2>
-                <p className="text-muted-foreground">
-                  Client intake information and forms will be displayed here.
-                </p>
+                <ClientIntakeChat clientId={client.id} />
               </CardContent>
             </Card>
           </TabsContent>
