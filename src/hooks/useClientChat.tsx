@@ -116,6 +116,7 @@ export const useClientChat = (clientId: string) => {
   };
 
   const handleFollowUpQuestionClick = (question: string) => {
+    console.log("Follow-up question clicked:", question);
     setActiveTab("attorney");
     setPrefilledMessage(question);
   };

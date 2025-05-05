@@ -25,6 +25,7 @@ const ChatInput = ({
   useEffect(() => {
     if (prefilledMessage) {
       setMessage(prefilledMessage);
+      console.log("Prefilled message set:", prefilledMessage);
     }
   }, [prefilledMessage]);
 
