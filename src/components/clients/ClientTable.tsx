@@ -20,7 +20,7 @@ const ClientTable = ({ clients, handleViewClient }: ClientTableProps) => {
             <TableHead>Email</TableHead>
             <TableHead>Phone</TableHead>
             <TableHead className="hidden sm:table-cell">Location</TableHead>
-            <TableHead className="w-20 text-right">Actions</TableHead>
+            <TableHead className="w-24 text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -37,9 +37,8 @@ const ClientTable = ({ clients, handleViewClient }: ClientTableProps) => {
               <TableCell className="text-right">
                 <div className="flex justify-end">
                   <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    title="View"
+                    variant="outline" 
+                    size="sm" 
                     onClick={() => 
                       handleViewClient(
                         client.id, 
@@ -47,7 +46,8 @@ const ClientTable = ({ clients, handleViewClient }: ClientTableProps) => {
                       )
                     }
                   >
-                    <View className="h-4 w-4" />
+                    <View className="h-4 w-4 mr-2" />
+                    View
                   </Button>
                 </div>
               </TableCell>
