@@ -4,7 +4,7 @@ import { CaseAnalysisData } from "@/types/caseAnalysis";
 import { useAnalysisData } from "@/hooks/useAnalysisData";
 import { useAnalysisGeneration } from "@/hooks/useAnalysisGeneration";
 
-export { CaseAnalysisData } from "@/types/caseAnalysis";
+export type { CaseAnalysisData } from "@/types/caseAnalysis";
 
 export const useCaseAnalysis = (clientId?: string) => {
   const [clientMessages, setClientMessages] = useState<any[]>([]);
