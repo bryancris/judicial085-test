@@ -4,7 +4,8 @@ import { CaseDiscussionMessage } from "@/utils/caseDiscussionService";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { User, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { processMarkdown, detectAndLinkLawReferences } from "@/utils/markdownProcessor";
+import { processMarkdown } from "@/utils/markdownProcessor";
+import { processLawReferencesSync } from "@/utils/lawReferenceUtils";
 
 interface CaseDiscussionMessageItemProps {
   message: CaseDiscussionMessage;
@@ -16,7 +17,7 @@ const CaseDiscussionMessageItem: React.FC<CaseDiscussionMessageItemProps> = ({ m
   // Process content with markdown and law references
   const processedContent = React.useMemo(() => {
     let content = message.content;
-    content = detectAndLinkLawReferences(content);
+    content = processLawReferencesSync(content);
     return processMarkdown(content);
   }, [message.content]);
 
