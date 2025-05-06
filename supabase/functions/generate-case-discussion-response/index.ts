@@ -39,16 +39,18 @@ serve(async (req) => {
       .eq('id', clientId)
       .single();
 
+    // Construct context even if client fetch fails
+    let contextText = "You are an AI legal assistant helping an attorney with a case. ";
+    
     if (clientError) {
       console.error('Error fetching client data:', clientError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch client information' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      contextText += "\nNote: Unable to fetch specific client details for this conversation.";
+    } else if (clientData) {
+      contextText += `\nClient: ${clientData.first_name} ${clientData.last_name}.`;
     }
 
     // Fetch case analysis
-    const { data: analysisData, error: analysisError } = await supabase
+    const { data: analysisData } = await supabase
       .from('legal_analyses')
       .select('content')
       .eq('client_id', clientId)
@@ -56,15 +58,12 @@ serve(async (req) => {
       .limit(1);
 
     // Fetch previous client messages for context
-    const { data: messagesData, error: messagesError } = await supabase
+    const { data: messagesData } = await supabase
       .from('client_messages')
       .select('content, role')
       .eq('client_id', clientId)
       .order('created_at', { ascending: true })
       .limit(10);
-
-    // Construct context for AI
-    let contextText = `You are an AI legal assistant helping an attorney with a case for client ${clientData.first_name} ${clientData.last_name}. `;
     
     if (analysisData && analysisData.length > 0) {
       contextText += `\nLegal analysis of this case: ${analysisData[0].content}`;
@@ -129,7 +128,7 @@ serve(async (req) => {
     const aiResponse = openAIData.choices[0].message.content;
 
     // Save attorney's message
-    const timestamp = new Date().toISOString();
+    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const { error: saveAttorneyError } = await supabase
       .from('case_discussions')
       .insert({
@@ -137,7 +136,7 @@ serve(async (req) => {
         user_id: userId,
         content: message,
         role: 'attorney',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        timestamp: timestamp
       });
 
     if (saveAttorneyError) {
@@ -152,7 +151,7 @@ serve(async (req) => {
         user_id: userId,
         content: aiResponse,
         role: 'ai',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        timestamp: timestamp
       });
 
     if (saveAIError) {
@@ -163,7 +162,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         response: aiResponse,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        timestamp: timestamp
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
