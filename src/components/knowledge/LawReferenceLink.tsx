@@ -1,3 +1,4 @@
+
 import React from "react";
 import { ExternalLink, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -15,7 +16,7 @@ const LawReferenceLink: React.FC<LawReferenceLinkProps> = ({
   searchTerm = "", 
   children 
 }) => {
-  // If we have a direct URL (likely a PDF), use that instead of knowledge search
+  // If we have a direct URL (likely a PDF), use that as an external link
   if (url) {
     return (
       <a
