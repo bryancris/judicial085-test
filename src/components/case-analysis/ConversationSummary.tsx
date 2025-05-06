@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquareIcon, UserIcon, UserRoundIcon } from "lucide-react";
+import { MessageSquare, User, UserRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChatMessageProps } from "@/components/clients/chat/ChatMessage";
 
@@ -85,7 +85,7 @@ const ConversationSummary: React.FC<ConversationSummaryProps> = ({
     <Card className="mb-6 shadow-sm">
       <CardHeader className="pb-2">
         <CardTitle className="text-xl font-semibold flex items-center">
-          <MessageSquareIcon className="h-5 w-5 mr-2" />
+          <MessageSquare className="h-5 w-5 mr-2" />
           Conversation Summary
           {isLoading && (
             <span className="ml-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
@@ -93,42 +93,36 @@ const ConversationSummary: React.FC<ConversationSummaryProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {loading ? (
-            <div className="flex justify-center py-4">
-              <span className="h-6 w-6 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
-            </div>
-          ) : conversation.length > 0 ? (
-            conversation.map((message, index) => (
-              <div 
-                key={index} 
-                className={`flex ${message.role === 'attorney' ? 'justify-start' : 'justify-end'}`}
-              >
-                <div 
-                  className={`max-w-[80%] rounded-lg p-3 ${
+        {loading ? (
+          <div className="flex justify-center py-4">
+            <span className="h-6 w-6 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
+          </div>
+        ) : conversation.length > 0 ? (
+          <div className="space-y-2 border p-4 rounded-md bg-muted/30">
+            {conversation.map((message, index) => (
+              <div key={index} className="py-2 border-b last:border-b-0 border-gray-100">
+                <div className="flex items-center mb-1">
+                  {message.role === 'attorney' ? (
+                    <User className="h-4 w-4 mr-1 text-primary" />
+                  ) : (
+                    <UserRound className="h-4 w-4 mr-1 text-brand-burgundy" />
+                  )}
+                  <span className={`text-xs font-medium px-2 py-1 rounded-full mr-2 ${
                     message.role === 'attorney' 
-                      ? 'bg-gray-100 text-gray-800' 
-                      : 'bg-brand-burgundy text-white'
-                  }`}
-                >
-                  <div className="flex items-center mb-1">
-                    {message.role === 'attorney' ? (
-                      <UserIcon className="h-4 w-4 mr-1" />
-                    ) : (
-                      <UserRoundIcon className="h-4 w-4 mr-1" />
-                    )}
-                    <span className="text-xs font-medium">
-                      {message.role === 'attorney' ? 'Attorney' : 'Client'}
-                    </span>
-                  </div>
-                  <p className="text-sm">{message.content}</p>
+                      ? 'bg-primary/10 text-primary' 
+                      : 'bg-brand-burgundy/10 text-brand-burgundy'
+                  }`}>
+                    {message.role === 'attorney' ? 'Attorney' : 'Client'}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{message.timestamp}</span>
                 </div>
+                <p className="text-sm pl-6">{message.content}</p>
               </div>
-            ))
-          ) : (
-            <p className="text-muted-foreground text-center py-4">No conversation data available</p>
-          )}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-center py-4">No conversation data available</p>
+        )}
         
         <div className="mt-6 border-t pt-4">
           <h4 className="font-medium mb-2">Key Takeaways:</h4>
