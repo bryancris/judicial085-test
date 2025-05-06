@@ -49,29 +49,40 @@ export const generateOpenAiResponse = async (messages: any[]) => {
   const { OPENAI_API_KEY } = getEnvVars();
   console.log("Calling OpenAI API...");
   
-  const openAIResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "gpt-4o",  // Upgraded from gpt-4o-mini for better context retention
-      messages,
-      temperature: 0.2, // Lower temperature for more focused, consistent responses
-      max_tokens: 1000  // Maintain token limit to ensure response fits
-    })
-  });
+  try {
+    const openAIResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "gpt-4o",  // Upgraded from gpt-4o-mini for better context retention
+        messages,
+        temperature: 0.2, // Lower temperature for more focused, consistent responses
+        max_tokens: 1000  // Maintain token limit to ensure response fits
+      })
+    });
 
-  const openAIData = await openAIResponse.json();
+    if (!openAIResponse.ok) {
+      const errorData = await openAIResponse.json();
+      console.error('OpenAI API returned an error:', errorData);
+      throw new Error(`OpenAI API error: ${JSON.stringify(errorData)}`);
+    }
 
-  if (!openAIData.choices || openAIData.choices.length === 0) {
-    console.error('OpenAI API error:', openAIData);
-    throw new Error('Failed to generate response');
+    const openAIData = await openAIResponse.json();
+
+    if (!openAIData.choices || openAIData.choices.length === 0) {
+      console.error('OpenAI API error:', openAIData);
+      throw new Error('Failed to generate response');
+    }
+
+    const aiResponse = openAIData.choices[0].message.content;
+    console.log(`Generated AI response of length: ${aiResponse.length} characters`);
+    
+    return aiResponse;
+  } catch (error) {
+    console.error('Error calling OpenAI:', error);
+    return "I'm sorry, I encountered an error processing your request. Please try again or contact support if the issue persists.";
   }
-
-  const aiResponse = openAIData.choices[0].message.content;
-  console.log(`Generated AI response of length: ${aiResponse.length} characters`);
-  
-  return aiResponse;
 };

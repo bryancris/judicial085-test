@@ -27,6 +27,9 @@ export const generateCaseDiscussionResponse = async (
       return { response: "", timestamp: "", error: "User not authenticated" };
     }
 
+    console.log(`Invoking edge function for client: ${clientId}`);
+    
+    // Make sure we're passing the clientId properly
     const { data, error } = await supabase.functions.invoke("generate-case-discussion-response", {
       body: {
         clientId,

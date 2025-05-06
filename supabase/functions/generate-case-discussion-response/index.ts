@@ -23,7 +23,13 @@ serve(async (req) => {
     // Parse request body
     const { clientId, message, previousMessages, userId } = await req.json();
 
+    // Log crucial parameters
+    console.log(`Request received with clientId: ${clientId}`);
+    console.log(`Message: ${message?.substring(0, 50)}...`);
+    console.log(`Previous messages count: ${previousMessages?.length || 0}`);
+
     if (!clientId || !message || !userId) {
+      console.error('Missing required parameters', { clientId, message: !!message, userId });
       return new Response(
         JSON.stringify({ error: 'Client ID, message, and user ID are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -37,6 +43,15 @@ serve(async (req) => {
     
     // Fetch all necessary data
     const { clientData, clientError } = await fetchClientData(supabase, clientId);
+    
+    if (clientError || !clientData) {
+      console.error('Failed to fetch client data:', clientError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch client data', details: clientError }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const analysisData = await fetchLegalAnalysis(supabase, clientId);
     const notesData = await fetchAttorneyNotes(supabase, clientId);
     const messagesData = await fetchClientMessages(supabase, clientId);
@@ -44,7 +59,7 @@ serve(async (req) => {
     // Build context for AI
     const contextText = buildCompleteContext(
       clientData, 
-      clientError, 
+      null, 
       analysisData, 
       notesData, 
       messagesData
@@ -92,7 +107,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Unexpected error in generate-case-discussion-response:', error);
     return new Response(
-      JSON.stringify({ error: 'An unexpected error occurred' }),
+      JSON.stringify({ error: 'An unexpected error occurred', details: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

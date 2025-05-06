@@ -14,33 +14,48 @@ export const getSupabaseClients = () => {
 
 // Fetch client data from database
 export const fetchClientData = async (supabase: any, clientId: string) => {
-  const { data: clientData, error: clientError } = await supabase
-    .from('clients')
-    .select('*')
-    .eq('id', clientId)
-    .single();
+  console.log(`Fetching client data for ID: ${clientId}`);
   
-  if (clientError) {
-    console.error('Error fetching client data:', clientError);
-  }
+  try {
+    const { data: clientData, error: clientError } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('id', clientId)
+      .single();
+    
+    if (clientError) {
+      console.error('Error fetching client data:', clientError);
+      return { clientData: null, clientError };
+    }
+    
+    console.log(`Client data found: ${clientData ? 'Yes' : 'No'}`);
+    if (clientData) {
+      console.log(`Client name: ${clientData.first_name} ${clientData.last_name}`);
+      console.log(`Client case types: ${JSON.stringify(clientData.case_types || [])}`);
+      console.log(`Client case notes length: ${clientData.case_notes ? clientData.case_notes.length : 0}`);
+    } else {
+      console.error(`No client data found for ID: ${clientId}`);
+    }
   
-  console.log(`Client data found: ${clientData ? 'Yes' : 'No'}`);
-  if (clientData) {
-    console.log(`Client case types: ${JSON.stringify(clientData.case_types)}`);
-    console.log(`Client case notes length: ${clientData.case_notes ? clientData.case_notes.length : 0}`);
+    return { clientData, clientError: null };
+  } catch (err) {
+    console.error('Unexpected error fetching client data:', err);
+    return { clientData: null, clientError: err };
   }
-
-  return { clientData, clientError };
 };
 
 // Fetch legal analysis data
 export const fetchLegalAnalysis = async (supabase: any, clientId: string) => {
-  const { data: analysisData } = await supabase
+  const { data: analysisData, error } = await supabase
     .from('legal_analyses')
     .select('content')
     .eq('client_id', clientId)
     .order('created_at', { ascending: false })
     .limit(1);
+  
+  if (error) {
+    console.error('Error fetching legal analysis:', error);
+  }
   
   console.log(`Legal analysis found: ${analysisData && analysisData.length > 0 ? 'Yes' : 'No'}`);
   
@@ -49,12 +64,16 @@ export const fetchLegalAnalysis = async (supabase: any, clientId: string) => {
 
 // Fetch attorney notes
 export const fetchAttorneyNotes = async (supabase: any, clientId: string) => {
-  const { data: notesData } = await supabase
+  const { data: notesData, error } = await supabase
     .from('case_analysis_notes')
     .select('content')
     .eq('client_id', clientId)
     .order('created_at', { ascending: false })
     .limit(5);
+  
+  if (error) {
+    console.error('Error fetching attorney notes:', error);
+  }
     
   console.log(`Attorney notes found: ${notesData && notesData.length > 0 ? 'Yes' : 'No'}`);
   
@@ -63,12 +82,16 @@ export const fetchAttorneyNotes = async (supabase: any, clientId: string) => {
 
 // Fetch client messages
 export const fetchClientMessages = async (supabase: any, clientId: string) => {
-  const { data: messagesData } = await supabase
+  const { data: messagesData, error } = await supabase
     .from('client_messages')
     .select('content, role')
     .eq('client_id', clientId)
     .order('created_at', { ascending: true })
     .limit(15);
+  
+  if (error) {
+    console.error('Error fetching client messages:', error);
+  }
   
   console.log(`Client messages found: ${messagesData && messagesData.length > 0 ? 'Yes' : 'No'}`);
   
