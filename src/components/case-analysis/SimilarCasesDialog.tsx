@@ -1,11 +1,12 @@
 
 import React from "react";
-import { Search, X, ExternalLink, Building, Scale, CalendarDays } from "lucide-react";
+import { Search, X, ExternalLink, Building, Scale, CalendarDays, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export interface SimilarCase {
   source: "internal" | "courtlistener";
@@ -42,6 +43,12 @@ const SimilarCasesDialog: React.FC<SimilarCasesDialogProps> = ({
   // Default to "court" tab if we have court cases, otherwise "internal"
   const defaultTab = courtListenerCases.length > 0 ? "court" : "internal";
 
+  // Check if any case suggests creating legal analysis first
+  const needsAnalysis = similarCases.some(c => 
+    c.relevantFacts.includes("no legal analysis available") || 
+    c.relevantFacts.includes("generate a legal analysis first")
+  );
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
@@ -51,7 +58,7 @@ const SimilarCasesDialog: React.FC<SimilarCasesDialogProps> = ({
             Similar Cases
           </DialogTitle>
           <DialogDescription>
-            Cases with similar facts and legal issues from your database and public Texas court records
+            Cases with similar facts and legal issues from your database and public court records
           </DialogDescription>
         </DialogHeader>
 
@@ -65,6 +72,15 @@ const SimilarCasesDialog: React.FC<SimilarCasesDialogProps> = ({
           <div className="text-center py-8">
             <p className="text-destructive font-medium text-lg mb-2">Error Finding Similar Cases</p>
             <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={onClose} variant="outline">Close</Button>
+          </div>
+        ) : needsAnalysis ? (
+          <div className="text-center py-6">
+            <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-2" />
+            <p className="font-medium text-lg mb-2">Legal Analysis Required</p>
+            <p className="text-muted-foreground mb-4">
+              Please generate a legal analysis for this client first by clicking the "Refresh Analysis" button at the top of the page. This helps find the most relevant similar cases.
+            </p>
             <Button onClick={onClose} variant="outline">Close</Button>
           </div>
         ) : similarCases.length === 0 ? (

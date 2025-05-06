@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { ChatMessageProps } from "@/components/clients/chat/ChatMessage";
 import { SimilarCase } from "@/components/case-analysis/SimilarCasesDialog";
@@ -52,24 +53,46 @@ export const generateLegalAnalysis = async (
   }
 };
 
-// New function to search for similar cases
+// Updated function to search for similar cases with improved return types
 export const searchSimilarCases = async (
   clientId: string
-): Promise<{ similarCases: SimilarCase[]; error?: string }> => {
+): Promise<{ 
+  similarCases: SimilarCase[]; 
+  error?: string;
+  fallbackUsed?: boolean;
+  analysisFound?: boolean;
+}> => {
   try {
+    console.log("Calling search-similar-cases function with clientId:", clientId);
     const { data, error } = await supabase.functions.invoke("search-similar-cases", {
       body: { clientId },
     });
 
     if (error) {
       console.error("Error searching for similar cases:", error);
-      return { similarCases: [], error: error.message };
+      return { 
+        similarCases: [], 
+        error: error.message,
+        fallbackUsed: false,
+        analysisFound: false
+      };
     }
 
-    return { similarCases: data.similarCases || [] };
+    console.log("Search-similar-cases response:", data);
+    
+    return { 
+      similarCases: data.similarCases || [],
+      fallbackUsed: data.fallbackUsed || false,
+      analysisFound: data.analysisFound !== false // default to true if not specifically false
+    };
   } catch (err: any) {
     console.error("Error searching for similar cases:", err);
-    return { similarCases: [], error: err.message };
+    return { 
+      similarCases: [], 
+      error: err.message,
+      fallbackUsed: false,
+      analysisFound: false
+    };
   }
 };
 
