@@ -1,3 +1,4 @@
+
 /**
  * Utility functions for detecting and linking law references to the knowledge database
  */
@@ -21,6 +22,8 @@ const CITATION_PATTERNS = [
   /\*([^*]+v\.\s+[^*]+)\*/gi,
   // Wal-Mart Stores, Inc. v. Wright (without asterisks)
   /Wal-Mart\s+Stores,\s+Inc\.\s+v\.\s+Wright/gi,
+  // Wal-Mart Stores, Inc. v. Gonzalez (without asterisks)
+  /Wal-Mart\s+Stores,\s+Inc\.\s+v\.\s+Gonzalez/gi,
   // Citations with § symbol followed by numbers (like § 101.021)
   /§\s+\d+\.\d+/gi,
 ];
@@ -130,9 +133,13 @@ export const processLawReferences = async (text: string): Promise<string> => {
       if (citation.includes("101.021")) {
         directUrl = "https://statutes.capitol.texas.gov/Docs/CP/htm/CP.101.htm";
       }
-      // Check for Wal-Mart case
+      // Check for Wal-Mart case with Wright
       else if (citation.toLowerCase().includes("wal-mart") && citation.toLowerCase().includes("wright")) {
         directUrl = "https://caselaw.findlaw.com/tx-supreme-court/1372854.html";
+      }
+      // Check for Wal-Mart case with Gonzalez
+      else if (citation.toLowerCase().includes("wal-mart") && citation.toLowerCase().includes("gonzalez")) {
+        directUrl = "https://caselaw.findlaw.com/tx-supreme-court/1031086.html";
       }
       
       // If we have a direct URL already, use it
@@ -189,7 +196,8 @@ export const processLawReferencesSync = (text: string): string => {
   const hardcodedUrls: Record<string, string> = {
     "§ 101.021": "https://statutes.capitol.texas.gov/Docs/CP/htm/CP.101.htm",
     "Texas Civil Practice and Remedies Code": "https://statutes.capitol.texas.gov/Docs/CP/htm/CP.75.htm",
-    "Wal-Mart Stores, Inc. v. Wright": "https://caselaw.findlaw.com/tx-supreme-court/1372854.html"
+    "Wal-Mart Stores, Inc. v. Wright": "https://caselaw.findlaw.com/tx-supreme-court/1372854.html",
+    "Wal-Mart Stores, Inc. v. Gonzalez": "https://caselaw.findlaw.com/tx-supreme-court/1031086.html"
   };
   
   // Apply hardcoded URLs first

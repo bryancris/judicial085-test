@@ -16,6 +16,21 @@ const LawReferenceLink: React.FC<LawReferenceLinkProps> = ({
   searchTerm = "", 
   children 
 }) => {
+  // Check if this is a special case for Gonzalez
+  if (citation.includes("Gonzalez") && citation.includes("Wal-Mart")) {
+    return (
+      <a
+        href="https://caselaw.findlaw.com/tx-supreme-court/1031086.html"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center text-blue-600 hover:underline hover:text-blue-800 group"
+      >
+        {children || citation}
+        <FileText className="ml-1 h-3 w-3 opacity-70 group-hover:opacity-100" />
+      </a>
+    );
+  }
+  
   // If we have a direct URL (likely a PDF), use that as an external link
   if (url) {
     return (
