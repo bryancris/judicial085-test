@@ -113,8 +113,8 @@ const ChatInput = ({
     }
   };
 
-  // Only show microphone button for attorney tab
-  const showMicButton = activeTab === "attorney" && !isLoading;
+  // Show microphone button for both attorney and client tabs
+  const showMicButton = !isLoading;
 
   return (
     <div className="border-t p-3 bg-background">
