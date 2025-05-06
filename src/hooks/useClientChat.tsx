@@ -7,9 +7,10 @@ import { useClientChatAnalysis } from "@/hooks/useClientChatAnalysis";
 export type { AnalysisItem } from "@/hooks/useClientChatHistory";
 
 export const useClientChat = (clientId: string) => {
-  const [activeTab, setActiveTab] = useState<"attorney" | "client">("attorney");
+  // We will no longer need this state since it's managed in the useClientChatMessages hook
+  // const [activeTab, setActiveTab] = useState<"attorney" | "client">("attorney");
   
-  // Use our new hooks
+  // Use our hooks
   const {
     messages,
     setMessages,
@@ -28,7 +29,9 @@ export const useClientChat = (clientId: string) => {
     prefilledMessage,
     handleSendMessage,
     handleFollowUpQuestionClick,
-    formatTimestamp
+    formatTimestamp,
+    activeTab,
+    setActiveTab
   } = useClientChatMessages(clientId, messages, setMessages, generateAnalysis);
 
   // Create the main message handler with the current active tab

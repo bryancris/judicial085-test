@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { saveMessage } from "@/utils/openaiService";
 import { ChatMessageProps } from "@/components/clients/chat/ChatMessage";
@@ -12,6 +12,7 @@ export const useClientChatMessages = (
 ) => {
   const [isLoading, setIsLoading] = useState(false);
   const [prefilledMessage, setPrefilledMessage] = useState("");
+  const [activeTab, setActiveTab] = useState<"attorney" | "client">("attorney");
   const { toast } = useToast();
 
   const formatTimestamp = (): string => {
@@ -19,21 +20,21 @@ export const useClientChatMessages = (
     return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const handleSendMessage = async (message: string, activeTab: "attorney" | "client") => {
+  const handleSendMessage = async (message: string, currentActiveTab: "attorney" | "client") => {
     if (message.trim()) {
       setIsLoading(true);
       const timestamp = formatTimestamp();
       const newMessage: ChatMessageProps = {
         content: message,
         timestamp,
-        role: activeTab
+        role: currentActiveTab
       };
 
       // Add user message to chat
       setMessages(prev => [...prev, newMessage]);
       
       // Save message to database
-      const { success, error } = await saveMessage(clientId, message, activeTab, timestamp);
+      const { success, error } = await saveMessage(clientId, message, currentActiveTab, timestamp);
       
       if (!success) {
         toast({
@@ -48,8 +49,14 @@ export const useClientChatMessages = (
         const updatedMessages = [...messages, newMessage];
         
         // Check if this was a client message, and if so, generate an analysis
-        if (activeTab === "client") {
+        if (currentActiveTab === "client") {
           await generateAnalysis(updatedMessages);
+          
+          // After client responds, switch back to attorney tab
+          setActiveTab("attorney");
+        } else {
+          // After attorney sends message, switch to client tab
+          setActiveTab("client");
         }
       } catch (err: any) {
         console.error("Error processing message:", err);
@@ -67,6 +74,8 @@ export const useClientChatMessages = (
   const handleFollowUpQuestionClick = (question: string) => {
     console.log("Follow-up question clicked in hook:", question);
     setPrefilledMessage(question);
+    // When a follow-up question is clicked, we should switch to attorney tab
+    setActiveTab("attorney");
   };
 
   return {
@@ -75,6 +84,8 @@ export const useClientChatMessages = (
     setPrefilledMessage,
     handleSendMessage,
     handleFollowUpQuestionClick,
-    formatTimestamp
+    formatTimestamp,
+    activeTab,
+    setActiveTab
   };
 };
