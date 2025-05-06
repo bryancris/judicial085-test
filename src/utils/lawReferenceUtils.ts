@@ -4,6 +4,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { DocumentMetadataDetail } from "@/types/knowledge";
 
 // Common Texas law citation patterns
 const CITATION_PATTERNS = [
@@ -32,18 +33,8 @@ export const searchLawDocuments = async (searchTerm: string): Promise<{
   url: string | null;
 }[]> => {
   try {
-    const { data: matchResults, error } = await supabase.rpc('match_documents', {
-      query_embedding: [],  // This is a placeholder since we're doing a text search
-      match_count: 3,
-      filter: {}
-    });
-
-    if (error) {
-      console.error("Error searching law documents:", error);
-      return [];
-    }
-
-    // Since we can't send the embedding directly, let's do a regular search
+    // Since we can't directly use the embedding function in the match_documents RPC,
+    // let's use a text search instead
     const { data: documents, error: searchError } = await supabase
       .from('documents')
       .select('id, metadata')
@@ -56,11 +47,14 @@ export const searchLawDocuments = async (searchTerm: string): Promise<{
     }
 
     // Map the results to the expected format
-    return (documents || []).map(doc => ({
-      id: doc.metadata?.file_id || String(doc.id),
-      title: doc.metadata?.title || doc.metadata?.file_title || "Texas Law Document",
-      url: doc.metadata?.file_path || `/knowledge/${doc.id}`
-    }));
+    return (documents || []).map(doc => {
+      const metadata = doc.metadata as DocumentMetadataDetail;
+      return {
+        id: metadata?.file_id || String(doc.id),
+        title: metadata?.title || metadata?.file_title || "Texas Law Document",
+        url: metadata?.file_path || `/knowledge/${doc.id}`
+      };
+    });
   } catch (error) {
     console.error("Exception in searchLawDocuments:", error);
     return [];
