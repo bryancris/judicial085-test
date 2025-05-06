@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const ClientDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const { client, loading, error, session } = useClientDetail(id);
+  const { client, loading, error, session, refreshClient } = useClientDetail(id);
   const { toast } = useToast();
 
   // If not authenticated, redirect to auth page
@@ -60,7 +60,7 @@ const ClientDetail = () => {
   const handleEditClick = () => {
     toast({
       title: "Edit mode",
-      description: "Client editing functionality coming soon.",
+      description: "You can now edit the client information.",
     });
   };
 
@@ -83,7 +83,8 @@ const ClientDetail = () => {
         <div className="mb-8">
           <ClientInformationAccordion 
             client={client} 
-            onEditClick={handleEditClick} 
+            onEditClick={handleEditClick}
+            refreshClient={refreshClient}
           />
         </div>
 
