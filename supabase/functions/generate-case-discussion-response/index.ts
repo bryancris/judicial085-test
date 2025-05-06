@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
@@ -29,6 +28,8 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    
+    console.log(`Processing case discussion for client: ${clientId}`);
 
     // Initialize Supabase client with anon key for read operations
     const supabase = createClient(SUPABASE_URL || '', SUPABASE_ANON_KEY || '');
@@ -42,32 +43,48 @@ serve(async (req) => {
       .select('*')
       .eq('id', clientId)
       .single();
+    
+    if (clientError) {
+      console.error('Error fetching client data:', clientError);
+    }
+    
+    console.log(`Client data found: ${clientData ? 'Yes' : 'No'}`);
+    if (clientData) {
+      console.log(`Client case types: ${JSON.stringify(clientData.case_types)}`);
+      console.log(`Client case notes length: ${clientData.case_notes ? clientData.case_notes.length : 0}`);
+    }
 
     // Start building a comprehensive context for the AI
     let contextText = "You are an AI legal assistant helping an attorney with a specific case. ";
-    let caseTypesText = "";
-    let caseDetailsText = "";
+    
+    // Add client section with prominently featured details
+    let clientSection = "";
+    let caseTypesSection = "";
+    let caseDetailsSection = "";
     
     // Add client information with error handling
     if (clientError) {
       console.error('Error fetching client data:', clientError);
-      contextText += "\nNote: Unable to fetch client details for this conversation.";
+      contextText += "\nWARNING: Unable to fetch client details for this conversation.";
     } else if (clientData) {
-      contextText += `\nCLIENT: ${clientData.first_name} ${clientData.last_name}`;
+      clientSection += `\n\n## CLIENT INFORMATION\nName: ${clientData.first_name} ${clientData.last_name}`;
       
-      // Add case details if available
-      if (clientData.case_number) {
-        caseDetailsText += `\nCASE NUMBER: ${clientData.case_number}`;
-      }
-      
-      // Add case types if available
+      // Add case types as a primary context element if available
       if (clientData.case_types && clientData.case_types.length > 0) {
-        caseTypesText = `\nCASE TYPE(S): ${clientData.case_types.join(", ")}`;
+        caseTypesSection = `\n\n## CASE TYPE\n${clientData.case_types.join(", ")}`;
       }
       
-      // Add case notes if available
+      // Build comprehensive case details section
+      caseDetailsSection = "\n\n## CASE DETAILS";
+      
+      // Add case number if available
+      if (clientData.case_number) {
+        caseDetailsSection += `\nCase Number: ${clientData.case_number}`;
+      }
+      
+      // Add case notes if available - critical for context
       if (clientData.case_notes) {
-        caseDetailsText += `\nCASE NOTES: ${clientData.case_notes}`;
+        caseDetailsSection += `\n\nCase Notes: ${clientData.case_notes}`;
       }
       
       // Add address information if available
@@ -79,21 +96,23 @@ serve(async (req) => {
         if (clientData.zip_code) addressInfo += ` ${clientData.zip_code}`;
         
         if (addressInfo) {
-          caseDetailsText += `\nCLIENT ADDRESS: ${addressInfo}`;
+          caseDetailsSection += `\n\nClient Address: ${addressInfo}`;
         }
       }
       
       // Add contact information
-      caseDetailsText += `\nCONTACT: ${clientData.email} | ${clientData.phone}`;
+      caseDetailsSection += `\nContact: ${clientData.email} | ${clientData.phone}`;
     }
 
-    // Fetch latest legal analysis
+    // Fetch latest legal analysis - critical for understanding case context
     const { data: analysisData } = await supabase
       .from('legal_analyses')
       .select('content')
       .eq('client_id', clientId)
       .order('created_at', { ascending: false })
       .limit(1);
+    
+    console.log(`Legal analysis found: ${analysisData && analysisData.length > 0 ? 'Yes' : 'No'}`);
 
     // Fetch attorney notes for additional context
     const { data: notesData } = await supabase
@@ -103,6 +122,8 @@ serve(async (req) => {
       .order('created_at', { ascending: false })
       .limit(5);
       
+    console.log(`Attorney notes found: ${notesData && notesData.length > 0 ? 'Yes' : 'No'}`);
+
     // Fetch client conversation for facts
     const { data: messagesData } = await supabase
       .from('client_messages')
@@ -111,21 +132,30 @@ serve(async (req) => {
       .order('created_at', { ascending: true })
       .limit(15);
     
-    // Add case types to context
-    if (caseTypesText) {
-      contextText += caseTypesText;
+    console.log(`Client messages found: ${messagesData && messagesData.length > 0 ? 'Yes' : 'No'}`);
+    
+    // Assemble the context in order of importance for the AI
+    // 1. Start with case type information (most important for legal context)
+    if (caseTypesSection) {
+      contextText += caseTypesSection;
     }
     
-    // Add case details to context
-    if (caseDetailsText) {
-      contextText += `\n\nCASE DETAILS: ${caseDetailsText}`;
+    // 2. Add client information
+    if (clientSection) {
+      contextText += clientSection;
     }
     
-    // Extract and structure legal analysis if available
+    // 3. Add detailed case information
+    if (caseDetailsSection) {
+      contextText += caseDetailsSection;
+    }
+    
+    // 4. Legal analysis section - structure it clearly
+    let legalAnalysisText = "\n\n## LEGAL ANALYSIS";
     if (analysisData && analysisData.length > 0) {
       const analysisContent = analysisData[0].content;
       
-      // Try to parse and structure the legal analysis
+      // Try to parse and highlight key sections from analysis
       try {
         // Check if there are sections that can be identified
         let structuredAnalysis = "";
@@ -150,23 +180,26 @@ serve(async (req) => {
           structuredAnalysis += `\n\nCASE WEAKNESSES: ${weaknessesMatch[1].trim()}`;
         }
         
-        // If we couldn't extract structured data, use the full analysis
+        // If we extracted structured data, use it; otherwise use full analysis
         if (structuredAnalysis) {
-          contextText += `\n\nLEGAL ANALYSIS:${structuredAnalysis}`;
+          legalAnalysisText += structuredAnalysis;
         } else {
-          contextText += `\n\nLEGAL ANALYSIS: ${analysisContent}`;
+          legalAnalysisText += `\n${analysisContent}`;
         }
       } catch (parseError) {
         // If parsing fails, use the raw analysis
-        contextText += `\n\nLEGAL ANALYSIS: ${analysisContent}`;
+        legalAnalysisText += `\n${analysisContent}`;
       }
+      
+      // Add the legal analysis to the context
+      contextText += legalAnalysisText;
     } else {
-      contextText += "\n\nNote: No legal analysis has been generated for this case yet.";
+      contextText += `${legalAnalysisText}\nNo legal analysis has been generated for this case yet.`;
     }
 
-    // Add attorney notes if available
+    // Attorney notes section
     if (notesData && notesData.length > 0) {
-      contextText += "\n\nATTORNEY NOTES:";
+      contextText += "\n\n## ATTORNEY NOTES";
       notesData.forEach((note, index) => {
         contextText += `\n${index + 1}. ${note.content}`;
       });
@@ -174,22 +207,24 @@ serve(async (req) => {
 
     // Extract key facts from client conversation
     if (messagesData && messagesData.length > 0) {
-      contextText += "\n\nCLIENT CONVERSATION SUMMARY:";
+      contextText += "\n\n## CLIENT CONVERSATION SUMMARY";
       messagesData.forEach((msg: any, index) => {
         if (index < 15) { // Limit to avoid token overflow
-          contextText += `\n${msg.role}: ${msg.content}`;
+          contextText += `\n${msg.role.toUpperCase()}: ${msg.content}`;
         }
       });
     }
 
-    // Add specific instructions for the AI
-    contextText += `\n\nINSTRUCTIONS:
-1. You are discussing THIS SPECIFIC CASE with the attorney. Reference case details in your responses.
-2. Provide thoughtful legal analysis based on the case details provided above.
-3. When citing legal principles, be as specific as possible to the laws in the client's jurisdiction.
-4. If you're unsure about any details, make it clear rather than making assumptions.
-5. Maintain consistent advice between conversations to avoid contradicting earlier guidance.
-6. Your goal is to help the attorney develop case strategy and prepare for proceedings.`;
+    // Add specific instructions for the AI with improved guidelines
+    contextText += `\n\n## INSTRUCTIONS
+1. You are discussing THIS SPECIFIC CASE with the attorney. Always acknowledge and reference the case details in your responses.
+2. Directly reference the client's name, case type, and key facts in your responses to show you are aware of the context.
+3. Provide thoughtful legal analysis based on the case details provided above.
+4. When citing legal principles, be as specific as possible to the laws in the client's jurisdiction.
+5. If you're unsure about any details, make it clear rather than making assumptions.
+6. Maintain consistent advice between conversations to avoid contradicting earlier guidance.
+7. Your goal is to help the attorney develop case strategy and prepare for proceedings.
+8. IMPORTANT: Always base your responses on the case information provided, not general legal knowledge.`;
 
     // Format messages for OpenAI
     const messages = [
@@ -198,15 +233,32 @@ serve(async (req) => {
         content: contextText
       }
     ];
+    
+    console.log(`Context text length: ${contextText.length} characters`);
 
-    // Add previous case discussion messages
+    // Add previous case discussion messages - critical for continuity
     if (previousMessages && previousMessages.length > 0) {
-      previousMessages.forEach((msg: any) => {
+      console.log(`Including ${previousMessages.length} previous messages for context`);
+      
+      // If we have many previous messages, prioritize the most recent ones to stay within token limits
+      let messagesToInclude = previousMessages;
+      if (previousMessages.length > 10) {
+        // Keep first message for context and last 9 for recent conversation
+        messagesToInclude = [
+          previousMessages[0],
+          ...previousMessages.slice(-9)
+        ];
+        console.log(`Limited to ${messagesToInclude.length} previous messages due to token constraints`);
+      }
+      
+      messagesToInclude.forEach((msg: any) => {
         messages.push({
           role: msg.role === "attorney" ? "user" : "assistant",
           content: msg.content
         });
       });
+    } else {
+      console.log("No previous messages to include");
     }
 
     // Add the current message
@@ -215,7 +267,8 @@ serve(async (req) => {
       content: message
     });
 
-    // Call OpenAI API
+    // Call OpenAI API with improved parameters
+    console.log("Calling OpenAI API...");
     const openAIResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -223,9 +276,9 @@ serve(async (req) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4o-mini", // Using the mini model for efficiency 
         messages,
-        temperature: 0.4,
+        temperature: 0.4,     // Lower temperature for more focused responses
         max_tokens: 1000
       })
     });
@@ -241,6 +294,7 @@ serve(async (req) => {
     }
 
     const aiResponse = openAIData.choices[0].message.content;
+    console.log(`Generated AI response of length: ${aiResponse.length} characters`);
 
     // Save attorney's message using admin client (bypasses RLS)
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
