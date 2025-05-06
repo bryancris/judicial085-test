@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RefreshCwIcon } from "lucide-react";
@@ -185,6 +184,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({ clientId 
             isLoading={isSearchingCases}
           />
 
+          {/* Pass clientId to ConversationSummary to enable the attorney chat */}
           <ConversationSummary 
             summary={analysisData.conversationSummary}
             isLoading={isLoading}

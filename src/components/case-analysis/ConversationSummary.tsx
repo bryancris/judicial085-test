@@ -1,9 +1,13 @@
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquare, User, UserRound } from "lucide-react";
+import { MessageSquare, User, UserRound, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChatMessageProps } from "@/components/clients/chat/ChatMessage";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { useCaseAnalysisChat, CaseAnalysisNote } from "@/hooks/useCaseAnalysisChat";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ConversationSummaryProps {
   summary: string;
@@ -16,10 +20,19 @@ const ConversationSummary: React.FC<ConversationSummaryProps> = ({
   isLoading = false,
   clientId
 }) => {
-  const [conversation, setConversation] = useState<ChatMessageProps[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [conversation, setConversation] = React.useState<ChatMessageProps[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [noteInput, setNoteInput] = React.useState("");
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  
+  const {
+    notes,
+    isLoading: isLoadingNotes,
+    isSending,
+    handleSendNote
+  } = useCaseAnalysisChat(clientId);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (clientId) {
       fetchClientMessages(clientId);
     }
@@ -81,12 +94,26 @@ const ConversationSummary: React.FC<ConversationSummaryProps> = ({
     }
   };
 
+  const handleSendClick = () => {
+    if (noteInput.trim() && clientId) {
+      handleSendNote(noteInput);
+      setNoteInput("");
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendClick();
+    }
+  };
+
   return (
     <Card className="mb-6 shadow-sm">
       <CardHeader className="pb-2">
         <CardTitle className="text-xl font-semibold flex items-center">
           <MessageSquare className="h-5 w-5 mr-2" />
-          Conversation Summary
+          Client Conversation
           {isLoading && (
             <span className="ml-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
           )}
@@ -124,9 +151,65 @@ const ConversationSummary: React.FC<ConversationSummaryProps> = ({
           <p className="text-muted-foreground text-center py-4">No conversation data available</p>
         )}
         
+        {/* Attorney Notes Section */}
         <div className="mt-6 border-t pt-4">
-          <h4 className="font-medium mb-2">Key Takeaways:</h4>
-          <p className="text-sm text-muted-foreground">{summary}</p>
+          <h4 className="font-medium mb-2 flex items-center">
+            <User className="h-4 w-4 mr-2 text-primary" /> 
+            Attorney Notes:
+          </h4>
+          
+          {isLoadingNotes ? (
+            <div className="space-y-2">
+              <Skeleton className="h-[20px] w-full" />
+              <Skeleton className="h-[20px] w-3/4" />
+              <Skeleton className="h-[20px] w-5/6" />
+            </div>
+          ) : (
+            <div className="space-y-2 mb-4">
+              {notes.length > 0 ? (
+                notes.map((note, index) => (
+                  <div key={index} className="py-2 border-b last:border-b-0 border-gray-100">
+                    <div className="flex items-center mb-1">
+                      <User className="h-4 w-4 mr-1 text-primary" />
+                      <span className="text-xs font-medium px-2 py-1 rounded-full mr-2 bg-primary/10 text-primary">
+                        Attorney Note
+                      </span>
+                      <span className="text-xs text-muted-foreground">{note.timestamp}</span>
+                    </div>
+                    <p className="text-sm pl-6">{note.content}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-muted-foreground text-sm">No attorney notes yet. Add your first note below.</p>
+              )}
+            </div>
+          )}
+          
+          {/* Note Input */}
+          <div className="flex mt-4">
+            <Textarea
+              ref={textareaRef}
+              value={noteInput}
+              onChange={(e) => setNoteInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Add attorney note..."
+              className="min-h-[80px] resize-none flex-grow"
+              disabled={isSending}
+            />
+            <div className="ml-2 flex flex-col justify-end">
+              <Button 
+                onClick={handleSendClick}
+                disabled={isSending || !noteInput.trim()}
+              >
+                {isSending ? (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-1"></span>
+                ) : (
+                  <Send className="h-4 w-4 mr-1" />
+                )}
+                Add Note
+              </Button>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
