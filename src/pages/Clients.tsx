@@ -27,11 +27,17 @@ const Clients = () => {
         
         <Tabs defaultValue="view-clients" className="w-full">
           <TabsList className="mb-4">
-            <TabsTrigger value="view-clients" className="flex items-center gap-2">
+            <TabsTrigger 
+              value="view-clients" 
+              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white data-[state=active]:bg-purple-700 transition-colors"
+            >
               <User className="h-4 w-4" />
               Clients
             </TabsTrigger>
-            <TabsTrigger value="add-client" className="flex items-center gap-2">
+            <TabsTrigger 
+              value="add-client" 
+              className="flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white data-[state=active]:bg-indigo-600 transition-colors"
+            >
               <UserPlus className="h-4 w-4" />
               Add Client
             </TabsTrigger>
