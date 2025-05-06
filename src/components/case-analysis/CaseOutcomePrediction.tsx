@@ -3,6 +3,7 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { ArrowUpIcon, ArrowDownIcon } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface CaseOutcomePredictionProps {
   defense: number;
@@ -31,7 +32,14 @@ const CaseOutcomePrediction: React.FC<CaseOutcomePredictionProps> = ({
             <div className="flex justify-between mb-1">
               <div className="font-medium flex items-center text-green-600">
                 <ArrowUpIcon className="h-4 w-4 mr-1" />
-                Defense Outcome
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger className="cursor-help">Client Win Likelihood</TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>Estimated probability that your client will prevail in this case</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               <span className="text-sm font-bold">{defense}%</span>
             </div>
@@ -42,7 +50,14 @@ const CaseOutcomePrediction: React.FC<CaseOutcomePredictionProps> = ({
             <div className="flex justify-between mb-1">
               <div className="font-medium flex items-center text-red-600">
                 <ArrowDownIcon className="h-4 w-4 mr-1" />
-                Prosecution Risk
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger className="cursor-help">Case Loss Risk</TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>Estimated probability that your client will not succeed in this case</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               <span className="text-sm font-bold">{prosecution}%</span>
             </div>
@@ -50,8 +65,8 @@ const CaseOutcomePrediction: React.FC<CaseOutcomePredictionProps> = ({
           </div>
           
           <p className="text-xs text-muted-foreground pt-2">
-            This prediction is based on analyzing similar case outcomes and the specific details of this case.
-            The percentages represent the estimated likelihood of each outcome.
+            This prediction is based on analysis of case details, evidence strength, and similar case outcomes.
+            The percentages represent the estimated likelihood of each outcome in this civil matter.
           </p>
         </div>
       </CardContent>
