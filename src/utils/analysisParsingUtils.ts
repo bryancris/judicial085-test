@@ -1,0 +1,179 @@
+
+import { StrengthsAndWeaknesses, PredictionPercentages } from "@/types/caseAnalysis";
+
+// Extract strengths and weaknesses from analysis text
+export const extractStrengthsWeaknesses = (analysisText: string): StrengthsAndWeaknesses => {
+  const strengths: string[] = [];
+  const weaknesses: string[] = [];
+  
+  // Find positive factors in the potential issues section
+  const potentialIssuesMatch = analysisText.match(/\*\*POTENTIAL LEGAL ISSUES:\*\*([\s\S]*?)(?=\*\*RECOMMENDED FOLLOW-UP|$)/);
+  if (potentialIssuesMatch) {
+    const issues = potentialIssuesMatch[1].split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 10); // Filter out short lines
+    
+    // Categorize issues as strengths or weaknesses based on keywords
+    issues.forEach(issue => {
+      const lowerIssue = issue.toLowerCase();
+      
+      // Check for positive indicators
+      if (
+        lowerIssue.includes("favorable") || 
+        lowerIssue.includes("advantage") || 
+        lowerIssue.includes("support") || 
+        lowerIssue.includes("benefit") ||
+        lowerIssue.includes("evidence in favor") ||
+        lowerIssue.includes("strong argument")
+      ) {
+        strengths.push(issue.replace(/^[-•*]\s*/, '')); // Remove bullet points
+      } 
+      // Check for negative indicators
+      else if (
+        lowerIssue.includes("challenge") || 
+        lowerIssue.includes("difficult") || 
+        lowerIssue.includes("concern") || 
+        lowerIssue.includes("problem") ||
+        lowerIssue.includes("weak") ||
+        lowerIssue.includes("against") ||
+        lowerIssue.includes("risk")
+      ) {
+        weaknesses.push(issue.replace(/^[-•*]\s*/, '')); // Remove bullet points
+      }
+      // If unclear, default logic
+      else if (strengths.length <= weaknesses.length) {
+        strengths.push(issue.replace(/^[-•*]\s*/, ''));
+      } else {
+        weaknesses.push(issue.replace(/^[-•*]\s*/, ''));
+      }
+    });
+  }
+  
+  // If we couldn't extract enough strengths/weaknesses, add generic ones based on the analysis
+  if (strengths.length < 2) {
+    const prelimAnalysisMatch = analysisText.match(/\*\*PRELIMINARY ANALYSIS:\*\*([\s\S]*?)(?=\*\*POTENTIAL LEGAL ISSUES|\*\*RECOMMENDED FOLLOW-UP|$)/);
+    if (prelimAnalysisMatch) {
+      const prelimText = prelimAnalysisMatch[1].toLowerCase();
+      
+      if (prelimText.includes("witness") && !strengths.some(s => s.toLowerCase().includes("witness"))) {
+        strengths.push("Witness testimony may strengthen the case");
+      }
+      
+      if (prelimText.includes("evidence") && !strengths.some(s => s.toLowerCase().includes("evidence"))) {
+        strengths.push("Available evidence supports client's position");
+      }
+      
+      if (prelimText.includes("precedent") && !strengths.some(s => s.toLowerCase().includes("precedent"))) {
+        strengths.push("Legal precedent supports elements of our case");
+      }
+    }
+  }
+  
+  if (weaknesses.length < 2) {
+    const prelimAnalysisMatch = analysisText.match(/\*\*PRELIMINARY ANALYSIS:\*\*([\s\S]*?)(?=\*\*POTENTIAL LEGAL ISSUES|\*\*RECOMMENDED FOLLOW-UP|$)/);
+    if (prelimAnalysisMatch) {
+      const prelimText = prelimAnalysisMatch[1].toLowerCase();
+      
+      if (prelimText.includes("burden") && !weaknesses.some(w => w.toLowerCase().includes("burden"))) {
+        weaknesses.push("Burden of proof challenges");
+      }
+      
+      if (prelimText.includes("credibility") && !weaknesses.some(w => w.toLowerCase().includes("credibility"))) {
+        weaknesses.push("Potential credibility challenges");
+      }
+      
+      if (prelimText.includes("limitation") && !weaknesses.some(w => w.toLowerCase().includes("limitation"))) {
+        weaknesses.push("Procedural or statutory limitations may apply");
+      }
+    }
+  }
+  
+  // Ensure we have at least some strengths and weaknesses
+  if (strengths.length === 0) {
+    strengths.push(
+      "Client's testimony appears consistent",
+      "Documentation of incident is available",
+      "Applicable law has favorable precedents"
+    );
+  }
+  
+  if (weaknesses.length === 0) {
+    weaknesses.push(
+      "Potential gaps in evidence chain",
+      "Timeline inconsistencies may need resolution",
+      "Opposing counsel likely to challenge key facts"
+    );
+  }
+  
+  // Ensure a reasonable number (2-4) of strengths and weaknesses
+  return {
+    strengths: strengths.slice(0, 4),
+    weaknesses: weaknesses.slice(0, 4)
+  };
+};
+
+// Calculate prediction percentages based on analysis text
+export const calculatePredictionPercentages = (
+  analysisText: string, 
+  strengthsWeaknesses: StrengthsAndWeaknesses
+): PredictionPercentages => {
+  // Base calculation on strengths vs weaknesses ratio
+  const strengthsCount = strengthsWeaknesses.strengths.length;
+  const weaknessesCount = strengthsWeaknesses.weaknesses.length;
+  const total = strengthsCount + weaknessesCount;
+  
+  // Calculate a base percentage
+  let defensePercentage = Math.round((strengthsCount / total) * 100);
+  
+  // Adjust based on keywords in analysis text
+  const lowerAnalysis = analysisText.toLowerCase();
+  
+  // Factors that would increase defense percentage
+  if (lowerAnalysis.includes("strong case") || lowerAnalysis.includes("likely to succeed")) {
+    defensePercentage += 10;
+  }
+  
+  if (lowerAnalysis.includes("precedent support") || lowerAnalysis.includes("favorable precedent")) {
+    defensePercentage += 5;
+  }
+  
+  // Factors that would decrease defense percentage
+  if (lowerAnalysis.includes("difficult to prove") || lowerAnalysis.includes("challenging case")) {
+    defensePercentage -= 10;
+  }
+  
+  if (lowerAnalysis.includes("burden of proof") || lowerAnalysis.includes("high standard")) {
+    defensePercentage -= 5;
+  }
+  
+  // Ensure percentage is within reasonable bounds
+  defensePercentage = Math.max(30, Math.min(defensePercentage, 80));
+  
+  return {
+    defense: defensePercentage,
+    prosecution: 100 - defensePercentage
+  };
+};
+
+// Extract sections from analysis content
+export const extractAnalysisSections = (content: string) => {
+  const relevantLawMatch = content.match(/\*\*RELEVANT TEXAS LAW:\*\*([\s\S]*?)(?=\*\*PRELIMINARY ANALYSIS|\*\*POTENTIAL LEGAL ISSUES|\*\*RECOMMENDED FOLLOW-UP|$)/);
+  const preliminaryAnalysisMatch = content.match(/\*\*PRELIMINARY ANALYSIS:\*\*([\s\S]*?)(?=\*\*POTENTIAL LEGAL ISSUES|\*\*RECOMMENDED FOLLOW-UP|$)/);
+  const potentialIssuesMatch = content.match(/\*\*POTENTIAL LEGAL ISSUES:\*\*([\s\S]*?)(?=\*\*RECOMMENDED FOLLOW-UP|$)/);
+  const followUpQuestionsMatch = content.match(/\*\*RECOMMENDED FOLLOW-UP QUESTIONS:\*\*([\s\S]*?)$/);
+  
+  // Extract follow-up questions
+  const followUpQuestions = followUpQuestionsMatch 
+    ? followUpQuestionsMatch[1].split('\n')
+      .map(line => line.trim())
+      .filter(line => line.match(/^\d+\.\s/))
+      .map(line => line.replace(/^\d+\.\s/, ''))
+    : [];
+  
+  return {
+    relevantLaw: relevantLawMatch ? relevantLawMatch[1].trim() : "No relevant law analysis available.",
+    preliminaryAnalysis: preliminaryAnalysisMatch ? preliminaryAnalysisMatch[1].trim() : "No preliminary analysis available.",
+    potentialIssues: potentialIssuesMatch ? potentialIssuesMatch[1].trim() : "No potential issues identified.",
+    followUpQuestions
+  };
+};
