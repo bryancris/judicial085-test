@@ -1,7 +1,7 @@
 /**
  * Utility functions for processing markdown and handling follow-up questions
  */
-import { processLawReferences } from "./lawReferenceUtils";
+import { processLawReferencesSync } from "./lawReferenceUtils";
 
 /**
  * Processes markdown content and enhances follow-up questions
@@ -41,7 +41,8 @@ export const processFollowUpQuestions = (content: string, MAX_QUESTIONS = 4): st
       // This is content between section headers
       if (i > 0 && sections[i-1].includes("RELEVANT") && sections[i-1].includes("LAW")) {
         // This is the Relevant Texas Law section, add links to law references
-        result += processLawReferences(sections[i]);
+        // We use the sync version here for immediate rendering
+        result += processLawReferencesSync(sections[i]);
       } else {
         // Other sections, keep as is
         result += sections[i];

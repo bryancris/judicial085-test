@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,12 @@ import {
 } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { ChevronDownIcon, ChevronUpIcon, SearchIcon } from "lucide-react";
-import { processLawReferences, extractCitations, searchLawDocuments } from "@/utils/lawReferenceUtils";
+import { 
+  processLawReferences, 
+  processLawReferencesSync, 
+  extractCitations, 
+  searchLawDocuments 
+} from "@/utils/lawReferenceUtils";
 
 interface DetailedLegalAnalysisProps {
   relevantLaw: string;
@@ -32,7 +38,8 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
     potentialIssues: true,
     followUpQuestions: true
   });
-  const [processedRelevantLaw, setProcessedRelevantLaw] = useState(relevantLaw);
+  const [processedRelevantLaw, setProcessedRelevantLaw] = useState("");
+  const [isProcessingLawRefs, setIsProcessingLawRefs] = useState(true);
   const [lawCitations, setLawCitations] = useState<string[]>([]);
 
   // Process the relevant law section to add links
@@ -41,9 +48,24 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
     const citations = extractCitations(relevantLaw);
     setLawCitations(citations);
     
-    // Process the text to add links
-    const processed = processLawReferences(relevantLaw);
-    setProcessedRelevantLaw(processed);
+    // Start with a synchronous version for immediate display
+    const initialProcessed = processLawReferencesSync(relevantLaw);
+    setProcessedRelevantLaw(initialProcessed);
+    
+    // Then process asynchronously to get direct URLs
+    const processAsync = async () => {
+      setIsProcessingLawRefs(true);
+      try {
+        const fullyProcessed = await processLawReferences(relevantLaw);
+        setProcessedRelevantLaw(fullyProcessed);
+      } catch (error) {
+        console.error("Error processing law references:", error);
+      } finally {
+        setIsProcessingLawRefs(false);
+      }
+    };
+    
+    processAsync();
   }, [relevantLaw]);
   
   // Preemptively fetch some citations data when available
@@ -168,7 +190,12 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
               className="flex w-full justify-between p-4 font-semibold" 
               onClick={() => handleToggleSection('relevantLaw')}
             >
-              <span>Relevant Texas Law</span>
+              <span className="flex items-center">
+                Relevant Texas Law
+                {isProcessingLawRefs && (
+                  <span className="ml-2 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
+                )}
+              </span>
               {openSections.relevantLaw ? (
                 <ChevronUpIcon className="h-4 w-4" />
               ) : (
@@ -179,7 +206,7 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
           <CollapsibleContent className="px-4 pb-4">
             {formatMarkdown(relevantLaw, true)}
             <div className="mt-2 text-xs text-muted-foreground">
-              <p>Click on law references to view the full text in the Knowledge database.</p>
+              <p>Click on law references to open the full text document in a new tab.</p>
             </div>
           </CollapsibleContent>
         </Collapsible>
