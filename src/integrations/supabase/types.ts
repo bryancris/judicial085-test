@@ -47,6 +47,47 @@ export type Database = {
           },
         ]
       }
+      case_discussions: {
+        Row: {
+          client_id: string
+          content: string
+          created_at: string
+          id: string
+          role: string
+          timestamp: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          content: string
+          created_at?: string
+          id?: string
+          role: string
+          timestamp: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          role?: string
+          timestamp?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_discussions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_messages: {
         Row: {
           client_id: string

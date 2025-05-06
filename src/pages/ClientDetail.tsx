@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useParams, Navigate, Link } from "react-router-dom";
 import { ArrowLeft, FileText, BookOpen, FileSearch, Video, FileChartLine, MessageSquare } from "lucide-react";
@@ -10,6 +11,7 @@ import ClientDetailSkeleton from "@/components/clients/ClientDetailSkeleton";
 import ClientInformationAccordion from "@/components/clients/ClientInformationAccordion";
 import ClientIntakeChat from "@/components/clients/chat/ClientIntakeChat";
 import CaseAnalysisContainer from "@/components/case-analysis/CaseAnalysisContainer";
+import CaseDiscussionContainer from "@/components/case-discussion/CaseDiscussionContainer";
 import { useToast } from "@/hooks/use-toast";
 
 // Define tab color styles
@@ -177,10 +179,7 @@ const ClientDetail = () => {
           <TabsContent value="discuss-case" className="py-4">
             <Card>
               <CardContent className="pt-6">
-                <h2 className="text-xl font-semibold mb-4">Discuss Case</h2>
-                <p className="text-muted-foreground">
-                  Case discussion and collaboration area will be displayed here.
-                </p>
+                <CaseDiscussionContainer clientId={client.id} />
               </CardContent>
             </Card>
           </TabsContent>
