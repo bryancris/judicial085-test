@@ -22,7 +22,7 @@ const SearchSimilarCasesButton: React.FC<SearchSimilarCasesButtonProps> = ({
         {isLoading ? (
           <>
             <span className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
-            Searching...
+            Searching Texas Court Records...
           </>
         ) : (
           <>

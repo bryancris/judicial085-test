@@ -5,6 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.33.2";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+const courtListenerApiKey = Deno.env.get('COURTLISTENER_API_KEY') || '';
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -50,7 +51,15 @@ serve(async (req) => {
       throw new Error('No legal analysis found for this client');
     }
 
-    // Fetch all other clients' legal analyses
+    // Extract key terms and relevant laws from the analysis
+    const relevantLaw = extractSection(currentAnalysis.content, 'RELEVANT TEXAS LAW');
+    const legalIssues = extractSection(currentAnalysis.content, 'POTENTIAL LEGAL ISSUES');
+    
+    // Generate search terms based on analysis content
+    const searchTerms = generateSearchTerms(relevantLaw, legalIssues);
+    console.log("Generated search terms:", searchTerms);
+    
+    // First try to find similar cases from our own database
     const { data: otherAnalyses, error: otherAnalysesError } = await supabase
       .from('legal_analyses')
       .select('content, client_id, created_at')
@@ -59,7 +68,7 @@ serve(async (req) => {
 
     if (otherAnalysesError) {
       console.error('Error fetching other analyses:', otherAnalysesError);
-      throw new Error('Failed to search for similar cases');
+      throw new Error('Failed to search for similar cases in database');
     }
 
     // Group analyses by client and take the most recent one for each
@@ -83,7 +92,7 @@ serve(async (req) => {
     ].join(' ');
 
     // For each client, calculate similarity score
-    const similarityResults = await Promise.all(
+    const internalSimilarityResults = await Promise.all(
       Object.values(latestAnalysesByClient).map(async (analysis: any) => {
         const relevantLaw = extractSection(analysis.content, 'RELEVANT TEXAS LAW');
         const preliminaryAnalysis = extractSection(analysis.content, 'PRELIMINARY ANALYSIS');
@@ -105,26 +114,87 @@ serve(async (req) => {
         const outcomeText = extractOutcomePrediction(analysis.content);
         
         return {
+          source: "internal",
           clientId: analysis.client_id,
           clientName: otherClient ? `${otherClient.first_name} ${otherClient.last_name}` : 'Unknown Client',
           similarity: similarityScore,
           relevantFacts: extractRelevantFacts(analysis.content),
-          outcome: outcomeText
+          outcome: outcomeText,
+          court: "N/A",
+          citation: "Client Case",
+          dateDecided: new Date(analysis.created_at).toLocaleDateString(),
+          url: null
         };
       })
     );
 
-    // Sort by similarity score (highest first)
-    const sortedResults = similarityResults
-      .filter(result => result.similarity > 0.2) // Only include results with at least 20% similarity
-      .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, 5); // Top 5 most similar
+    // Now query the CourtListener API
+    let courtListenerResults = [];
+    
+    if (courtListenerApiKey) {
+      try {
+        console.log("Querying CourtListener API with search terms:", searchTerms);
+        // Build query for CourtListener API
+        const queryString = encodeURIComponent(searchTerms);
+        const url = `https://www.courtlistener.com/api/rest/v3/opinions/?court__jurisdiction=T&court__state=tex&q=${queryString}`;
 
-    console.log(`Found ${sortedResults.length} similar cases`);
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Token ${courtListenerApiKey}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`CourtListener API returned ${response.status}: ${await response.text()}`);
+        }
+
+        const data = await response.json();
+        console.log(`Found ${data.results.length} cases from CourtListener API`);
+
+        // Process CourtListener results
+        courtListenerResults = data.results.slice(0, 5).map(result => {
+          // Extract the most relevant snippet from the opinion text
+          const opinionText = result.plain_text || "";
+          const snippet = extractRelevantSnippet(opinionText, searchTerms);
+          
+          return {
+            source: "courtlistener",
+            clientId: null,
+            clientName: result.case_name || "Unknown Case",
+            similarity: 0.7, // Placeholder - we would calculate this better in a real implementation
+            relevantFacts: snippet,
+            outcome: extractOutcomeFromOpinion(opinionText),
+            court: result.court_name || "Texas Court",
+            citation: result.citation || "No citation available",
+            dateDecided: result.date_filed ? new Date(result.date_filed).toLocaleDateString() : "Unknown date",
+            url: result.absolute_url ? `https://www.courtlistener.com${result.absolute_url}` : null
+          };
+        });
+      } catch (apiError) {
+        console.error('Error querying CourtListener API:', apiError);
+        // Continue with just internal results if API fails
+      }
+    } else {
+      console.log("No CourtListener API key provided, skipping external search");
+    }
+
+    // Combine and sort both internal and CourtListener results
+    const combinedResults = [...internalSimilarityResults, ...courtListenerResults]
+      .filter(result => result.similarity > 0.2 || result.source === "courtlistener") // Include all CourtListener results for now
+      .sort((a, b) => {
+        // Prioritize CourtListener results slightly
+        if (a.source === "courtlistener" && b.source !== "courtlistener") return -1;
+        if (a.source !== "courtlistener" && b.source === "courtlistener") return 1;
+        // Then sort by similarity
+        return b.similarity - a.similarity;
+      })
+      .slice(0, 10); // Top 10 most similar
+
+    console.log(`Found ${combinedResults.length} total similar cases`);
 
     return new Response(
       JSON.stringify({ 
-        similarCases: sortedResults,
+        similarCases: combinedResults,
         currentClient: `${clientData.first_name} ${clientData.last_name}`
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -185,4 +255,113 @@ function extractOutcomePrediction(content: string): string {
   
   // Default outcome if no prediction found
   return "No specific outcome prediction available.";
+}
+
+// Generate search terms for CourtListener API based on legal analysis
+function generateSearchTerms(relevantLaw: string, legalIssues: string): string {
+  // Extract potential statutes
+  const statuteMatches = relevantLaw.match(/([A-Z][\w\s]+Code\s+§+\s*\d+[\w\.\-]*)/g) || [];
+  
+  // Extract key legal terms
+  const legalTerms = new Set<string>();
+  
+  // Process relevant law for legal terms
+  const lawWords = relevantLaw.split(/\W+/);
+  for (let i = 0; i < lawWords.length - 1; i++) {
+    if (lawWords[i].length > 3 && lawWords[i][0].toUpperCase() === lawWords[i][0]) {
+      const term = lawWords[i] + ' ' + lawWords[i+1];
+      if (term.length > 7) legalTerms.add(term);
+    }
+  }
+  
+  // Process legal issues for additional terms
+  const issueWords = legalIssues.split(/\W+/);
+  for (let i = 0; i < issueWords.length - 1; i++) {
+    if (issueWords[i].length > 4) {
+      const term = issueWords[i] + ' ' + issueWords[i+1];
+      if (term.length > 7) legalTerms.add(term);
+    }
+  }
+  
+  // Combine statutes and best legal terms
+  const statutes = statuteMatches.slice(0, 2).join(' ');
+  const bestTerms = Array.from(legalTerms).slice(0, 5).join(' ');
+  
+  return `${statutes} ${bestTerms}`.trim();
+}
+
+// Extract a relevant snippet from a court opinion based on search terms
+function extractRelevantSnippet(opinionText: string, searchTerms: string): string {
+  // Split search terms into individual words
+  const terms = searchTerms.toLowerCase().split(/\W+/).filter(term => term.length > 3);
+  
+  // Split opinion into paragraphs
+  const paragraphs = opinionText.split(/\n\n+/);
+  
+  // Score each paragraph based on how many search terms it contains
+  const scoredParagraphs = paragraphs.map(paragraph => {
+    const paraLower = paragraph.toLowerCase();
+    let score = 0;
+    
+    // Count occurrences of search terms
+    terms.forEach(term => {
+      if (paraLower.includes(term)) {
+        score += 1;
+      }
+    });
+    
+    return { paragraph, score };
+  });
+  
+  // Sort paragraphs by score (highest first)
+  scoredParagraphs.sort((a, b) => b.score - a.score);
+  
+  // If we found a relevant paragraph, return it (trimmed if too long)
+  if (scoredParagraphs.length > 0 && scoredParagraphs[0].score > 0) {
+    const bestParagraph = scoredParagraphs[0].paragraph;
+    return bestParagraph.length > 300 
+      ? bestParagraph.substring(0, 297) + '...'
+      : bestParagraph;
+  }
+  
+  // Fallback to first 200 characters if no relevant paragraph found
+  return opinionText.length > 200 
+    ? opinionText.substring(0, 197) + '...' 
+    : opinionText;
+}
+
+// Extract the outcome from a court opinion
+function extractOutcomeFromOpinion(opinionText: string): string {
+  // Look for common phrases that indicate the outcome
+  const conclusionKeywords = [
+    'therefore', 'accordingly', 'thus', 'we affirm', 'we reverse', 
+    'judgment is affirmed', 'judgment is reversed', 'we conclude'
+  ];
+  
+  // Split into paragraphs to look for conclusion
+  const paragraphs = opinionText.split(/\n\n+/);
+  
+  // Check the last few paragraphs for conclusion statements
+  for (let i = Math.max(0, paragraphs.length - 3); i < paragraphs.length; i++) {
+    const para = paragraphs[i].toLowerCase();
+    
+    for (const keyword of conclusionKeywords) {
+      if (para.includes(keyword)) {
+        // Get the sentence containing the keyword
+        const sentences = paragraphs[i].split(/\.\s+/);
+        for (const sentence of sentences) {
+          if (sentence.toLowerCase().includes(keyword)) {
+            return sentence.trim() + '.';
+          }
+        }
+        // Return the whole paragraph if specific sentence not found
+        return paragraphs[i].length > 300 
+          ? paragraphs[i].substring(0, 297) + '...' 
+          : paragraphs[i];
+      }
+    }
+  }
+  
+  // Fallback if no clear conclusion found
+  return "Case outcome details not available";
 }
