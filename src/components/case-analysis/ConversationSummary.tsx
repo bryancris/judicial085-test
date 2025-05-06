@@ -1,13 +1,13 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquare, User, UserRound, Send } from "lucide-react";
+import { MessageSquare, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChatMessageProps } from "@/components/clients/chat/ChatMessage";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { useCaseAnalysisChat, CaseAnalysisNote } from "@/hooks/useCaseAnalysisChat";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useCaseAnalysisChat } from "@/hooks/useCaseAnalysisChat";
+import ConversationList from "./conversation/ConversationList";
+import AttorneyNotesList from "./conversation/AttorneyNotesList";
+import AttorneyNoteInput from "./conversation/AttorneyNoteInput";
 
 interface ConversationSummaryProps {
   summary: string;
@@ -20,10 +20,9 @@ const ConversationSummary: React.FC<ConversationSummaryProps> = ({
   isLoading = false,
   clientId
 }) => {
-  const [conversation, setConversation] = React.useState<ChatMessageProps[]>([]);
-  const [loading, setLoading] = React.useState(false);
-  const [noteInput, setNoteInput] = React.useState("");
-  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const [conversation, setConversation] = useState<ChatMessageProps[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [noteInput, setNoteInput] = useState("");
   
   const {
     notes,
@@ -32,7 +31,7 @@ const ConversationSummary: React.FC<ConversationSummaryProps> = ({
     handleSendNote
   } = useCaseAnalysisChat(clientId);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (clientId) {
       fetchClientMessages(clientId);
     }
@@ -101,13 +100,6 @@ const ConversationSummary: React.FC<ConversationSummaryProps> = ({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendClick();
-    }
-  };
-
   return (
     <Card className="mb-6 shadow-sm">
       <CardHeader className="pb-2">
@@ -120,36 +112,7 @@ const ConversationSummary: React.FC<ConversationSummaryProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {loading ? (
-          <div className="flex justify-center py-4">
-            <span className="h-6 w-6 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
-          </div>
-        ) : conversation.length > 0 ? (
-          <div className="space-y-2 border p-4 rounded-md bg-muted/30">
-            {conversation.map((message, index) => (
-              <div key={index} className="py-2 border-b last:border-b-0 border-gray-100">
-                <div className="flex items-center mb-1">
-                  {message.role === 'attorney' ? (
-                    <User className="h-4 w-4 mr-1 text-primary" />
-                  ) : (
-                    <UserRound className="h-4 w-4 mr-1 text-brand-burgundy" />
-                  )}
-                  <span className={`text-xs font-medium px-2 py-1 rounded-full mr-2 ${
-                    message.role === 'attorney' 
-                      ? 'bg-primary/10 text-primary' 
-                      : 'bg-brand-burgundy/10 text-brand-burgundy'
-                  }`}>
-                    {message.role === 'attorney' ? 'Attorney' : 'Client'}
-                  </span>
-                  <span className="text-xs text-muted-foreground">{message.timestamp}</span>
-                </div>
-                <p className="text-sm pl-6">{message.content}</p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-muted-foreground text-center py-4">No conversation data available</p>
-        )}
+        <ConversationList conversation={conversation} loading={loading} />
         
         {/* Attorney Notes Section */}
         <div className="mt-6 border-t pt-4">
@@ -158,58 +121,15 @@ const ConversationSummary: React.FC<ConversationSummaryProps> = ({
             Attorney Notes:
           </h4>
           
-          {isLoadingNotes ? (
-            <div className="space-y-2">
-              <Skeleton className="h-[20px] w-full" />
-              <Skeleton className="h-[20px] w-3/4" />
-              <Skeleton className="h-[20px] w-5/6" />
-            </div>
-          ) : (
-            <div className="space-y-2 mb-4">
-              {notes.length > 0 ? (
-                notes.map((note, index) => (
-                  <div key={index} className="py-2 border-b last:border-b-0 border-gray-100">
-                    <div className="flex items-center mb-1">
-                      <User className="h-4 w-4 mr-1 text-primary" />
-                      <span className="text-xs font-medium px-2 py-1 rounded-full mr-2 bg-primary/10 text-primary">
-                        Attorney Note
-                      </span>
-                      <span className="text-xs text-muted-foreground">{note.timestamp}</span>
-                    </div>
-                    <p className="text-sm pl-6">{note.content}</p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-muted-foreground text-sm">No attorney notes yet. Add your first note below.</p>
-              )}
-            </div>
-          )}
+          <AttorneyNotesList notes={notes} isLoading={isLoadingNotes} />
           
           {/* Note Input */}
-          <div className="flex mt-4">
-            <Textarea
-              ref={textareaRef}
-              value={noteInput}
-              onChange={(e) => setNoteInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Add attorney note..."
-              className="min-h-[80px] resize-none flex-grow"
-              disabled={isSending}
-            />
-            <div className="ml-2 flex flex-col justify-end">
-              <Button 
-                onClick={handleSendClick}
-                disabled={isSending || !noteInput.trim()}
-              >
-                {isSending ? (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-1"></span>
-                ) : (
-                  <Send className="h-4 w-4 mr-1" />
-                )}
-                Add Note
-              </Button>
-            </div>
-          </div>
+          <AttorneyNoteInput 
+            noteInput={noteInput}
+            setNoteInput={setNoteInput}
+            isSending={isSending}
+            onSend={handleSendClick}
+          />
         </div>
       </CardContent>
     </Card>
