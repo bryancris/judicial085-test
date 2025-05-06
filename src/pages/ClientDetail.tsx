@@ -15,11 +15,19 @@ import { useToast } from "@/hooks/use-toast";
 
 // Define tab color styles
 const tabColors = {
-  "client-intake": "bg-[#0EA5E9] hover:bg-[#0EA5E9]/90 text-white",
-  "fact-pattern": "bg-[#F97316] hover:bg-[#F97316]/90 text-white",
-  "discovery": "bg-[#8B5CF6] hover:bg-[#8B5CF6]/90 text-white",
-  "deposition": "bg-[#D946EF] hover:bg-[#D946EF]/90 text-white",
-  "case-analysis": "bg-[#ea384c] hover:bg-[#ea384c]/90 text-white",
+  "client-intake": "bg-[#0EA5E9] text-white",
+  "fact-pattern": "bg-[#F97316] text-white",
+  "discovery": "bg-[#8B5CF6] text-white",
+  "deposition": "bg-[#D946EF] text-white",
+  "case-analysis": "bg-[#ea384c] text-white",
+};
+
+const tabHoverColors = {
+  "client-intake": "hover:bg-[#0EA5E9]/90",
+  "fact-pattern": "hover:bg-[#F97316]/90",
+  "discovery": "hover:bg-[#8B5CF6]/90",
+  "deposition": "hover:bg-[#D946EF]/90",
+  "case-analysis": "hover:bg-[#ea384c]/90",
 };
 
 const ClientDetail = () => {
@@ -99,11 +107,11 @@ const ClientDetail = () => {
 
         <Tabs defaultValue="client-intake" className="w-full">
           <TabsList className="w-full grid grid-cols-5 mb-6">
-            {["client-intake", "fact-pattern", "discovery", "deposition", "case-analysis"].map((tabValue, index) => (
+            {["client-intake", "fact-pattern", "discovery", "deposition", "case-analysis"].map((tabValue) => (
               <TabsTrigger 
                 key={tabValue}
                 value={tabValue} 
-                className={`flex items-center gap-2 data-[state=active]:${tabColors[tabValue as keyof typeof tabColors]} ${tabColors[tabValue as keyof typeof tabColors].replace('bg-', 'data-[state=active]:')}`}
+                className={`flex items-center gap-2 ${tabColors[tabValue as keyof typeof tabColors]} ${tabHoverColors[tabValue as keyof typeof tabHoverColors]} data-[state=inactive]:opacity-70`}
               >
                 {tabValue === "client-intake" && <FileText className="h-4 w-4" />}
                 {tabValue === "fact-pattern" && <BookOpen className="h-4 w-4" />}
