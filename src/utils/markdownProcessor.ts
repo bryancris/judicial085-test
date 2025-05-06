@@ -1,6 +1,7 @@
 /**
  * Utility functions for processing markdown and handling follow-up questions
  */
+import { processLawReferences } from "./lawReferenceUtils";
 
 /**
  * Processes markdown content and enhances follow-up questions
@@ -31,11 +32,32 @@ export const processMarkdown = (content: string): string => {
  * @returns Processed content with enhanced question items
  */
 export const processFollowUpQuestions = (content: string, MAX_QUESTIONS = 4): string => {
+  // Split content into sections for better processing
+  const sections = content.split(/\*\*([A-Z\s\-:]+)\*\*/);
+  
+  let result = '';
+  for (let i = 0; i < sections.length; i++) {
+    if (i % 2 === 0) {
+      // This is content between section headers
+      if (i > 0 && sections[i-1].includes("RELEVANT") && sections[i-1].includes("LAW")) {
+        // This is the Relevant Texas Law section, add links to law references
+        result += processLawReferences(sections[i]);
+      } else {
+        // Other sections, keep as is
+        result += sections[i];
+      }
+    } else {
+      // This is a section header, keep as is
+      result += `**${sections[i]}**`;
+    }
+  }
+  
+  // Process follow-up questions in the entire content
   // Split content into lines for better processing
-  const lines = content.split('\n');
+  const lines = result.split('\n');
   let inQuestionSection = false;
   let questionCount = 0;
-  let result = '';
+  let processedContent = '';
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -43,7 +65,7 @@ export const processFollowUpQuestions = (content: string, MAX_QUESTIONS = 4): st
     // Detect when we enter the recommended follow-up questions section
     if (/RECOMMENDED\s+FOLLOW[\s\-]*UP\s+QUESTIONS/i.test(line)) {
       inQuestionSection = true;
-      result += line + '\n';
+      processedContent += line + '\n';
       continue;
     }
     
@@ -64,27 +86,27 @@ export const processFollowUpQuestions = (content: string, MAX_QUESTIONS = 4): st
             <span class="ml-auto text-blue-500">➡</span>
           </div>\n`;
           
-          result += clickableQuestion;
+          processedContent += clickableQuestion;
           questionCount++;
         }
       } else if (line.trim() === '') {
         // Keep empty lines
-        result += '\n';
+        processedContent += '\n';
       } else if (/^[A-Za-z]+:/.test(line) || /^#{1,3}\s+/.test(line) || /^\*\*[^*]+\*\*$/.test(line)) {
         // Detect new section headers to exit question section
         inQuestionSection = false;
-        result += line + '\n';
+        processedContent += line + '\n';
       } else {
         // Any other content in the question section that's not a question or new header
-        result += line + '\n';
+        processedContent += line + '\n';
       }
     } else {
       // Not in question section, just pass through
-      result += line + '\n';
+      processedContent += line + '\n';
     }
   }
   
-  return result;
+  return processedContent;
 };
 
 /**

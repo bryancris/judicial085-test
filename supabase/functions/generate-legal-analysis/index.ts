@@ -31,11 +31,15 @@ serve(async (req) => {
     console.log(`Conversation length: ${conversation.length}`);
 
     // Create improved system prompt for legal analysis - explicitly requesting exactly 4 follow-up questions
+    // and adding formatting guidance for law citations
     const systemPrompt = `
 You are a legal expert assistant for attorneys in Texas. Based on the attorney-client conversation provided, 
 generate a concise legal analysis with the following sections:
 
 1. **RELEVANT TEXAS LAW:** Identify and briefly explain Texas laws, statutes, or precedents that apply to this case.
+   - When citing Texas statutes, use the format: "Texas Civil Practice and Remedies Code § 75.001" or similar standard legal citation format
+   - For case law, use italics with the format: *Wal-Mart Stores, Inc. v. Gonzalez*
+   - Be specific with statute numbers and section references when possible
 
 2. **PRELIMINARY ANALYSIS:** Analyze the key facts from the conversation and their legal implications under Texas law.
 

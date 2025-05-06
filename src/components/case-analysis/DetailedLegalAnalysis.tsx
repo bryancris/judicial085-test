@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { 
@@ -9,6 +8,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { ChevronDownIcon, ChevronUpIcon, SearchIcon } from "lucide-react";
+import { processLawReferences, extractCitations, searchLawDocuments } from "@/utils/lawReferenceUtils";
 
 interface DetailedLegalAnalysisProps {
   relevantLaw: string;
@@ -32,6 +32,36 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
     potentialIssues: true,
     followUpQuestions: true
   });
+  const [processedRelevantLaw, setProcessedRelevantLaw] = useState(relevantLaw);
+  const [lawCitations, setLawCitations] = useState<string[]>([]);
+
+  // Process the relevant law section to add links
+  useEffect(() => {
+    // Extract citations for future use
+    const citations = extractCitations(relevantLaw);
+    setLawCitations(citations);
+    
+    // Process the text to add links
+    const processed = processLawReferences(relevantLaw);
+    setProcessedRelevantLaw(processed);
+  }, [relevantLaw]);
+  
+  // Preemptively fetch some citations data when available
+  useEffect(() => {
+    const preloadCitations = async () => {
+      if (lawCitations.length > 0) {
+        // Take first 2 citations to avoid overloading
+        const sampleCitations = lawCitations.slice(0, 2);
+        
+        for (const citation of sampleCitations) {
+          // Fetch in background, this is just to warm up the cache
+          await searchLawDocuments(citation);
+        }
+      }
+    };
+    
+    preloadCitations();
+  }, [lawCitations]);
 
   const handleToggleSection = (section: keyof typeof openSections) => {
     setOpenSections(prev => ({
@@ -53,14 +83,59 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
   };
 
   // Convert markdown content to React elements with basic formatting
-  const formatMarkdown = (content: string) => {
-    // Handle paragraphs
-    const paragraphs = content.split('\n\n');
+  const formatMarkdown = (content: string, processLinks = false) => {
+    // Handle paragraphs and apply search highlighting
+    let paragraphs = content.split('\n\n');
+    
+    // If we need to process links (for the Relevant Law section)
+    if (processLinks) {
+      // The content is already processed with links in processedRelevantLaw
+      // But we need to split it into paragraphs
+      paragraphs = processedRelevantLaw.split('\n\n');
+    }
+    
     return paragraphs.map((paragraph, idx) => {
-      // Highlight search terms
-      const highlightedText = highlightSearch(paragraph);
-      return <p key={idx} className="mb-3">{highlightedText}</p>;
+      // For searchable content, we need to highlight matches
+      if (!processLinks) {
+        // Highlight search terms
+        const highlightedText = highlightSearch(paragraph);
+        return <p key={idx} className="mb-3">{highlightedText}</p>;
+      } else {
+        // For content with links, we use dangerouslySetInnerHTML
+        // since the links are now HTML
+        return (
+          <p 
+            key={idx} 
+            className="mb-3" 
+            dangerouslySetInnerHTML={{ 
+              __html: searchTerm 
+                ? highlightLawLinksWithSearch(paragraph, searchTerm) 
+                : paragraph 
+            }} 
+          />
+        );
+      }
     });
+  };
+  
+  // Special highlight function for text that contains HTML links
+  const highlightLawLinksWithSearch = (htmlContent: string, term: string): string => {
+    if (!term) return htmlContent;
+    
+    // This is complex because we need to avoid messing up the HTML tags
+    // Split the content at HTML tags and then only highlight text content
+    const tagSplit = htmlContent.split(/(<[^>]*>)/g);
+    
+    return tagSplit.map(part => {
+      // If this is an HTML tag, leave it untouched
+      if (part.startsWith('<') && part.endsWith('>')) {
+        return part;
+      }
+      
+      // Otherwise it's text content, highlight search term
+      const regex = new RegExp(`(${term})`, 'gi');
+      return part.replace(regex, '<mark class="bg-yellow-200">$1</mark>');
+    }).join('');
   };
 
   return (
@@ -102,7 +177,10 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="px-4 pb-4">
-            {formatMarkdown(relevantLaw)}
+            {formatMarkdown(relevantLaw, true)}
+            <div className="mt-2 text-xs text-muted-foreground">
+              <p>Click on law references to view the full text in the Knowledge database.</p>
+            </div>
           </CollapsibleContent>
         </Collapsible>
 
