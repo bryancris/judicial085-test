@@ -1,7 +1,6 @@
-
 import React from "react";
 import { useParams, Navigate, Link } from "react-router-dom";
-import { ArrowLeft, FileText, BookOpen, FileSearch, Video, FileChartLine } from "lucide-react";
+import { ArrowLeft, FileText, BookOpen, FileSearch, Video, FileChartLine, MessageSquare } from "lucide-react";
 import NavBar from "@/components/NavBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +19,7 @@ const tabColors = {
   "discovery": "bg-[#8B5CF6] text-white",
   "deposition": "bg-[#D946EF] text-white",
   "case-analysis": "bg-[#ea384c] text-white",
+  "discuss-case": "bg-[#9b87f5] text-white", // New vibrant purple color for the Discuss Case tab
 };
 
 const tabHoverColors = {
@@ -28,6 +28,7 @@ const tabHoverColors = {
   "discovery": "hover:bg-[#8B5CF6]/90",
   "deposition": "hover:bg-[#D946EF]/90",
   "case-analysis": "hover:bg-[#ea384c]/90",
+  "discuss-case": "hover:bg-[#9b87f5]/90", // Hover state for the Discuss Case tab
 };
 
 const ClientDetail = () => {
@@ -106,8 +107,8 @@ const ClientDetail = () => {
         </div>
 
         <Tabs defaultValue="client-intake" className="w-full">
-          <TabsList className="w-full grid grid-cols-5 mb-6">
-            {["client-intake", "fact-pattern", "discovery", "deposition", "case-analysis"].map((tabValue) => (
+          <TabsList className="w-full grid grid-cols-6 mb-6">
+            {["client-intake", "fact-pattern", "discovery", "deposition", "case-analysis", "discuss-case"].map((tabValue) => (
               <TabsTrigger 
                 key={tabValue}
                 value={tabValue} 
@@ -118,6 +119,7 @@ const ClientDetail = () => {
                 {tabValue === "discovery" && <FileSearch className="h-4 w-4" />}
                 {tabValue === "deposition" && <Video className="h-4 w-4" />}
                 {tabValue === "case-analysis" && <FileChartLine className="h-4 w-4" />}
+                {tabValue === "discuss-case" && <MessageSquare className="h-4 w-4" />}
                 {tabValue.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")}
               </TabsTrigger>
             ))}
@@ -168,6 +170,17 @@ const ClientDetail = () => {
             <Card>
               <CardContent className="pt-6">
                 <CaseAnalysisContainer clientId={client.id} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="discuss-case" className="py-4">
+            <Card>
+              <CardContent className="pt-6">
+                <h2 className="text-xl font-semibold mb-4">Discuss Case</h2>
+                <p className="text-muted-foreground">
+                  Case discussion and collaboration area will be displayed here.
+                </p>
               </CardContent>
             </Card>
           </TabsContent>
