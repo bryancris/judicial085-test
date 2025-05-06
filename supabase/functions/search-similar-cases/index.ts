@@ -5,7 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.33.2";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-const courtListenerApiKey = Deno.env.get('COURTLISTENER_API_KEY') || '';
+const courtListenerApiKey = Deno.env.get('COURTLISTENER_API_KEY') || '76ddb006469713cde169d7d8a2907ca5ff600b3a';
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -132,59 +132,90 @@ serve(async (req) => {
     // Now query the CourtListener API with improved search terms
     let courtListenerResults = [];
     
-    if (courtListenerApiKey) {
-      try {
-        console.log("Querying CourtListener API with search terms:", searchTerms);
-        
-        // Add common slip and fall related terms to improve search results
-        const enhancedSearchTerms = addCommonLegalTerms(searchTerms, currentSearchDocument);
-        console.log("Enhanced search terms:", enhancedSearchTerms);
-        
-        // Build query for CourtListener API - search all states, not just Texas to get more results
-        const queryString = encodeURIComponent(enhancedSearchTerms);
-        const url = `https://www.courtlistener.com/api/rest/v3/opinions/?q=${queryString}`;
-        
-        console.log("Court Listener request URL:", url);
+    try {
+      console.log("Querying CourtListener API with search terms:", searchTerms);
+      
+      // Add common slip and fall related terms to improve search results
+      const enhancedSearchTerms = addCommonLegalTerms(searchTerms, currentSearchDocument);
+      console.log("Enhanced search terms:", enhancedSearchTerms);
+      
+      // Build query for CourtListener API with correct query parameters
+      const queryParams = new URLSearchParams({
+        q: enhancedSearchTerms,
+        // Per the documentation, we can search across all jurisdictions to get more results
+        // We'll sort and filter them on our side
+        order_by: 'score desc',
+        type: 'o',  // Only get opinions
+        format: 'json'
+      });
+      
+      const url = `https://www.courtlistener.com/api/rest/v3/search/?${queryParams.toString()}`;
+      
+      console.log("Court Listener request URL:", url);
 
-        const response = await fetch(url, {
-          headers: {
-            'Authorization': `Token ${courtListenerApiKey}`
-          }
-        });
-
-        if (!response.ok) {
-          console.error(`CourtListener API error: ${response.status}`);
-          throw new Error(`CourtListener API returned ${response.status}: ${await response.text()}`);
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Token ${courtListenerApiKey}`
         }
+      });
 
-        const data = await response.json();
-        console.log(`Found ${data.results.length} cases from CourtListener API`);
-
-        // Process CourtListener results (take more results for better coverage)
-        courtListenerResults = data.results.slice(0, 10).map(result => {
-          // Extract the most relevant snippet from the opinion text
-          const opinionText = result.plain_text || "";
-          const snippet = extractRelevantSnippet(opinionText, enhancedSearchTerms);
-          
-          return {
-            source: "courtlistener",
-            clientId: null,
-            clientName: result.case_name || "Unknown Case",
-            similarity: 0.75, // Higher default similarity to ensure results show up
-            relevantFacts: snippet,
-            outcome: extractOutcomeFromOpinion(opinionText),
-            court: result.court_name || "Court of Record",
-            citation: result.citation || "No citation available",
-            dateDecided: result.date_filed ? new Date(result.date_filed).toLocaleDateString() : "Unknown date",
-            url: result.absolute_url ? `https://www.courtlistener.com${result.absolute_url}` : null
-          };
-        });
-      } catch (apiError) {
-        console.error('Error querying CourtListener API:', apiError);
-        // Continue with just internal results if API fails
+      if (!response.ok) {
+        const responseText = await response.text();
+        console.error(`CourtListener API error: ${response.status}, Response: ${responseText}`);
+        throw new Error(`CourtListener API returned ${response.status}: ${responseText}`);
       }
-    } else {
-      console.log("No CourtListener API key provided, skipping external search");
+
+      const data = await response.json();
+      console.log(`Found ${data.results.length} cases from CourtListener API`);
+
+      // Process CourtListener results
+      courtListenerResults = await Promise.all(data.results.slice(0, 15).map(async (result) => {
+        console.log("Processing result:", result.caseName);
+        
+        // Get the full opinion text if available
+        let opinionText = "";
+        if (result.id && result.absolute_url) {
+          try {
+            const opinionUrl = `https://www.courtlistener.com/api/rest/v3/opinions/${result.id}/`;
+            const opinionResponse = await fetch(opinionUrl, {
+              headers: {
+                'Authorization': `Token ${courtListenerApiKey}`
+              }
+            });
+            
+            if (opinionResponse.ok) {
+              const opinionData = await opinionResponse.json();
+              opinionText = opinionData.plain_text || "";
+            }
+          } catch (opinionError) {
+            console.error("Error fetching opinion text:", opinionError);
+          }
+        }
+        
+        // Extract the most relevant snippet from the opinion text
+        const snippet = extractRelevantSnippet(
+          opinionText || result.snippet || "", 
+          enhancedSearchTerms
+        );
+        
+        return {
+          source: "courtlistener",
+          clientId: null,
+          clientName: result.caseName || "Unknown Case",
+          similarity: 0.75, // Higher default similarity to ensure results show up
+          relevantFacts: snippet,
+          outcome: extractOutcomeFromOpinion(opinionText || ""),
+          court: result.court_name || result.court || "Court of Record",
+          citation: result.citation || result.citeCount || "No citation available",
+          dateDecided: result.dateFiled ? new Date(result.dateFiled).toLocaleDateString() : "Unknown date",
+          url: result.absolute_url ? `https://www.courtlistener.com${result.absolute_url}` : null
+        };
+      }));
+      
+      console.log(`Successfully processed ${courtListenerResults.length} CourtListener results`);
+    } catch (apiError) {
+      console.error('Error querying CourtListener API:', apiError);
+      // Continue with just internal results if API fails
     }
 
     // Combine and sort both internal and CourtListener results

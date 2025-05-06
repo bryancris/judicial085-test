@@ -33,9 +33,9 @@ const SearchSimilarCasesButton: React.FC<SearchSimilarCasesButtonProps> = ({
           </>
         )}
       </Button>
-      <div className="text-xs text-muted-foreground flex gap-2 items-center mt-1">
+      <div className="text-xs text-muted-foreground flex gap-2 items-center mt-1 flex-wrap justify-center">
         <Badge variant="outline" className="text-[10px] font-normal">Powered by CourtListener</Badge>
-        <span>Searches Texas court records & your firm database</span>
+        <span>Searches U.S. court records & your firm's database</span>
       </div>
     </div>
   );
