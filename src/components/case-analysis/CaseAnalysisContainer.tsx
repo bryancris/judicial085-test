@@ -1,17 +1,14 @@
-import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { RefreshCwIcon } from "lucide-react";
+
+import React from "react";
 import { useCaseAnalysis } from "@/hooks/useCaseAnalysis";
 import CaseOutcomePrediction from "./CaseOutcomePrediction";
 import DetailedLegalAnalysis from "./DetailedLegalAnalysis";
 import CaseStrengthsWeaknesses from "./CaseStrengthsWeaknesses";
-import SearchSimilarCasesButton from "./SearchSimilarCasesButton";
-import SimilarCasesDialog from "./SimilarCasesDialog";
 import ConversationSummary from "./ConversationSummary";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
-import { searchSimilarCases } from "@/utils/openaiService";
-import { SimilarCase } from "./SimilarCasesDialog";
+import CaseAnalysisLoadingSkeleton from "./CaseAnalysisLoadingSkeleton";
+import CaseAnalysisErrorState from "./CaseAnalysisErrorState";
+import CaseAnalysisHeader from "./CaseAnalysisHeader";
+import SearchSimilarCasesSection from "./SearchSimilarCasesSection";
 
 interface CaseAnalysisContainerProps {
   clientId: string;
@@ -19,142 +16,23 @@ interface CaseAnalysisContainerProps {
 
 const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({ clientId }) => {
   const { analysisData, isLoading, error, generateNewAnalysis } = useCaseAnalysis(clientId);
-  const [isSearchingCases, setIsSearchingCases] = useState(false);
-  const [similarCases, setSimilarCases] = useState<SimilarCase[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const { toast } = useToast();
 
   const handleRefreshAnalysis = () => {
     if (isLoading) return;
-    
     generateNewAnalysis();
   };
 
-  const handleSearchSimilarCases = async () => {
-    if (isSearchingCases) return;
-    
-    setIsSearchingCases(true);
-    setIsDialogOpen(true);
-    setSearchError(null);
-    
-    try {
-      console.log("Starting search for similar cases for client:", clientId);
-      const { similarCases, error, fallbackUsed, analysisFound } = await searchSimilarCases(clientId);
-      
-      if (error) {
-        setSearchError(error);
-        toast({
-          title: "Search Failed",
-          description: error,
-          variant: "destructive",
-        });
-      } else {
-        setSimilarCases(similarCases || []);
-        
-        if (!analysisFound) {
-          toast({
-            title: "Legal Analysis Required",
-            description: "Please generate a legal analysis first to find relevant similar cases.",
-            variant: "warning",
-          });
-        } else if (fallbackUsed) {
-          toast({
-            title: "Using Fallback Results",
-            description: "We encountered an issue with the court database. Showing sample cases instead.",
-            variant: "warning",
-          });
-        } else if (similarCases.length === 0) {
-          toast({
-            title: "No Similar Cases Found",
-            description: "We couldn't find any cases with similar facts or legal issues.",
-          });
-        } else {
-          toast({
-            title: "Similar Cases Found",
-            description: `Found ${similarCases.length} cases with similar facts or legal issues.`,
-          });
-        }
-      }
-    } catch (err: any) {
-      console.error("Error searching for similar cases:", err);
-      setSearchError(err.message || "An unexpected error occurred");
-      toast({
-        title: "Search Error",
-        description: err.message || "An unexpected error occurred while searching for similar cases.",
-        variant: "destructive",
-      });
-      
-      // Set fallback cases if there's an error
-      setSimilarCases([
-        {
-          source: "courtlistener",
-          clientId: null,
-          clientName: "Error Retrieving Cases",
-          similarity: 0,
-          relevantFacts: "There was an error retrieving similar cases. Please try again later.",
-          outcome: "No outcome available",
-          court: "N/A",
-          citation: "N/A",
-          dateDecided: "N/A",
-          url: null
-        }
-      ]);
-    } finally {
-      setIsSearchingCases(false);
-    }
-  };
-
   if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Case Analysis</h2>
-          <Button disabled variant="outline" className="flex items-center gap-2">
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
-            Generating Analysis...
-          </Button>
-        </div>
-        <Skeleton className="h-[150px] w-full mb-6" />
-        <Skeleton className="h-[300px] w-full mb-6" />
-        <Skeleton className="h-[200px] w-full mb-6" />
-        <Skeleton className="h-[250px] w-full" />
-      </div>
-    );
+    return <CaseAnalysisLoadingSkeleton />;
   }
 
   if (error && !analysisData) {
-    return (
-      <div className="text-center py-12">
-        <h2 className="text-xl font-semibold mb-2">No Case Analysis Available</h2>
-        <p className="text-muted-foreground mb-6">
-          {error}
-        </p>
-        <Button 
-          onClick={handleRefreshAnalysis}
-          className="flex items-center gap-2"
-        >
-          <RefreshCwIcon className="h-4 w-4" />
-          Generate Analysis
-        </Button>
-      </div>
-    );
+    return <CaseAnalysisErrorState error={error} onRefresh={handleRefreshAnalysis} />;
   }
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold">Case Analysis</h2>
-        <Button 
-          onClick={handleRefreshAnalysis}
-          variant="outline" 
-          className="flex items-center gap-2"
-          disabled={isLoading}
-        >
-          <RefreshCwIcon className="h-4 w-4" />
-          Refresh Analysis
-        </Button>
-      </div>
+      <CaseAnalysisHeader onRefresh={handleRefreshAnalysis} isLoading={isLoading} />
 
       {analysisData && (
         <>
@@ -178,26 +56,12 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({ clientId 
             isLoading={isLoading}
           />
 
-          {/* Add the Search Similar Cases button here */}
-          <SearchSimilarCasesButton 
-            onClick={handleSearchSimilarCases}
-            isLoading={isSearchingCases}
-          />
+          <SearchSimilarCasesSection clientId={clientId} />
 
-          {/* Pass clientId to ConversationSummary to enable the attorney chat */}
           <ConversationSummary 
             summary={analysisData.conversationSummary}
             isLoading={isLoading}
             clientId={clientId}
-          />
-
-          {/* Add the Similar Cases Dialog */}
-          <SimilarCasesDialog 
-            isOpen={isDialogOpen}
-            onClose={() => setIsDialogOpen(false)}
-            similarCases={similarCases}
-            isLoading={isSearchingCases}
-            error={searchError}
           />
         </>
       )}
