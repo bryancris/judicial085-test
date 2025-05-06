@@ -47,6 +47,12 @@ export const formatMessages = (contextText: string, previousMessages: any[] = []
 // Call OpenAI API
 export const generateOpenAiResponse = async (messages: any[]) => {
   const { OPENAI_API_KEY } = getEnvVars();
+  
+  if (!OPENAI_API_KEY) {
+    console.error("OpenAI API key is missing");
+    return "I'm sorry, there was an issue with the AI configuration. Please contact support.";
+  }
+  
   console.log("Calling OpenAI API with gpt-4o model...");
   
   try {

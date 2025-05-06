@@ -95,8 +95,8 @@ export const useCaseDiscussion = (clientId: string) => {
       if (error) {
         console.error("Error generating AI response:", error);
         toast({
-          title: "Error",
-          description: `AI response error: ${error}`,
+          title: "AI Response Error",
+          description: `${error}`,
           variant: "destructive",
         });
         

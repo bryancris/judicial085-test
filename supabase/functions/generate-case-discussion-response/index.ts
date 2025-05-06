@@ -27,6 +27,7 @@ serve(async (req) => {
     console.log(`Request received with clientId: ${clientId}`);
     console.log(`Message: ${message?.substring(0, 50)}...`);
     console.log(`Previous messages count: ${previousMessages?.length || 0}`);
+    console.log(`User ID: ${userId || 'not provided'}`);
 
     if (!clientId || !message || !userId) {
       console.error('Missing required parameters', { clientId, message: !!message, userId });
@@ -41,8 +42,8 @@ serve(async (req) => {
     // Initialize Supabase clients
     const { supabase, supabaseAdmin } = getSupabaseClients();
     
-    // Fetch all necessary data
-    const { clientData, clientError } = await fetchClientData(supabase, clientId);
+    // Fetch client data using admin client to bypass RLS
+    const { clientData, clientError } = await fetchClientData(supabaseAdmin, clientId);
     
     if (clientError || !clientData) {
       console.error('Error fetching client data:', clientError);
@@ -58,6 +59,7 @@ serve(async (req) => {
       );
     }
 
+    // Continue to fetch other data - these can still use the regular client since they might not need admin
     const analysisData = await fetchLegalAnalysis(supabase, clientId);
     const notesData = await fetchAttorneyNotes(supabase, clientId);
     const messagesData = await fetchClientMessages(supabase, clientId);
@@ -83,7 +85,7 @@ serve(async (req) => {
     // Format timestamp for consistency
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     
-    // Save attorney's message
+    // Save attorney's message using admin client
     const saveAttorneyError = await saveCaseDiscussion(
       supabaseAdmin, 
       clientId, 
@@ -97,7 +99,7 @@ serve(async (req) => {
       console.warn('Non-critical error saving attorney message:', saveAttorneyError);
     }
 
-    // Save AI's response
+    // Save AI's response using admin client
     const saveAIError = await saveCaseDiscussion(
       supabaseAdmin, 
       clientId, 

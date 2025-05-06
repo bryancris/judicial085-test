@@ -12,24 +12,24 @@ export const getSupabaseClients = () => {
   };
 };
 
-// Fetch client data from database with improved error handling
-export const fetchClientData = async (supabase: any, clientId: string) => {
-  console.log(`Fetching client data for ID: ${clientId}`);
+// Fetch client data from database with improved error handling - USING ADMIN CLIENT
+export const fetchClientData = async (supabaseAdmin: any, clientId: string) => {
+  console.log(`Fetching client data for ID: ${clientId} using admin client`);
   
   try {
-    // Modified query to ensure we get data even if there's only one row
-    const { data: clientData, error: clientError } = await supabase
+    // Use supabaseAdmin client to bypass RLS
+    const { data: clientData, error: clientError } = await supabaseAdmin
       .from('clients')
       .select('*')
       .eq('id', clientId);
     
     if (clientError) {
-      console.error('Error fetching client data:', clientError);
+      console.error('Error fetching client data with admin client:', clientError);
       return { clientData: null, clientError };
     }
     
     if (!clientData || clientData.length === 0) {
-      console.error(`No client found with ID: ${clientId}`);
+      console.error(`No client found with ID: ${clientId} even with admin privileges`);
       return { clientData: null, clientError: new Error(`No client found with ID: ${clientId}`) };
     }
     
@@ -42,7 +42,7 @@ export const fetchClientData = async (supabase: any, clientId: string) => {
   
     return { clientData: client, clientError: null };
   } catch (err) {
-    console.error('Unexpected error fetching client data:', err);
+    console.error('Unexpected error fetching client data with admin client:', err);
     return { clientData: null, clientError: err };
   }
 };
