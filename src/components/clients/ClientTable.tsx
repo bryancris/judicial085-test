@@ -37,8 +37,8 @@ const ClientTable = ({ clients, handleViewClient }: ClientTableProps) => {
               <TableCell className="text-right">
                 <div className="flex justify-end">
                   <Button 
-                    variant="outline" 
                     size="sm" 
+                    className="bg-purple-600 hover:bg-purple-700 text-white transition-colors"
                     onClick={() => 
                       handleViewClient(
                         client.id, 
