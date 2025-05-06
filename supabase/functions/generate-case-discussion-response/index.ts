@@ -11,6 +11,7 @@ const corsHeaders = {
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -29,8 +30,11 @@ serve(async (req) => {
       );
     }
 
-    // Initialize Supabase client
+    // Initialize Supabase client with anon key for read operations
     const supabase = createClient(SUPABASE_URL || '', SUPABASE_ANON_KEY || '');
+    
+    // Initialize Supabase admin client with service role key for write operations (bypassing RLS)
+    const supabaseAdmin = createClient(SUPABASE_URL || '', SUPABASE_SERVICE_ROLE_KEY || '');
 
     // Fetch comprehensive client information
     const { data: clientData, error: clientError } = await supabase
@@ -238,9 +242,9 @@ serve(async (req) => {
 
     const aiResponse = openAIData.choices[0].message.content;
 
-    // Save attorney's message
+    // Save attorney's message using admin client (bypasses RLS)
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const { error: saveAttorneyError } = await supabase
+    const { error: saveAttorneyError } = await supabaseAdmin
       .from('case_discussions')
       .insert({
         client_id: clientId,
@@ -254,8 +258,8 @@ serve(async (req) => {
       console.error('Error saving attorney message:', saveAttorneyError);
     }
 
-    // Save AI's response
-    const { error: saveAIError } = await supabase
+    // Save AI's response using admin client (bypasses RLS)
+    const { error: saveAIError } = await supabaseAdmin
       .from('case_discussions')
       .insert({
         client_id: clientId,
