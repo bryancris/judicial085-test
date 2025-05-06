@@ -139,14 +139,18 @@ export const buildCompleteContext = (
   notesData: any, 
   messagesData: any
 ) => {
-  // Start building a comprehensive context for the AI
-  let contextText = "You are an AI legal assistant helping an attorney with a specific case. ";
+  // Start with a clear identity statement that prioritizes client awareness
+  let contextText = "You are an AI legal assistant helping an attorney with a specific client case. ";
   
   // Handle client data
   if (clientError) {
     console.error('Error fetching client data:', clientError);
     contextText += "\nWARNING: Unable to fetch client details for this conversation.";
   } else if (clientData) {
+    // Add prominent client identification at the very beginning
+    contextText += `\n\nTHIS CONVERSATION IS ABOUT CLIENT: ${clientData.first_name} ${clientData.last_name}. `;
+    contextText += `Always acknowledge this client by name in your responses.`;
+    
     const { clientSection, caseTypesSection, caseDetailsSection } = buildClientSection(clientData);
     
     // Assemble the context in order of importance for the AI
@@ -183,6 +187,15 @@ export const buildCompleteContext = (
   
   // Add specific instructions for the AI
   contextText += buildInstructionsSection();
+  
+  // Add final explicit directive to reference the client's information
+  if (clientData) {
+    contextText += `\n\n9. CRITICAL: You MUST address the client by name (${clientData.first_name} ${clientData.last_name}) in every response and reference their specific case details.`;
+  }
+  
+  // Log full context for debugging purposes
+  console.log("Full context being sent to OpenAI:");
+  console.log(contextText);
   
   return contextText;
 };

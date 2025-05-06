@@ -1,3 +1,4 @@
+
 import { getEnvVars } from "./config.ts";
 
 // Format messages for OpenAI API
@@ -55,10 +56,10 @@ export const generateOpenAiResponse = async (messages: any[]) => {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini", // Using the mini model for efficiency 
+      model: "gpt-4o",  // Upgraded from gpt-4o-mini for better context retention
       messages,
-      temperature: 0.4,     // Lower temperature for more focused responses
-      max_tokens: 1000
+      temperature: 0.2, // Lower temperature for more focused, consistent responses
+      max_tokens: 1000  // Maintain token limit to ensure response fits
     })
   });
 
