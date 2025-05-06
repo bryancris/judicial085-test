@@ -1,7 +1,7 @@
 /**
  * Utility functions for processing markdown and handling follow-up questions
  */
-import { processLawReferencesSync } from "./lawReferenceUtils";
+import { processLawReferencesSync } from "@/utils/lawReferenceUtils";
 
 /**
  * Processes markdown content and enhances follow-up questions
