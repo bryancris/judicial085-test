@@ -181,29 +181,14 @@ export const extractCitations = (text: string): string[] => {
 
 /**
  * Create a React component-friendly law reference link
+ * This function interfaces with our LawReferenceLink component
  * @param citation The citation text
  * @param url Optional direct URL to the document
- * @returns React JSX for the link
+ * @returns LawReferenceLink component properties
  */
-export const LawReferenceLink = ({ 
-  citation, 
-  url 
-}: { 
-  citation: string; 
-  url?: string | null 
-}): JSX.Element => {
-  // If we have a direct URL, use it, otherwise use the search page
-  const href = url || `/knowledge?search=${encodeURIComponent(citation)}`;
-  const icon = url ? "📄" : "🔍";
-  
-  return (
-    <a 
-      href={href} 
-      className="text-blue-600 hover:underline hover:text-blue-800 flex items-center" 
-      target="_blank" 
-      rel="noopener noreferrer"
-    >
-      {citation} <span className="ml-1 inline-block text-xs">{icon}</span>
-    </a>
-  );
+export const createLawReferenceLinkProps = (
+  citation: string, 
+  url?: string | null
+): { citation: string; url?: string | null } => {
+  return { citation, url };
 };
