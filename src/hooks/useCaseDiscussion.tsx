@@ -23,6 +23,7 @@ export const useCaseDiscussion = (clientId: string) => {
         const { messages, error } = await getCaseDiscussionMessages(clientId);
         
         if (error) {
+          console.error("Error loading discussion history:", error);
           toast({
             title: "Error loading discussion",
             description: error,
@@ -82,6 +83,8 @@ export const useCaseDiscussion = (clientId: string) => {
     setMessages(prev => [...prev, attorneyMessage]);
     
     try {
+      console.log(`Sending message for client ID: ${clientId}`);
+      
       // Generate AI response
       const { response, timestamp: aiTimestamp, error } = await generateCaseDiscussionResponse(
         clientId,
@@ -90,11 +93,23 @@ export const useCaseDiscussion = (clientId: string) => {
       );
       
       if (error) {
+        console.error("Error generating AI response:", error);
         toast({
           title: "Error",
-          description: `Failed to generate AI response: ${error}`,
+          description: `AI response error: ${error}`,
           variant: "destructive",
         });
+        
+        // Still display the AI error response to the user
+        const errorMessage: CaseDiscussionMessage = {
+          client_id: clientId,
+          user_id: userId,
+          content: response, // This contains the friendly error message
+          role: "ai",
+          timestamp: aiTimestamp || formatTimestamp()
+        };
+        
+        setMessages(prev => [...prev, errorMessage]);
         return;
       }
       
@@ -115,6 +130,17 @@ export const useCaseDiscussion = (clientId: string) => {
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
+      
+      // Add error message to the chat
+      const errorMessage: CaseDiscussionMessage = {
+        client_id: clientId,
+        user_id: userId,
+        content: "I'm sorry, I encountered an error processing your request. Please try again.",
+        role: "ai",
+        timestamp: formatTimestamp()
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }

@@ -45,10 +45,16 @@ serve(async (req) => {
     const { clientData, clientError } = await fetchClientData(supabase, clientId);
     
     if (clientError || !clientData) {
-      console.error('Failed to fetch client data:', clientError);
+      console.error('Error fetching client data:', clientError);
+      
+      // Return a graceful error response 
       return new Response(
-        JSON.stringify({ error: 'Failed to fetch client data', details: clientError }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          response: "I'm sorry, I couldn't access this client's information. Please check if the client exists or try again later.",
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          error: clientError ? clientError.message : 'Client data not found'
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -59,13 +65,14 @@ serve(async (req) => {
     // Build context for AI
     const contextText = buildCompleteContext(
       clientData, 
-      null, 
+      clientError, 
       analysisData, 
       notesData, 
       messagesData
     );
     
     console.log(`Context text length: ${contextText.length} characters`);
+    console.log('First 200 characters of context:', contextText.substring(0, 200));
 
     // Format messages for OpenAI
     const messages = formatMessages(contextText, previousMessages, message);
@@ -86,6 +93,10 @@ serve(async (req) => {
       timestamp
     );
 
+    if (saveAttorneyError) {
+      console.warn('Non-critical error saving attorney message:', saveAttorneyError);
+    }
+
     // Save AI's response
     const saveAIError = await saveCaseDiscussion(
       supabaseAdmin, 
@@ -95,6 +106,10 @@ serve(async (req) => {
       'ai', 
       timestamp
     );
+
+    if (saveAIError) {
+      console.warn('Non-critical error saving AI response:', saveAIError);
+    }
 
     // Return response
     return new Response(
@@ -106,9 +121,14 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error('Unexpected error in generate-case-discussion-response:', error);
+    // Return a user-friendly error message
     return new Response(
-      JSON.stringify({ error: 'An unexpected error occurred', details: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        response: "I'm sorry, I encountered an unexpected error. Please try again or contact support if the issue persists.",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        error: error.message
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

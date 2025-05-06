@@ -38,7 +38,7 @@ export const buildClientSection = (clientData: any) => {
   }
   
   // Add contact information
-  caseDetailsSection += `\nContact: ${clientData.email} | ${clientData.phone}`;
+  caseDetailsSection += `\nContact: ${clientData.email || 'N/A'} | ${clientData.phone || 'N/A'}`;
   
   return { clientSection, caseTypesSection, caseDetailsSection };
 };
@@ -128,7 +128,8 @@ export const buildInstructionsSection = () => {
 5. If you're unsure about any details, make it clear rather than making assumptions.
 6. Maintain consistent advice between conversations to avoid contradicting earlier guidance.
 7. Your goal is to help the attorney develop case strategy and prepare for proceedings.
-8. IMPORTANT: Always base your responses on the case information provided, not general legal knowledge.`;
+8. IMPORTANT: Always base your responses on the case information provided, not general legal knowledge.
+9. MANDATORY: Begin every response by addressing the client by name.`;
 };
 
 // Assemble the complete context
@@ -139,17 +140,18 @@ export const buildCompleteContext = (
   notesData: any, 
   messagesData: any
 ) => {
-  // Start with a clear identity statement that prioritizes client awareness
-  let contextText = "You are an AI legal assistant helping an attorney with a specific client case. ";
+  // Client identification is the most critical context - place it at the very beginning
+  let contextText = "IMPORTANT CONTEXT - READ CAREFULLY:";
   
   // Handle client data
   if (clientError) {
     console.error('Error fetching client data:', clientError);
     contextText += "\nWARNING: Unable to fetch client details for this conversation.";
   } else if (clientData) {
-    // Add prominent client identification at the very beginning
-    contextText += `\n\nTHIS CONVERSATION IS ABOUT CLIENT: ${clientData.first_name} ${clientData.last_name}. `;
-    contextText += `Always acknowledge this client by name in your responses.`;
+    // Add prominent client identification as the FIRST thing in the context
+    contextText += `\n\nYou are discussing the case of CLIENT: ${clientData.first_name} ${clientData.last_name}.\n`;
+    contextText += `THIS IS ${clientData.first_name} ${clientData.last_name}'s CASE.\n`;
+    contextText += `Every response MUST begin with addressing ${clientData.first_name} ${clientData.last_name} by name.`;
     
     const { clientSection, caseTypesSection, caseDetailsSection } = buildClientSection(clientData);
     
@@ -168,6 +170,8 @@ export const buildCompleteContext = (
     if (caseDetailsSection) {
       contextText += caseDetailsSection;
     }
+  } else {
+    contextText += "\nWARNING: No client data available. You are unable to provide specific case advice.";
   }
   
   // 4. Legal analysis section
@@ -188,14 +192,14 @@ export const buildCompleteContext = (
   // Add specific instructions for the AI
   contextText += buildInstructionsSection();
   
-  // Add final explicit directive to reference the client's information
+  // Add final explicit directive to reference the client's information in EVERY response
   if (clientData) {
-    contextText += `\n\n9. CRITICAL: You MUST address the client by name (${clientData.first_name} ${clientData.last_name}) in every response and reference their specific case details.`;
+    contextText += `\n\nCRITICAL REMINDER: You MUST address ${clientData.first_name} ${clientData.last_name} by name in EVERY response and reference their specific case details. Every response must start with the client's name.`;
   }
   
-  // Log full context for debugging purposes
-  console.log("Full context being sent to OpenAI:");
-  console.log(contextText);
+  // Log a sample of the context for debugging
+  console.log("Sample of context being sent to OpenAI (first 500 chars):");
+  console.log(contextText.substring(0, 500) + "...");
   
   return contextText;
 };

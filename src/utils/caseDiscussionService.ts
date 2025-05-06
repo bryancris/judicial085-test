@@ -41,7 +41,21 @@ export const generateCaseDiscussionResponse = async (
 
     if (error) {
       console.error("Error calling generate-case-discussion-response:", error);
-      return { response: "", timestamp: "", error: error.message };
+      return { 
+        response: "I'm sorry, I encountered an error processing your request. Please try again or contact support if the issue persists.", 
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        error: error.message 
+      };
+    }
+
+    // If the edge function returned an error in the response body
+    if (data.error) {
+      console.error("Edge function returned error:", data.error);
+      return {
+        response: data.response || "I'm sorry, I couldn't access this client's information. Please try again later.",
+        timestamp: data.timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        error: data.error
+      };
     }
 
     return {
@@ -50,7 +64,11 @@ export const generateCaseDiscussionResponse = async (
     };
   } catch (err: any) {
     console.error("Error generating case discussion response:", err);
-    return { response: "", timestamp: "", error: err.message };
+    return { 
+      response: "I'm sorry, I encountered an unexpected error. Please try again later.", 
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), 
+      error: err.message 
+    };
   }
 };
 

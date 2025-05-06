@@ -47,7 +47,7 @@ export const formatMessages = (contextText: string, previousMessages: any[] = []
 // Call OpenAI API
 export const generateOpenAiResponse = async (messages: any[]) => {
   const { OPENAI_API_KEY } = getEnvVars();
-  console.log("Calling OpenAI API...");
+  console.log("Calling OpenAI API with gpt-4o model...");
   
   try {
     const openAIResponse = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -57,7 +57,7 @@ export const generateOpenAiResponse = async (messages: any[]) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "gpt-4o",  // Upgraded from gpt-4o-mini for better context retention
+        model: "gpt-4o",  // Using gpt-4o for better context understanding and retention
         messages,
         temperature: 0.2, // Lower temperature for more focused, consistent responses
         max_tokens: 1000  // Maintain token limit to ensure response fits
@@ -79,6 +79,7 @@ export const generateOpenAiResponse = async (messages: any[]) => {
 
     const aiResponse = openAIData.choices[0].message.content;
     console.log(`Generated AI response of length: ${aiResponse.length} characters`);
+    console.log(`Response begins with: "${aiResponse.substring(0, 50)}..."`);
     
     return aiResponse;
   } catch (error) {
