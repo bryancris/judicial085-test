@@ -13,6 +13,15 @@ import ClientIntakeChat from "@/components/clients/chat/ClientIntakeChat";
 import CaseAnalysisContainer from "@/components/case-analysis/CaseAnalysisContainer";
 import { useToast } from "@/hooks/use-toast";
 
+// Define tab color styles
+const tabColors = {
+  "client-intake": "bg-[#0EA5E9] hover:bg-[#0EA5E9]/90 text-white",
+  "fact-pattern": "bg-[#F97316] hover:bg-[#F97316]/90 text-white",
+  "discovery": "bg-[#8B5CF6] hover:bg-[#8B5CF6]/90 text-white",
+  "deposition": "bg-[#D946EF] hover:bg-[#D946EF]/90 text-white",
+  "case-analysis": "bg-[#ea384c] hover:bg-[#ea384c]/90 text-white",
+};
+
 const ClientDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { client, loading, error, session, refreshClient } = useClientDetail(id);
@@ -90,21 +99,20 @@ const ClientDetail = () => {
 
         <Tabs defaultValue="client-intake" className="w-full">
           <TabsList className="w-full grid grid-cols-5 mb-6">
-            <TabsTrigger value="client-intake" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" /> Client Intake
-            </TabsTrigger>
-            <TabsTrigger value="fact-pattern" className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4" /> Fact Pattern
-            </TabsTrigger>
-            <TabsTrigger value="discovery" className="flex items-center gap-2">
-              <FileSearch className="h-4 w-4" /> Discovery
-            </TabsTrigger>
-            <TabsTrigger value="deposition" className="flex items-center gap-2">
-              <Video className="h-4 w-4" /> Deposition
-            </TabsTrigger>
-            <TabsTrigger value="case-analysis" className="flex items-center gap-2">
-              <FileChartLine className="h-4 w-4" /> Case Analysis
-            </TabsTrigger>
+            {["client-intake", "fact-pattern", "discovery", "deposition", "case-analysis"].map((tabValue, index) => (
+              <TabsTrigger 
+                key={tabValue}
+                value={tabValue} 
+                className={`flex items-center gap-2 data-[state=active]:${tabColors[tabValue as keyof typeof tabColors]} ${tabColors[tabValue as keyof typeof tabColors].replace('bg-', 'data-[state=active]:')}`}
+              >
+                {tabValue === "client-intake" && <FileText className="h-4 w-4" />}
+                {tabValue === "fact-pattern" && <BookOpen className="h-4 w-4" />}
+                {tabValue === "discovery" && <FileSearch className="h-4 w-4" />}
+                {tabValue === "deposition" && <Video className="h-4 w-4" />}
+                {tabValue === "case-analysis" && <FileChartLine className="h-4 w-4" />}
+                {tabValue.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")}
+              </TabsTrigger>
+            ))}
           </TabsList>
           
           <TabsContent value="client-intake" className="py-4">
