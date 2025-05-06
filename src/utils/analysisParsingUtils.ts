@@ -112,46 +112,114 @@ export const extractStrengthsWeaknesses = (analysisText: string): StrengthsAndWe
   };
 };
 
-// Calculate prediction percentages based on analysis text
+// Calculate prediction percentages based on analysis text - completely revamped
 export const calculatePredictionPercentages = (
   analysisText: string, 
   strengthsWeaknesses: StrengthsAndWeaknesses
 ): PredictionPercentages => {
-  // Base calculation on strengths vs weaknesses ratio
+  // Start with a baseline of 50/50
+  let defensePercentage = 50;
+  
+  // Analyze the full text content for evidence quality
+  const lowerAnalysis = analysisText.toLowerCase();
+  
+  // Evidence strength factors - score each piece of evidence
+  const evidenceFactors: {factor: string, weight: number}[] = [
+    // Strong positive factors
+    {factor: "video evidence", weight: 15},
+    {factor: "surveillance footage", weight: 15},
+    {factor: "employee saw the spill", weight: 12},
+    {factor: "employee walk", weight: 10},
+    {factor: "witnessed by", weight: 8},
+    {factor: "medical record", weight: 8},
+    {factor: "witnessed the incident", weight: 8},
+    {factor: "no warning sign", weight: 10},
+    {factor: "no barrier", weight: 8},
+    {factor: "documented injuries", weight: 6},
+    {factor: "ambulance", weight: 5},
+    {factor: "witness testimony", weight: 8},
+    {factor: "constructive knowledge", weight: 10},
+    {factor: "clearly show", weight: 8},
+    
+    // Negative factors
+    {factor: "no witness", weight: -6},
+    {factor: "no evidence", weight: -10},
+    {factor: "contributory negligence", weight: -8},
+    {factor: "comparative fault", weight: -8},
+    {factor: "pre-existing condition", weight: -7},
+    {factor: "failure to observe", weight: -6},
+    {factor: "no documentation", weight: -8},
+    {factor: "conflicting testimony", weight: -7},
+    {factor: "warning sign", weight: -10},
+    {factor: "open and obvious", weight: -12},
+  ];
+  
+  // Apply evidence factors
+  for (const {factor, weight} of evidenceFactors) {
+    if (lowerAnalysis.includes(factor)) {
+      defensePercentage += weight;
+    }
+  }
+  
+  // Case type adjustments - premises liability cases
+  if (
+    lowerAnalysis.includes("slip and fall") || 
+    lowerAnalysis.includes("premises liability")
+  ) {
+    // Check for slip and fall specific evidence
+    if (lowerAnalysis.includes("video") && lowerAnalysis.includes("employee")) {
+      defensePercentage += 10; // Video evidence of employee negligence is very strong
+    }
+    
+    if (lowerAnalysis.includes("warned") && lowerAnalysis.includes("failed")) {
+      defensePercentage += 8;
+    }
+  }
+  
+  // Consider the ratio of strengths to weaknesses, but with less impact than evidence
   const strengthsCount = strengthsWeaknesses.strengths.length;
   const weaknessesCount = strengthsWeaknesses.weaknesses.length;
   const total = strengthsCount + weaknessesCount;
   
-  // Calculate a base percentage
-  let defensePercentage = Math.round((strengthsCount / total) * 100);
-  
-  // Adjust based on keywords in analysis text
-  const lowerAnalysis = analysisText.toLowerCase();
-  
-  // Factors that would increase defense percentage
-  if (lowerAnalysis.includes("strong case") || lowerAnalysis.includes("likely to succeed")) {
-    defensePercentage += 10;
+  if (total > 0) {
+    // Apply a modest adjustment based on strength/weakness ratio (max ±12%)
+    const ratioImpact = ((strengthsCount / total) - 0.5) * 24;
+    defensePercentage += ratioImpact;
   }
   
-  if (lowerAnalysis.includes("precedent support") || lowerAnalysis.includes("favorable precedent")) {
-    defensePercentage += 5;
+  // Legal language analysis
+  if (lowerAnalysis.includes("likely to prevail") || lowerAnalysis.includes("strong case")) {
+    defensePercentage += 8;
   }
   
-  // Factors that would decrease defense percentage
   if (lowerAnalysis.includes("difficult to prove") || lowerAnalysis.includes("challenging case")) {
-    defensePercentage -= 10;
+    defensePercentage -= 8;
   }
   
-  if (lowerAnalysis.includes("burden of proof") || lowerAnalysis.includes("high standard")) {
-    defensePercentage -= 5;
-  }
+  // More granular keyword analysis
+  const specificKeywords = [
+    // Positive outcomes
+    {term: "clear liability", score: 10},
+    {term: "duty of care violated", score: 8},
+    {term: "breach of duty", score: 7},
+    {term: "negligence is apparent", score: 9},
+    {term: "statute of limitations", score: -5},
+    {term: "difficulty proving", score: -7},
+    {term: "lack of evidence", score: -8},
+  ];
   
-  // Ensure percentage is within reasonable bounds
-  defensePercentage = Math.max(30, Math.min(defensePercentage, 80));
+  specificKeywords.forEach(({term, score}) => {
+    if (lowerAnalysis.includes(term)) {
+      defensePercentage += score;
+    }
+  });
+  
+  // Apply reasonable limits - wider range (18% to 95%)
+  defensePercentage = Math.max(18, Math.min(defensePercentage, 95));
   
   return {
-    defense: defensePercentage,
-    prosecution: 100 - defensePercentage
+    defense: Math.round(defensePercentage),
+    prosecution: 100 - Math.round(defensePercentage)
   };
 };
 
