@@ -10,7 +10,7 @@ import {
   fetchClientMessages,
   saveCaseDiscussion 
 } from "./clientDataService.ts";
-import { buildCompleteContext } from "./contextBuilder.ts";
+import { buildCompleteContext } from "./contextBuilders/index.ts";
 import { formatMessages, generateOpenAiResponse } from "./openAiService.ts";
 
 serve(async (req) => {
