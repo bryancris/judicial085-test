@@ -12,6 +12,7 @@ import ClientInformationAccordion from "@/components/clients/ClientInformationAc
 import ClientIntakeChat from "@/components/clients/chat/ClientIntakeChat";
 import CaseAnalysisContainer from "@/components/case-analysis/CaseAnalysisContainer";
 import CaseDiscussionContainer from "@/components/case-discussion/CaseDiscussionContainer";
+import DiscoveryContainer from "@/components/discovery/DiscoveryContainer";
 import { useToast } from "@/hooks/use-toast";
 
 // Define tab color styles
@@ -149,10 +150,7 @@ const ClientDetail = () => {
           <TabsContent value="discovery" className="py-4">
             <Card>
               <CardContent className="pt-6">
-                <h2 className="text-xl font-semibold mb-4">Discovery</h2>
-                <p className="text-muted-foreground">
-                  Case discovery documents and information will be displayed here.
-                </p>
+                <DiscoveryContainer clientId={client.id} />
               </CardContent>
             </Card>
           </TabsContent>

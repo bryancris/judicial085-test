@@ -68,3 +68,6 @@ verify_jwt = true
 
 [functions.generate-case-discussion-response]
 verify_jwt = true
+
+[functions.generate-discovery-response]
+verify_jwt = true

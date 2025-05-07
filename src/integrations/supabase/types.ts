@@ -186,6 +186,157 @@ export type Database = {
         }
         Relationships: []
       }
+      discovery_documents: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          document_id: number | null
+          id: string
+          name: string
+          response_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          document_id?: number | null
+          id?: string
+          name: string
+          response_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          document_id?: number | null
+          id?: string
+          name?: string
+          response_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discovery_documents_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discovery_documents_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "discovery_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discovery_requests: {
+        Row: {
+          client_id: string
+          content: string
+          created_at: string | null
+          date_received: string | null
+          id: string
+          requesting_party: string | null
+          status: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          content: string
+          created_at?: string | null
+          date_received?: string | null
+          id?: string
+          requesting_party?: string | null
+          status?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          content?: string
+          created_at?: string | null
+          date_received?: string | null
+          id?: string
+          requesting_party?: string | null
+          status?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discovery_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discovery_responses: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          request_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          request_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          request_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discovery_responses_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "discovery_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discovery_templates: {
+        Row: {
+          category: string
+          content: string
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          content: string
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       document_metadata: {
         Row: {
           created_at: string | null
