@@ -6,6 +6,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DocumentWithContent, DocumentContent } from '@/types/knowledge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface DocumentCardProps {
   document: DocumentWithContent;
@@ -34,20 +35,33 @@ const getPageNumber = (content: DocumentContent) => {
 const DocumentCard: React.FC<DocumentCardProps> = ({ document }) => {
   // Check if this document had an error during content fetching
   const hasError = 'fetchError' in document && document.fetchError;
+  // Get title or use fallback
+  const title = document.title || "Untitled Document";
 
   return (
     <Card className="shadow-sm h-full">
-      <CardHeader className="py-3 px-4">
-        <CardTitle className="text-base flex items-center gap-1.5 mb-1">
-          <FileText className="h-4 w-4 text-brand-burgundy" /> 
-          {document.title || "Untitled Document"}
-        </CardTitle>
+      <CardHeader className="py-3 px-3">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <CardTitle className="text-base flex items-start gap-1.5 mb-1">
+                <FileText className="h-4 w-4 text-brand-burgundy mt-0.5 flex-shrink-0" /> 
+                <span className="truncate break-words line-clamp-2 text-sm leading-tight">
+                  {title}
+                </span>
+              </CardTitle>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[250px] break-words">
+              {title}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <CardDescription className="text-xs flex items-center gap-1">
-          <Calendar className="h-3 w-3" /> 
+          <Calendar className="h-3 w-3 flex-shrink-0" /> 
           {formatDate(document.created_at)}
         </CardDescription>
       </CardHeader>
-      <CardContent className="py-2 px-4 text-sm">
+      <CardContent className="py-2 px-3 text-sm">
         {hasError ? (
           <Alert variant="destructive" className="py-1 px-2">
             <AlertCircle className="h-3 w-3" />
@@ -62,14 +76,20 @@ const DocumentCard: React.FC<DocumentCardProps> = ({ document }) => {
         )}
         {document.url && (
           <div className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800">
-            <ExternalLink className="h-3 w-3" />
-            <a href={document.url} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="h-3 w-3 flex-shrink-0" />
+            <a 
+              href={document.url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="truncate"
+              title={document.url}
+            >
               Source Link
             </a>
           </div>
         )}
       </CardContent>
-      <CardFooter className="py-2 px-4">
+      <CardFooter className="py-2 px-3">
         {!hasError && (
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="content" className="border-b-0">
@@ -90,8 +110,10 @@ const DocumentCard: React.FC<DocumentCardProps> = ({ document }) => {
                             <TableCell className="py-1 text-xs">
                               {getPageNumber(content)}
                             </TableCell>
-                            <TableCell className="py-1 text-xs max-w-xs truncate">
-                              {content.content || 'No content available'}
+                            <TableCell className="py-1 text-xs max-w-xs">
+                              <span className="line-clamp-2" title={content.content || 'No content available'}>
+                                {content.content || 'No content available'}
+                              </span>
                             </TableCell>
                           </TableRow>
                         ))}
