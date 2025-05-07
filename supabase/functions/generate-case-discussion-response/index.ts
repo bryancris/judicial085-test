@@ -59,10 +59,10 @@ serve(async (req) => {
       );
     }
 
-    // Continue to fetch other data - these can still use the regular client since they might not need admin
-    const analysisData = await fetchLegalAnalysis(supabase, clientId);
-    const notesData = await fetchAttorneyNotes(supabase, clientId);
-    const messagesData = await fetchClientMessages(supabase, clientId);
+    // Use admin client for all data fetching to bypass RLS restrictions
+    const analysisData = await fetchLegalAnalysis(supabaseAdmin, clientId);
+    const notesData = await fetchAttorneyNotes(supabaseAdmin, clientId);
+    const messagesData = await fetchClientMessages(supabaseAdmin, clientId);
 
     // Build context for AI
     const contextText = buildCompleteContext(

@@ -47,10 +47,12 @@ export const fetchClientData = async (supabaseAdmin: any, clientId: string) => {
   }
 };
 
-// Fetch legal analysis data
-export const fetchLegalAnalysis = async (supabase: any, clientId: string) => {
+// Fetch legal analysis data - NOW USING ADMIN CLIENT
+export const fetchLegalAnalysis = async (supabaseAdmin: any, clientId: string) => {
   try {
-    const { data: analysisData, error } = await supabase
+    console.log(`Fetching legal analysis for client ID: ${clientId} using admin client`);
+    
+    const { data: analysisData, error } = await supabaseAdmin
       .from('legal_analyses')
       .select('content')
       .eq('client_id', clientId)
@@ -61,7 +63,12 @@ export const fetchLegalAnalysis = async (supabase: any, clientId: string) => {
       console.error('Error fetching legal analysis:', error);
     }
     
-    console.log(`Legal analysis found: ${analysisData && analysisData.length > 0 ? 'Yes' : 'No'}`);
+    if (analysisData && analysisData.length > 0) {
+      console.log(`Legal analysis found: Yes, length: ${analysisData[0].content.length} characters`);
+      console.log(`First 100 chars of analysis: ${analysisData[0].content.substring(0, 100)}...`);
+    } else {
+      console.log(`Legal analysis found: No`);
+    }
     
     return analysisData && analysisData.length > 0 ? analysisData : [];
   } catch (err) {
@@ -70,10 +77,12 @@ export const fetchLegalAnalysis = async (supabase: any, clientId: string) => {
   }
 };
 
-// Fetch attorney notes
-export const fetchAttorneyNotes = async (supabase: any, clientId: string) => {
+// Fetch attorney notes - NOW USING ADMIN CLIENT
+export const fetchAttorneyNotes = async (supabaseAdmin: any, clientId: string) => {
   try {
-    const { data: notesData, error } = await supabase
+    console.log(`Fetching attorney notes for client ID: ${clientId} using admin client`);
+    
+    const { data: notesData, error } = await supabaseAdmin
       .from('case_analysis_notes')
       .select('content')
       .eq('client_id', clientId)
@@ -93,10 +102,12 @@ export const fetchAttorneyNotes = async (supabase: any, clientId: string) => {
   }
 };
 
-// Fetch client messages
-export const fetchClientMessages = async (supabase: any, clientId: string) => {
+// Fetch client messages - NOW USING ADMIN CLIENT
+export const fetchClientMessages = async (supabaseAdmin: any, clientId: string) => {
   try {
-    const { data: messagesData, error } = await supabase
+    console.log(`Fetching client messages for client ID: ${clientId} using admin client`);
+    
+    const { data: messagesData, error } = await supabaseAdmin
       .from('client_messages')
       .select('content, role')
       .eq('client_id', clientId)
