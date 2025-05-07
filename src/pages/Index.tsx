@@ -6,7 +6,7 @@ import StreamlineSection from '@/components/StreamlineSection';
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-white">
       <NavBar />
       <main className="flex-grow">
         <HeroSection />

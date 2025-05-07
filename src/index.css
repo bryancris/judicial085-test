@@ -57,8 +57,99 @@ body {
 }
 
 .hero-section {
-  background-color: hsl(220, 33%, 19%);
+  position: relative;
   min-height: 600px;
+  overflow: hidden;
+}
+
+.animated-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(-45deg, 
+    hsl(220, 33%, 19%), 
+    hsl(220, 33%, 25%), 
+    hsl(354, 69%, 31%), 
+    hsl(220, 33%, 30%));
+  background-size: 400% 400%;
+  animation: gradient 15s ease infinite;
+  z-index: 0;
+}
+
+.animated-particles {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(1px);
+  animation: float 20s infinite ease-in-out;
+}
+
+@for $i from 1 through 15 {
+  .particle-#{$i} {
+    width: #{random(30) + 10}px;
+    height: #{random(30) + 10}px;
+    top: #{random(100)}%;
+    left: #{random(100)}%;
+    opacity: #{random(10) / 10};
+    animation-delay: #{random(20)}s;
+    animation-duration: #{random(10) + 15}s;
+  }
+}
+
+@keyframes gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+  }
+  25% {
+    transform: translateY(-20px) translateX(10px);
+  }
+  50% {
+    transform: translateY(0) translateX(20px);
+  }
+  75% {
+    transform: translateY(20px) translateX(10px);
+  }
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.8s ease-out forwards;
+  opacity: 0;
+}
+
+.hover-scale {
+  transition: transform 0.2s ease;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
 }
 
 .gold-text {
@@ -71,4 +162,21 @@ body {
   backdrop-filter: blur(10px);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   border-radius: 12px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-highlight:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animated-bg, 
+  .particle,
+  .animate-fade-in,
+  .hover-scale:hover {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
 }
