@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -91,7 +92,7 @@ const NavBar: React.FC = () => {
         </div>
         
         <nav className="hidden md:flex items-center space-x-8">
-          <a href="#" className="font-medium hover:text-brand-burgundy transition-colors">Features</a>
+          <Link to="/features" className="font-medium hover:text-brand-burgundy transition-colors">Features</Link>
           <a href="#" className="font-medium hover:text-brand-burgundy transition-colors">Benefits</a>
           <a href="#" className="font-medium hover:text-brand-burgundy transition-colors">Pricing</a>
           <a href="#" className="font-medium hover:text-brand-burgundy transition-colors">Contact</a>
