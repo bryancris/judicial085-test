@@ -118,6 +118,7 @@ const CaseDiscussionInput: React.FC<CaseDiscussionInputProps> = ({
             title={isRecording ? "Stop recording" : "Start voice input"}
             type="button"
             disabled={isLoading}
+            className={isRecording ? "" : "bg-[#9b87f5] hover:bg-[#9b87f5]/80 text-white"}
           >
             {isRecording ? (
               <MicOff className="h-4 w-4" />

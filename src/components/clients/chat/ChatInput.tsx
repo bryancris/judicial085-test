@@ -168,6 +168,7 @@ const ChatInput = ({
               onClick={toggleRecording}
               title={isRecording ? "Stop recording" : "Start voice input"}
               type="button"
+              className={isRecording ? "" : "bg-[#0EA5E9] hover:bg-[#0EA5E9]/80 text-white"}
             >
               {isRecording ? (
                 <MicOff className="h-4 w-4" />

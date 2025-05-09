@@ -107,6 +107,7 @@ const AttorneyNoteInput: React.FC<AttorneyNoteInputProps> = ({
             title={isRecording ? "Stop recording" : "Start voice input"}
             type="button"
             disabled={isSending}
+            className={isRecording ? "" : "bg-[#0EA5E9] hover:bg-[#0EA5E9]/80 text-white"}
           >
             {isRecording ? (
               <MicOff className="h-4 w-4" />
@@ -119,6 +120,7 @@ const AttorneyNoteInput: React.FC<AttorneyNoteInputProps> = ({
             onClick={onSend} 
             disabled={!noteInput.trim() || isSending}
             size="icon"
+            className="bg-[#0EA5E9] hover:bg-[#0EA5E9]/90 text-white"
           >
             <SendHorizontal className="h-4 w-4" />
           </Button>
