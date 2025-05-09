@@ -113,6 +113,16 @@ const ChatInput = ({
     }
   };
 
+  // Vibrant colors for active tabs
+  const getTabStyle = (tab: "attorney" | "client") => {
+    if (tab === activeTab) {
+      return tab === "attorney" 
+        ? "bg-[#0EA5E9] text-white" 
+        : "bg-[#8B5CF6] text-white";
+    }
+    return "bg-transparent";
+  };
+
   // Show microphone button for both attorney and client tabs
   const showMicButton = !isLoading;
 
@@ -122,7 +132,7 @@ const ChatInput = ({
         <Button 
           variant="ghost" 
           size="sm" 
-          className={activeTab === "attorney" ? "bg-muted" : ""}
+          className={`transition-colors ${getTabStyle("attorney")}`}
           onClick={() => onTabChange("attorney")}
         >
           <span className="flex items-center gap-1">
@@ -132,7 +142,7 @@ const ChatInput = ({
         <Button 
           variant="ghost" 
           size="sm"
-          className={activeTab === "client" ? "bg-muted" : ""}
+          className={`transition-colors ${getTabStyle("client")}`}
           onClick={() => onTabChange("client")}
         >
           <span className="flex items-center gap-1">
@@ -169,6 +179,7 @@ const ChatInput = ({
           <Button 
             onClick={handleSendMessage}
             disabled={isLoading || !message.trim()}
+            className={activeTab === "attorney" ? "bg-[#0EA5E9] hover:bg-[#0EA5E9]/90" : "bg-[#8B5CF6] hover:bg-[#8B5CF6]/90"}
           >
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin mr-1" />
