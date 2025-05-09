@@ -30,7 +30,7 @@ const ClientIntakeChat = ({ clientId }: ClientIntakeChatProps) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[calc(100vh-400px)] min-h-[500px]">
         <div className="flex flex-col border rounded-lg overflow-hidden">
           <div className="bg-primary text-primary-foreground p-3">
-            <h3 className="font-medium">Attorney Input</h3>
+            <h3 className="font-medium">Attorney / Client Input</h3>
             <div className="text-xs opacity-80">{formatTimestamp()}</div>
           </div>
           <div className="flex-grow p-4">
@@ -61,7 +61,7 @@ const ClientIntakeChat = ({ clientId }: ClientIntakeChatProps) => {
       {/* Attorney Input Side */}
       <div className="flex flex-col border rounded-lg overflow-hidden">
         <div className="bg-primary text-primary-foreground p-3">
-          <h3 className="font-medium">Attorney Input</h3>
+          <h3 className="font-medium">Attorney / Client Input</h3>
           <div className="text-xs opacity-80">{formatTimestamp()}</div>
         </div>
         
