@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -96,6 +97,7 @@ const NavBar: React.FC = () => {
           <a href="#" className="font-medium hover:text-brand-burgundy transition-colors">Contact</a>
           {session && (
             <>
+              <Link to="/clients" className="font-medium hover:text-brand-burgundy transition-colors">Clients</Link>
               <Link to="/knowledge" className="font-medium hover:text-brand-burgundy transition-colors">Knowledge</Link>
             </>
           )}
