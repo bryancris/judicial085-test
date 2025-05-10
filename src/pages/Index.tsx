@@ -1,8 +1,8 @@
-
 import React from 'react';
 import NavBar from '@/components/NavBar';
 import HeroSection from '@/components/HeroSection';
 import StreamlineSection from '@/components/StreamlineSection';
+import SecuritySection from '@/components/SecuritySection';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Star } from 'lucide-react';
 
@@ -120,6 +120,7 @@ const Index = () => {
       <main className="flex-grow">
         <HeroSection />
         <StreamlineSection />
+        <SecuritySection />
         <TestimonialsSection />
         <ROISection />
       </main>
