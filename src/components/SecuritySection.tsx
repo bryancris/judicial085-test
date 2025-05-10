@@ -8,11 +8,11 @@ const SecuritySection = () => {
     <section className="py-16 bg-gray-50">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Your Client Data Stays Private & Secure</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Simple Solutions That Respect Client Confidentiality</h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Experience the industry's leading legal platform built with attorney-client privilege at its core. 
-            While competitors sacrifice confidentiality for AI training, we guarantee 100% data isolation 
-            on our fortress-like secure infrastructure that Texas attorneys trust.
+            Stop wasting billable hours on complex legal software. Our streamlined platform eliminates tedious tasks 
+            while maintaining the highest standards of data security. Unlike bloated competitors that compromise 
+            confidentiality, we deliver powerful simplicity that respects attorney-client privilege.
           </p>
         </div>
 
