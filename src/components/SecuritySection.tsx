@@ -10,8 +10,9 @@ const SecuritySection = () => {
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Your Client Data Stays Private & Secure</h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Unlike other legal platforms that share data across a common AI system, we prioritize 
-            the security and confidentiality of your sensitive client information with dedicated secure servers.
+            Experience the industry's leading legal platform built with attorney-client privilege at its core. 
+            While competitors sacrifice confidentiality for AI training, we guarantee 100% data isolation 
+            on our fortress-like secure infrastructure that Texas attorneys trust.
           </p>
         </div>
 
