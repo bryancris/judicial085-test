@@ -10,7 +10,7 @@ const SecuritySection = () => {
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Your Client Data Stays Private & Secure</h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
             Unlike other legal platforms that share data across a common AI system, we prioritize 
-            the security and confidentiality of your sensitive client information.
+            the security and confidentiality of your sensitive client information with dedicated secure servers.
           </p>
         </div>
         
@@ -19,9 +19,9 @@ const SecuritySection = () => {
             <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-4 mx-auto">
               <Server className="w-6 h-6 text-[#0EA5E9]" />
             </div>
-            <h3 className="text-xl font-semibold mb-2">Isolated Databases</h3>
+            <h3 className="text-xl font-semibold mb-2">Dedicated Secure Servers</h3>
             <p className="text-gray-600">
-              Each attorney gets a dedicated Supabase database instance, ensuring your client data remains completely separate from others.
+              Each attorney gets a dedicated database on our secure servers, ensuring your client data remains completely separate from others.
             </p>
           </div>
           
@@ -41,7 +41,7 @@ const SecuritySection = () => {
             </div>
             <h3 className="text-xl font-semibold mb-2">Enterprise-Grade Security</h3>
             <p className="text-gray-600">
-              Encrypted data storage and transmission with industry-standard protocols ensures your sensitive information remains protected.
+              Military-grade encryption for data storage and transmission ensures your sensitive client information remains protected at all times.
             </p>
           </div>
           
@@ -51,7 +51,7 @@ const SecuritySection = () => {
             </div>
             <h3 className="text-xl font-semibold mb-2">Texas Ethics Compliant</h3>
             <p className="text-gray-600">
-              Our system is designed to meet Texas Bar ethics requirements for client confidentiality and data protection.
+              Our system is designed to exceed Texas Bar ethics requirements for client confidentiality and data protection.
             </p>
           </div>
         </div>
@@ -62,11 +62,12 @@ const SecuritySection = () => {
               <Shield className="w-12 h-12 text-brand-burgundy" />
             </div>
             <div>
-              <h3 className="text-xl font-bold mb-2">How Our Security Differs From Other Legal AI Platforms</h3>
+              <h3 className="text-xl font-bold mb-2">How Our Data Security Differs From Other Legal Platforms</h3>
               <p className="text-gray-600">
-                Most legal AI platforms pool client data across users to train their AI models, creating potential confidentiality risks. 
-                We take a different approach by maintaining complete data isolation, ensuring your client information is never used 
-                to enhance AI services for other attorneys or organizations.
+                Most legal platforms pool client data across users to train their AI models, creating serious confidentiality risks. 
+                Our approach is fundamentally different - we maintain complete data isolation on dedicated secure servers, 
+                ensuring your client information never leaves your control and is never used to enhance services for other attorneys.
+                Your clients' data belongs to you and you alone.
               </p>
             </div>
           </div>
