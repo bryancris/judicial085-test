@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Shield, Lock, Server, CheckCircle, Database, Key } from 'lucide-react';
+import { Shield, Lock, Server, CheckCircle, Database, Key, Clock, FileSearch, Users } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
 const SecuritySection = () => {
@@ -32,6 +32,46 @@ const SecuritySection = () => {
               <Button className="mt-4 bg-brand-burgundy hover:bg-brand-burgundy/90 text-white">
                 Learn More About Our Security
               </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm mb-12">
+          <h3 className="text-2xl font-bold mb-4 text-center">Simple, Focused Tools That Save You Precious Hours</h3>
+          <p className="text-lg text-gray-700 text-center mb-8 max-w-4xl mx-auto">
+            Unlike bloated legal software that wastes your time, our streamlined platform targets the exact pain points 
+            that consume most of your billable hours. Texas attorneys report saving <span className="text-brand-burgundy font-semibold">15+ hours weekly</span> with our focused approach.
+          </p>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="bg-gray-50 p-6 rounded-lg border border-gray-100">
+              <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-4 mx-auto">
+                <Users className="w-7 h-7 text-[#0EA5E9]" />
+              </div>
+              <h4 className="text-xl font-semibold mb-2 text-center">Client Intake Simplified</h4>
+              <p className="text-gray-600">
+                Reduce intake time by 75% with AI-assisted forms that gather essential information while maintaining complete data security. No more repetitive paperwork or lost intake notes.
+              </p>
+            </div>
+            
+            <div className="bg-gray-50 p-6 rounded-lg border border-gray-100">
+              <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-4 mx-auto">
+                <FileSearch className="w-7 h-7 text-[#0EA5E9]" />
+              </div>
+              <h4 className="text-xl font-semibold mb-2 text-center">Discovery Response Automation</h4>
+              <p className="text-gray-600">
+                Transform 6+ hours of discovery response preparation into 45 minutes with our Texas-specific AI tools that maintain attorney oversight while eliminating tedious formatting work.
+              </p>
+            </div>
+            
+            <div className="bg-gray-50 p-6 rounded-lg border border-gray-100">
+              <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-4 mx-auto">
+                <Clock className="w-7 h-7 text-[#0EA5E9]" />
+              </div>
+              <h4 className="text-xl font-semibold mb-2 text-center">Case Analysis In Minutes</h4>
+              <p className="text-gray-600">
+                Analyze case strengths and weaknesses in minutes, not hours, with our Texas law-trained AI that provides actionable insights while keeping your client information completely secure.
+              </p>
             </div>
           </div>
         </div>
