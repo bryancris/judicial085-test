@@ -34,7 +34,7 @@ export const generateChatCompletion = async (
 export const generateLegalAnalysis = async (
   clientId: string, 
   conversation: ChatMessageProps[]
-): Promise<{ analysis: string; error?: string }> => {
+): Promise<{ analysis: string; lawReferences?: any[]; error?: string }> => {
   try {
     const { data, error } = await supabase.functions.invoke("generate-legal-analysis", {
       body: { clientId, conversation },
@@ -45,7 +45,10 @@ export const generateLegalAnalysis = async (
       return { analysis: "", error: error.message };
     }
 
-    return { analysis: data.analysis || "" };
+    return { 
+      analysis: data.analysis || "",
+      lawReferences: data.lawReferences || []
+    };
   } catch (err: any) {
     console.error("Error generating legal analysis:", err);
     return { analysis: "", error: err.message };

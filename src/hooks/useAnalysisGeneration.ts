@@ -44,7 +44,7 @@ export const useAnalysisGeneration = (clientId?: string, onSuccess?: () => void)
       }));
       
       // Call the edge function to generate a new analysis
-      const { analysis, error: analysisError } = await generateLegalAnalysis(
+      const { analysis, lawReferences, error: analysisError } = await generateLegalAnalysis(
         clientId, 
         formattedMessages
       );
@@ -60,6 +60,7 @@ export const useAnalysisGeneration = (clientId?: string, onSuccess?: () => void)
             client_id: clientId,
             content: analysis,
             timestamp,
+            law_references: lawReferences || [],
             user_id: (await supabase.auth.getUser()).data.user?.id || "anonymous"
           });
           

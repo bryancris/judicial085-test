@@ -1,17 +1,9 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  processLawReferences, 
-  processLawReferencesSync, 
-  extractCitations, 
-  searchLawDocuments 
-} from "@/utils/lawReferenceUtils";
-
-import AnalysisSearch from "./AnalysisSearch";
+import { AlertCircle, BookOpen, CheckCircle2, Scale, HelpCircle } from "lucide-react";
+import { processLawReferences } from "@/utils/lawReferences";
 import RelevantLawSection from "./sections/RelevantLawSection";
-import AnalysisSection from "./sections/AnalysisSection";
-import FollowUpQuestionsSection from "./sections/FollowUpQuestionsSection";
 
 interface DetailedLegalAnalysisProps {
   relevantLaw: string;
@@ -28,118 +20,110 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
   followUpQuestions,
   isLoading = false
 }) => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [openSections, setOpenSections] = useState({
-    relevantLaw: true,
-    preliminaryAnalysis: true,
-    potentialIssues: true,
-    followUpQuestions: true
-  });
-  const [processedRelevantLaw, setProcessedRelevantLaw] = useState("");
-  const [isProcessingLawRefs, setIsProcessingLawRefs] = useState(true);
-  const [lawCitations, setLawCitations] = useState<string[]>([]);
-
-  // Process the relevant law section to add links
-  useEffect(() => {
-    // Extract citations for future use
-    const citations = extractCitations(relevantLaw);
-    setLawCitations(citations);
-    
-    // Start with a synchronous version for immediate display
-    const initialProcessed = processLawReferencesSync(relevantLaw);
-    setProcessedRelevantLaw(initialProcessed);
-    
-    // Then process asynchronously to get direct URLs
-    const processAsync = async () => {
-      setIsProcessingLawRefs(true);
-      try {
-        const fullyProcessed = await processLawReferences(relevantLaw);
-        setProcessedRelevantLaw(fullyProcessed);
-      } catch (error) {
-        console.error("Error processing law references:", error);
-      } finally {
-        setIsProcessingLawRefs(false);
-      }
-    };
-    
-    processAsync();
-  }, [relevantLaw]);
+  const [openSection, setOpenSection] = useState<string>("relevantLaw");
+  const [processedLawSection, setProcessedLawSection] = useState<string>(relevantLaw);
+  const [isProcessingLaw, setIsProcessingLaw] = useState<boolean>(false);
   
-  // Preemptively fetch some citations data when available
+  // Process relevant law section to add links to Texas law references
   useEffect(() => {
-    const preloadCitations = async () => {
-      if (lawCitations.length > 0) {
-        // Take first 2 citations to avoid overloading
-        const sampleCitations = lawCitations.slice(0, 2);
-        
-        for (const citation of sampleCitations) {
-          // Fetch in background, this is just to warm up the cache
-          await searchLawDocuments(citation);
+    const processLawSection = async () => {
+      if (relevantLaw) {
+        setIsProcessingLaw(true);
+        try {
+          const processed = await processLawReferences(relevantLaw);
+          setProcessedLawSection(processed);
+        } catch (err) {
+          console.error("Error processing law references:", err);
+        } finally {
+          setIsProcessingLaw(false);
         }
       }
     };
     
-    preloadCitations();
-  }, [lawCitations]);
-
-  const handleToggleSection = (section: keyof typeof openSections) => {
-    setOpenSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
+    processLawSection();
+  }, [relevantLaw]);
+  
+  const handleToggle = (section: string) => {
+    setOpenSection(openSection === section ? "" : section);
   };
 
   return (
     <Card className="mb-6 shadow-sm">
       <CardHeader className="pb-2">
-        <div className="flex justify-between items-center">
-          <CardTitle className="text-xl font-semibold flex items-center">
-            Detailed Legal Analysis
-            {isLoading && (
-              <span className="ml-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
-            )}
-          </CardTitle>
-          <AnalysisSearch 
-            searchTerm={searchTerm} 
-            onSearchChange={setSearchTerm} 
-          />
-        </div>
+        <CardTitle className="text-xl font-semibold flex items-center">
+          <BookOpen className="h-5 w-5 mr-2 text-[#0EA5E9]" />
+          Detailed Legal Analysis
+          {isLoading && (
+            <span className="ml-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Relevant Law Section */}
-        <RelevantLawSection 
+        <RelevantLawSection
           content={relevantLaw}
-          isOpen={openSections.relevantLaw}
-          isProcessing={isProcessingLawRefs}
-          onToggle={() => handleToggleSection('relevantLaw')}
-          processedContent={processedRelevantLaw}
+          isOpen={openSection === "relevantLaw"}
+          isProcessing={isProcessingLaw}
+          onToggle={() => handleToggle("relevantLaw")}
+          processedContent={processedLawSection}
         />
-
-        {/* Preliminary Analysis Section */}
-        <AnalysisSection 
-          title="Preliminary Analysis"
-          content={preliminaryAnalysis}
-          isOpen={openSections.preliminaryAnalysis}
-          searchTerm={searchTerm}
-          onToggle={() => handleToggleSection('preliminaryAnalysis')}
-        />
-
-        {/* Potential Issues Section */}
-        <AnalysisSection 
-          title="Potential Legal Issues"
-          content={potentialIssues}
-          isOpen={openSections.potentialIssues}
-          searchTerm={searchTerm}
-          onToggle={() => handleToggleSection('potentialIssues')}
-        />
-
-        {/* Follow-up Questions Section */}
-        <FollowUpQuestionsSection 
-          questions={followUpQuestions}
-          isOpen={openSections.followUpQuestions}
-          searchTerm={searchTerm}
-          onToggle={() => handleToggleSection('followUpQuestions')}
-        />
+        
+        <div className="border rounded-md">
+          <button
+            className="flex w-full justify-between p-4 font-semibold"
+            onClick={() => handleToggle("preliminaryAnalysis")}
+          >
+            <span className="flex items-center">
+              <CheckCircle2 className="h-4 w-4 mr-2 text-[#0EA5E9]" />
+              Preliminary Analysis
+            </span>
+            <span>{openSection === "preliminaryAnalysis" ? "−" : "+"}</span>
+          </button>
+          {openSection === "preliminaryAnalysis" && (
+            <div className="px-4 pb-4">
+              <div className="whitespace-pre-line">{preliminaryAnalysis}</div>
+            </div>
+          )}
+        </div>
+        
+        <div className="border rounded-md">
+          <button
+            className="flex w-full justify-between p-4 font-semibold"
+            onClick={() => handleToggle("potentialIssues")}
+          >
+            <span className="flex items-center">
+              <AlertCircle className="h-4 w-4 mr-2 text-[#0EA5E9]" />
+              Potential Legal Issues
+            </span>
+            <span>{openSection === "potentialIssues" ? "−" : "+"}</span>
+          </button>
+          {openSection === "potentialIssues" && (
+            <div className="px-4 pb-4">
+              <div className="whitespace-pre-line">{potentialIssues}</div>
+            </div>
+          )}
+        </div>
+        
+        <div className="border rounded-md">
+          <button
+            className="flex w-full justify-between p-4 font-semibold"
+            onClick={() => handleToggle("followUpQuestions")}
+          >
+            <span className="flex items-center">
+              <HelpCircle className="h-4 w-4 mr-2 text-[#0EA5E9]" />
+              Recommended Follow-Up Questions
+            </span>
+            <span>{openSection === "followUpQuestions" ? "−" : "+"}</span>
+          </button>
+          {openSection === "followUpQuestions" && (
+            <div className="px-4 pb-4">
+              <ol className="list-decimal list-outside ml-5 space-y-2">
+                {followUpQuestions.map((question, index) => (
+                  <li key={index} className="pl-1">{question}</li>
+                ))}
+              </ol>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

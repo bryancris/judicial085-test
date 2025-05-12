@@ -9,6 +9,7 @@ import CaseAnalysisLoadingSkeleton from "./CaseAnalysisLoadingSkeleton";
 import CaseAnalysisErrorState from "./CaseAnalysisErrorState";
 import CaseAnalysisHeader from "./CaseAnalysisHeader";
 import SearchSimilarCasesSection from "./SearchSimilarCasesSection";
+import LawReferencesSection from "./LawReferencesSection";
 
 interface CaseAnalysisContainerProps {
   clientId: string;
@@ -41,6 +42,13 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({ clientId 
             prosecution={analysisData.outcome.prosecution}
             isLoading={isLoading}
           />
+
+          {analysisData.lawReferences && analysisData.lawReferences.length > 0 && (
+            <LawReferencesSection 
+              references={analysisData.lawReferences}
+              isLoading={isLoading}
+            />
+          )}
 
           <DetailedLegalAnalysis 
             relevantLaw={analysisData.legalAnalysis.relevantLaw}
