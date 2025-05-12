@@ -154,7 +154,7 @@ serve(async (req) => {
       })
     );
 
-    // Now query the CourtListener API with improved search terms
+    // Now query the CourtListener API v4 with improved search terms
     let courtListenerResults = [];
     
     try {
@@ -162,15 +162,16 @@ serve(async (req) => {
       const enhancedSearchTerms = addExplicitLegalTerms(searchTerms, currentSearchDocument);
       console.log("Enhanced search terms:", enhancedSearchTerms);
       
-      // Build query for CourtListener API with correct query parameters
+      // Build query for CourtListener API v4 with correct query parameters
       const queryParams = new URLSearchParams({
         q: enhancedSearchTerms,
         order_by: 'score desc',
-        type: 'o',  // Only get opinions
+        type: 'opinion', // Changed from 'o' to 'opinion' for v4
         format: 'json'
       });
       
-      const url = `https://www.courtlistener.com/api/rest/v3/search/?${queryParams.toString()}`;
+      // Updated to use v4 API endpoint
+      const url = `https://www.courtlistener.com/api/rest/v4/search/?${queryParams.toString()}`;
       
       console.log("Court Listener request URL:", url);
 
@@ -190,18 +191,23 @@ serve(async (req) => {
       }
 
       const data = await response.json();
-      console.log(`Found ${data.results?.length || 0} cases from CourtListener API`);
+      console.log(`Found ${data.results?.length || 0} cases from CourtListener API v4`);
 
       if (data.results && data.results.length > 0) {
         // Process CourtListener results
-        courtListenerResults = await Promise.all(data.results.slice(0, 10).map(async (result) => {
-          console.log("Processing result:", result.caseName);
+        // Updated to handle v4 API response structure
+        courtListenerResults = await Promise.all(data.results.slice(0, 10).map(async (result: any) => {
+          console.log("Processing result:", result.caseName || result.case_name);
           
           // Get the full opinion text if available
           let opinionText = "";
-          if (result.id && result.absolute_url) {
+          const opinionId = result.id || result.opinion_id;
+          const absoluteUrl = result.absolute_url || result.absolute_uri;
+          
+          if (opinionId) {
             try {
-              const opinionUrl = `https://www.courtlistener.com/api/rest/v3/opinions/${result.id}/`;
+              // Updated to v4 API endpoint for opinion
+              const opinionUrl = `https://www.courtlistener.com/api/rest/v4/opinions/${opinionId}/`;
               console.log("Fetching opinion from:", opinionUrl);
               
               const opinionResponse = await fetch(opinionUrl, {
@@ -231,14 +237,16 @@ serve(async (req) => {
           return {
             source: "courtlistener",
             clientId: null,
-            clientName: result.caseName || "Unknown Case",
+            clientName: result.caseName || result.case_name || "Unknown Case",
             similarity: 0.75, // Higher default similarity to ensure results show up
             relevantFacts: snippet,
             outcome: extractOutcomeFromOpinion(opinionText || ""),
             court: result.court_name || result.court || "Court of Record",
-            citation: result.citation || result.citeCount || "No citation available",
-            dateDecided: result.dateFiled ? new Date(result.dateFiled).toLocaleDateString() : "Unknown date",
-            url: result.absolute_url ? `https://www.courtlistener.com${result.absolute_url}` : null
+            citation: result.citation || result.citeCount || result.cite_count || "No citation available",
+            dateDecided: result.dateFiled || result.date_filed ? 
+              new Date(result.dateFiled || result.date_filed).toLocaleDateString() : "Unknown date",
+            url: absoluteUrl ? 
+              (absoluteUrl.startsWith('http') ? absoluteUrl : `https://www.courtlistener.com${absoluteUrl}`) : null
           };
         }));
       } else {
