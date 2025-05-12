@@ -1,7 +1,6 @@
-
-import React from "react";
+import React, { useState } from "react";
 import { useParams, Navigate, Link } from "react-router-dom";
-import { ArrowLeft, FileText, BookOpen, FileSearch, Video, FileChartLine, MessageSquare } from "lucide-react";
+import { ArrowLeft, FileText, BookOpen, FileSearch, Video, FileChartLine, MessageSquare, Trash2 } from "lucide-react";
 import NavBar from "@/components/NavBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,6 +13,16 @@ import CaseAnalysisContainer from "@/components/case-analysis/CaseAnalysisContai
 import CaseDiscussionContainer from "@/components/case-discussion/CaseDiscussionContainer";
 import DiscoveryContainer from "@/components/discovery/DiscoveryContainer";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Define tab color styles
 const tabColors = {
@@ -22,7 +31,7 @@ const tabColors = {
   "discovery": "bg-[#8B5CF6] text-white",
   "deposition": "bg-[#D946EF] text-white",
   "case-analysis": "bg-[#ea384c] text-white",
-  "discuss-case": "bg-[#9b87f5] text-white", // New vibrant purple color for the Discuss Case tab
+  "discuss-case": "bg-[#9b87f5] text-white",
 };
 
 const tabHoverColors = {
@@ -31,13 +40,14 @@ const tabHoverColors = {
   "discovery": "hover:bg-[#8B5CF6]/90",
   "deposition": "hover:bg-[#D946EF]/90",
   "case-analysis": "hover:bg-[#ea384c]/90",
-  "discuss-case": "hover:bg-[#9b87f5]/90", // Hover state for the Discuss Case tab
+  "discuss-case": "hover:bg-[#9b87f5]/90",
 };
 
 const ClientDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const { client, loading, error, session, refreshClient } = useClientDetail(id);
+  const { client, loading, error, session, refreshClient, deleteClient, isDeleting } = useClientDetail(id);
   const { toast } = useToast();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // If not authenticated, redirect to auth page
   if (!session && !loading) {
@@ -85,6 +95,15 @@ const ClientDetail = () => {
     });
   };
 
+  const handleDeleteClick = () => {
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    await deleteClient();
+    setDeleteDialogOpen(false);
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <NavBar />
@@ -93,12 +112,23 @@ const ClientDetail = () => {
           <h1 className="text-3xl font-bold">
             {client.first_name} {client.last_name}
           </h1>
-          <Link to="/clients">
-            <Button variant="outline" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Clients
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2"
+              onClick={handleDeleteClick}
+              disabled={isDeleting}
+            >
+              <Trash2 className="h-4 w-4 text-red-500" />
+              {isDeleting ? "Deleting..." : "Delete Client"}
             </Button>
-          </Link>
+            <Link to="/clients">
+              <Button variant="outline" className="flex items-center gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Clients
+              </Button>
+            </Link>
+          </div>
         </div>
 
         <div className="mb-8">
@@ -183,6 +213,30 @@ const ClientDetail = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {client.first_name} {client.last_name} and all associated data including client messages, 
+              case analysis, discovery documents, and all other related information. 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm} 
+              className="bg-red-500 hover:bg-red-600"
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Yes, delete client"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
