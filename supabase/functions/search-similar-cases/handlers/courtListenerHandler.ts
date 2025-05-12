@@ -1,6 +1,5 @@
-
 import { corsHeaders } from "../utils/corsUtils.ts";
-import { addExplicitLegalTerms } from "./clientSearchHandler.ts";
+import { addExplicitLegalTerms } from "../utils/searchTermGenerator.ts";
 import { getFallbackCasesByType } from "../utils/fallbackCases.ts";
 
 // Extract a relevant snippet from a court opinion based on search terms
