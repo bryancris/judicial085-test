@@ -60,6 +60,7 @@ export const useCaseAnalysis = (clientId: string) => {
       if (data && data.length > 0) {
         const analysis = data[0];
         const content = analysis.content;
+        // Handle law references safely (use empty array if null/undefined)
         const lawReferences = analysis.law_references || [];
 
         // Extract analysis sections
@@ -95,8 +96,8 @@ export const useCaseAnalysis = (clientId: string) => {
         // Create analysis data structure
         setAnalysisData({
           outcome: {
-            defense: "The defense will likely focus on contributory negligence and question the causal relationship between the incident and claimed injuries.",
-            prosecution: "We have sufficient evidence to establish negligence and can demonstrate the direct impact on our client's life and livelihood."
+            defense: "65",
+            prosecution: "35",
           },
           legalAnalysis: {
             relevantLaw: relevantLawMatch ? relevantLawMatch[1].trim() : "",

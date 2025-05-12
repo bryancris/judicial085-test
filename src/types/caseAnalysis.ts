@@ -1,6 +1,13 @@
 
 import { ChatMessageProps } from "@/components/clients/chat/ChatMessage";
 
+export interface LawReference {
+  id: string;
+  title: string | null;
+  url: string | null;
+  content?: string | null;
+}
+
 export interface CaseAnalysisData {
   outcome: {
     defense: number;
@@ -16,6 +23,7 @@ export interface CaseAnalysisData {
   weaknesses: string[];
   conversationSummary: string;
   timestamp: string;
+  lawReferences?: LawReference[];
 }
 
 export interface AnalysisItem {

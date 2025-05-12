@@ -38,8 +38,8 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({ clientId 
       {analysisData && (
         <>
           <CaseOutcomePrediction 
-            defense={analysisData.outcome.defense} 
-            prosecution={analysisData.outcome.prosecution}
+            defense={Number(analysisData.outcome.defense)} 
+            prosecution={Number(analysisData.outcome.prosecution)}
             isLoading={isLoading}
           />
 
