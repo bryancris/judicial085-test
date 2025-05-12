@@ -6,55 +6,6 @@ import SecuritySection from '@/components/SecuritySection';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Star } from 'lucide-react';
 
-const TestimonialsSection = () => {
-  const testimonials = [
-    {
-      quote: "I saved 15+ hours in my first week. The discovery response tool alone was worth the subscription.",
-      author: "Linda M., Family Law Attorney",
-      stars: 5
-    },
-    {
-      quote: "Finally, legal software that doesn't require a training course to use. Easy to learn, easy to implement.",
-      author: "Robert K., Solo Practitioner",
-      stars: 5
-    },
-    {
-      quote: "As a Texas attorney for 20 years, I've wasted time on complex legal platforms. This is refreshingly simple and effective.",
-      author: "Michael T., Corporate Counsel",
-      stars: 5
-    }
-  ];
-
-  return (
-    <section className="py-16 bg-gray-50">
-      <div className="container mx-auto px-4">
-        <h2 className="text-4xl font-bold text-center mb-12">What Texas Attorneys Say</h2>
-        
-        <div className="grid md:grid-cols-3 gap-8">
-          {testimonials.map((testimonial, index) => (
-            <div key={index} className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <div className="flex mb-4">
-                {Array.from({ length: testimonial.stars }).map((_, i) => (
-                  <Star key={i} className="w-5 h-5 text-yellow-400 fill-yellow-400" />
-                ))}
-              </div>
-              <p className="text-gray-700 italic mb-4">"{testimonial.quote}"</p>
-              <p className="text-gray-600 font-medium">{testimonial.author}</p>
-            </div>
-          ))}
-        </div>
-        
-        <div className="text-center mt-12">
-          <Button className="bg-brand-burgundy hover:bg-brand-burgundy/90 text-white font-medium flex items-center gap-2 hover-scale mx-auto">
-            See Why Attorneys Choose Us
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    </section>
-  );
-};
-
 const ROISection = () => {
   return (
     <section className="py-16 bg-white">
@@ -121,7 +72,6 @@ const Index = () => {
         <HeroSection />
         <SecuritySection />
         <StreamlineSection />
-        <TestimonialsSection />
         <ROISection />
       </main>
       <footer className="bg-gray-100 py-8">
