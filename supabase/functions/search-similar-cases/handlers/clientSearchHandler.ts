@@ -3,7 +3,7 @@ import { corsHeaders } from "../utils/corsUtils.ts";
 import { supabase } from "../index.ts";
 import { processCourtListenerResults } from "./courtListenerHandler.ts";
 import { processInternalAnalyses } from "./internalAnalysisHandler.ts";
-import { generateFallbackCases } from "../utils/fallbackCases.ts";
+import { generateFallbackCases, getFallbackCasesByType } from "../utils/fallbackCases.ts";
 
 export async function handleClientSearch(clientId: string, courtListenerApiKey: string) {
   // Get the client's name for reference
@@ -35,7 +35,7 @@ export async function handleClientSearch(clientId: string, courtListenerApiKey: 
   if (!currentAnalysis) {
     console.error('No legal analysis found for client:', clientId);
     
-    // Return some fallback cases since we have no legal analysis to compare with
+    // Return some generic fallback cases since we have no legal analysis to compare with
     return new Response(
       JSON.stringify({
         similarCases: generateFallbackCases(clientData.first_name, clientData.last_name),
@@ -77,12 +77,12 @@ export async function handleClientSearch(clientId: string, courtListenerApiKey: 
     issues: currentIssues.substring(0, 100) + "..."
   });
 
-  // Check if we can detect the case type
-  const caseType = identifyCaseType(currentPreliminaryAnalysis);
+  // Detect the case type
+  const caseType = identifyCaseType(currentPreliminaryAnalysis, currentIssues, currentRelevantLaw);
   console.log("Detected case type:", caseType);
 
-  // Generate search terms based on analysis content
-  const searchTerms = generateSearchTerms(currentRelevantLaw, currentIssues, currentPreliminaryAnalysis);
+  // Generate search terms based on analysis content and case type
+  const searchTerms = generateSearchTerms(currentRelevantLaw, currentIssues, currentPreliminaryAnalysis, caseType);
   console.log("Generated search terms:", searchTerms);
 
   // Process internal analyses  
@@ -95,7 +95,8 @@ export async function handleClientSearch(clientId: string, courtListenerApiKey: 
   const courtListenerResults = await processCourtListenerResults(
     searchTerms, 
     currentSearchDocument, 
-    courtListenerApiKey
+    courtListenerApiKey,
+    caseType
   );
 
   // Combine and sort both internal and CourtListener results
@@ -131,37 +132,82 @@ export function extractSection(content: string, sectionName: string): string {
   return match ? match[1].trim() : '';
 }
 
-// Identify the type of case from the analysis
-export function identifyCaseType(analysis: string): string | null {
-  if (!analysis) return null;
+// Enhanced case type identification from the analysis
+export function identifyCaseType(analysis: string, issues: string, law: string): string {
+  if (!analysis && !issues && !law) return "unknown";
   
-  const lowerAnalysis = analysis.toLowerCase();
+  const combinedText = (analysis + " " + issues + " " + law).toLowerCase();
   
-  // Check for common case types
-  if (lowerAnalysis.includes("slip") && lowerAnalysis.includes("fall")) {
-    return "slip and fall";
-  }
-  if (lowerAnalysis.includes("premises liability")) {
-    return "premises liability";
-  }
-  if (lowerAnalysis.includes("car accident") || lowerAnalysis.includes("motor vehicle") || lowerAnalysis.includes("auto accident")) {
-    return "motor vehicle accident";
-  }
-  if (lowerAnalysis.includes("medical malpractice")) {
-    return "medical malpractice";
-  }
-  if (lowerAnalysis.includes("product liability") || lowerAnalysis.includes("defective product")) {
-    return "product liability";
+  // Check for bailment/property cases first (like the vehicle theft case)
+  if (
+    (combinedText.includes("bailment") || 
+     combinedText.includes("bailee") || 
+     combinedText.includes("bailor")) ||
+    ((combinedText.includes("property") || combinedText.includes("vehicle") || 
+      combinedText.includes("car") || combinedText.includes("automobile")) && 
+     (combinedText.includes("theft") || combinedText.includes("stolen") || 
+      combinedText.includes("damage") || combinedText.includes("lost")))
+  ) {
+    return "bailment";
   }
   
-  return null;
+  // Check for slip and fall / premises liability
+  if ((combinedText.includes("slip") && combinedText.includes("fall")) || 
+      combinedText.includes("premises liability")) {
+    return "premises-liability";
+  }
+  
+  // Check for motor vehicle accidents
+  if ((combinedText.includes("car accident") || 
+       combinedText.includes("motor vehicle") || 
+       combinedText.includes("auto accident") || 
+       combinedText.includes("collision")) && 
+      !combinedText.includes("theft")) {
+    return "motor-vehicle-accident";
+  }
+  
+  // Check for medical malpractice
+  if (combinedText.includes("medical malpractice") || 
+      (combinedText.includes("medical") && 
+       (combinedText.includes("negligence") || combinedText.includes("doctor")))) {
+    return "medical-malpractice";
+  }
+  
+  // Check for product liability
+  if (combinedText.includes("product liability") || 
+      combinedText.includes("defective product")) {
+    return "product-liability";
+  }
+  
+  // Check for contract disputes
+  if (combinedText.includes("contract") || 
+      combinedText.includes("agreement") || 
+      combinedText.includes("breach")) {
+    return "contract-dispute";
+  }
+  
+  // Check for employment cases
+  if (combinedText.includes("employment") || 
+      combinedText.includes("wrongful termination") || 
+      combinedText.includes("discrimination") || 
+      combinedText.includes("workplace")) {
+    return "employment";
+  }
+  
+  // Default case type if no specific pattern is detected
+  return "general-liability";
 }
 
-// Generate search terms for CourtListener API based on legal analysis
-export function generateSearchTerms(relevantLaw: string, legalIssues: string, preliminaryAnalysis: string): string {
+// Generate search terms for CourtListener API based on legal analysis and case type
+export function generateSearchTerms(
+  relevantLaw: string, 
+  legalIssues: string, 
+  preliminaryAnalysis: string,
+  caseType: string
+): string {
   // Default search terms if sections are empty
   if (!relevantLaw && !legalIssues && !preliminaryAnalysis) {
-    return "slip and fall premises liability negligence";
+    return "liability negligence damages";
   }
   
   // Extract potential statutes
@@ -170,11 +216,42 @@ export function generateSearchTerms(relevantLaw: string, legalIssues: string, pr
   // Extract key legal terms
   const legalTerms = new Set<string>();
   
-  // Try to identify case type (slip and fall, car accident, etc)
-  const caseType = identifyCaseType(preliminaryAnalysis);
-  if (caseType) {
-    legalTerms.add(caseType);
+  // Add case type specific terms
+  if (caseType === "bailment") {
+    legalTerms.add("bailment");
+    legalTerms.add("bailee");
+    legalTerms.add("property");
+    legalTerms.add("vehicle theft");
+    legalTerms.add("duty of care");
+  } else if (caseType === "premises-liability") {
+    legalTerms.add("slip and fall");
+    legalTerms.add("premises liability");
+    legalTerms.add("dangerous condition");
+  } else if (caseType === "motor-vehicle-accident") {
+    legalTerms.add("motor vehicle accident");
+    legalTerms.add("collision");
+    legalTerms.add("automobile negligence");
+  } else if (caseType === "medical-malpractice") {
+    legalTerms.add("medical malpractice");
+    legalTerms.add("doctor negligence");
+    legalTerms.add("standard of care");
+  } else if (caseType === "product-liability") {
+    legalTerms.add("product liability");
+    legalTerms.add("defective product");
+    legalTerms.add("manufacturer liability");
+  } else if (caseType === "contract-dispute") {
+    legalTerms.add("breach of contract");
+    legalTerms.add("contract dispute");
+    legalTerms.add("contract terms");
+  } else if (caseType === "employment") {
+    legalTerms.add("employment dispute");
+    legalTerms.add("wrongful termination");
+    legalTerms.add("workplace discrimination");
   }
+  
+  // Always add negligence as it's common across many case types
+  legalTerms.add("negligence");
+  legalTerms.add("damages");
   
   // Process relevant law for legal terms
   const lawWords = relevantLaw.split(/\W+/);
@@ -194,22 +271,17 @@ export function generateSearchTerms(relevantLaw: string, legalIssues: string, pr
     }
   }
   
-  // Extract named entities that might be relevant (like "premises liability")
+  // Extract named entities that might be relevant
   extractNamedEntities(preliminaryAnalysis).forEach(entity => {
     legalTerms.add(entity);
   });
-  
-  // Always add key terms for slip and fall cases
-  legalTerms.add("slip and fall");
-  legalTerms.add("premises liability");
-  legalTerms.add("negligence");
   
   // Combine statutes and best legal terms
   const statutes = statuteMatches.slice(0, 2).join(' ');
   const bestTerms = Array.from(legalTerms).slice(0, 5).join(' ');
   
   const combinedTerms = `${statutes} ${bestTerms}`.trim();
-  return combinedTerms.length > 0 ? combinedTerms : "slip and fall premises liability negligence";
+  return combinedTerms.length > 0 ? combinedTerms : "liability negligence damages";
 }
 
 // Simple function to extract potential named entities
@@ -228,25 +300,35 @@ export function extractNamedEntities(text: string): string[] {
   ))];
 }
 
-// Add explicit legal terms to improve search results
-export function addExplicitLegalTerms(searchTerms: string, caseText: string): string {
-  const isSlipAndFall = caseText.toLowerCase().includes("slip") && 
-                      caseText.toLowerCase().includes("fall") || 
-                      caseText.toLowerCase().includes("premises liability");
+// Add explicit legal terms to improve search results based on case type
+export function addExplicitLegalTerms(searchTerms: string, caseText: string, caseType: string): string {
+  let enhancedTerms = searchTerms;
   
-  // Always add slip and fall terms regardless of case text
-  let enhancedTerms = `${searchTerms} "slip and fall" "premises liability" negligence duty dangerous condition owner occupier`;
-  
-  // Add more variation to the search terms
-  if (isSlipAndFall) {
-    return `${enhancedTerms} hazard unsafe floor wet slippery`;
+  // Add case-type specific terms
+  if (caseType === "bailment") {
+    enhancedTerms = `${enhancedTerms} "bailment" "bailee" "property" "duty of care" vehicle valuable theft stolen`;
+  } 
+  else if (caseType === "premises-liability") {
+    enhancedTerms = `${enhancedTerms} "slip and fall" "premises liability" negligence duty dangerous condition owner occupier hazard unsafe`;
   }
-  
-  // Check if this is likely a car accident case
-  if (caseText.toLowerCase().includes("car accident") || 
-      caseText.toLowerCase().includes("motor vehicle") || 
-      caseText.toLowerCase().includes("automobile")) {
-    return `${enhancedTerms} "motor vehicle" accident collision negligence`;
+  else if (caseType === "motor-vehicle-accident") {
+    enhancedTerms = `${enhancedTerms} "motor vehicle" "car accident" collision automobile traffic negligence driver`;
+  }
+  else if (caseType === "medical-malpractice") {
+    enhancedTerms = `${enhancedTerms} "medical malpractice" "standard of care" doctor hospital treatment negligence patient`;
+  }
+  else if (caseType === "product-liability") {
+    enhancedTerms = `${enhancedTerms} "product liability" defective manufacturer warranty unsafe consumer`;
+  }
+  else if (caseType === "contract-dispute") {
+    enhancedTerms = `${enhancedTerms} "breach of contract" agreement terms violation damages performance`;
+  }
+  else if (caseType === "employment") {
+    enhancedTerms = `${enhancedTerms} "wrongful termination" discrimination harassment workplace employer employee`;
+  }
+  else {
+    // Generic terms for other case types
+    enhancedTerms = `${enhancedTerms} liability negligence damages duty breach`;
   }
   
   return enhancedTerms;

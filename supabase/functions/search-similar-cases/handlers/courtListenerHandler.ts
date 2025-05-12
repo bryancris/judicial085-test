@@ -1,7 +1,7 @@
 
 import { corsHeaders } from "../utils/corsUtils.ts";
 import { addExplicitLegalTerms } from "./clientSearchHandler.ts";
-import { generateSlipAndFallFallbackCases } from "../utils/fallbackCases.ts";
+import { getFallbackCasesByType } from "../utils/fallbackCases.ts";
 
 // Extract a relevant snippet from a court opinion based on search terms
 export function extractRelevantSnippet(opinionText: string, searchTerms: string): string {
@@ -25,13 +25,14 @@ export function extractRelevantSnippet(opinionText: string, searchTerms: string)
       }
     });
     
-    // Bonus for paragraphs mentioning slip and fall or premises liability
-    if (paraLower.includes("slip") && paraLower.includes("fall")) {
-      score += 3;
-    }
-    if (paraLower.includes("premises liability")) {
-      score += 3;
-    }
+    // Bonus for paragraphs mentioning key legal concepts
+    if (paraLower.includes("liability")) score += 2;
+    if (paraLower.includes("negligence")) score += 2;
+    if (paraLower.includes("damages")) score += 2;
+    if (paraLower.includes("bailment")) score += 3;
+    if (paraLower.includes("property")) score += 1;
+    if (paraLower.includes("theft")) score += 2;
+    if (paraLower.includes("vehicle")) score += 1;
     
     return { paragraph, score };
   });
@@ -63,20 +64,20 @@ export function extractOutcomeFromOpinion(opinionText: string): string {
     'judgment is affirmed', 'judgment is reversed', 'we conclude'
   ];
   
-  // Check for common slip and fall outcomes
-  const slipFallOutcomes = [
-    'summary judgment', 'premises liability', 'duty of care', 
-    'business invitee', 'dangerous condition', 'condition was open and obvious'
+  // Check for common legal outcomes
+  const legalOutcomes = [
+    'summary judgment', 'duty of care', 'breach', 'damages', 'liability',
+    'negligence', 'bailment', 'property', 'theft', 'contract', 'criminal'
   ];
   
   // Split into paragraphs to look for conclusion
   const paragraphs = opinionText.split(/\n\n+/);
   
-  // First check for slip and fall specific outcome language
+  // First check for legal outcome language
   for (const paragraph of paragraphs) {
     const paraLower = paragraph.toLowerCase();
     
-    for (const keyword of slipFallOutcomes) {
+    for (const keyword of legalOutcomes) {
       if (paraLower.includes(keyword)) {
         // Get the sentence containing the keyword
         const sentences = paragraph.split(/\.\s+/);
@@ -115,24 +116,30 @@ export function extractOutcomeFromOpinion(opinionText: string): string {
 }
 
 // Process Court Listener API results
-export async function processCourtListenerResults(searchTerms: string, currentSearchDocument: string, courtListenerApiKey: string): Promise<any[]> {
+export async function processCourtListenerResults(
+  searchTerms: string, 
+  currentSearchDocument: string, 
+  courtListenerApiKey: string,
+  caseType: string
+): Promise<any[]> {
   let courtListenerResults = [];
   
   try {
-    // Add common slip and fall related terms to improve search results
-    const enhancedSearchTerms = addExplicitLegalTerms(searchTerms, currentSearchDocument);
+    // Add case-type specific terms to improve search results
+    const enhancedSearchTerms = addExplicitLegalTerms(searchTerms, currentSearchDocument, caseType);
     console.log("Enhanced search terms:", enhancedSearchTerms);
     
-    // Build query for CourtListener API v4 with correct query parameters
+    // Build query for CourtListener API with correct query parameters for v3 API
+    // Note: CourtListener v4 API has different parameter names than what we were using
     const queryParams = new URLSearchParams({
       q: enhancedSearchTerms,
       order_by: 'score desc',
-      type: 'opinion', // Changed from 'o' to 'opinion' for v4
+      type: 'o', // 'o' for opinions in v3 API
       format: 'json'
     });
     
-    // Updated to use v4 API endpoint
-    const url = `https://www.courtlistener.com/api/rest/v4/search/?${queryParams.toString()}`;
+    // Use the v3 API endpoint which is more stable
+    const url = `https://www.courtlistener.com/api/rest/v3/search/?${queryParams.toString()}`;
     
     console.log("Court Listener request URL:", url);
 
@@ -152,23 +159,22 @@ export async function processCourtListenerResults(searchTerms: string, currentSe
     }
 
     const data = await response.json();
-    console.log(`Found ${data.results?.length || 0} cases from CourtListener API v4`);
+    console.log(`Found ${data.results?.length || 0} cases from CourtListener API`);
 
     if (data.results && data.results.length > 0) {
-      // Process CourtListener results
-      // Updated to handle v4 API response structure
+      // Process CourtListener results with v3 API response structure
       courtListenerResults = await Promise.all(data.results.slice(0, 10).map(async (result: any) => {
         console.log("Processing result:", result.caseName || result.case_name);
         
         // Get the full opinion text if available
         let opinionText = "";
-        const opinionId = result.id || result.opinion_id;
+        const opinionId = result.id || result.resource_uri?.split('/').filter(Boolean).pop();
         const absoluteUrl = result.absolute_url || result.absolute_uri;
         
         if (opinionId) {
           try {
-            // Updated to v4 API endpoint for opinion
-            const opinionUrl = `https://www.courtlistener.com/api/rest/v4/opinions/${opinionId}/`;
+            // Use v3 API endpoint for opinion
+            const opinionUrl = `https://www.courtlistener.com/api/rest/v3/opinions/${opinionId}/`;
             console.log("Fetching opinion from:", opinionUrl);
             
             const opinionResponse = await fetch(opinionUrl, {
@@ -203,7 +209,7 @@ export async function processCourtListenerResults(searchTerms: string, currentSe
           relevantFacts: snippet,
           outcome: extractOutcomeFromOpinion(opinionText || ""),
           court: result.court_name || result.court || "Court of Record",
-          citation: result.citation || result.citeCount || result.cite_count || "No citation available",
+          citation: result.citation || result.citation_count || result.citeCount || "No citation available",
           dateDecided: result.dateFiled || result.date_filed ? 
             new Date(result.dateFiled || result.date_filed).toLocaleDateString() : "Unknown date",
           url: absoluteUrl ? 
@@ -213,18 +219,17 @@ export async function processCourtListenerResults(searchTerms: string, currentSe
     } else {
       console.log("No results found from CourtListener API, adding fallback cases");
       
-      // Add fallback cases for testing/demonstration if no results are found
-      const fallbackCases = generateSlipAndFallFallbackCases();
-      courtListenerResults = [...courtListenerResults, ...fallbackCases];
+      // Add fallback cases for the specific case type
+      courtListenerResults = getFallbackCasesByType(caseType);
     }
     
     console.log(`Successfully processed ${courtListenerResults.length} CourtListener results`);
   } catch (apiError) {
     console.error('Error querying CourtListener API:', apiError);
     
-    // Continue with just internal results if API fails, and add fallback cases
-    console.log("Adding fallback cases due to API error");
-    courtListenerResults = generateSlipAndFallFallbackCases();
+    // Continue with just internal results if API fails, and add fallback cases for the specific case type
+    console.log(`Adding fallback cases for case type: ${caseType}`);
+    courtListenerResults = getFallbackCasesByType(caseType);
   }
   
   return courtListenerResults;

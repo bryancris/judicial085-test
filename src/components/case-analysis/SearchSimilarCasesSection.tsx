@@ -56,8 +56,11 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({ c
             description: "We couldn't find any cases with similar facts or legal issues.",
           });
         } else {
+          // Determine case type from results
+          const caseType = determineCaseTypeFromResults(similarCases);
+          
           toast({
-            title: "Similar Cases Found",
+            title: `Similar ${caseType} Cases Found`,
             description: `Found ${similarCases.length} cases with similar facts or legal issues.`,
           });
         }
@@ -89,6 +92,35 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({ c
     } finally {
       setIsSearchingCases(false);
     }
+  };
+  
+  // Helper function to determine case type from results
+  const determineCaseTypeFromResults = (cases: SimilarCase[]): string => {
+    if (!cases || cases.length === 0) return "Legal";
+    
+    // Check for case type indicators in the results
+    const allText = cases.map(c => 
+      (c.relevantFacts || "") + " " + (c.outcome || "")
+    ).join(" ").toLowerCase();
+    
+    if (allText.includes("bailment") || allText.includes("vehicle theft") || 
+        allText.includes("property") && allText.includes("stolen")) {
+      return "Bailment/Property";
+    } else if (allText.includes("slip and fall") || allText.includes("premises liability")) {
+      return "Premises Liability";
+    } else if (allText.includes("car accident") || allText.includes("motor vehicle")) {
+      return "Motor Vehicle";
+    } else if (allText.includes("medical malpractice") || allText.includes("hospital")) {
+      return "Medical Malpractice";
+    } else if (allText.includes("product liability") || allText.includes("defective")) {
+      return "Product Liability";
+    } else if (allText.includes("contract") || allText.includes("agreement")) {
+      return "Contract";
+    } else if (allText.includes("employment") || allText.includes("workplace")) {
+      return "Employment";
+    }
+    
+    return "Legal";
   };
 
   return (

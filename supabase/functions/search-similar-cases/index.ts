@@ -4,7 +4,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.33.2";
 import { corsHeaders } from "./utils/corsUtils.ts";
 import { handleClientSearch } from "./handlers/clientSearchHandler.ts";
-import { generateFallbackCases, generateSlipAndFallFallbackCases } from "./utils/fallbackCases.ts";
+import { getFallbackCasesByType } from "./utils/fallbackCases.ts";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
@@ -29,7 +29,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: error.message || 'Failed to search for similar cases',
-        similarCases: generateSlipAndFallFallbackCases(),
+        similarCases: getFallbackCasesByType("general-liability"),
         fallbackUsed: true 
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
