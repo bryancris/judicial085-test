@@ -1,6 +1,6 @@
 
 import { supabase } from "../index.ts";
-import { extractSection } from "./clientSearchHandler.ts";
+import { extractSection } from "../utils/textUtils.ts";
 
 // Simple text similarity function based on word overlap
 export function calculateSimilarity(text1: string, text2: string): number {

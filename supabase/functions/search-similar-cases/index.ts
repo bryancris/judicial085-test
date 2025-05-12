@@ -5,6 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.33.2";
 import { corsHeaders } from "./utils/corsUtils.ts";
 import { handleClientSearch } from "./handlers/clientSearchHandler.ts";
 import { getFallbackCasesByType } from "./utils/fallbackCases.ts";
+import { identifyCaseType } from "./utils/caseTypeDetector.ts";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
@@ -24,12 +25,18 @@ serve(async (req) => {
     
     // Handle the client search request
     return await handleClientSearch(clientId, courtListenerApiKey);
+    
   } catch (error) {
     console.error('Error in search-similar-cases function:', error);
+    
+    // Default to general liability if we can't detect the case type
+    const fallbackType = "general-liability";
+    console.log(`Using fallback case type: ${fallbackType} due to error`);
+    
     return new Response(
       JSON.stringify({ 
         error: error.message || 'Failed to search for similar cases',
-        similarCases: getFallbackCasesByType("general-liability"),
+        similarCases: getFallbackCasesByType(fallbackType),
         fallbackUsed: true 
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
