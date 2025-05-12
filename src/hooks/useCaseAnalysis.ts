@@ -3,15 +3,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAnalysisGeneration } from "./useAnalysisGeneration";
+import { LawReference } from "@/types/caseAnalysis";
 import { extractCitations } from "@/utils/lawReferences/citationUtils";
-
-// Define the shape of a law reference
-interface LawReference {
-  id: string;
-  title: string | null;
-  url: string | null;
-  content?: string | null;
-}
 
 interface AnalysisData {
   outcome: {
@@ -60,8 +53,25 @@ export const useCaseAnalysis = (clientId: string) => {
       if (data && data.length > 0) {
         const analysis = data[0];
         const content = analysis.content;
-        // Handle law references safely (use empty array if null/undefined)
-        const lawReferences = analysis.law_references || [];
+        
+        // Transform the law_references JSON to match the LawReference type
+        // This guarantees the type safety for the lawReferences property
+        let lawReferences: LawReference[] = [];
+        
+        if (analysis.law_references) {
+          try {
+            // Cast the JSON array to our LawReference type
+            lawReferences = (analysis.law_references as any[]).map(ref => ({
+              id: ref.id || "",
+              title: ref.title || null,
+              url: ref.url || null,
+              content: ref.content || null
+            }));
+          } catch (err) {
+            console.error("Error parsing law references:", err);
+            lawReferences = [];
+          }
+        }
 
         // Extract analysis sections
         const relevantLawMatch = content.match(/\*\*RELEVANT TEXAS LAW:\*\*([\s\S]*?)(?=\*\*PRELIMINARY ANALYSIS:|$)/);
