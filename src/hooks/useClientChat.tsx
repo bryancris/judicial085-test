@@ -21,6 +21,7 @@ export const useClientChat = (clientId: string) => {
   
   const {
     isAnalysisLoading,
+    analysisError,
     generateAnalysis
   } = useClientChatAnalysis(clientId, setLegalAnalysis);
   
@@ -47,6 +48,7 @@ export const useClientChat = (clientId: string) => {
     isLoading,
     isAnalysisLoading,
     isLoadingHistory,
+    analysisError,
     prefilledMessage,
     handleSendMessage: handleSendMessageWithActiveTab,
     handleFollowUpQuestionClick,

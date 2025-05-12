@@ -19,6 +19,7 @@ const ClientIntakeChat = ({ clientId }: ClientIntakeChatProps) => {
     isLoading,
     isAnalysisLoading,
     isLoadingHistory,
+    analysisError,
     prefilledMessage,
     handleSendMessage,
     handleFollowUpQuestionClick,
@@ -89,6 +90,7 @@ const ClientIntakeChat = ({ clientId }: ClientIntakeChatProps) => {
         <LegalAnalysisView 
           analysisItems={legalAnalysis}
           isLoading={isAnalysisLoading}
+          error={analysisError}
           onQuestionClick={handleFollowUpQuestionClick}
         />
       </div>

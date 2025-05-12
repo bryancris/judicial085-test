@@ -10,6 +10,7 @@ export const useClientChatAnalysis = (
   setLegalAnalysis: React.Dispatch<React.SetStateAction<AnalysisItem[]>>
 ) => {
   const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const generateAnalysis = async (currentMessages: ChatMessageProps[]) => {
@@ -22,16 +23,18 @@ export const useClientChatAnalysis = (
     }
     
     setIsAnalysisLoading(true);
+    setAnalysisError(null);
     
     try {
       // Send the conversation to generate legal analysis
-      const { analysis, error } = await generateLegalAnalysis(clientId, currentMessages);
+      const { analysis, error, lawReferences } = await generateLegalAnalysis(clientId, currentMessages);
       
       if (error) {
         console.error("Error generating analysis:", error);
+        setAnalysisError(error);
         toast({
           title: "Analysis Error",
-          description: "Failed to generate legal analysis. Please try again.",
+          description: `Failed to generate legal analysis: ${error}`,
           variant: "destructive",
         });
       } else if (analysis) {
@@ -55,9 +58,17 @@ export const useClientChatAnalysis = (
             variant: "destructive",
           });
         }
+      } else {
+        setAnalysisError("No analysis was generated. Please try again.");
+        toast({
+          title: "Analysis Error",
+          description: "No analysis content was returned. Please try again.",
+          variant: "destructive",
+        });
       }
     } catch (err: any) {
       console.error("Error generating legal analysis:", err);
+      setAnalysisError(err.message || "Unknown error");
       toast({
         title: "Analysis Error",
         description: "An unexpected error occurred while generating legal analysis.",
@@ -70,6 +81,7 @@ export const useClientChatAnalysis = (
 
   return {
     isAnalysisLoading,
+    analysisError,
     generateAnalysis
   };
 };

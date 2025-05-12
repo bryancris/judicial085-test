@@ -3,6 +3,8 @@ import React, { useEffect, useRef } from "react";
 import EmptyAnalysisState from "./EmptyAnalysisState";
 import AnalysisLoadingState from "./AnalysisLoadingState";
 import AnalysisItem from "./AnalysisItem";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 interface AnalysisItem {
   content: string;
@@ -12,10 +14,11 @@ interface AnalysisItem {
 interface LegalAnalysisViewProps {
   analysisItems: AnalysisItem[];
   isLoading: boolean;
+  error?: string | null;
   onQuestionClick?: (question: string) => void;
 }
 
-const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalAnalysisViewProps) => {
+const LegalAnalysisView = ({ analysisItems, isLoading, error, onQuestionClick }: LegalAnalysisViewProps) => {
   const analysisEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -27,6 +30,15 @@ const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalA
 
   return (
     <div className="flex-grow overflow-y-auto p-4 bg-card">
+      {error && !isLoading && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {error}
+          </AlertDescription>
+        </Alert>
+      )}
+      
       {analysisItems.length === 0 ? (
         <EmptyAnalysisState isLoading={isLoading} />
       ) : (
@@ -42,7 +54,7 @@ const LegalAnalysisView = ({ analysisItems, isLoading, onQuestionClick }: LegalA
           <div ref={analysisEndRef} />
         </div>
       )}
-      <AnalysisLoadingState isLoading={isLoading} />
+      <AnalysisLoadingState isLoading={isLoading} error={error} />
     </div>
   );
 };

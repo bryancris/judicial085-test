@@ -9,61 +9,93 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Function to search for relevant legal documents in the vector database
-async function searchRelevantLaw(supabase, searchTerms) {
+// Function to search for relevant legal documents with improved error handling
+async function searchRelevantLaw(searchTerms) {
   console.log(`Searching for legal references with terms: ${searchTerms}`);
   try {
-    // First search for exact document matches in metadata
-    const { data: metadataResults, error: metadataError } = await supabase
-      .from('document_metadata')
-      .select('id, title, url')
-      .or(`title.ilike.%${searchTerms}%,schema.ilike.%${searchTerms}%`)
-      .limit(5);
+    // Get Supabase credentials from environment
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
-    if (metadataError) {
-      console.error("Error searching document metadata:", metadataError);
-    }
-    
-    if (metadataResults && metadataResults.length > 0) {
-      console.log(`Found ${metadataResults.length} direct metadata results`);
-      return metadataResults.map(doc => ({
-        id: doc.id,
-        title: doc.title || "Texas Law Document",
-        url: doc.url || null,
-        content: null // We'll fetch content separately if needed
-      }));
-    }
-    
-    // Fallback to searching in the documents table with vector similarity
-    const { data: documents, error: searchError } = await supabase
-      .from('documents')
-      .select('id, content, metadata')
-      .textSearch('content', searchTerms, { type: 'plain' })
-      .limit(3);
-
-    if (searchError) {
-      console.error("Error in text search:", searchError);
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Supabase credentials not configured');
       return [];
     }
 
-    console.log(`Found ${documents?.length || 0} documents in text search`);
-    
-    // Format and return the results
-    return (documents || []).map(doc => {
-      const metadata = doc.metadata || {};
-      const content = doc.content || "";
-      // Extract a snippet if the content is long
-      const snippet = content.length > 500 
-        ? content.substring(0, 500) + "..." 
-        : content;
+    // First try searching document metadata
+    try {
+      const metadataResponse = await fetch(
+        `${supabaseUrl}/rest/v1/document_metadata?select=id,title,url&title=ilike.*${encodeURIComponent(searchTerms)}*`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseServiceKey}`,
+            'apikey': supabaseServiceKey
+          }
+        }
+      );
       
-      return {
-        id: metadata?.file_id || String(doc.id),
-        title: metadata?.title || metadata?.file_title || "Texas Law Document",
-        url: metadata?.file_path || null,
-        content: snippet
-      };
-    });
+      if (metadataResponse.ok) {
+        const metadataResults = await metadataResponse.json();
+        if (metadataResults && metadataResults.length > 0) {
+          console.log(`Found ${metadataResults.length} direct metadata results`);
+          return metadataResults.map(doc => ({
+            id: doc.id,
+            title: doc.title || "Texas Law Document",
+            url: doc.url || null,
+            content: null // We'll fetch content separately if needed
+          }));
+        }
+      } else {
+        console.warn(`Metadata search failed with status: ${metadataResponse.status}`);
+        // Continue to fall back to documents table search
+      }
+    } catch (metadataError) {
+      console.error("Error in metadata search, falling back to documents table:", metadataError);
+      // Continue to documents table search
+    }
+    
+    // Fallback to searching in the documents table
+    try {
+      const documentsResponse = await fetch(
+        `${supabaseUrl}/rest/v1/documents?select=id,content,metadata&limit=3`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseServiceKey}`,
+            'apikey': supabaseServiceKey
+          }
+        }
+      );
+      
+      if (!documentsResponse.ok) {
+        console.warn(`Documents search failed with status: ${documentsResponse.status}`);
+        return [];
+      }
+      
+      const documents = await documentsResponse.json();
+      console.log(`Found ${documents?.length || 0} documents in fallback search`);
+      
+      // Format and return the results
+      return (documents || []).map(doc => {
+        const metadata = doc.metadata || {};
+        const content = doc.content || "";
+        // Extract a snippet if the content is long
+        const snippet = content.length > 500 
+          ? content.substring(0, 500) + "..." 
+          : content;
+        
+        return {
+          id: metadata?.file_id || String(doc.id),
+          title: metadata?.title || metadata?.file_title || "Texas Law Document",
+          url: metadata?.file_path || null,
+          content: snippet
+        };
+      });
+    } catch (documentsError) {
+      console.error("Error in documents search:", documentsError);
+      return [];
+    }
   } catch (error) {
     console.error("Exception in searchRelevantLaw:", error);
     return [];
@@ -106,69 +138,6 @@ function extractLegalTopics(conversation) {
   };
 }
 
-// Create a Supabase client specifically for the edge function
-function createSupabaseClient() {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  
-  if (!supabaseUrl || !supabaseServiceKey) {
-    console.error('Supabase credentials not configured');
-    return null;
-  }
-  
-  return createClient(supabaseUrl, supabaseServiceKey);
-}
-
-// Basic client implementation for the edge function
-function createClient(supabaseUrl, supabaseKey) {
-  return {
-    from: (table) => ({
-      select: (columns) => ({
-        textSearch: (column, query, options) => ({
-          or: (conditions) => ({
-            limit: (limit) => ({
-              then: async () => {
-                const url = `${supabaseUrl}/rest/v1/${table}?select=${columns}`;
-                const response = await fetch(url, {
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${supabaseKey}`,
-                    'apikey': supabaseKey
-                  }
-                });
-                return response.json();
-              }
-            })
-          })
-        }),
-        or: (conditions) => ({
-          limit: (limit) => ({
-            then: async () => {
-              const url = `${supabaseUrl}/rest/v1/${table}?select=${columns}&${conditions}`;
-              try {
-                const response = await fetch(url, {
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${supabaseKey}`,
-                    'apikey': supabaseKey
-                  }
-                });
-                if (!response.ok) {
-                  throw new Error(`Server responded with ${response.status}`);
-                }
-                return await response.json();
-              } catch (error) {
-                console.error(`Error fetching from ${table}:`, error);
-                return { data: [], error };
-              }
-            }
-          })
-        })
-      })
-    })
-  };
-}
-
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -206,14 +175,12 @@ serve(async (req) => {
     
     // Search for relevant law if we have extracted topics
     if (searchQuery.trim()) {
-      const supabase = createSupabaseClient();
-      if (supabase) {
-        try {
-          relevantLawReferences = await searchRelevantLaw(supabase, searchQuery);
-          console.log(`Found ${relevantLawReferences.length} relevant law references`);
-        } catch (error) {
-          console.error("Error searching for relevant law:", error);
-        }
+      try {
+        relevantLawReferences = await searchRelevantLaw(searchQuery);
+        console.log(`Found ${relevantLawReferences.length} relevant law references`);
+      } catch (error) {
+        console.error("Error searching for relevant law:", error);
+        // Continue without law references if search fails
       }
     }
 
