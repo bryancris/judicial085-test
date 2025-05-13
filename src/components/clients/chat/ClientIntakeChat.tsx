@@ -82,8 +82,8 @@ const ClientIntakeChat = ({ clientId }: ClientIntakeChatProps) => {
           <Button 
             onClick={handleAddDocuments} 
             size="sm" 
-            variant="outline" 
-            className="border-primary-foreground/20 hover:bg-primary-foreground/10 text-primary-foreground"
+            variant="secondary" 
+            className="bg-white text-primary font-medium px-3 hover:bg-gray-100"
           >
             <Paperclip className="h-4 w-4 mr-2" />
             Add Supporting Documents
