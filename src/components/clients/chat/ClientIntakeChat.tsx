@@ -5,6 +5,8 @@ import ChatInput from "./ChatInput";
 import LegalAnalysisView from "./LegalAnalysisView";
 import { useClientChat } from "@/hooks/useClientChat";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { FileText, Paperclip } from "lucide-react";
 
 interface ClientIntakeChatProps {
   clientId: string;
@@ -25,6 +27,17 @@ const ClientIntakeChat = ({ clientId }: ClientIntakeChatProps) => {
     handleFollowUpQuestionClick,
     formatTimestamp
   } = useClientChat(clientId);
+
+  const handleAddDocuments = () => {
+    // This is a placeholder function that will be implemented in the future
+    console.log("Add supporting documents clicked");
+    // For now, show a toast notification
+    const { toast } = require("@/hooks/use-toast");
+    toast({
+      title: "Feature coming soon",
+      description: "Document upload functionality will be implemented soon.",
+    });
+  };
 
   if (isLoadingHistory) {
     return (
@@ -61,9 +74,20 @@ const ClientIntakeChat = ({ clientId }: ClientIntakeChatProps) => {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[calc(100vh-400px)] min-h-[500px]">
       {/* Attorney Input Side */}
       <div className="flex flex-col border rounded-lg overflow-hidden">
-        <div className="bg-primary text-primary-foreground p-3">
-          <h3 className="font-medium">Attorney / Client Input</h3>
-          <div className="text-xs opacity-80">{formatTimestamp()}</div>
+        <div className="bg-primary text-primary-foreground p-3 flex justify-between items-center">
+          <div>
+            <h3 className="font-medium">Attorney / Client Input</h3>
+            <div className="text-xs opacity-80">{formatTimestamp()}</div>
+          </div>
+          <Button 
+            onClick={handleAddDocuments} 
+            size="sm" 
+            variant="outline" 
+            className="border-primary-foreground/20 hover:bg-primary-foreground/10 text-primary-foreground"
+          >
+            <Paperclip className="h-4 w-4 mr-2" />
+            Add Supporting Documents
+          </Button>
         </div>
         
         <ChatView 
