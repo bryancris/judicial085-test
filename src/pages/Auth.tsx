@@ -60,11 +60,6 @@ const Auth = () => {
     };
   }, []);
 
-  // Redirect if already logged in
-  if (session) {
-    return <Navigate to="/" />;
-  }
-
   // Form setup
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -142,6 +137,11 @@ const Auth = () => {
     setError(null);
     form.reset();
   };
+
+  // Redirect if already logged in - IMPORTANT: This conditional return must come after all hook calls
+  if (session) {
+    return <Navigate to="/" />;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
