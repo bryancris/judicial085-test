@@ -1,6 +1,7 @@
+
 import React, { useState } from "react";
 import { useParams, Navigate, Link } from "react-router-dom";
-import { ArrowLeft, FileText, BookOpen, FileSearch, Video, FileChartLine, MessageSquare, Trash2 } from "lucide-react";
+import { ArrowLeft, FileText, BookOpen, FileSearch, Video, FileChartLine, MessageSquare, Trash2, FileCheck } from "lucide-react";
 import NavBar from "@/components/NavBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,6 +28,7 @@ import {
 // Define tab color styles
 const tabColors = {
   "client-intake": "bg-[#0EA5E9] text-white",
+  "contract-review": "bg-[#22C55E] text-white", // Added new tab color
   "fact-pattern": "bg-[#F97316] text-white",
   "discovery": "bg-[#8B5CF6] text-white",
   "deposition": "bg-[#D946EF] text-white",
@@ -36,6 +38,7 @@ const tabColors = {
 
 const tabHoverColors = {
   "client-intake": "hover:bg-[#0EA5E9]/90",
+  "contract-review": "hover:bg-[#22C55E]/90", // Added new tab hover color
   "fact-pattern": "hover:bg-[#F97316]/90",
   "discovery": "hover:bg-[#8B5CF6]/90",
   "deposition": "hover:bg-[#D946EF]/90",
@@ -140,14 +143,23 @@ const ClientDetail = () => {
         </div>
 
         <Tabs defaultValue="client-intake" className="w-full">
-          <TabsList className="w-full grid grid-cols-6 mb-6">
-            {["client-intake", "fact-pattern", "discovery", "deposition", "case-analysis", "discuss-case"].map((tabValue) => (
+          <TabsList className="w-full grid grid-cols-7 mb-6">
+            {[
+              "client-intake", 
+              "contract-review", // Added new tab
+              "fact-pattern", 
+              "discovery", 
+              "deposition", 
+              "case-analysis", 
+              "discuss-case"
+            ].map((tabValue) => (
               <TabsTrigger 
                 key={tabValue}
                 value={tabValue} 
                 className={`flex items-center gap-2 ${tabColors[tabValue as keyof typeof tabColors]} ${tabHoverColors[tabValue as keyof typeof tabHoverColors]} data-[state=inactive]:opacity-70`}
               >
                 {tabValue === "client-intake" && <FileText className="h-4 w-4" />}
+                {tabValue === "contract-review" && <FileCheck className="h-4 w-4" />}
                 {tabValue === "fact-pattern" && <BookOpen className="h-4 w-4" />}
                 {tabValue === "discovery" && <FileSearch className="h-4 w-4" />}
                 {tabValue === "deposition" && <Video className="h-4 w-4" />}
@@ -162,6 +174,18 @@ const ClientDetail = () => {
             <Card>
               <CardContent className="pt-6">
                 <ClientIntakeChat clientId={client.id} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* New Contract Review Tab Content */}
+          <TabsContent value="contract-review" className="py-4">
+            <Card>
+              <CardContent className="pt-6">
+                <h2 className="text-xl font-semibold mb-4">Contract Review</h2>
+                <p className="text-muted-foreground">
+                  Contract review and analysis details will be displayed here.
+                </p>
               </CardContent>
             </Card>
           </TabsContent>
