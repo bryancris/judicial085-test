@@ -6,6 +6,7 @@ import ClientIntakeChat from "@/components/clients/chat/ClientIntakeChat";
 import CaseAnalysisContainer from "@/components/case-analysis/CaseAnalysisContainer";
 import CaseDiscussionContainer from "@/components/case-discussion/CaseDiscussionContainer";
 import DiscoveryContainer from "@/components/discovery/DiscoveryContainer";
+import ContractReviewChat from "@/components/contract-review/ContractReviewChat";
 import { Client } from "@/types/client";
 
 interface ClientDetailTabContentProps {
@@ -26,10 +27,7 @@ const ClientDetailTabContent = ({ client }: ClientDetailTabContentProps) => {
       <TabsContent value="contract-review" className="py-4">
         <Card>
           <CardContent className="pt-6">
-            <h2 className="text-xl font-semibold mb-4">Contract Review</h2>
-            <p className="text-muted-foreground">
-              Contract review and analysis details will be displayed here.
-            </p>
+            <ContractReviewChat clientId={client.id} />
           </CardContent>
         </Card>
       </TabsContent>
