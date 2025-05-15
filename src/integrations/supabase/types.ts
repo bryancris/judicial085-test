@@ -607,6 +607,10 @@ export type Database = {
         Args: { "": string } | { "": unknown }
         Returns: unknown
       }
+      delete_client_contract_reviews: {
+        Args: { client_id_param: string }
+        Returns: undefined
+      }
       halfvec_avg: {
         Args: { "": number[] }
         Returns: unknown

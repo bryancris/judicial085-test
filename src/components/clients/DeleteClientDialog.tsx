@@ -36,7 +36,7 @@ const DeleteClientDialog = ({
             <p>
               This will permanently delete {client.first_name} {client.last_name} and all associated data including:
             </p>
-            {/* Moved the list outside of the paragraph tag to fix DOM nesting */}
+            {/* List moved outside of paragraph tag to fix DOM nesting */}
             <ul className="list-disc pl-5 text-sm mt-2">
               <li>Contract reviews</li>
               <li>Case discussions</li>

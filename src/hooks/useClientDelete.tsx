@@ -21,7 +21,10 @@ export const useClientDelete = (clientId?: string, client?: Client | null) => {
       // Use raw SQL for contract_reviews deletion to ensure all entries are deleted
       // This avoids any potential foreign key constraint issues
       console.log("Deleting contract reviews with raw SQL query...");
-      const { error: contractReviewsRawError } = await supabase.rpc('delete_client_contract_reviews', { client_id_param: clientId });
+      const { error: contractReviewsRawError } = await supabase.rpc(
+        'delete_client_contract_reviews',
+        { client_id_param: clientId }
+      );
       
       if (contractReviewsRawError) {
         console.error("Error with raw SQL delete of contract reviews:", contractReviewsRawError);
