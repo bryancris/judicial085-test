@@ -3,8 +3,12 @@ import React from "react";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, BookOpen, FileSearch, Video, FileChartLine, MessageSquare, FileCheck, HelpCircle } from "lucide-react";
 import { tabColors, tabHoverColors } from "./tabStyles";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import TabExplanationDialog from "./TabExplanationDialog";
 
 const ClientDetailTabsList = () => {
+  const [showExplanationDialog, setShowExplanationDialog] = React.useState(false);
+  
   const tabs = [
     // First row
     { value: "client-intake", icon: <FileText className="h-4 w-4" /> },
@@ -18,6 +22,10 @@ const ClientDetailTabsList = () => {
     { value: "deposition", icon: <Video className="h-4 w-4" /> },
     { value: "faq", icon: <HelpCircle className="h-4 w-4" /> },
   ];
+
+  const handleFaqClick = () => {
+    setShowExplanationDialog(true);
+  };
 
   return (
     <div className="mb-6">
@@ -37,7 +45,7 @@ const ClientDetailTabsList = () => {
       <div className="h-2"></div>
       
       <TabsList className="w-full grid grid-cols-4 gap-2">
-        {tabs.slice(4, 8).map(({ value, icon }) => (
+        {tabs.slice(4, 7).map(({ value, icon }) => (
           <TabsTrigger 
             key={value}
             value={value} 
@@ -47,7 +55,21 @@ const ClientDetailTabsList = () => {
             {value.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")}
           </TabsTrigger>
         ))}
+        <TabsTrigger
+          key="faq"
+          value="faq"
+          className={`flex items-center gap-2 ${tabColors["faq"]} ${tabHoverColors["faq"]} data-[state=inactive]:opacity-70`}
+          onClick={handleFaqClick}
+        >
+          <HelpCircle className="h-4 w-4" />
+          FAQ
+        </TabsTrigger>
       </TabsList>
+
+      <TabExplanationDialog 
+        isOpen={showExplanationDialog} 
+        onClose={() => setShowExplanationDialog(false)} 
+      />
     </div>
   );
 };

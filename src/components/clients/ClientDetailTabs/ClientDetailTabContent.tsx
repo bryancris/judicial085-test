@@ -7,6 +7,7 @@ import CaseAnalysisContainer from "@/components/case-analysis/CaseAnalysisContai
 import CaseDiscussionContainer from "@/components/case-discussion/CaseDiscussionContainer";
 import DiscoveryContainer from "@/components/discovery/DiscoveryContainer";
 import ContractReviewChat from "@/components/contract-review/ContractReviewChat";
+import FaqTabContent from "./FaqTabContent";
 import { Client } from "@/types/client";
 
 interface ClientDetailTabContentProps {
@@ -81,10 +82,7 @@ const ClientDetailTabContent = ({ client }: ClientDetailTabContentProps) => {
       <TabsContent value="faq" className="py-4">
         <Card>
           <CardContent className="pt-6">
-            <h2 className="text-xl font-semibold mb-4">Frequently Asked Questions</h2>
-            <p className="text-muted-foreground">
-              Common questions and answers related to this case will be displayed here.
-            </p>
+            <FaqTabContent />
           </CardContent>
         </Card>
       </TabsContent>
