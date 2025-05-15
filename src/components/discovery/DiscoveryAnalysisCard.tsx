@@ -7,8 +7,10 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { AlertTriangle } from 'lucide-react';
 import { DiscoveryAnalysisResult } from '@/types/discovery';
+import AnalysisMetricsSection from './analysis/AnalysisMetricsSection';
+import PotentialIssuesSection from './analysis/PotentialIssuesSection';
+import ApproachSection from './analysis/ApproachSection';
 
 interface DiscoveryAnalysisCardProps {
   analysis: DiscoveryAnalysisResult;
@@ -16,46 +18,24 @@ interface DiscoveryAnalysisCardProps {
 
 const DiscoveryAnalysisCard: React.FC<DiscoveryAnalysisCardProps> = ({ analysis }) => {
   return (
-    <Card>
-      <CardHeader>
+    <Card className="border border-blue-100 shadow-sm">
+      <CardHeader className="bg-gradient-to-r from-blue-50 to-white">
         <CardTitle className="text-xl">Request Analysis</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <p className="text-sm font-medium">Request Type</p>
-            <p className="text-sm">{analysis.requestType}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm font-medium">Request Count</p>
-            <p className="text-sm">{analysis.requestCount}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm font-medium">Complexity Score</p>
-            <p className="text-sm">{analysis.complexityScore}/10</p>
-          </div>
-        </div>
+      <CardContent className="space-y-6 pt-4">
+        <AnalysisMetricsSection 
+          requestType={analysis.requestType}
+          requestCount={analysis.requestCount}
+          complexityScore={analysis.complexityScore}
+        />
         
-        <Separator />
+        <Separator className="my-2" />
         
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Potential Issues</p>
-          <ul className="list-disc list-inside text-sm space-y-1">
-            {analysis.potentialIssues.map((issue, index) => (
-              <li key={index} className="flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                <span>{issue}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <PotentialIssuesSection issues={analysis.potentialIssues} />
         
-        <Separator />
+        <Separator className="my-2" />
         
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Suggested Approach</p>
-          <p className="text-sm">{analysis.suggestedApproach}</p>
-        </div>
+        <ApproachSection suggestedApproach={analysis.suggestedApproach} />
       </CardContent>
     </Card>
   );
