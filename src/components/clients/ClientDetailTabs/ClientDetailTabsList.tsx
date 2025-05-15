@@ -17,18 +17,35 @@ const ClientDetailTabsList = () => {
   ];
 
   return (
-    <TabsList className="w-full grid grid-cols-4 grid-rows-2 gap-2 mb-6">
-      {tabs.map(({ value, icon }) => (
-        <TabsTrigger 
-          key={value}
-          value={value} 
-          className={`flex items-center gap-2 ${tabColors[value as keyof typeof tabColors]} ${tabHoverColors[value as keyof typeof tabHoverColors]} data-[state=inactive]:opacity-70`}
-        >
-          {icon}
-          {value.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")}
-        </TabsTrigger>
-      ))}
-    </TabsList>
+    <div className="mb-6">
+      <TabsList className="w-full grid grid-cols-4 gap-2">
+        {tabs.slice(0, 4).map(({ value, icon }) => (
+          <TabsTrigger 
+            key={value}
+            value={value} 
+            className={`flex items-center gap-2 ${tabColors[value as keyof typeof tabColors]} ${tabHoverColors[value as keyof typeof tabHoverColors]} data-[state=inactive]:opacity-70`}
+          >
+            {icon}
+            {value.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+      
+      <div className="h-2"></div>
+      
+      <TabsList className="w-full grid grid-cols-4 gap-2">
+        {tabs.slice(4, 8).map(({ value, icon }) => (
+          <TabsTrigger 
+            key={value}
+            value={value} 
+            className={`flex items-center gap-2 ${tabColors[value as keyof typeof tabColors]} ${tabHoverColors[value as keyof typeof tabHoverColors]} data-[state=inactive]:opacity-70`}
+          >
+            {icon}
+            {value.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </div>
   );
 };
 
