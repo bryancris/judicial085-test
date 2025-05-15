@@ -15,7 +15,6 @@ import {
   AlertDialogDescription,
 } from "@/components/ui/alert-dialog";
 import EditClientForm from "./EditClientForm";
-import NewCaseDialog from "./cases/NewCaseDialog";
 
 interface ClientInformationAccordionProps {
   client: Client;
@@ -49,7 +48,6 @@ const ClientInformationAccordion = ({
               Client Information
             </AccordionTrigger>
             <div className="flex">
-              <NewCaseDialog clientId={client.id} />
               <Button 
                 variant="outline" 
                 size="sm" 
