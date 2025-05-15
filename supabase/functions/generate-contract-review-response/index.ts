@@ -4,6 +4,7 @@ import { corsHeaders } from "./corsUtils.ts";
 import { buildCompleteContext } from "./contextBuilders/index.ts";
 import { generateOpenAIResponse } from "./openAiService.ts";
 import { supabase } from "./supabaseClient.ts";
+import { SEVERITY_LEVELS, ISSUE_SEVERITY_MAP } from "./contextBuilders/texasLawContextBuilder.ts";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -28,7 +29,7 @@ serve(async (req) => {
       .eq('id', clientId)
       .single();
 
-    // Fetch contracts associated with client (if we implement contract upload later)
+    // Fetch contracts associated with client
     const { data: contractsData } = await supabase
       .from('contract_reviews')
       .select('*')
@@ -44,8 +45,19 @@ serve(async (req) => {
       .order('created_at', { ascending: true })
       .limit(50);
 
+    // Is this a contract upload message?
+    const isContractUpload = message.toLowerCase().includes("please review this contract") || 
+                            message.length > 1000;
+
+    // Log the analysis type
+    if (isContractUpload) {
+      console.log("Processing full contract review request");
+    } else {
+      console.log("Processing contract question");
+    }
+
     // Build context based on all available data
-    const contextText = buildCompleteContext(
+    const contextText = await buildCompleteContext(
       clientData,
       clientError,
       contractsData || [],
@@ -71,7 +83,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         error: error.message,
-        response: "I apologize, but I encountered an error analyzing your contract. Please try again.",
+        response: "I apologize, but I encountered an error analyzing your contract under Texas law. Please try again.",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }

@@ -12,7 +12,7 @@ export async function generateOpenAIResponse(contextText: string, userMessage: s
         'Authorization': `Bearer ${OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4o", // Upgraded from gpt-4o-mini for more comprehensive contract analysis
         messages: [
           {
             role: "system",
@@ -23,8 +23,8 @@ export async function generateOpenAIResponse(contextText: string, userMessage: s
             content: userMessage
           }
         ],
-        temperature: 0.7,
-        max_tokens: 1500,
+        temperature: 0.5, // Lower temperature for more focused legal analysis
+        max_tokens: 2500, // Increased token limit for detailed analysis
       })
     });
 

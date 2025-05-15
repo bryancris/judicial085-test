@@ -4,9 +4,10 @@ import { buildClientSection } from "./clientSectionBuilder.ts";
 import { buildContractSection } from "./contractSectionBuilder.ts";
 import { buildContractHistorySection } from "./contractHistoryBuilder.ts";
 import { buildInstructionsSection } from "./instructionsBuilder.ts";
+import { buildTexasLawContext } from "./texasLawContextBuilder.ts";
 
 // Assemble the complete context for contract review
-export const buildCompleteContext = (
+export const buildCompleteContext = async (
   clientData: any, 
   clientError: any, 
   contractsData: any[], 
@@ -37,6 +38,23 @@ export const buildCompleteContext = (
     contextText += contractSection;
   }
   
+  // Extract contract text from message or history for Texas law analysis
+  let contractText = currentMessage;
+  if (contractHistory && contractHistory.length > 0) {
+    // Look for contract text in history
+    for (const entry of contractHistory) {
+      if (entry.role === "attorney" && entry.content.length > 500) {
+        contractText += " " + entry.content; // Include longer messages as they likely contain contract text
+      }
+    }
+  }
+  
+  // Add Texas law context based on the contract text
+  if (contractText && contractText.length > 0) {
+    const texasLawContext = await buildTexasLawContext(contractText);
+    contextText += texasLawContext;
+  }
+  
   // Add contract review history for context
   const historySection = buildContractHistorySection(contractHistory);
   if (historySection) {
@@ -48,7 +66,7 @@ export const buildCompleteContext = (
   
   // Add final explicit directive to reference the client's information in EVERY response
   if (clientData) {
-    contextText += `\n\nCRITICAL REMINDER: You are a legal assistant specializing in contract review. Address ${clientData.first_name} ${clientData.last_name}'s contract questions with specific legal expertise.`;
+    contextText += `\n\nCRITICAL REMINDER: You are a legal assistant specializing in contract review under Texas law. Address ${clientData.first_name} ${clientData.last_name}'s contract questions with specific Texas legal expertise.`;
   }
   
   // Log a sample of the context for debugging
