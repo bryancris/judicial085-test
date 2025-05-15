@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import CasesList from "./CasesList";
 import { Case } from "@/types/case";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +7,8 @@ import { useCase } from "@/contexts/CaseContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import NewCaseDialog from "./NewCaseDialog";
 import { Button } from "@/components/ui/button";
+import { useClientCases } from "@/hooks/useClientCases";
+import { FileText } from "lucide-react";
 
 interface CasesSectionProps {
   clientId: string;
@@ -15,6 +17,14 @@ interface CasesSectionProps {
 const CasesSection = ({ clientId }: CasesSectionProps) => {
   const [activeTab, setActiveTab] = useState<string>("cases");
   const { currentCase, setCurrentCase } = useCase();
+  const { cases, loading, error } = useClientCases(clientId);
+
+  useEffect(() => {
+    // If we have cases but no current case is selected, select the first one
+    if (cases.length > 0 && !currentCase) {
+      setCurrentCase(cases[0]);
+    }
+  }, [cases, currentCase, setCurrentCase]);
 
   const handleSelectCase = (caseData: Case) => {
     setCurrentCase(caseData);
@@ -42,10 +52,24 @@ const CasesSection = ({ clientId }: CasesSectionProps) => {
           </TabsList>
           
           <TabsContent value="cases">
-            <CasesList 
-              clientId={clientId} 
-              onSelectCase={handleSelectCase} 
-            />
+            {loading ? (
+              <div className="p-8 text-center">Loading cases...</div>
+            ) : error ? (
+              <div className="p-8 text-center text-red-500">Error loading cases: {error}</div>
+            ) : cases.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
+                <FileText className="mb-3 h-12 w-12 opacity-30" />
+                <p>No cases found for this client.</p>
+                <p className="mt-1 text-sm">
+                  Create a new case using the "New Case" button.
+                </p>
+              </div>
+            ) : (
+              <CasesList 
+                clientId={clientId} 
+                onSelectCase={handleSelectCase}
+              />
+            )}
           </TabsContent>
           
           <TabsContent value="details">
