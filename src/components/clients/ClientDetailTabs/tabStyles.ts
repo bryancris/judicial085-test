@@ -8,6 +8,7 @@ export const tabColors = {
   "deposition": "bg-[#D946EF] text-white",
   "case-analysis": "bg-[#ea384c] text-white",
   "discuss-case": "bg-[#9b87f5] text-white",
+  "faq": "bg-[#3B82F6] text-white",
 };
 
 export const tabHoverColors = {
@@ -18,4 +19,5 @@ export const tabHoverColors = {
   "deposition": "hover:bg-[#D946EF]/90",
   "case-analysis": "hover:bg-[#ea384c]/90",
   "discuss-case": "hover:bg-[#9b87f5]/90",
+  "faq": "hover:bg-[#3B82F6]/90",
 };

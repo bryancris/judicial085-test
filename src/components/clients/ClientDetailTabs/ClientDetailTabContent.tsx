@@ -77,6 +77,17 @@ const ClientDetailTabContent = ({ client }: ClientDetailTabContentProps) => {
           </CardContent>
         </Card>
       </TabsContent>
+      
+      <TabsContent value="faq" className="py-4">
+        <Card>
+          <CardContent className="pt-6">
+            <h2 className="text-xl font-semibold mb-4">Frequently Asked Questions</h2>
+            <p className="text-muted-foreground">
+              Common questions and answers related to this case will be displayed here.
+            </p>
+          </CardContent>
+        </Card>
+      </TabsContent>
     </>
   );
 };

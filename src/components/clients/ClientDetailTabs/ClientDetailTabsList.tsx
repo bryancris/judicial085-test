@@ -1,7 +1,7 @@
 
 import React from "react";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, BookOpen, FileSearch, Video, FileChartLine, MessageSquare, FileCheck } from "lucide-react";
+import { FileText, BookOpen, FileSearch, Video, FileChartLine, MessageSquare, FileCheck, HelpCircle } from "lucide-react";
 import { tabColors, tabHoverColors } from "./tabStyles";
 
 const ClientDetailTabsList = () => {
@@ -13,10 +13,11 @@ const ClientDetailTabsList = () => {
     { value: "deposition", icon: <Video className="h-4 w-4" /> },
     { value: "case-analysis", icon: <FileChartLine className="h-4 w-4" /> },
     { value: "discuss-case", icon: <MessageSquare className="h-4 w-4" /> },
+    { value: "faq", icon: <HelpCircle className="h-4 w-4" /> },
   ];
 
   return (
-    <TabsList className="w-full grid grid-cols-7 mb-6">
+    <TabsList className="w-full grid grid-cols-4 grid-rows-2 gap-2 mb-6">
       {tabs.map(({ value, icon }) => (
         <TabsTrigger 
           key={value}
