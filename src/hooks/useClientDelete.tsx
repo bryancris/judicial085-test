@@ -30,55 +30,37 @@ export const useClientDelete = (clientId?: string, client?: Client | null) => {
         console.log(`Found ${reviewsToDelete?.length || 0} contract reviews to delete:`, reviewsToDelete);
       }
 
-      // APPROACH 1: Use SQL query with CASCADE option
+      // APPROACH 1: First try to remove the client_id reference
+      console.log("Attempting to unlink contract reviews...");
       try {
-        console.log("Attempting SQL DELETE WITH CASCADE...");
-        const { error: sqlCascadeError } = await supabase.rpc(
-          'execute_sql', 
-          { 
-            sql_query: `DELETE FROM contract_reviews WHERE client_id = '${clientId}'` 
-          }
-        );
+        const { error: nullifyError } = await supabase
+          .from("contract_reviews")
+          .update({ client_id: null })
+          .eq("client_id", clientId);
         
-        if (sqlCascadeError) {
-          console.error("Error with SQL CASCADE deletion:", sqlCascadeError);
+        if (nullifyError) {
+          console.error("Error unlinking contract reviews:", nullifyError);
         }
-      } catch (sqlError) {
-        console.error("Exception during SQL CASCADE deletion:", sqlError);
+      } catch (e) {
+        console.error("Exception during contract review unlinking:", e);
       }
       
-      // APPROACH 2: Forcefully delete with explicit query
-      try {
-        console.log("Attempting forced explicit deletion...");
-        await supabase.rpc(
-          'execute_sql',
-          {
-            sql_query: `
-              UPDATE contract_reviews 
-              SET client_id = NULL 
-              WHERE client_id = '${clientId}';
-              
-              DELETE FROM contract_reviews 
-              WHERE client_id IS NULL OR client_id = '${clientId}';
-            `
-          }
-        );
-      } catch (forceError) {
-        console.error("Error during forced deletion:", forceError);
-      }
-      
-      // APPROACH 3: Direct DELETE as a fallback
+      // APPROACH 2: Direct DELETE as a primary approach
       try {
         console.log("Attempting direct DELETE...");
-        await supabase
+        const { error: deleteError } = await supabase
           .from("contract_reviews")
           .delete()
           .eq("client_id", clientId);
+          
+        if (deleteError) {
+          console.error("Error with direct deletion:", deleteError);
+        }
       } catch (directDeleteError) {
         console.error("Error with direct deletion:", directDeleteError);
       }
 
-      // Verify if contract_reviews are actually deleted
+      // Verify if contract_reviews are actually deleted or unlinked
       console.log("Verifying contract reviews deletion...");
       const { data: remainingReviews, error: verifyError } = await supabase
         .from("contract_reviews")
@@ -88,9 +70,9 @@ export const useClientDelete = (clientId?: string, client?: Client | null) => {
       if (verifyError) {
         console.error("Error verifying contract reviews deletion:", verifyError);
       } else if (remainingReviews && remainingReviews.length > 0) {
-        console.log(`${remainingReviews.length} contract reviews remain:`, remainingReviews);
+        console.log(`Failed to delete all contract reviews. ${remainingReviews.length} reviews remain.`, remainingReviews);
         
-        // APPROACH 4: DELETE each review individually with retry logic
+        // APPROACH 3: DELETE each review individually with retry logic
         console.log("Attempting individual deletions with retry logic...");
         
         for (const review of remainingReviews) {
@@ -145,7 +127,7 @@ export const useClientDelete = (clientId?: string, client?: Client | null) => {
           }
         }
         
-        // APPROACH 5: Last resort - try to handle with RPC function directly
+        // APPROACH 4: Try using a specific RPC function (if available in your database)
         try {
           console.log("Using delete_client_contract_reviews RPC function as final attempt...");
           await supabase.rpc('delete_client_contract_reviews', {
@@ -168,7 +150,7 @@ export const useClientDelete = (clientId?: string, client?: Client | null) => {
           
           // Create a detailed error message with the remaining review IDs
           const remainingIds = finalCheck.map(r => r.id).join(", ");
-          throw new Error(`Cannot delete client: ${finalCheck.length} contract reviews (IDs: ${remainingIds}) still linked to this client after multiple deletion attempts.`);
+          throw new Error(`Cannot delete client: ${finalCheck.length} contract reviews still linked to this client.`);
         } else {
           console.log("All contract reviews successfully deleted!");
         }
