@@ -1,10 +1,9 @@
-
 import React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Control } from "react-hook-form";
 
-const CASE_TYPES = [
+export const caseTypes = [
   { id: "family", label: "Family Law" },
   { id: "criminal", label: "Criminal Defense" },
   { id: "immigration", label: "Immigration" },
@@ -26,7 +25,7 @@ const CaseTypesSelector = ({ control }: CaseTypesSelectorProps) => {
     <div className="space-y-3">
       <FormLabel>Case Types</FormLabel>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {CASE_TYPES.map((type) => (
+        {caseTypes.map((type) => (
           <FormField
             key={type.id}
             control={control}

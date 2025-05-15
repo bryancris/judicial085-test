@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCase } from "@/contexts/CaseContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import NewCaseDialog from "./NewCaseDialog";
+import { Button } from "@/components/ui/button";
 
 interface CasesSectionProps {
   clientId: string;
