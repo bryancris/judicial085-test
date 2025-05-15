@@ -1,6 +1,6 @@
 
 import React, { useEffect, useRef } from "react";
-import { renderMarkdown } from "@/utils/markdownProcessor";
+import { processMarkdown } from "@/utils/markdownProcessor";
 
 interface AnalysisItemProps {
   content: string;
@@ -50,7 +50,7 @@ const AnalysisItem: React.FC<AnalysisItemProps> = ({ content, timestamp, onQuest
         <div 
           ref={contentRef}
           dangerouslySetInnerHTML={{ 
-            __html: renderMarkdown(content)
+            __html: processMarkdown(content)
           }} 
         />
       </div>
