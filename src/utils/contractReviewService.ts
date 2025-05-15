@@ -97,8 +97,9 @@ export const getContractReviewMessages = async (
       return { messages: [], error: error.message };
     }
 
+    // Fix the type conversion issue by casting data as unknown first
     return {
-      messages: data as ContractReviewMessage[]
+      messages: (data as unknown) as ContractReviewMessage[]
     };
   } catch (err: any) {
     console.error("Error fetching contract review messages:", err);
