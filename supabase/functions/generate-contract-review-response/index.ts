@@ -5,6 +5,7 @@ import { buildCompleteContext } from "./contextBuilders/index.ts";
 import { generateOpenAIResponse } from "./openAiService.ts";
 import { supabase } from "./supabaseClient.ts";
 import { SEVERITY_LEVELS, ISSUE_SEVERITY_MAP } from "./contextBuilders/texasLawContextBuilder.ts";
+import { validateAllCitations, getValidationStyles } from "./texasStatuteValidator.ts";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -69,10 +70,14 @@ serve(async (req) => {
 
     // Generate AI response using context
     const aiResponse = await generateOpenAIResponse(contextText, message);
+    
+    // Add CSS styles for validated citations
+    const validationStyles = getValidationStyles();
+    const enhancedResponse = `<style>${validationStyles}</style>\n${aiResponse}`;
 
     return new Response(
       JSON.stringify({
-        response: aiResponse,
+        response: enhancedResponse,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

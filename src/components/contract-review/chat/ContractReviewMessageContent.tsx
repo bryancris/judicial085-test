@@ -1,4 +1,3 @@
-
 import React from "react";
 import { ContractReviewMessage } from "@/utils/contractReviewService";
 import { cn } from "@/lib/utils";
@@ -17,6 +16,13 @@ const ContractReviewMessageContent: React.FC<ContractReviewMessageContentProps> 
   // Process content with markdown and law references
   const processedContent = React.useMemo(() => {
     let content = message.content;
+    
+    // If content already contains HTML style tags (from validation), keep it as is
+    if (content.includes('<style>')) {
+      return content;
+    }
+    
+    // Otherwise process with standard law reference processing
     content = processLawReferencesSync(content);
     return processMarkdown(content);
   }, [message.content]);
@@ -94,6 +100,12 @@ const ContractReviewMessageContent: React.FC<ContractReviewMessageContentProps> 
                   +{lawReferences.length - 3} more
                 </span>
               )}
+            </div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              <span className="inline-block w-3 h-3 bg-green-100 border border-green-300 rounded-full mr-1"></span>
+              <span className="mr-3">Valid citations</span>
+              <span className="inline-block w-3 h-3 bg-red-100 border border-red-300 rounded-full mr-1"></span>
+              <span>Invalid citations</span>
             </div>
           </div>
         )}

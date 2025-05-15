@@ -1,5 +1,6 @@
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') || '';
+import { validateAllCitations, enhanceTextWithValidation } from "./texasStatuteValidator.ts";
 
 export async function generateOpenAIResponse(contextText: string, userMessage: string): Promise<string> {
   console.log("Generating AI response with context length:", contextText.length);
@@ -12,7 +13,7 @@ export async function generateOpenAIResponse(contextText: string, userMessage: s
         'Authorization': `Bearer ${OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        model: "gpt-4o", // Upgraded from gpt-4o-mini for more comprehensive contract analysis
+        model: "gpt-4o", // Using the more powerful model for comprehensive contract analysis
         messages: [
           {
             role: "system",
@@ -35,7 +36,19 @@ export async function generateOpenAIResponse(contextText: string, userMessage: s
     }
 
     const data = await response.json();
-    return data.choices[0].message.content;
+    const generatedContent = data.choices[0].message.content;
+    
+    // Validate all statute citations in the generated content
+    console.log("Validating Texas statute citations in generated content...");
+    const validationResults = await validateAllCitations(generatedContent);
+    
+    console.log(`Validated ${validationResults.length} citations:`, 
+      validationResults.map(r => `${r.citation.displayName}: ${r.isValid ? 'Valid' : 'Invalid'} (${r.confidence.toFixed(2)})`));
+    
+    // Enhance the content with validation markers
+    const enhancedContent = enhanceTextWithValidation(generatedContent, validationResults);
+    
+    return enhancedContent;
   } catch (error) {
     console.error("Error calling OpenAI:", error);
     throw error;

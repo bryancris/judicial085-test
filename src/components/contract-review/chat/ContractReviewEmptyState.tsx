@@ -21,6 +21,16 @@ const ContractReviewEmptyState: React.FC = () => {
           </ul>
           
           <div className="mt-4 pt-3 border-t border-blue-100">
+            <p className="text-xs font-medium mb-1">Our enhanced verification:</p>
+            <ul className="list-disc pl-5 space-y-1 text-xs">
+              <li>All Texas statute citations are verified against our legal database</li>
+              <li>Valid citations are highlighted in green</li>
+              <li>Invalid citations are marked in red</li>
+              <li>Analysis includes confidence scores based on citation accuracy</li>
+            </ul>
+          </div>
+          
+          <div className="mt-4 pt-3 border-t border-blue-100">
             <p className="text-xs text-muted-foreground">
               All analysis is provided with references to relevant Texas statutes and case law, 
               with issues prioritized by severity.
