@@ -4,27 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { DiscoveryRequest } from '@/types/discovery';
 import { createDiscoveryResponse } from '@/utils/discoveryService';
 import { useToast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  AlertCircle,
-  CheckCircle2,
-  Loader2,
-  AlertTriangle,
-  FileText,
-  Sparkles,
-} from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import DiscoveryAnalyzeCard from './DiscoveryAnalyzeCard';
+import DiscoveryAnalysisCard from './DiscoveryAnalysisCard';
+import DiscoveryResponseEditorCard from './DiscoveryResponseEditorCard';
 
 interface DiscoveryResponseGeneratorProps {
   request: DiscoveryRequest;
@@ -47,7 +29,6 @@ const DiscoveryResponseGenerator: React.FC<DiscoveryResponseGeneratorProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [generatedResponse, setGeneratedResponse] = useState<string>('');
-  const [editedResponse, setEditedResponse] = useState<string>('');
   const { toast } = useToast();
 
   const analyzeRequest = async () => {
@@ -74,7 +55,6 @@ const DiscoveryResponseGenerator: React.FC<DiscoveryResponseGeneratorProps> = ({
 
       setAnalysis(data.analysis);
       setGeneratedResponse(data.responseContent);
-      setEditedResponse(data.responseContent);
     } catch (err: any) {
       toast({
         title: "Error",
@@ -86,8 +66,8 @@ const DiscoveryResponseGenerator: React.FC<DiscoveryResponseGeneratorProps> = ({
     }
   };
 
-  const saveResponse = async () => {
-    if (!editedResponse.trim()) {
+  const saveResponse = async (responseContent: string) => {
+    if (!responseContent.trim()) {
       toast({
         title: "Validation Error",
         description: "Response content cannot be empty",
@@ -100,7 +80,7 @@ const DiscoveryResponseGenerator: React.FC<DiscoveryResponseGeneratorProps> = ({
     try {
       const responseData = {
         request_id: request.id,
-        content: editedResponse,
+        content: responseContent,
         status: 'draft' as const,
       };
 
@@ -135,129 +115,19 @@ const DiscoveryResponseGenerator: React.FC<DiscoveryResponseGeneratorProps> = ({
   return (
     <div className="space-y-6">
       {!analysis ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl">Analyze Discovery Request</CardTitle>
-            <CardDescription>
-              AI will analyze the request and suggest appropriate responses.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Using AI, we'll analyze the request to identify:
-            </p>
-            <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-              <li>Request type and format</li>
-              <li>Number of individual requests</li>
-              <li>Potential issues requiring objections</li>
-              <li>Suggested approach for responding</li>
-            </ul>
-          </CardContent>
-          <CardFooter>
-            <Button 
-              onClick={analyzeRequest}
-              disabled={isAnalyzing}
-              className="w-full"
-            >
-              {isAnalyzing ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Analyze with AI
-                </>
-              )}
-            </Button>
-          </CardFooter>
-        </Card>
+        <DiscoveryAnalyzeCard 
+          onAnalyze={analyzeRequest}
+          isAnalyzing={isAnalyzing}
+        />
       ) : (
         <>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">Request Analysis</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Request Type</p>
-                  <p className="text-sm">{analysis.requestType}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Request Count</p>
-                  <p className="text-sm">{analysis.requestCount}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Complexity Score</p>
-                  <p className="text-sm">{analysis.complexityScore}/10</p>
-                </div>
-              </div>
-              
-              <Separator />
-              
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Potential Issues</p>
-                <ul className="list-disc list-inside text-sm space-y-1">
-                  {analysis.potentialIssues.map((issue, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                      <span>{issue}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              
-              <Separator />
-              
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Suggested Approach</p>
-                <p className="text-sm">{analysis.suggestedApproach}</p>
-              </div>
-            </CardContent>
-          </Card>
+          <DiscoveryAnalysisCard analysis={analysis} />
           
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">Generated Response</CardTitle>
-              <CardDescription>
-                Edit this AI-generated response before saving.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Textarea 
-                value={editedResponse} 
-                onChange={(e) => setEditedResponse(e.target.value)}
-                className="min-h-[400px] font-mono text-sm"
-              />
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button 
-                variant="outline" 
-                onClick={() => setEditedResponse(generatedResponse)}
-                disabled={isGenerating}
-              >
-                Reset to Original
-              </Button>
-              <Button 
-                onClick={saveResponse}
-                disabled={isGenerating}
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Save Response
-                  </>
-                )}
-              </Button>
-            </CardFooter>
-          </Card>
+          <DiscoveryResponseEditorCard
+            generatedResponse={generatedResponse}
+            onSaveResponse={saveResponse}
+            isGenerating={isGenerating}
+          />
         </>
       )}
     </div>
