@@ -1,9 +1,9 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Control } from "react-hook-form";
+import { Control, useWatch } from "react-hook-form";
 import CaseTypesSelector from "./CaseTypesSelector";
 
 interface CaseInfoFieldsProps {
@@ -11,6 +11,20 @@ interface CaseInfoFieldsProps {
 }
 
 const CaseInfoFields = ({ control }: CaseInfoFieldsProps) => {
+  const [isContractReview, setIsContractReview] = useState(false);
+  
+  // Watch for changes to case_types field
+  const caseTypes = useWatch({
+    control,
+    name: "case_types",
+    defaultValue: []
+  });
+
+  // Check if "contract_review" is selected
+  useEffect(() => {
+    setIsContractReview(caseTypes.includes("contract_review"));
+  }, [caseTypes]);
+
   return (
     <>
       <CaseTypesSelector control={control} />
@@ -20,9 +34,12 @@ const CaseInfoFields = ({ control }: CaseInfoFieldsProps) => {
         name="case_number"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Case Number</FormLabel>
+            <FormLabel>{isContractReview ? "Contract Type" : "Case Number"}</FormLabel>
             <FormControl>
-              <Input placeholder="CAS-12345" {...field} />
+              <Input 
+                placeholder={isContractReview ? "Employment, NDA, Lease, etc." : "CAS-12345"} 
+                {...field} 
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -34,10 +51,12 @@ const CaseInfoFields = ({ control }: CaseInfoFieldsProps) => {
         name="case_description"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Case Description</FormLabel>
+            <FormLabel>{isContractReview ? "Contract Description" : "Case Description"}</FormLabel>
             <FormControl>
               <Textarea 
-                placeholder="Brief description of the case..." 
+                placeholder={isContractReview 
+                  ? "Brief description of the contract..." 
+                  : "Brief description of the case..."} 
                 className="min-h-[80px]" 
                 {...field} 
               />
@@ -66,10 +85,12 @@ const CaseInfoFields = ({ control }: CaseInfoFieldsProps) => {
         name="case_notes"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Case Notes</FormLabel>
+            <FormLabel>{isContractReview ? "Contract Notes" : "Case Notes"}</FormLabel>
             <FormControl>
               <Textarea 
-                placeholder="Enter any additional notes about the case here..." 
+                placeholder={isContractReview
+                  ? "Enter any additional notes about the contract here..." 
+                  : "Enter any additional notes about the case here..."} 
                 className="min-h-[120px]" 
                 {...field} 
               />
