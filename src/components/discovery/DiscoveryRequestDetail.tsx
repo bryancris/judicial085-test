@@ -4,54 +4,20 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { getDiscoveryRequest, getDiscoveryResponses, updateDiscoveryRequest } from '@/utils/discoveryService';
 import { DiscoveryRequest, DiscoveryResponse } from '@/types/discovery';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
-import {
-  ArrowLeft,
-  FileText,
-  Clock,
-  User,
-  Check,
-  FileSearch,
-  MoreHorizontal,
-} from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
+import { FileText, FileSearch, Check } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
+// Import the refactored components
 import DiscoveryResponseGenerator from './DiscoveryResponseGenerator';
-import DiscoveryResponseEditor from './DiscoveryResponseEditor';
-
-const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
-  switch (status) {
-    case 'pending':
-      return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Pending</Badge>;
-    case 'in_progress':
-      return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">In Progress</Badge>;
-    case 'completed':
-      return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Completed</Badge>;
-    default:
-      return <Badge variant="outline">Unknown</Badge>;
-  }
-};
-
-const formatDate = (dateString: string | null): string => {
-  if (!dateString) return 'N/A';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-};
+import DiscoveryRequestActions from './DiscoveryRequestActions';
+import DiscoveryRequestHeader from './DiscoveryRequestHeader';
+import DiscoveryRequestContentTab from './tabs/DiscoveryRequestContentTab';
+import DiscoveryResponsesTab from './tabs/DiscoveryResponsesTab';
 
 const DiscoveryRequestDetail: React.FC = () => {
   const { clientId, requestId } = useParams<{ clientId: string; requestId: string }>();
@@ -163,57 +129,23 @@ const DiscoveryRequestDetail: React.FC = () => {
         <p className="text-muted-foreground mb-6">
           The requested discovery request could not be found.
         </p>
-        <Button onClick={() => navigate(`/clients/${clientId}`)}>
+        <button onClick={() => navigate(`/clients/${clientId}`)}>
           Return to Client
-        </Button>
+        </button>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Button
-          variant="outline"
-          onClick={() => navigate(`/clients/${clientId}`)}
-          className="flex items-center gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Client
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="flex items-center gap-2">
-              <MoreHorizontal className="h-4 w-4" />
-              Actions
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleUpdateStatus('pending')}>Mark as Pending</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleUpdateStatus('in_progress')}>Mark In Progress</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleUpdateStatus('completed')}>Mark as Completed</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      <DiscoveryRequestActions 
+        clientId={clientId || ''}
+        onUpdateStatus={handleUpdateStatus}
+      />
 
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div>
-              <CardTitle className="text-2xl">{request.title}</CardTitle>
-              <CardDescription className="mt-2 flex items-center gap-4">
-                <div className="flex items-center gap-1">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">Received: {formatDate(request.date_received)}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">From: {request.requesting_party || 'Unknown'}</span>
-                </div>
-                <StatusBadge status={request.status} />
-              </CardDescription>
-            </div>
-          </div>
+          <DiscoveryRequestHeader request={request} />
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -230,18 +162,7 @@ const DiscoveryRequestDetail: React.FC = () => {
             </TabsList>
             
             <TabsContent value="request">
-              <Card className="border-0 shadow-none">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Discovery Request Content</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-[calc(100vh-450px)] pr-4">
-                    <div className="whitespace-pre-wrap font-mono text-sm">
-                      {request.content}
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
+              <DiscoveryRequestContentTab request={request} />
             </TabsContent>
             
             <TabsContent value="analyze">
@@ -252,29 +173,12 @@ const DiscoveryRequestDetail: React.FC = () => {
             </TabsContent>
             
             <TabsContent value="responses">
-              {responses.length === 0 ? (
-                <div className="text-center py-12">
-                  <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium">No Responses Yet</h3>
-                  <p className="text-muted-foreground mt-2 mb-6">
-                    Generate a response using the Analyze & Respond tab.
-                  </p>
-                  <Button onClick={() => setActiveTab('analyze')}>
-                    Create Response
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {responses.map((response) => (
-                    <DiscoveryResponseEditor 
-                      key={response.id} 
-                      response={response} 
-                      clientId={clientId || ''} 
-                      requestId={requestId || ''} 
-                    />
-                  ))}
-                </div>
-              )}
+              <DiscoveryResponsesTab 
+                responses={responses}
+                clientId={clientId || ''}
+                requestId={requestId || ''}
+                onCreateResponse={() => setActiveTab('analyze')}
+              />
             </TabsContent>
           </Tabs>
         </CardContent>
