@@ -35,6 +35,13 @@ const CaseInformationSection = ({ client }: CaseInformationSectionProps) => {
               </div>
               
               <div>
+                <Label className="text-sm font-medium text-muted-foreground">Case Description</Label>
+                <div className="mt-1 p-2 border rounded-md whitespace-pre-wrap min-h-[80px]">
+                  {client.case_description || "Not provided"}
+                </div>
+              </div>
+              
+              <div>
                 <Label className="text-sm font-medium text-muted-foreground block mb-3">Case Types</Label>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {CASE_TYPES.map((type) => (
