@@ -13,6 +13,8 @@ interface CaseInfoFieldsProps {
 const CaseInfoFields = ({ control }: CaseInfoFieldsProps) => {
   return (
     <>
+      <CaseTypesSelector control={control} />
+      
       <FormField
         control={control}
         name="case_number"
@@ -44,8 +46,6 @@ const CaseInfoFields = ({ control }: CaseInfoFieldsProps) => {
           </FormItem>
         )}
       />
-      
-      <CaseTypesSelector control={control} />
       
       <FormField
         control={control}
