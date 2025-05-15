@@ -8,17 +8,10 @@ import {
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { AlertTriangle } from 'lucide-react';
-
-interface AnalysisResult {
-  requestType: string;
-  requestCount: number;
-  complexityScore: number;
-  potentialIssues: string[];
-  suggestedApproach: string;
-}
+import { DiscoveryAnalysisResult } from '@/types/discovery';
 
 interface DiscoveryAnalysisCardProps {
-  analysis: AnalysisResult;
+  analysis: DiscoveryAnalysisResult;
 }
 
 const DiscoveryAnalysisCard: React.FC<DiscoveryAnalysisCardProps> = ({ analysis }) => {

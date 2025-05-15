@@ -38,3 +38,11 @@ export interface DiscoveryDocument {
   created_at: string;
   updated_at: string;
 }
+
+export interface DiscoveryAnalysisResult {
+  requestType: string;
+  requestCount: number;
+  complexityScore: number;
+  potentialIssues: string[];
+  suggestedApproach: string;
+}
