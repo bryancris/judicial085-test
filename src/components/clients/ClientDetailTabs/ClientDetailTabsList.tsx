@@ -6,13 +6,16 @@ import { tabColors, tabHoverColors } from "./tabStyles";
 
 const ClientDetailTabsList = () => {
   const tabs = [
+    // First row
     { value: "client-intake", icon: <FileText className="h-4 w-4" /> },
-    { value: "contract-review", icon: <FileCheck className="h-4 w-4" /> },
-    { value: "fact-pattern", icon: <BookOpen className="h-4 w-4" /> },
-    { value: "discovery", icon: <FileSearch className="h-4 w-4" /> },
-    { value: "deposition", icon: <Video className="h-4 w-4" /> },
     { value: "case-analysis", icon: <FileChartLine className="h-4 w-4" /> },
     { value: "discuss-case", icon: <MessageSquare className="h-4 w-4" /> },
+    { value: "contract-review", icon: <FileCheck className="h-4 w-4" /> },
+    
+    // Second row
+    { value: "discovery", icon: <FileSearch className="h-4 w-4" /> },
+    { value: "fact-pattern", icon: <BookOpen className="h-4 w-4" /> },
+    { value: "deposition", icon: <Video className="h-4 w-4" /> },
     { value: "faq", icon: <HelpCircle className="h-4 w-4" /> },
   ];
 
