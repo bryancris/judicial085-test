@@ -19,7 +19,7 @@ const ContractReviewChatView: React.FC<ContractReviewChatViewProps> = ({
   }, [messages]);
 
   return (
-    <div className="flex-grow overflow-y-auto p-4 bg-background/70">
+    <div className="flex-grow overflow-y-auto p-4 bg-background/70 h-full">
       {messages.length === 0 && !isLoading ? (
         <div className="flex flex-col items-center justify-center h-full text-center">
           <p className="text-muted-foreground mb-2">No messages yet.</p>

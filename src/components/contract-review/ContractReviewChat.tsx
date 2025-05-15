@@ -49,7 +49,7 @@ const ContractReviewChat: React.FC<ContractReviewChatProps> = ({ clientId }) => 
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-400px)] min-h-[500px]">
+    <div className="flex flex-col h-[calc(100vh-300px)] min-h-[600px]">
       <div className="flex flex-col flex-grow overflow-hidden border rounded-lg">
         <div className="bg-[#4CAF50] text-white p-3 flex justify-between items-center">
           <div>

@@ -26,17 +26,31 @@ export const generateContractReviewResponse = async (
       return { response: "", timestamp: "", error: "User not authenticated" };
     }
 
-    // For now, return a placeholder response since the edge function isn't implemented yet
-    const placeholderResponse = "This is a placeholder response for contract review. The actual AI integration will be implemented in the future.";
-    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    // Call the edge function to get the AI response
+    const { data, error } = await supabase.functions.invoke("generate-contract-review-response", {
+      body: { 
+        clientId, 
+        message, 
+        previousMessages 
+      }
+    });
 
-    // Demo: Save attorney message and AI response in the database
-    await saveContractReviewMessage(clientId, userId, message, "attorney", timestamp);
-    await saveContractReviewMessage(clientId, userId, placeholderResponse, "ai", timestamp);
+    if (error) {
+      console.error("Error calling contract review function:", error);
+      return { 
+        response: "I'm sorry, I encountered an error analyzing the contract. Please try again.", 
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        error: error.message
+      };
+    }
+
+    // Save attorney message and AI response in the database
+    await saveContractReviewMessage(clientId, userId, message, "attorney", data.timestamp);
+    await saveContractReviewMessage(clientId, userId, data.response, "ai", data.timestamp);
 
     return {
-      response: placeholderResponse,
-      timestamp
+      response: data.response,
+      timestamp: data.timestamp
     };
   } catch (err: any) {
     console.error("Error generating contract review response:", err);

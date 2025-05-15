@@ -71,3 +71,7 @@ verify_jwt = true
 
 [functions.generate-discovery-response]
 verify_jwt = true
+
+[functions.generate-contract-review-response]
+verify_jwt = true
+
