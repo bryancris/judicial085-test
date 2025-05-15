@@ -13,7 +13,8 @@ const CASE_TYPES = [
   { id: "business", label: "Business Law" },
   { id: "real_estate", label: "Real Estate" },
   { id: "intellectual_property", label: "Intellectual Property" },
-  { id: "employment", label: "Employment" }
+  { id: "employment", label: "Employment" },
+  { id: "contract_review", label: "Contract Review" }
 ];
 
 interface CaseTypesSelectorProps {
