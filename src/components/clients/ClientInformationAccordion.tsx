@@ -15,6 +15,7 @@ import {
   AlertDialogDescription,
 } from "@/components/ui/alert-dialog";
 import EditClientForm from "./EditClientForm";
+import NewCaseDialog from "./cases/NewCaseDialog";
 
 interface ClientInformationAccordionProps {
   client: Client;
@@ -47,15 +48,18 @@ const ClientInformationAccordion = ({
             <AccordionTrigger className="bg-background hover:bg-muted px-4 py-3 rounded-md border text-lg font-medium flex-grow">
               Client Information
             </AccordionTrigger>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="ml-2 flex items-center gap-1"
-              onClick={handleEditClick}
-            >
-              <Edit className="h-4 w-4" />
-              Edit
-            </Button>
+            <div className="flex">
+              <NewCaseDialog clientId={client.id} />
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="ml-2 flex items-center gap-1"
+                onClick={handleEditClick}
+              >
+                <Edit className="h-4 w-4" />
+                Edit
+              </Button>
+            </div>
           </div>
           <AccordionContent className="pt-6">
             <div className="space-y-8">

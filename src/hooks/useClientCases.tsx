@@ -1,0 +1,138 @@
+
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Case } from "@/types/case";
+
+export const useClientCases = (clientId?: string) => {
+  const [cases, setCases] = useState<Case[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const fetchCases = async () => {
+    if (!clientId) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("cases")
+        .select("*")
+        .eq("client_id", clientId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setCases(data || []);
+    } catch (err: any) {
+      console.error("Error fetching cases:", err);
+      setError(err.message || "Failed to load cases");
+      toast({
+        title: "Error loading cases",
+        description: err.message || "There was a problem loading the cases.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createCase = async (caseData: Omit<Case, "id" | "created_at" | "updated_at" | "status">) => {
+    try {
+      const { data, error } = await supabase
+        .from("cases")
+        .insert([{ ...caseData, client_id: clientId, status: "active" }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Case created",
+        description: "The case has been successfully created.",
+      });
+
+      await fetchCases();
+      return data;
+    } catch (err: any) {
+      console.error("Error creating case:", err);
+      toast({
+        title: "Error creating case",
+        description: err.message || "There was a problem creating the case.",
+        variant: "destructive",
+      });
+      return null;
+    }
+  };
+
+  const updateCase = async (id: string, caseData: Partial<Case>) => {
+    try {
+      const { error } = await supabase
+        .from("cases")
+        .update(caseData)
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Case updated",
+        description: "The case has been successfully updated.",
+      });
+
+      await fetchCases();
+      return true;
+    } catch (err: any) {
+      console.error("Error updating case:", err);
+      toast({
+        title: "Error updating case",
+        description: err.message || "There was a problem updating the case.",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  const deleteCase = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("cases")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Case deleted",
+        description: "The case has been successfully deleted.",
+      });
+
+      await fetchCases();
+      return true;
+    } catch (err: any) {
+      console.error("Error deleting case:", err);
+      toast({
+        title: "Error deleting case",
+        description: err.message || "There was a problem deleting the case.",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    fetchCases();
+  }, [clientId]);
+
+  return {
+    cases,
+    loading,
+    error,
+    fetchCases,
+    createCase,
+    updateCase,
+    deleteCase,
+  };
+};

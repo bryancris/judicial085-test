@@ -49,6 +49,7 @@ export type Database = {
       }
       case_discussions: {
         Row: {
+          case_id: string | null
           client_id: string
           content: string
           created_at: string
@@ -59,6 +60,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          case_id?: string | null
           client_id: string
           content: string
           created_at?: string
@@ -69,6 +71,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          case_id?: string | null
           client_id?: string
           content?: string
           created_at?: string
@@ -80,7 +83,61 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "case_discussions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "case_discussions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cases: {
+        Row: {
+          case_description: string | null
+          case_notes: string | null
+          case_number: string | null
+          case_title: string
+          case_type: string | null
+          client_id: string
+          created_at: string
+          id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          case_description?: string | null
+          case_notes?: string | null
+          case_number?: string | null
+          case_title: string
+          case_type?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          case_description?: string | null
+          case_notes?: string | null
+          case_number?: string | null
+          case_title?: string
+          case_type?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cases_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
@@ -90,6 +147,7 @@ export type Database = {
       }
       client_messages: {
         Row: {
+          case_id: string | null
           client_id: string
           content: string
           created_at: string
@@ -100,6 +158,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          case_id?: string | null
           client_id: string
           content: string
           created_at?: string
@@ -110,6 +169,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          case_id?: string | null
           client_id?: string
           content?: string
           created_at?: string
@@ -120,6 +180,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "client_messages_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "client_messages_client_id_fkey"
             columns: ["client_id"]
@@ -191,6 +258,7 @@ export type Database = {
       }
       contract_reviews: {
         Row: {
+          case_id: string | null
           client_id: string
           content: string
           created_at: string
@@ -201,6 +269,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          case_id?: string | null
           client_id: string
           content: string
           created_at?: string
@@ -211,6 +280,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          case_id?: string | null
           client_id?: string
           content?: string
           created_at?: string
@@ -221,6 +291,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "contract_reviews_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "contract_reviews_client_id_fkey"
             columns: ["client_id"]
@@ -454,6 +531,7 @@ export type Database = {
       }
       legal_analyses: {
         Row: {
+          case_id: string | null
           client_id: string
           content: string
           created_at: string
@@ -464,6 +542,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          case_id?: string | null
           client_id: string
           content: string
           created_at?: string
@@ -474,6 +553,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          case_id?: string | null
           client_id?: string
           content?: string
           created_at?: string
@@ -484,6 +564,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "legal_analyses_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "legal_analyses_client_id_fkey"
             columns: ["client_id"]
