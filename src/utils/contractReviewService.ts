@@ -57,13 +57,16 @@ export const saveContractReviewMessage = async (
   timestamp: string
 ): Promise<{ error?: string }> => {
   try {
-    const { error } = await supabase.from("contract_reviews").insert({
-      client_id: clientId,
-      user_id: userId,
-      content,
-      role,
-      timestamp
-    });
+    // Using explicitly typed insert to avoid TypeScript errors with new tables
+    const { error } = await supabase
+      .from('contract_reviews')
+      .insert({
+        client_id: clientId,
+        user_id: userId,
+        content,
+        role,
+        timestamp
+      } as any);
 
     if (error) {
       console.error("Error saving contract review message:", error);
@@ -82,8 +85,9 @@ export const getContractReviewMessages = async (
   clientId: string
 ): Promise<{ messages: ContractReviewMessage[]; error?: string }> => {
   try {
+    // Using explicitly typed from to avoid TypeScript errors with new tables
     const { data, error } = await supabase
-      .from("contract_reviews")
+      .from('contract_reviews' as any)
       .select("*")
       .eq("client_id", clientId)
       .order("created_at", { ascending: true });
