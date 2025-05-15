@@ -20,31 +20,37 @@ export const useClientDelete = (clientId?: string, client?: Client | null) => {
       // Delete all associated data in the correct order
       // First delete all child records that reference the client
       
-      // 1. Delete case discussions
+      // 1. Delete contract reviews
+      await supabase
+        .from("contract_reviews")
+        .delete()
+        .eq("client_id", clientId);
+      
+      // 2. Delete case discussions
       await supabase
         .from("case_discussions")
         .delete()
         .eq("client_id", clientId);
       
-      // 2. Delete case analysis notes
+      // 3. Delete case analysis notes
       await supabase
         .from("case_analysis_notes")
         .delete()
         .eq("client_id", clientId);
       
-      // 3. Delete legal analyses
+      // 4. Delete legal analyses
       await supabase
         .from("legal_analyses")
         .delete()
         .eq("client_id", clientId);
       
-      // 4. Delete client messages
+      // 5. Delete client messages
       await supabase
         .from("client_messages")
         .delete()
         .eq("client_id", clientId);
       
-      // 5. Delete discovery related data
+      // 6. Delete discovery related data
       // First get all discovery request IDs
       const { data: discoveryRequests } = await supabase
         .from("discovery_requests")
@@ -87,6 +93,12 @@ export const useClientDelete = (clientId?: string, client?: Client | null) => {
           .delete()
           .eq("client_id", clientId);
       }
+      
+      // 7. Delete all cases associated with this client
+      await supabase
+        .from("cases")
+        .delete()
+        .eq("client_id", clientId);
       
       // Finally delete the client
       const { error } = await supabase

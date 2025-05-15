@@ -32,10 +32,22 @@ const DeleteClientDialog = ({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This will permanently delete {client.first_name} {client.last_name} and all associated data including client messages, 
-            case analysis, discovery documents, and all other related information. 
-            This action cannot be undone.
+          <AlertDialogDescription className="space-y-2">
+            <p>
+              This will permanently delete {client.first_name} {client.last_name} and all associated data including:
+            </p>
+            <ul className="list-disc pl-5 text-sm">
+              <li>Contract reviews</li>
+              <li>Case discussions</li>
+              <li>Case analysis notes</li>
+              <li>Legal analyses</li>
+              <li>Client messages</li>
+              <li>Discovery documents</li>
+              <li>All cases</li>
+            </ul>
+            <p className="font-medium text-red-500 pt-2">
+              This action cannot be undone.
+            </p>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
