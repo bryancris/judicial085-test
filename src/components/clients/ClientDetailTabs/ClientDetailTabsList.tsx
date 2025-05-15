@@ -3,7 +3,6 @@ import React from "react";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, BookOpen, FileSearch, Video, FileChartLine, MessageSquare, FileCheck, HelpCircle } from "lucide-react";
 import { tabColors, tabHoverColors } from "./tabStyles";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import TabExplanationDialog from "./TabExplanationDialog";
 
 const ClientDetailTabsList = () => {
@@ -20,10 +19,10 @@ const ClientDetailTabsList = () => {
     { value: "discovery", icon: <FileSearch className="h-4 w-4" /> },
     { value: "fact-pattern", icon: <BookOpen className="h-4 w-4" /> },
     { value: "deposition", icon: <Video className="h-4 w-4" /> },
-    { value: "faq", icon: <HelpCircle className="h-4 w-4" /> },
   ];
 
-  const handleFaqClick = () => {
+  const handleFaqClick = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent default tab switching
     setShowExplanationDialog(true);
   };
 
@@ -55,15 +54,13 @@ const ClientDetailTabsList = () => {
             {value.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")}
           </TabsTrigger>
         ))}
-        <TabsTrigger
-          key="faq"
-          value="faq"
-          className={`flex items-center gap-2 ${tabColors["faq"]} ${tabHoverColors["faq"]} data-[state=inactive]:opacity-70`}
+        <button
+          className={`flex items-center gap-2 rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${tabColors["faq"]} ${tabHoverColors["faq"]}`}
           onClick={handleFaqClick}
         >
           <HelpCircle className="h-4 w-4" />
           FAQ
-        </TabsTrigger>
+        </button>
       </TabsList>
 
       <TabExplanationDialog 
