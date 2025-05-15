@@ -10,10 +10,12 @@ import { clientSchema, ClientFormValues, defaultValues } from "./ClientFormSchem
 import PersonalInfoFields from "./PersonalInfoFields";
 import AddressFields from "./AddressFields";
 import CaseInfoFields from "./CaseInfoFields";
+import { useClientCases } from "@/hooks/useClientCases";
 
 const ClientForm = () => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const { createCase } = useClientCases();
 
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
@@ -47,9 +49,34 @@ const ClientForm = () => {
         case_notes: data.case_notes || null
       };
       
-      const { error } = await supabase.from('clients').insert(clientData);
+      // Insert the client and get the returned client data with the generated ID
+      const { data: newClient, error } = await supabase
+        .from('clients')
+        .insert(clientData)
+        .select()
+        .single();
       
       if (error) throw error;
+      
+      // Create a case if client was successfully created
+      if (newClient && data.case_types.length > 0) {
+        // Determine the case type from the first selected type
+        const caseType = data.case_types[0];
+        
+        // Create the case data
+        const caseData = {
+          client_id: newClient.id,
+          case_title: `${data.first_name} ${data.last_name} - ${getCaseTypeLabel(caseType)}`,
+          case_number: data.case_number || null,
+          case_type: caseType,
+          case_description: data.case_description || null,
+          case_notes: data.case_notes || null,
+          status: "active"
+        };
+        
+        // Create the case
+        await createCase(caseData);
+      }
       
       toast({
         title: "Client added successfully",
@@ -67,6 +94,24 @@ const ClientForm = () => {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  // Helper function to get a readable label for the case type
+  function getCaseTypeLabel(caseTypeId: string): string {
+    const caseTypeMap: Record<string, string> = {
+      "family": "Family Law",
+      "criminal": "Criminal Defense",
+      "immigration": "Immigration",
+      "personal_injury": "Personal Injury",
+      "estate": "Estate Planning",
+      "business": "Business Law",
+      "real_estate": "Real Estate",
+      "intellectual_property": "Intellectual Property",
+      "employment": "Employment",
+      "contract_review": "Contract Review"
+    };
+    
+    return caseTypeMap[caseTypeId] || "Case";
   }
 
   return (

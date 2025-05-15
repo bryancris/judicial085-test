@@ -43,11 +43,17 @@ export const useClientCases = (clientId?: string) => {
     }
   };
 
-  const createCase = async (caseData: Omit<Case, "id" | "created_at" | "updated_at" | "status">) => {
+  const createCase = async (caseData: Omit<Case, "id" | "created_at" | "updated_at" | "status"> & { status?: string }) => {
     try {
+      // Make status optional with a default value
+      const dataToInsert = {
+        ...caseData,
+        status: caseData.status || "active"
+      };
+      
       const { data, error } = await supabase
         .from("cases")
-        .insert([{ ...caseData, client_id: clientId, status: "active" }])
+        .insert([dataToInsert])
         .select()
         .single();
 
@@ -58,7 +64,11 @@ export const useClientCases = (clientId?: string) => {
         description: "The case has been successfully created.",
       });
 
-      await fetchCases();
+      // Only fetch cases if we have a clientId (we might be creating a case without having loaded cases yet)
+      if (clientId) {
+        await fetchCases();
+      }
+      
       return data;
     } catch (err: any) {
       console.error("Error creating case:", err);
