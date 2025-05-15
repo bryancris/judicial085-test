@@ -35,6 +35,7 @@ const EditClientForm = ({ client, onSuccess, onCancel }: EditClientFormProps) =>
       state: client.state || "",
       zip_code: client.zip_code || "",
       case_number: client.case_number || "",
+      case_description: client.case_description || "",
       case_types: client.case_types || [],
       referred_by: client.referred_by || "",
       case_notes: client.case_notes || "",
@@ -63,6 +64,7 @@ const EditClientForm = ({ client, onSuccess, onCancel }: EditClientFormProps) =>
           state: data.state || null,
           zip_code: data.zip_code || null,
           case_number: data.case_number || null,
+          case_description: data.case_description || null,
           case_types: data.case_types,
           referred_by: data.referred_by || null,
           case_notes: data.case_notes || null

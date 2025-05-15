@@ -19,6 +19,11 @@ export const buildClientSection = (clientData: any) => {
     caseDetailsSection += `\nCase Number: ${clientData.case_number}`;
   }
   
+  // Add case description if available
+  if (clientData.case_description) {
+    caseDetailsSection += `\n\nCase Description: ${clientData.case_description}`;
+  }
+  
   // Add case notes if available - critical for context
   if (clientData.case_notes) {
     caseDetailsSection += `\n\nCase Notes: ${clientData.case_notes}`;

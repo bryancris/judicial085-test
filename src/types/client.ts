@@ -10,6 +10,7 @@ export interface Client {
   state: string | null;
   zip_code: string | null;
   case_number: string | null;
+  case_description: string | null;
   case_types: string[] | null;
   referred_by: string | null;
   case_notes: string | null;

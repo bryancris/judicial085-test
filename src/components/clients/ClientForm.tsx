@@ -41,6 +41,7 @@ const ClientForm = () => {
         state: data.state || null,
         zip_code: data.zip_code || null,
         case_number: data.case_number || null,
+        case_description: data.case_description || null,
         case_types: data.case_types,
         referred_by: data.referred_by || null,
         case_notes: data.case_notes || null

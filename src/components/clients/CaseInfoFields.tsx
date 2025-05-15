@@ -27,6 +27,24 @@ const CaseInfoFields = ({ control }: CaseInfoFieldsProps) => {
         )}
       />
       
+      <FormField
+        control={control}
+        name="case_description"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Case Description</FormLabel>
+            <FormControl>
+              <Textarea 
+                placeholder="Brief description of the case..." 
+                className="min-h-[80px]" 
+                {...field} 
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      
       <CaseTypesSelector control={control} />
       
       <FormField

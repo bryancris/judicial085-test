@@ -132,6 +132,7 @@ export type Database = {
       clients: {
         Row: {
           address: string | null
+          case_description: string | null
           case_notes: string | null
           case_number: string | null
           case_types: string[] | null
@@ -150,6 +151,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          case_description?: string | null
           case_notes?: string | null
           case_number?: string | null
           case_types?: string[] | null
@@ -168,6 +170,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          case_description?: string | null
           case_notes?: string | null
           case_number?: string | null
           case_types?: string[] | null
