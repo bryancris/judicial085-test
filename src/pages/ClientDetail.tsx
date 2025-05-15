@@ -13,7 +13,7 @@ import ClientDetailHeader from "@/components/clients/ClientDetailHeader";
 import ClientDetailTabsList from "@/components/clients/ClientDetailTabs/ClientDetailTabsList";
 import ClientDetailTabContent from "@/components/clients/ClientDetailTabs/ClientDetailTabContent";
 import DeleteClientDialog from "@/components/clients/DeleteClientDialog";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { CaseProvider } from "@/contexts/CaseContext";
 import CasesSection from "@/components/clients/cases/CasesSection";
 
@@ -74,8 +74,14 @@ const ClientDetail = () => {
   };
 
   const handleDeleteConfirm = async () => {
-    await deleteClient();
-    setDeleteDialogOpen(false);
+    try {
+      await deleteClient();
+      // We don't close the dialog here because we want to show the loading state
+      // The navigation will happen automatically after successful deletion
+    } catch (error) {
+      // If there's an error, we close the dialog so the user can try again
+      setDeleteDialogOpen(false);
+    }
   };
 
   return (

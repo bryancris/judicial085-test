@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Client } from "@/types/client";
 
@@ -24,8 +24,17 @@ const ClientDetailHeader = ({ client, onDeleteClick, isDeleting }: ClientDetailH
           onClick={onDeleteClick}
           disabled={isDeleting}
         >
-          <Trash2 className="h-4 w-4 text-red-500" />
-          {isDeleting ? "Deleting..." : "Delete Client"}
+          {isDeleting ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin text-red-500" />
+              Deleting...
+            </>
+          ) : (
+            <>
+              <Trash2 className="h-4 w-4 text-red-500" />
+              Delete Client
+            </>
+          )}
         </Button>
         <Link to="/clients">
           <Button variant="outline" className="flex items-center gap-2">

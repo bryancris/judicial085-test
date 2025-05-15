@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Client } from "@/types/client";
+import { Loader2 } from "lucide-react";
 
 interface DeleteClientDialogProps {
   client: Client;
@@ -52,13 +53,20 @@ const DeleteClientDialog = ({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
           <AlertDialogAction 
             onClick={onConfirm} 
             className="bg-red-500 hover:bg-red-600"
             disabled={isDeleting}
           >
-            {isDeleting ? "Deleting..." : "Yes, delete client"}
+            {isDeleting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              "Yes, delete client"
+            )}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
