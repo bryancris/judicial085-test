@@ -1,11 +1,11 @@
 
 import React from "react";
-import ContractReviewChatView from "./ContractReviewChatView";
-import ContractReviewChatInput from "./ContractReviewChatInput";
 import { useContractReviewChat } from "@/hooks/useContractReviewChat";
 import { Button } from "@/components/ui/button";
 import { FilePlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import ContractReviewChatInput from "./ContractReviewChatInput";
+import ContractReviewChatView from "./chat/ContractReviewChatView";
 
 interface ContractReviewChatProps {
   clientId: string;
