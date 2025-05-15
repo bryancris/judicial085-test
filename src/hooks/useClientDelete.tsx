@@ -16,41 +16,51 @@ export const useClientDelete = (clientId?: string, client?: Client | null) => {
 
     try {
       setIsDeleting(true);
+      console.log("Starting deletion process for client:", clientId);
       
       // Delete all associated data in the correct order
-      // First delete all child records that reference the client
       
-      // 1. Delete contract reviews
-      await supabase
+      // 1. First check and delete contract_reviews
+      console.log("Deleting contract reviews...");
+      const { error: contractReviewsError } = await supabase
         .from("contract_reviews")
         .delete()
         .eq("client_id", clientId);
       
+      if (contractReviewsError) {
+        console.error("Error deleting contract reviews:", contractReviewsError);
+      }
+      
       // 2. Delete case discussions
+      console.log("Deleting case discussions...");
       await supabase
         .from("case_discussions")
         .delete()
         .eq("client_id", clientId);
       
       // 3. Delete case analysis notes
+      console.log("Deleting case analysis notes...");
       await supabase
         .from("case_analysis_notes")
         .delete()
         .eq("client_id", clientId);
       
       // 4. Delete legal analyses
+      console.log("Deleting legal analyses...");
       await supabase
         .from("legal_analyses")
         .delete()
         .eq("client_id", clientId);
       
       // 5. Delete client messages
+      console.log("Deleting client messages...");
       await supabase
         .from("client_messages")
         .delete()
         .eq("client_id", clientId);
       
       // 6. Delete discovery related data
+      console.log("Deleting discovery data...");
       // First get all discovery request IDs
       const { data: discoveryRequests } = await supabase
         .from("discovery_requests")
@@ -59,6 +69,7 @@ export const useClientDelete = (clientId?: string, client?: Client | null) => {
       
       if (discoveryRequests && discoveryRequests.length > 0) {
         const requestIds = discoveryRequests.map(req => req.id);
+        console.log("Found discovery requests:", requestIds);
         
         // Delete discovery responses and related documents
         for (const requestId of requestIds) {
@@ -70,9 +81,11 @@ export const useClientDelete = (clientId?: string, client?: Client | null) => {
           
           if (responses && responses.length > 0) {
             const responseIds = responses.map(res => res.id);
+            console.log("Found discovery responses:", responseIds);
             
             // Delete discovery documents
             for (const responseId of responseIds) {
+              console.log("Deleting documents for response:", responseId);
               await supabase
                 .from("discovery_documents")
                 .delete()
@@ -80,6 +93,7 @@ export const useClientDelete = (clientId?: string, client?: Client | null) => {
             }
             
             // Delete responses
+            console.log("Deleting discovery responses...");
             await supabase
               .from("discovery_responses")
               .delete()
@@ -88,6 +102,7 @@ export const useClientDelete = (clientId?: string, client?: Client | null) => {
         }
         
         // Delete discovery requests
+        console.log("Deleting discovery requests...");
         await supabase
           .from("discovery_requests")
           .delete()
@@ -95,18 +110,23 @@ export const useClientDelete = (clientId?: string, client?: Client | null) => {
       }
       
       // 7. Delete all cases associated with this client
+      console.log("Deleting cases...");
       await supabase
         .from("cases")
         .delete()
         .eq("client_id", clientId);
       
       // Finally delete the client
+      console.log("Deleting client record...");
       const { error } = await supabase
         .from("clients")
         .delete()
         .eq("id", clientId);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Final client deletion error:", error);
+        throw error;
+      }
 
       toast({
         title: "Client deleted",
