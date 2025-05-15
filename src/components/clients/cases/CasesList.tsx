@@ -20,6 +20,9 @@ const CasesList = ({ clientId, onSelectCase }: CasesListProps) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
   
+  console.log("CasesList rendering with clientId:", clientId);
+  console.log("Cases data in component:", cases);
+  
   const handleEditClick = (caseData: Case) => {
     setSelectedCase(caseData);
     setIsEditDialogOpen(true);
@@ -67,7 +70,7 @@ const CasesList = ({ clientId, onSelectCase }: CasesListProps) => {
     return <CasesListError error={error} />;
   }
 
-  if (cases.length === 0) {
+  if (!cases || cases.length === 0) {
     return <EmptyCasesList />;
   }
 

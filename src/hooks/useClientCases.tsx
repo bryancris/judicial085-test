@@ -18,6 +18,8 @@ export const useClientCases = (clientId?: string) => {
 
     try {
       setLoading(true);
+      console.log("Fetching cases for client ID:", clientId);
+      
       const { data, error } = await supabase
         .from("cases")
         .select("*")
@@ -26,6 +28,7 @@ export const useClientCases = (clientId?: string) => {
 
       if (error) throw error;
 
+      console.log("Cases data received:", data);
       setCases(data || []);
     } catch (err: any) {
       console.error("Error fetching cases:", err);
@@ -123,6 +126,7 @@ export const useClientCases = (clientId?: string) => {
   };
 
   useEffect(() => {
+    console.log("useClientCases effect triggered with clientId:", clientId);
     fetchCases();
   }, [clientId]);
 

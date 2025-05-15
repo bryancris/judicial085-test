@@ -9,7 +9,10 @@ const EmptyCasesList = () => {
       <CardContent className="pt-6">
         <div className="text-center text-muted-foreground">
           <FileText className="mx-auto h-12 w-12 opacity-50 mb-2" />
-          <p>No cases found for this client.</p>
+          <p>No cases found for this client in the database.</p>
+          <p className="mt-2 text-sm">
+            Please create a new case using the "New Case" button at the top of the page.
+          </p>
         </div>
       </CardContent>
     </Card>

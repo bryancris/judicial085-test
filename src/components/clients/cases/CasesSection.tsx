@@ -18,20 +18,26 @@ const CasesSection = ({ clientId }: CasesSectionProps) => {
   const [activeTab, setActiveTab] = useState<string>("cases");
   const { currentCase, setCurrentCase } = useCase();
   const { cases, loading, error } = useClientCases(clientId);
+  
+  console.log("CasesSection rendering with clientId:", clientId);
+  console.log("Cases in CasesSection:", cases);
 
   useEffect(() => {
     // If we have cases but no current case is selected, select the first one
     if (cases.length > 0 && !currentCase) {
+      console.log("Auto-selecting first case:", cases[0]);
       setCurrentCase(cases[0]);
     }
   }, [cases, currentCase, setCurrentCase]);
 
   const handleSelectCase = (caseData: Case) => {
+    console.log("Case selected:", caseData);
     setCurrentCase(caseData);
     setActiveTab("details");
   };
 
   const handleNewCase = (newCase: Case) => {
+    console.log("New case created:", newCase);
     setCurrentCase(newCase);
     setActiveTab("details");
   };
