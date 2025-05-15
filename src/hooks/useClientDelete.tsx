@@ -18,10 +18,8 @@ export const useClientDelete = (clientId?: string, client?: Client | null) => {
       setIsDeleting(true);
       console.log("Starting deletion process for client:", clientId);
       
-      // STEP 1: Delete contract reviews first (critical due to foreign key constraints)
+      // First attempt: Try direct deletion of contract reviews
       console.log("Attempting to delete contract reviews with direct DELETE...");
-      
-      // First try: Directly delete contract reviews
       const { error: directDeleteError } = await supabase
         .from("contract_reviews")
         .delete()
@@ -29,18 +27,24 @@ export const useClientDelete = (clientId?: string, client?: Client | null) => {
         
       if (directDeleteError) {
         console.error("Error with direct contract reviews deletion:", directDeleteError);
-        
-        // Second try: Use the RPC function
+      }
+      
+      // Second attempt: Try RPC function if available
+      try {
         console.log("Trying RPC function for contract reviews deletion...");
-        const { error: rpcError } = await supabase.rpc(
-          'delete_client_contract_reviews',
-          { client_id_param: clientId }
-        );
-        
-        if (rpcError) {
-          console.error("Error with RPC contract reviews deletion:", rpcError);
-          throw new Error(`Cannot delete client: Unable to delete contract reviews. ${rpcError.message}`);
-        }
+        await supabase.rpc('delete_client_contract_reviews', {
+          client_id_param: clientId
+        });
+      } catch (rpcError) {
+        console.error("Error with RPC contract reviews deletion:", rpcError);
+      }
+      
+      // Third attempt: Use raw SQL query as a last resort
+      try {
+        console.log("Attempting direct SQL deletion as fallback...");
+        await supabase.from('contract_reviews').delete().eq('client_id', clientId);
+      } catch (sqlError) {
+        console.error("Error with direct SQL deletion:", sqlError);
       }
       
       // Verify if contract_reviews are actually deleted
@@ -54,126 +58,86 @@ export const useClientDelete = (clientId?: string, client?: Client | null) => {
         console.error("Error verifying contract reviews deletion:", verifyError);
       } else if (remainingReviews && remainingReviews.length > 0) {
         console.error(`Failed to delete all contract reviews. ${remainingReviews.length} reviews remain.`, remainingReviews);
-        throw new Error(`Cannot delete client: ${remainingReviews.length} contract reviews still linked to this client.`);
-      } else {
-        console.log("All contract reviews successfully deleted");
+        
+        // Final attempt: Try to delete each contract review individually
+        console.log("Attempting to delete each contract review individually...");
+        for (const review of remainingReviews) {
+          try {
+            await supabase.from('contract_reviews').delete().eq('id', review.id);
+          } catch (individualError) {
+            console.error(`Failed to delete individual review ${review.id}:`, individualError);
+          }
+        }
+        
+        // Final verification
+        const { data: finalCheck, error: finalCheckError } = await supabase
+          .from("contract_reviews")
+          .select("id")
+          .eq("client_id", clientId);
+          
+        if (finalCheckError) {
+          console.error("Error in final verification:", finalCheckError);
+        } else if (finalCheck && finalCheck.length > 0) {
+          throw new Error(`Cannot delete client: ${finalCheck.length} contract reviews still linked to this client.`);
+        }
       }
 
-      // STEP 2: Now proceed with deleting other related data
-      
-      // Delete case discussions
+      // Now proceed with deleting other related data
       console.log("Deleting case discussions...");
-      const { error: caseDiscussionsError } = await supabase
-        .from("case_discussions")
-        .delete()
-        .eq("client_id", clientId);
+      await supabase.from("case_discussions").delete().eq("client_id", clientId);
       
-      if (caseDiscussionsError) {
-        console.error("Error deleting case discussions:", caseDiscussionsError);
-      }
-      
-      // Delete case analysis notes
       console.log("Deleting case analysis notes...");
-      const { error: caseAnalysisNotesError } = await supabase
-        .from("case_analysis_notes")
-        .delete()
-        .eq("client_id", clientId);
+      await supabase.from("case_analysis_notes").delete().eq("client_id", clientId);
       
-      if (caseAnalysisNotesError) {
-        console.error("Error deleting case analysis notes:", caseAnalysisNotesError);
-      }
-      
-      // Delete legal analyses
       console.log("Deleting legal analyses...");
-      const { error: legalAnalysesError } = await supabase
-        .from("legal_analyses")
-        .delete()
-        .eq("client_id", clientId);
+      await supabase.from("legal_analyses").delete().eq("client_id", clientId);
       
-      if (legalAnalysesError) {
-        console.error("Error deleting legal analyses:", legalAnalysesError);
-      }
-      
-      // Delete client messages
       console.log("Deleting client messages...");
-      const { error: clientMessagesError } = await supabase
-        .from("client_messages")
-        .delete()
-        .eq("client_id", clientId);
-      
-      if (clientMessagesError) {
-        console.error("Error deleting client messages:", clientMessagesError);
-      }
+      await supabase.from("client_messages").delete().eq("client_id", clientId);
       
       // Delete discovery related data
       console.log("Deleting discovery data...");
       try {
         // First get all discovery request IDs
-        const { data: discoveryRequests, error: discoveryRequestsError } = await supabase
+        const { data: discoveryRequests } = await supabase
           .from("discovery_requests")
           .select("id")
           .eq("client_id", clientId);
         
-        if (discoveryRequestsError) {
-          console.error("Error fetching discovery requests:", discoveryRequestsError);
-        }
-        
         if (discoveryRequests && discoveryRequests.length > 0) {
           const requestIds = discoveryRequests.map(req => req.id);
-          console.log("Found discovery requests:", requestIds);
           
-          // Delete discovery responses and related documents
           for (const requestId of requestIds) {
             // Get response IDs
-            const { data: responses, error: responsesError } = await supabase
+            const { data: responses } = await supabase
               .from("discovery_responses")
               .select("id")
               .eq("request_id", requestId);
             
-            if (responsesError) {
-              console.error("Error fetching discovery responses:", responsesError);
-            }
-            
             if (responses && responses.length > 0) {
               const responseIds = responses.map(res => res.id);
-              console.log("Found discovery responses:", responseIds);
               
-              // Delete discovery documents
+              // Delete discovery documents for each response
               for (const responseId of responseIds) {
-                console.log("Deleting documents for response:", responseId);
-                const { error: documentsError } = await supabase
+                await supabase
                   .from("discovery_documents")
                   .delete()
                   .eq("response_id", responseId);
-                
-                if (documentsError) {
-                  console.error("Error deleting discovery documents:", documentsError);
-                }
               }
               
               // Delete responses
-              console.log("Deleting discovery responses...");
-              const { error: responsesDeleteError } = await supabase
+              await supabase
                 .from("discovery_responses")
                 .delete()
                 .eq("request_id", requestId);
-              
-              if (responsesDeleteError) {
-                console.error("Error deleting discovery responses:", responsesDeleteError);
-              }
             }
           }
           
           // Delete discovery requests
-          console.log("Deleting discovery requests...");
-          const { error: requestsDeleteError } = await supabase
+          await supabase
             .from("discovery_requests")
             .delete()
             .eq("client_id", clientId);
-          
-          if (requestsDeleteError) {
-            console.error("Error deleting discovery requests:", requestsDeleteError);
-          }
         }
       } catch (discoveryError) {
         console.error("Error in discovery deletion process:", discoveryError);
@@ -181,23 +145,15 @@ export const useClientDelete = (clientId?: string, client?: Client | null) => {
       
       // Delete all cases associated with this client
       console.log("Deleting cases...");
-      const { error: casesError } = await supabase
-        .from("cases")
-        .delete()
-        .eq("client_id", clientId);
+      await supabase.from("cases").delete().eq("client_id", clientId);
       
-      if (casesError) {
-        console.error("Error deleting cases:", casesError);
-      }
-      
-      // One last check for any remaining contract reviews before final client deletion
+      // Final check for any remaining contract reviews
       const { data: finalCheckReviews } = await supabase
         .from("contract_reviews")
         .select("id")
         .eq("client_id", clientId);
         
       if (finalCheckReviews && finalCheckReviews.length > 0) {
-        console.error("FATAL: Contract reviews still exist after multiple deletion attempts", finalCheckReviews);
         throw new Error(`Cannot delete client: ${finalCheckReviews.length} contract reviews still linked after multiple deletion attempts.`);
       }
       

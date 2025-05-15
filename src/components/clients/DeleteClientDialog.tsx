@@ -33,11 +33,10 @@ const DeleteClientDialog = ({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-          <AlertDialogDescription>
-            <p>
+          <AlertDialogDescription className="space-y-2">
+            <div>
               This will permanently delete {client.first_name} {client.last_name} and all associated data including:
-            </p>
-            {/* List moved outside of paragraph tag to fix DOM nesting */}
+            </div>
             <ul className="list-disc pl-5 text-sm mt-2">
               <li>Contract reviews</li>
               <li>Case discussions</li>
@@ -47,9 +46,9 @@ const DeleteClientDialog = ({
               <li>Discovery documents</li>
               <li>All cases</li>
             </ul>
-            <p className="font-medium text-red-500 pt-2">
+            <div className="font-medium text-red-500 pt-2">
               This action cannot be undone.
-            </p>
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
