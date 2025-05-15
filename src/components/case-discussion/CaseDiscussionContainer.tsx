@@ -41,7 +41,7 @@ const CaseDiscussionContainer: React.FC<CaseDiscussionContainerProps> = ({ clien
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-400px)] min-h-[500px]">
+    <div className="flex flex-col h-[calc(100vh-300px)] min-h-[600px]">
       <div className="flex flex-col flex-grow overflow-hidden border rounded-lg">
         <div className="bg-[#9b87f5] text-white p-3">
           <h3 className="font-medium">Case Discussion</h3>

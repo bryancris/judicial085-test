@@ -19,13 +19,13 @@ const ChatView = ({ messages, isLoading }: ChatViewProps) => {
   }, [messages]);
 
   return (
-    <div className="flex-grow overflow-y-auto p-4 bg-card">
+    <div className="flex-grow overflow-y-auto p-4 bg-card h-full">
       {messages.length === 0 ? (
         <div className="flex items-center justify-center h-full text-muted-foreground">
           Start the interview by asking a question as the attorney or providing a response as the client.
         </div>
       ) : (
-        <div>
+        <div className="space-y-3">
           {messages.map((msg, index) => (
             <ChatMessage key={index} {...msg} />
           ))}
