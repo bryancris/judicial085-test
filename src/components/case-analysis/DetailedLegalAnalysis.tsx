@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollText } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
@@ -29,6 +29,15 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
 }) => {
   // We'll render the remedies section separately if it exists
   const hasRemedies = remedies && remedies.trim() !== "";
+  
+  // Add state for collapsible sections
+  const [isRelevantLawOpen, setIsRelevantLawOpen] = useState(true);
+  const [isFollowUpOpen, setIsFollowUpOpen] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  // For this implementation, we'll use a simplified version of the processed content
+  const processedContent = relevantLaw;
+  const isConsumerCase = caseType === "consumer-protection";
 
   return (
     <div className="space-y-6">
@@ -58,7 +67,14 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            <RelevantLawSection content={relevantLaw} />
+            <RelevantLawSection 
+              content={relevantLaw}
+              isOpen={isRelevantLawOpen}
+              isProcessing={isLoading}
+              onToggle={() => setIsRelevantLawOpen(!isRelevantLawOpen)}
+              processedContent={processedContent}
+              isConsumerCase={isConsumerCase}
+            />
             
             <Separator className="my-4" />
             
@@ -77,7 +93,12 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
             
             <Separator className="my-4" />
             
-            <FollowUpQuestionsSection questions={followUpQuestions} />
+            <FollowUpQuestionsSection 
+              questions={followUpQuestions}
+              isOpen={isFollowUpOpen}
+              searchTerm={searchTerm}
+              onToggle={() => setIsFollowUpOpen(!isFollowUpOpen)}
+            />
           </div>
         </CardContent>
       </Card>
