@@ -43,13 +43,25 @@ export const useClientCases = (clientId?: string) => {
     }
   };
 
-  const createCase = async (caseData: Omit<Case, "id" | "created_at" | "updated_at" | "status"> & { status?: string }) => {
+  const createCase = async (caseData: Omit<Case, "id" | "created_at" | "updated_at"> & { status?: string }) => {
     try {
+      // Ensure client_id is set
+      if (!caseData.client_id) {
+        if (clientId) {
+          // Use the clientId from the hook if available
+          caseData.client_id = clientId;
+        } else {
+          throw new Error("Client ID is required to create a case");
+        }
+      }
+      
       // Make status optional with a default value
       const dataToInsert = {
         ...caseData,
         status: caseData.status || "active"
       };
+      
+      console.log("Creating case with data:", dataToInsert);
       
       const { data, error } = await supabase
         .from("cases")

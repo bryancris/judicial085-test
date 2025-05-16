@@ -26,7 +26,13 @@ const NewCaseDialog = ({ clientId, onCaseCreated }: NewCaseDialogProps) => {
   const handleSubmit = async (formData: any) => {
     setIsSubmitting(true);
     try {
-      const newCase = await createCase(formData);
+      // Adding the client_id to the form data
+      const caseDataWithClientId = {
+        ...formData,
+        client_id: clientId
+      };
+      
+      const newCase = await createCase(caseDataWithClientId);
       if (newCase && onCaseCreated) {
         onCaseCreated(newCase);
       }
@@ -55,6 +61,7 @@ const NewCaseDialog = ({ clientId, onCaseCreated }: NewCaseDialogProps) => {
           onSubmit={handleSubmit} 
           onCancel={() => setIsOpen(false)} 
           isLoading={isSubmitting}
+          clientId={clientId} // Pass clientId to the CaseForm
         />
       </DialogContent>
     </Dialog>

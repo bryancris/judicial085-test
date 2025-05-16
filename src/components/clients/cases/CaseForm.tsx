@@ -39,13 +39,15 @@ interface CaseFormProps {
   onCancel: () => void;
   initialData?: Partial<Case>;
   isLoading?: boolean;
+  clientId?: string; // Add clientId prop
 }
 
 const CaseForm = ({ 
   onSubmit, 
   onCancel, 
   initialData,
-  isLoading = false 
+  isLoading = false,
+  clientId  // Accept clientId prop
 }: CaseFormProps) => {
   const form = useForm<CaseFormValues>({
     resolver: zodResolver(caseFormSchema),
@@ -62,9 +64,14 @@ const CaseForm = ({
   const caseType = form.watch("case_type");
   const isContractReview = caseType === "contract_review";
 
+  const handleFormSubmit = (data: CaseFormValues) => {
+    // The clientId is now passed from the parent component
+    onSubmit(data);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="case_title"
