@@ -24,6 +24,8 @@ export interface CaseAnalysisData {
   conversationSummary: string;
   timestamp: string;
   lawReferences?: LawReference[];
+  caseType?: string;
+  remedies?: string;
 }
 
 export interface AnalysisItem {
@@ -39,4 +41,12 @@ export interface StrengthsAndWeaknesses {
 export interface PredictionPercentages {
   defense: number;
   prosecution: number;
+}
+
+export interface ConsumerProtectionReference {
+  id: string;
+  section: string;
+  title: string;
+  description: string;
+  type: 'dtpa' | 'home-solicitation' | 'debt-collection' | 'other';
 }

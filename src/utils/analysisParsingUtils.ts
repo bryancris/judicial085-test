@@ -1,8 +1,9 @@
 
 import { StrengthsAndWeaknesses, PredictionPercentages } from "@/types/caseAnalysis";
+import { extractDTPAReferences } from "./lawReferences/consumerProtectionUtils";
 
 // Extract strengths and weaknesses from analysis text
-export const extractStrengthsWeaknesses = (analysisText: string): StrengthsAndWeaknesses => {
+export const extractStrengthsWeaknesses = (analysisText: string, caseType?: string): StrengthsAndWeaknesses => {
   const strengths: string[] = [];
   const weaknesses: string[] = [];
   
@@ -47,6 +48,40 @@ export const extractStrengthsWeaknesses = (analysisText: string): StrengthsAndWe
         weaknesses.push(issue.replace(/^[-•*]\s*/, ''));
       }
     });
+  }
+  
+  // Add consumer protection specific strengths and weaknesses for DTPA cases
+  if (caseType === "consumer-protection" || analysisText.toLowerCase().includes("deceptive trade") || analysisText.toLowerCase().includes("dtpa")) {
+    const dtpaReferences = extractDTPAReferences(analysisText);
+    
+    // If we have DTPA references, use them to create strengths
+    if (dtpaReferences.length > 0 && strengths.length < 3) {
+      dtpaReferences.slice(0, 2).forEach(ref => {
+        if (!strengths.some(s => s.includes(ref))) {
+          strengths.push(`Potential ${ref} violation supports DTPA claim`);
+        }
+      });
+    }
+    
+    // Add standard DTPA strengths if needed
+    if (strengths.length < 2) {
+      if (!strengths.some(s => s.toLowerCase().includes("treble"))) {
+        strengths.push("Potential for treble damages under DTPA for knowing violations");
+      }
+      if (!strengths.some(s => s.toLowerCase().includes("attorney"))) {
+        strengths.push("DTPA allows recovery of attorney's fees for successful claims");
+      }
+    }
+    
+    // Add standard DTPA weaknesses if needed
+    if (weaknesses.length < 2) {
+      if (!weaknesses.some(w => w.toLowerCase().includes("consumer"))) {
+        weaknesses.push("Must establish consumer status under DTPA to maintain claim");
+      }
+      if (!weaknesses.some(w => w.toLowerCase().includes("notice"))) {
+        weaknesses.push("Pre-suit notice requirements must be satisfied for DTPA claims");
+      }
+    }
   }
   
   // If we couldn't extract enough strengths/weaknesses, add generic ones based on the analysis
@@ -115,64 +150,113 @@ export const extractStrengthsWeaknesses = (analysisText: string): StrengthsAndWe
 // Calculate prediction percentages based on analysis text - completely revamped
 export const calculatePredictionPercentages = (
   analysisText: string, 
-  strengthsWeaknesses: StrengthsAndWeaknesses
+  strengthsWeaknesses: StrengthsAndWeaknesses,
+  caseType?: string
 ): PredictionPercentages => {
-  // Start with a baseline of 50/50
+  // Start with a baseline
   let defensePercentage = 50;
   
   // Analyze the full text content for evidence quality
   const lowerAnalysis = analysisText.toLowerCase();
   
-  // Evidence strength factors - score each piece of evidence
-  const evidenceFactors: {factor: string, weight: number}[] = [
-    // Strong positive factors
-    {factor: "video evidence", weight: 15},
-    {factor: "surveillance footage", weight: 15},
-    {factor: "employee saw the spill", weight: 12},
-    {factor: "employee walk", weight: 10},
-    {factor: "witnessed by", weight: 8},
-    {factor: "medical record", weight: 8},
-    {factor: "witnessed the incident", weight: 8},
-    {factor: "no warning sign", weight: 10},
-    {factor: "no barrier", weight: 8},
-    {factor: "documented injuries", weight: 6},
-    {factor: "ambulance", weight: 5},
-    {factor: "witness testimony", weight: 8},
-    {factor: "constructive knowledge", weight: 10},
-    {factor: "clearly show", weight: 8},
+  // Consumer protection case specific scoring
+  if (caseType === "consumer-protection" || lowerAnalysis.includes("dtpa") || lowerAnalysis.includes("deceptive trade")) {
+    // DTPA specific evidence factors
+    const dtpaFactors: {factor: string, weight: number}[] = [
+      // Strong positive factors
+      {factor: "written misrepresentation", weight: 15},
+      {factor: "bait and switch", weight: 12},
+      {factor: "knowing violation", weight: 15},
+      {factor: "failure to disclose", weight: 10},
+      {factor: "false advertising", weight: 10},
+      {factor: "laundry list", weight: 8},
+      {factor: "17.46(b)", weight: 12},
+      {factor: "documentary evidence", weight: 10},
+      {factor: "consumer status", weight: 8},
+      {factor: "treble damages", weight: 5},
+      {factor: "home solicitation", weight: 10},
+      {factor: "right to cancel", weight: 8},
+      {factor: "deceptive practice", weight: 7},
+      
+      // Negative factors
+      {factor: "no writing", weight: -10},
+      {factor: "statute of limitations", weight: -12},
+      {factor: "no consumer", weight: -15},
+      {factor: "exemption", weight: -12},
+      {factor: "no goods or services", weight: -10},
+      {factor: "professional services", weight: -8},
+      {factor: "mere puffery", weight: -8},
+      {factor: "opinion", weight: -7},
+      {factor: "sophisticated party", weight: -6},
+    ];
     
-    // Negative factors
-    {factor: "no witness", weight: -6},
-    {factor: "no evidence", weight: -10},
-    {factor: "contributory negligence", weight: -8},
-    {factor: "comparative fault", weight: -8},
-    {factor: "pre-existing condition", weight: -7},
-    {factor: "failure to observe", weight: -6},
-    {factor: "no documentation", weight: -8},
-    {factor: "conflicting testimony", weight: -7},
-    {factor: "warning sign", weight: -10},
-    {factor: "open and obvious", weight: -12},
-  ];
-  
-  // Apply evidence factors
-  for (const {factor, weight} of evidenceFactors) {
-    if (lowerAnalysis.includes(factor)) {
-      defensePercentage += weight;
-    }
-  }
-  
-  // Case type adjustments - premises liability cases
-  if (
-    lowerAnalysis.includes("slip and fall") || 
-    lowerAnalysis.includes("premises liability")
-  ) {
-    // Check for slip and fall specific evidence
-    if (lowerAnalysis.includes("video") && lowerAnalysis.includes("employee")) {
-      defensePercentage += 10; // Video evidence of employee negligence is very strong
+    // Apply DTPA factors
+    for (const {factor, weight} of dtpaFactors) {
+      if (lowerAnalysis.includes(factor)) {
+        defensePercentage += weight;
+      }
     }
     
-    if (lowerAnalysis.includes("warned") && lowerAnalysis.includes("failed")) {
-      defensePercentage += 8;
+    // Count DTPA provisions cited
+    const dtpaReferences = extractDTPAReferences(analysisText);
+    defensePercentage += Math.min(dtpaReferences.length * 3, 15); // Max 15 points for DTPA citations
+    
+    // Check for cooling-off period violations
+    if (lowerAnalysis.includes("3-day") || lowerAnalysis.includes("three day") || lowerAnalysis.includes("cooling off")) {
+      defensePercentage += 12;
+    }
+  } else {
+    // General case evidence factors
+    const evidenceFactors: {factor: string, weight: number}[] = [
+      // Strong positive factors
+      {factor: "video evidence", weight: 15},
+      {factor: "surveillance footage", weight: 15},
+      {factor: "employee saw the spill", weight: 12},
+      {factor: "employee walk", weight: 10},
+      {factor: "witnessed by", weight: 8},
+      {factor: "medical record", weight: 8},
+      {factor: "witnessed the incident", weight: 8},
+      {factor: "no warning sign", weight: 10},
+      {factor: "no barrier", weight: 8},
+      {factor: "documented injuries", weight: 6},
+      {factor: "ambulance", weight: 5},
+      {factor: "witness testimony", weight: 8},
+      {factor: "constructive knowledge", weight: 10},
+      {factor: "clearly show", weight: 8},
+      
+      // Negative factors
+      {factor: "no witness", weight: -6},
+      {factor: "no evidence", weight: -10},
+      {factor: "contributory negligence", weight: -8},
+      {factor: "comparative fault", weight: -8},
+      {factor: "pre-existing condition", weight: -7},
+      {factor: "failure to observe", weight: -6},
+      {factor: "no documentation", weight: -8},
+      {factor: "conflicting testimony", weight: -7},
+      {factor: "warning sign", weight: -10},
+      {factor: "open and obvious", weight: -12},
+    ];
+    
+    // Apply evidence factors
+    for (const {factor, weight} of evidenceFactors) {
+      if (lowerAnalysis.includes(factor)) {
+        defensePercentage += weight;
+      }
+    }
+    
+    // Case type adjustments - premises liability cases
+    if (
+      lowerAnalysis.includes("slip and fall") || 
+      lowerAnalysis.includes("premises liability")
+    ) {
+      // Check for slip and fall specific evidence
+      if (lowerAnalysis.includes("video") && lowerAnalysis.includes("employee")) {
+        defensePercentage += 10; // Video evidence of employee negligence is very strong
+      }
+      
+      if (lowerAnalysis.includes("warned") && lowerAnalysis.includes("failed")) {
+        defensePercentage += 8;
+      }
     }
   }
   
@@ -195,24 +279,6 @@ export const calculatePredictionPercentages = (
   if (lowerAnalysis.includes("difficult to prove") || lowerAnalysis.includes("challenging case")) {
     defensePercentage -= 8;
   }
-  
-  // More granular keyword analysis
-  const specificKeywords = [
-    // Positive outcomes
-    {term: "clear liability", score: 10},
-    {term: "duty of care violated", score: 8},
-    {term: "breach of duty", score: 7},
-    {term: "negligence is apparent", score: 9},
-    {term: "statute of limitations", score: -5},
-    {term: "difficulty proving", score: -7},
-    {term: "lack of evidence", score: -8},
-  ];
-  
-  specificKeywords.forEach(({term, score}) => {
-    if (lowerAnalysis.includes(term)) {
-      defensePercentage += score;
-    }
-  });
   
   // Apply reasonable limits - wider range (18% to 95%)
   defensePercentage = Math.max(18, Math.min(defensePercentage, 95));
@@ -238,10 +304,77 @@ export const extractAnalysisSections = (content: string) => {
       .map(line => line.replace(/^\d+\.\s/, ''))
     : [];
   
+  // Extract remedies section for consumer protection cases
+  let remedies = null;
+  if (content.toLowerCase().includes('dtpa') || content.toLowerCase().includes('deceptive trade')) {
+    // Look for remedies discussions
+    const remedyPatterns = [
+      /\b(remedies|damages|recovery|relief)[\s\S]{10,300}?(?=\n\n|\n\*\*|$)/i,
+      /treble damages[\s\S]{10,200}?(?=\n\n|\n\*\*|$)/i,
+      /17\.50[\s\S]{10,200}?(?=\n\n|\n\*\*|$)/i
+    ];
+    
+    for (const pattern of remedyPatterns) {
+      const match = content.match(pattern);
+      if (match && match[0]) {
+        remedies = match[0];
+        break;
+      }
+    }
+  }
+  
   return {
     relevantLaw: relevantLawMatch ? relevantLawMatch[1].trim() : "No relevant law analysis available.",
     preliminaryAnalysis: preliminaryAnalysisMatch ? preliminaryAnalysisMatch[1].trim() : "No preliminary analysis available.",
     potentialIssues: potentialIssuesMatch ? potentialIssuesMatch[1].trim() : "No potential issues identified.",
-    followUpQuestions
+    followUpQuestions,
+    remedies
   };
+};
+
+// Detect case type from analysis content
+export const detectCaseType = (content: string): string => {
+  const lowerContent = content.toLowerCase();
+  
+  // Check for consumer protection/DTPA cases
+  if (
+    lowerContent.includes("dtpa") || 
+    lowerContent.includes("deceptive trade practice") || 
+    lowerContent.includes("consumer protection") ||
+    lowerContent.includes("17.46") ||
+    lowerContent.includes("home solicitation") ||
+    (lowerContent.includes("consumer") && lowerContent.includes("texas business"))
+  ) {
+    return "consumer-protection";
+  }
+  
+  // Check for personal injury cases
+  if (
+    lowerContent.includes("slip and fall") || 
+    lowerContent.includes("premises liability") ||
+    (lowerContent.includes("injury") && lowerContent.includes("negligence"))
+  ) {
+    return "premises-liability";
+  }
+  
+  // Check for motor vehicle accident cases
+  if (
+    lowerContent.includes("car accident") || 
+    lowerContent.includes("automobile") || 
+    lowerContent.includes("motor vehicle")
+  ) {
+    return "motor-vehicle-accident";
+  }
+  
+  // Check for contract disputes
+  if (
+    lowerContent.includes("breach of contract") || 
+    lowerContent.includes("agreement") ||
+    lowerContent.includes("contractual")
+  ) {
+    return "contract-dispute";
+  }
+  
+  // Default case type
+  return "general";
 };

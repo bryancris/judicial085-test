@@ -33,7 +33,11 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({ clientId 
 
   return (
     <div>
-      <CaseAnalysisHeader onRefresh={handleRefreshAnalysis} isLoading={isLoading} />
+      <CaseAnalysisHeader 
+        onRefresh={handleRefreshAnalysis} 
+        isLoading={isLoading} 
+        caseType={analysisData?.caseType}
+      />
 
       {analysisData && (
         <>
@@ -41,12 +45,14 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({ clientId 
             defense={Number(analysisData.outcome.defense)} 
             prosecution={Number(analysisData.outcome.prosecution)}
             isLoading={isLoading}
+            caseType={analysisData.caseType}
           />
 
           {analysisData.lawReferences && analysisData.lawReferences.length > 0 && (
             <LawReferencesSection 
               references={analysisData.lawReferences}
               isLoading={isLoading}
+              caseType={analysisData.caseType}
             />
           )}
 
@@ -55,6 +61,8 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({ clientId 
             preliminaryAnalysis={analysisData.legalAnalysis.preliminaryAnalysis}
             potentialIssues={analysisData.legalAnalysis.potentialIssues}
             followUpQuestions={analysisData.legalAnalysis.followUpQuestions}
+            remedies={analysisData.remedies}
+            caseType={analysisData.caseType}
             isLoading={isLoading}
           />
 
@@ -62,9 +70,13 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({ clientId 
             strengths={analysisData.strengths}
             weaknesses={analysisData.weaknesses}
             isLoading={isLoading}
+            caseType={analysisData.caseType}
           />
 
-          <SearchSimilarCasesSection clientId={clientId} />
+          <SearchSimilarCasesSection 
+            clientId={clientId} 
+            caseType={analysisData.caseType}
+          />
 
           <ConversationSummary 
             summary={analysisData.conversationSummary}

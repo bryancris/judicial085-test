@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAnalysisGeneration } from "./useAnalysisGeneration";
 import { LawReference } from "@/types/caseAnalysis";
-import { extractCitations } from "@/utils/lawReferences/citationUtils";
+import { extractAnalysisSections, extractStrengthsWeaknesses, calculatePredictionPercentages, detectCaseType } from "@/utils/analysisParsingUtils";
 
 interface AnalysisData {
   outcome: {
@@ -21,6 +21,8 @@ interface AnalysisData {
   weaknesses: string[];
   conversationSummary: string;
   lawReferences?: LawReference[];
+  caseType?: string;
+  remedies?: string;
 }
 
 export const useCaseAnalysis = (clientId: string) => {
@@ -43,7 +45,7 @@ export const useCaseAnalysis = (clientId: string) => {
     try {
       const { data, error } = await supabase
         .from("legal_analyses")
-        .select("content, law_references")
+        .select("content, law_references, case_type")
         .eq("client_id", clientId)
         .order("created_at", { ascending: false })
         .limit(1);
@@ -55,7 +57,6 @@ export const useCaseAnalysis = (clientId: string) => {
         const content = analysis.content;
         
         // Transform the law_references JSON to match the LawReference type
-        // This guarantees the type safety for the lawReferences property
         let lawReferences: LawReference[] = [];
         
         if (analysis.law_references) {
@@ -73,52 +74,46 @@ export const useCaseAnalysis = (clientId: string) => {
           }
         }
 
-        // Extract analysis sections
-        const relevantLawMatch = content.match(/\*\*RELEVANT TEXAS LAW:\*\*([\s\S]*?)(?=\*\*PRELIMINARY ANALYSIS:|$)/);
-        const preliminaryAnalysisMatch = content.match(/\*\*PRELIMINARY ANALYSIS:\*\*([\s\S]*?)(?=\*\*POTENTIAL LEGAL ISSUES:|$)/);
-        const potentialIssuesMatch = content.match(/\*\*POTENTIAL LEGAL ISSUES:\*\*([\s\S]*?)(?=\*\*RECOMMENDED FOLLOW-UP QUESTIONS:|$)/);
-        const followUpQuestionsMatch = content.match(/\*\*RECOMMENDED FOLLOW-UP QUESTIONS:\*\*([\s\S]*)/);
+        // Get case type from database or detect from content
+        const caseType = analysis.case_type || detectCaseType(content);
 
-        // Parse follow-up questions
-        let followUpQuestions: string[] = [];
-        if (followUpQuestionsMatch && followUpQuestionsMatch[1]) {
-          const questionText = followUpQuestionsMatch[1].trim();
-          // Extract numbered questions (1. Question text)
-          const questionMatches = questionText.match(/\d+\.\s+(.*?)(?=\n\d+\.|$)/g);
-          if (questionMatches) {
-            followUpQuestions = questionMatches.map(q => q.replace(/^\d+\.\s+/, '').trim());
-          }
-        }
-
-        // Determine strengths and weaknesses
-        const strengths = [
-          "Clear documentation of injuries",
-          "Multiple witnesses corroborate client's account",
-          "Defendant has history of similar incidents"
-        ];
-
-        const weaknesses = [
-          "Delayed medical treatment after incident",
-          "Inconsistent statements about timeline",
-          "Preexisting condition may complicate causation"
-        ];
+        // Extract analysis sections using the enhanced utils
+        const { 
+          relevantLaw, 
+          preliminaryAnalysis, 
+          potentialIssues, 
+          followUpQuestions,
+          remedies
+        } = extractAnalysisSections(content);
+        
+        // Extract strengths and weaknesses with case type awareness
+        const { strengths, weaknesses } = extractStrengthsWeaknesses(content, caseType);
+        
+        // Calculate prediction percentages considering case type
+        const outcome = calculatePredictionPercentages(
+          content, 
+          { strengths, weaknesses },
+          caseType
+        );
 
         // Create analysis data structure
         setAnalysisData({
           outcome: {
-            defense: "65",
-            prosecution: "35",
+            defense: outcome.defense.toString(),
+            prosecution: outcome.prosecution.toString(),
           },
           legalAnalysis: {
-            relevantLaw: relevantLawMatch ? relevantLawMatch[1].trim() : "",
-            preliminaryAnalysis: preliminaryAnalysisMatch ? preliminaryAnalysisMatch[1].trim() : "",
-            potentialIssues: potentialIssuesMatch ? potentialIssuesMatch[1].trim() : "",
-            followUpQuestions: followUpQuestions
+            relevantLaw,
+            preliminaryAnalysis,
+            potentialIssues,
+            followUpQuestions
           },
           strengths,
           weaknesses,
           conversationSummary: "Client described a slip and fall incident at a local grocery store. Initial medical assessment confirms sprained wrist and back strain. Client reports ongoing pain and inability to perform normal work duties as a contractor.",
-          lawReferences: lawReferences
+          lawReferences,
+          caseType,
+          remedies
         });
       } else {
         // No analysis found - set null and show a toast

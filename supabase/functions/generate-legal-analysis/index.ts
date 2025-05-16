@@ -58,7 +58,7 @@ async function searchRelevantLaw(searchTerms) {
     // Fallback to searching in the documents table
     try {
       const documentsResponse = await fetch(
-        `${supabaseUrl}/rest/v1/documents?select=id,content,metadata&limit=3`,
+        `${supabaseUrl}/rest/v1/documents?select=id,content,metadata&limit=5`,
         {
           headers: {
             'Content-Type': 'application/json',
@@ -102,12 +102,13 @@ async function searchRelevantLaw(searchTerms) {
   }
 }
 
-// Function to extract key legal topics from conversation
+// Enhanced function to extract key legal topics from conversation with improved consumer protection coverage
 function extractLegalTopics(conversation) {
   const combinedText = conversation.map(msg => msg.content).join(" ");
   
-  // List of potential legal topics to check for in Texas law context
+  // Enhanced list of potential legal topics with specific focus on consumer protection
   const legalTopics = [
+    // General legal topics
     "personal injury", "premises liability", "negligence", "tort", 
     "civil practice", "CPRC", "family law", "divorce", "custody", 
     "property division", "criminal", "DUI", "DWI", "theft", 
@@ -115,7 +116,14 @@ function extractLegalTopics(conversation) {
     "real estate", "landlord tenant", "eviction", "workers compensation",
     "employment", "discrimination", "estate planning", "probate", "will", 
     "trust", "guardianship", "business formation", "LLC", "corporation",
-    "insurance", "malpractice", "wrongful death", "product liability"
+    "insurance", "malpractice", "wrongful death", "product liability",
+    
+    // Enhanced consumer protection topics
+    "deceptive trade practices", "DTPA", "consumer protection", 
+    "false advertising", "warranty", "misleading", "door-to-door", 
+    "home solicitation", "cooling off period", "right to cancel",
+    "debt collection", "usury", "predatory lending", "loan", "finance charge",
+    "consumer fraud", "bait and switch", "unfair practices", "misrepresentation"
   ];
   
   // Find which topics are mentioned in the conversation
@@ -123,7 +131,13 @@ function extractLegalTopics(conversation) {
     combinedText.toLowerCase().includes(topic.toLowerCase())
   );
   
-  // Extract potential statute references like "Section 101.021"
+  // Extract consumer protection statute references like "Section 17.46" (DTPA)
+  const dtpaStatutePattern = /\b(section|§)\s*(17\.\d+)\b|\bDTPA\b|Bus\.\s*(&|and)\s*Com\.\s*Code/gi;
+  const dtpaStatutes = (combinedText.match(dtpaStatutePattern) || []).map(s => 
+    s.replace(/^(section|§)\s*/i, '')
+  );
+  
+  // Extract general statute references like "Section 101.021"
   const statutePattern = /\b(section|§)\s*\d+(\.\d+)*\b/gi;
   const potentialStatutes = combinedText.match(statutePattern) || [];
   
@@ -133,9 +147,34 @@ function extractLegalTopics(conversation) {
   
   return {
     topics: mentionedTopics,
-    statutes: potentialStatutes.map(s => s.replace(/^(section|§)\s*/i, '')),
+    statutes: [...new Set([...dtpaStatutes, ...potentialStatutes.map(s => s.replace(/^(section|§)\s*/i, ''))])],
     cases: potentialCases
   };
+}
+
+// Function to detect consumer protection cases for specialized prompt enhancement
+function isConsumerProtectionCase(legalContext) {
+  const consumerTopics = [
+    "deceptive trade practices", "dtpa", "consumer protection", 
+    "false advertising", "warranty", "misleading", "door-to-door", 
+    "home solicitation", "cooling off", "right to cancel", "17.46", 
+    "consumer fraud", "bait and switch", "unfair practices", "misrepresentation"
+  ];
+  
+  // Convert topics to lowercase for case-insensitive comparison
+  const lowerTopics = legalContext.topics.map(t => t.toLowerCase());
+  
+  // Check if any consumer protection topics are mentioned
+  const hasConsumerTopic = consumerTopics.some(topic => 
+    lowerTopics.includes(topic.toLowerCase())
+  );
+  
+  // Check if any statutes mention 17.4 (common DTPA sections start with 17.4)
+  const hasDTPAStatute = legalContext.statutes.some(statute => 
+    statute.startsWith("17.4") || statute.includes("DTPA")
+  );
+  
+  return hasConsumerTopic || hasDTPAStatute;
 }
 
 serve(async (req) => {
@@ -184,9 +223,12 @@ serve(async (req) => {
       }
     }
 
-    // Create improved system prompt for legal analysis - explicitly requesting exactly 4 follow-up questions
-    // and adding formatting guidance for law citations
-    const systemPrompt = `
+    // Detect if this is a consumer protection case
+    const isConsumerCase = isConsumerProtectionCase(legalContext);
+    console.log(`Case identified as consumer protection case: ${isConsumerCase}`);
+    
+    // Create base system prompt
+    let systemPrompt = `
 You are a legal expert assistant for attorneys in Texas. Based on the attorney-client conversation provided, 
 generate a concise legal analysis with the following sections:
 
@@ -219,6 +261,41 @@ Make sure each question:
 After the last follow-up question, don't add any additional content, comments, or new sections. Generate exactly 4 follow-up questions, no more and no less.
 `;
 
+    // Add enhanced prompt for consumer protection cases
+    if (isConsumerCase) {
+      const consumerProtectionPrompt = `
+IMPORTANT: This appears to be a Consumer Protection/Deceptive Trade Practices case. In your analysis, be sure to address:
+
+1. The Texas Deceptive Trade Practices-Consumer Protection Act (DTPA), Texas Business & Commerce Code § 17.41-17.63:
+   - Cite specific violations from § 17.46(b)'s "laundry list" that apply to this case
+   - Identify if the case involves a "false, misleading, or deceptive act" under § 17.46(a)
+   - Determine if there are failures to disclose information under § 17.46(b)(24)
+   - Assess if warranty breaches exist under § 17.50(a)(2)
+   - Consider unconscionable actions under § 17.50(a)(3)
+
+2. The Texas Home Solicitation Act (Texas Business & Commerce Code § 601.001 et seq.):
+   - Determine if a 3-day right of rescission applies
+   - Verify if proper notice of cancellation was provided
+   - Check compliance with door-to-door sales requirements
+
+3. The Texas Debt Collection Act (Texas Finance Code § 392.001 et seq.):
+   - Identify any prohibited debt collection methods
+   - Note any misrepresentations about debt amount or character
+
+4. Available Remedies:
+   - Economic damages under DTPA § 17.50(b)(1)
+   - Potential for treble damages for knowing violations under § 17.50(b)(1)
+   - Mental anguish damages if conduct was committed knowingly
+   - Attorney's fees under § 17.50(d)
+   - Injunctive relief possibilities
+   - Contract rescission options
+
+When analyzing these issues, connect specific facts from the conversation to the exact statutory provisions they violate. Prioritize violations by severity and impact on the consumer's case.
+`;
+      systemPrompt += consumerProtectionPrompt;
+      console.log("Added consumer protection specialized prompt enhancement");
+    }
+
     // Format the conversation for the API request
     const formattedConversation = conversation.map(msg => ({
       role: "user", 
@@ -239,10 +316,10 @@ After the last follow-up question, don't add any additional content, comments, o
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o', // Upgraded from gpt-4o-mini for more accurate legal analysis
         messages,
-        temperature: 0.7,
-        max_tokens: 1200,
+        temperature: 0.5, // Reduced temperature for more precise legal analysis
+        max_tokens: 2000, // Increased token limit for more comprehensive analysis
       }),
     });
 
@@ -259,13 +336,38 @@ After the last follow-up question, don't add any additional content, comments, o
     // Extract and verify the analysis
     let analysis = data.choices[0]?.message?.content || '';
     
-    // Post-process the analysis to ensure exactly 4 follow-up questions if needed
+    // Add post-processing for consumer protection cases
+    if (isConsumerCase && analysis) {
+      console.log("Post-processing consumer protection case analysis");
+      
+      // Ensure DTPA is properly referenced
+      if (!analysis.includes('Texas Business & Commerce Code § 17.4') && !analysis.includes('DTPA')) {
+        analysis = analysis.replace('**RELEVANT TEXAS LAW:**', 
+          '**RELEVANT TEXAS LAW:**\n\nTexas Deceptive Trade Practices-Consumer Protection Act (DTPA), Texas Business & Commerce Code § 17.41 et seq., which protects consumers against false, misleading, and deceptive business practices.\n\n' + 
+          analysis.split('**RELEVANT TEXAS LAW:**')[1]
+        );
+      }
+      
+      // Ensure remedies are discussed if not already
+      if (!analysis.toLowerCase().includes('remedy') && !analysis.toLowerCase().includes('remedies') && 
+          !analysis.toLowerCase().includes('damages') && !analysis.includes('treble')) {
+        analysis = analysis.replace('**POTENTIAL LEGAL ISSUES:**', 
+          '**POTENTIAL LEGAL ISSUES:**\n\nPotential remedies under the DTPA include economic damages, mental anguish damages if violations were committed knowingly, and up to three times (treble) damages for knowing violations. The client may also recover court costs and reasonable attorney\'s fees.\n\n' + 
+          analysis.split('**POTENTIAL LEGAL ISSUES:**')[1]
+        );
+      }
+    }
+
     if (analysis) {
-      console.log("Legal analysis generated successfully with vector database references");
+      console.log("Legal analysis generated successfully with enhanced context and post-processing");
     }
 
     return new Response(
-      JSON.stringify({ analysis, lawReferences: relevantLawReferences }),
+      JSON.stringify({ 
+        analysis, 
+        lawReferences: relevantLawReferences,
+        caseType: isConsumerCase ? "consumer-protection" : "general"
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
