@@ -12,11 +12,17 @@ import { useDocumentAuth } from '@/hooks/useDocumentAuth';
 
 const Clients = () => {
   const { session, loading } = useDocumentAuth();
+  const [activeTab, setActiveTab] = useState("view-clients");
 
   // If not authenticated, redirect to auth page
   if (!loading && !session) {
     return <Navigate to="/auth" />;
   }
+
+  // Function to handle tab change
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -25,7 +31,7 @@ const Clients = () => {
         <h1 className="text-3xl font-bold mb-6">Clients</h1>
         <p className="text-lg mb-4">Manage your legal clients and cases here.</p>
         
-        <Tabs defaultValue="view-clients" className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="mb-4">
             <TabsTrigger 
               value="view-clients" 
