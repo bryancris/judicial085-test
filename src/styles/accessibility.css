@@ -1,0 +1,11 @@
+
+@media (prefers-reduced-motion: reduce) {
+  .animated-bg, 
+  .particle,
+  .animate-fade-in,
+  .hover-scale:hover {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
+}
