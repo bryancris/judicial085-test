@@ -77,20 +77,6 @@ const CaseForm = ({
 
         <FormField
           control={form.control}
-          name="case_number"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Case Number</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter case number" {...field} value={field.value || ""} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
           name="case_type"
           render={({ field }) => (
             <FormItem>
@@ -112,6 +98,20 @@ const CaseForm = ({
                   ))}
                 </SelectContent>
               </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="case_number"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Case Number</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter case number" {...field} value={field.value || ""} />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
