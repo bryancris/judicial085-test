@@ -109,13 +109,14 @@ const ContractReviewChatInput: React.FC<ContractReviewChatInputProps> = ({
       <div className="flex gap-2 items-end">
         <TextareaAutosize
           ref={textareaRef}
-          className={`flex-grow resize-none border rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${isRecording ? 'border-red-500 border-2' : ''}`}
+          className={`flex-grow resize-none border rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-foreground bg-card ${isRecording ? 'border-red-500 border-2' : ''}`}
           placeholder="Ask about the contract..."
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           maxRows={6}
           disabled={isLoading}
+          style={{ color: "currentColor" }}
         />
         <div className="flex flex-col gap-2">
           <Button
