@@ -11,13 +11,11 @@ import { clientSchema, ClientFormValues, defaultValues } from "./ClientFormSchem
 import PersonalInfoFields from "./PersonalInfoFields";
 import AddressFields from "./AddressFields";
 import CaseInfoFields from "./CaseInfoFields";
-import { useClientCases } from "@/hooks/useClientCases";
 
 const ClientForm = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const { createCase } = useClientCases();
 
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
@@ -60,23 +58,8 @@ const ClientForm = () => {
       
       if (error) throw error;
       
-      // Create a default case if client was successfully created
+      // Navigate to the newly created client's page
       if (newClient) {
-        // Create a simple case with the client's name
-        const caseData = {
-          client_id: newClient.id,
-          case_title: `${data.first_name} ${data.last_name} - General`,
-          case_number: null,
-          case_type: "general",
-          case_description: null,
-          case_notes: data.notes || null,
-          status: "active"
-        };
-        
-        // Create the case
-        await createCase(caseData);
-        
-        // Navigate to the newly created client's page
         navigate(`/clients/${newClient.id}`);
       }
       
