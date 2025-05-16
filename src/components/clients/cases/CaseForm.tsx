@@ -58,6 +58,10 @@ const CaseForm = ({
     },
   });
 
+  // Get current case type to dynamically change field labels
+  const caseType = form.watch("case_type");
+  const isContractReview = caseType === "contract_review";
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -108,9 +112,13 @@ const CaseForm = ({
           name="case_number"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Case Number</FormLabel>
+              <FormLabel>{isContractReview ? "Contract Name" : "Case Number"}</FormLabel>
               <FormControl>
-                <Input placeholder="Enter case number" {...field} value={field.value || ""} />
+                <Input 
+                  placeholder={isContractReview ? "Enter contract name" : "Enter case number"} 
+                  {...field} 
+                  value={field.value || ""} 
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -122,10 +130,10 @@ const CaseForm = ({
           name="case_description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Case Description</FormLabel>
+              <FormLabel>{isContractReview ? "Contract Description" : "Case Description"}</FormLabel>
               <FormControl>
                 <Textarea 
-                  placeholder="Describe the case" 
+                  placeholder={isContractReview ? "Describe the contract" : "Describe the case"} 
                   className="min-h-[100px]" 
                   {...field} 
                   value={field.value || ""} 
