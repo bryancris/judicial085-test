@@ -23,8 +23,16 @@ const ContractReviewMessageContent: React.FC<ContractReviewMessageContentProps> 
       return content;
     }
     
-    // Otherwise process with standard law reference processing
+    // Format severity levels for better visibility
+    content = content.replace(/CRITICAL(\s+SEVERITY|\s+ISSUE|\:|\s*$)/g, '<span class="severity-critical">CRITICAL$1</span>');
+    content = content.replace(/HIGH(\s+SEVERITY|\s+ISSUE|\:|\s*$)/g, '<span class="severity-high">HIGH$1</span>');
+    content = content.replace(/MEDIUM(\s+SEVERITY|\s+ISSUE|\:|\s*$)/g, '<span class="severity-medium">MEDIUM$1</span>');
+    content = content.replace(/LOW(\s+SEVERITY|\s+ISSUE|\:|\s*$)/g, '<span class="severity-low">LOW$1</span>');
+    
+    // Process law references
     content = processLawReferencesSync(content);
+    
+    // Process markdown last to ensure formatted content is preserved
     return processMarkdown(content);
   }, [message.content]);
   
@@ -40,6 +48,28 @@ const ContractReviewMessageContent: React.FC<ContractReviewMessageContentProps> 
     return extractLawReferences(message.content);
   }, [message.content, message.role]);
 
+  // Enhance contract review formatting if this is an AI response
+  const enhancedContractReview = React.useMemo(() => {
+    if (message.role !== "ai" || !processedContent.includes('CONTRACT REVIEW SUMMARY')) {
+      return processedContent;
+    }
+    
+    // Add additional formatting to enhance readability
+    let enhanced = processedContent;
+    
+    // Add review-summary-box class to the contract review summary section
+    enhanced = enhanced.replace(
+      /<h3[^>]*>CONTRACT REVIEW SUMMARY<\/h3>/,
+      '<h3>CONTRACT REVIEW SUMMARY</h3><div class="review-summary-box">'
+    );
+    enhanced = enhanced.replace(
+      /<h3[^>]*>CRITICAL ISSUES<\/h3>/,
+      '</div><h3>CRITICAL ISSUES</h3>'
+    );
+    
+    return enhanced;
+  }, [message.role, processedContent]);
+
   return (
     <div className={cn(
       "flex flex-col",
@@ -50,22 +80,24 @@ const ContractReviewMessageContent: React.FC<ContractReviewMessageContentProps> 
         "px-4 py-3 rounded-lg shadow-sm",
         isAttorney 
           ? "bg-green-100 dark:bg-green-900/30 text-green-900 dark:text-green-100" 
-          : "bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100"
+          : "bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100",
+        message.role === "ai" && message.content.includes('CONTRACT REVIEW SUMMARY') ? "w-full" : ""
       )}>
         <div 
           className={cn(
             "prose prose-sm md:prose max-w-none dark:prose-invert",
             "prose-headings:font-semibold prose-headings:text-slate-800 dark:prose-headings:text-slate-100",
-            "prose-h1:text-xl prose-h1:mt-4 prose-h1:mb-2",
-            "prose-h2:text-lg prose-h2:mt-3 prose-h2:mb-2",
-            "prose-h3:text-base prose-h3:mt-2 prose-h3:mb-1",
-            "prose-p:my-2",
-            "prose-li:my-0.5",
-            "prose-strong:font-semibold",
-            "prose-strong:text-slate-900 dark:prose-strong:text-slate-50",
-            isAttorney ? "prose-a:text-green-700 dark:prose-a:text-green-300" : "prose-a:text-blue-700 dark:prose-a:text-blue-300"
+            "prose-h3:text-lg prose-h3:mt-4 prose-h3:mb-2 prose-h3:border-b prose-h3:pb-1 prose-h3:border-gray-200 dark:prose-h3:border-gray-700",
+            "prose-h4:text-base prose-h4:mt-3 prose-h4:mb-1.5 prose-h4:font-medium",
+            "prose-p:my-2 prose-p:leading-relaxed",
+            "prose-ul:my-2 prose-ul:pl-6",
+            "prose-ol:my-2 prose-ol:pl-6",
+            "prose-li:my-1",
+            "prose-strong:font-semibold prose-strong:text-slate-900 dark:prose-strong:text-slate-50",
+            isAttorney ? "prose-a:text-green-700 dark:prose-a:text-green-300" : "prose-a:text-blue-700 dark:prose-a:text-blue-300",
+            message.role === "ai" && message.content.includes('CONTRACT REVIEW') ? "legal-document" : ""
           )}
-          dangerouslySetInnerHTML={{ __html: processedContent }}
+          dangerouslySetInnerHTML={{ __html: enhancedContractReview }}
         />
         
         {/* Display severity summary for AI responses if available */}

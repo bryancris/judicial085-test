@@ -46,24 +46,72 @@ export const processLawReferencesSync = (text: string): string => {
   // Replace severity markers with highlighted spans
   processedText = processedText.replace(severityPattern, (match, severity) => {
     const colorClass = {
-      'CRITICAL': 'text-red-600 font-bold',
-      'HIGH': 'text-orange-500 font-bold',
-      'MEDIUM': 'text-yellow-600 font-bold',
-      'LOW': 'text-green-600 font-bold'
+      'CRITICAL': 'severity-critical',
+      'HIGH': 'severity-high',
+      'MEDIUM': 'severity-medium',
+      'LOW': 'severity-low'
     }[severity] || '';
     
     return `<span class="${colorClass}">${match}</span>`;
   });
   
+  // Enhance formatting for issue sections
+  processedText = enhanceIssueSections(processedText);
+  
   return processedText;
 };
 
-// Process markdown in text
+// Process markdown in text with enhanced options
 export const processMarkdown = (text: string): string => {
   if (!text) return '';
   
+  // Configure marked options to enhance rendering
+  marked.setOptions({
+    breaks: true,            // Add line breaks on single newlines
+    gfm: true,               // Use GitHub Flavored Markdown
+    headerIds: true,         // Generate IDs for headings
+    mangle: false,           // Don't escape HTML
+    smartLists: true,        // Use smarter list behavior
+  });
+  
   // Use marked to process markdown
   return marked(text) as string;
+};
+
+// Enhance formatting for issue sections
+const enhanceIssueSections = (text: string): string => {
+  // No enhancement needed for short texts
+  if (text.length < 100) return text;
+  
+  // Add special classes to structure issue sections better
+  let enhanced = text;
+  
+  // Process critical issues section
+  if (text.includes('CRITICAL')) {
+    enhanced = enhanced.replace(
+      /\*\*Issue:\*\*(.*?)(?=\*\*Issue:\*\*|\*\*Section:|$)/gs,
+      '<div class="issue-section critical-issue"><div class="issue-header">**Issue:**$1</div>'
+    );
+  }
+  
+  // Process high severity issues section
+  if (text.includes('HIGH')) {
+    enhanced = enhanced.replace(
+      /\*\*Issue:\*\*(.*?)(?=\*\*Issue:\*\*|\*\*Section:|$)/gs,
+      '<div class="issue-section high-issue"><div class="issue-header">**Issue:**$1</div>'
+    );
+  }
+  
+  // Close issue section divs
+  enhanced = enhanced.replace(/(\*\*Recommendation:\*\*.*?)(?=<div class="issue-|$)/gs, '$1</div>');
+  
+  // Format recommended actions list
+  enhanced = enhanced.replace(
+    /(\d+\.\s+.*?)(?=\d+\.\s+|$)/g,
+    '<div class="recommendation-item"><div class="recommendation-number">$1</div></div>'
+  );
+  
+  return enhanced;
 };
 
 /**
@@ -82,19 +130,19 @@ export const extractSeverityLevels = (text: string): Record<string, number> => {
   if (!text) return severityCounts;
   
   // Count CRITICAL issues
-  const criticalMatches = text.match(/CRITICAL(\s+SEVERITY|\s+ISSUE|\:)/g);
+  const criticalMatches = text.match(/CRITICAL(\s+SEVERITY|\s+ISSUE|\:|\s*$)/g);
   if (criticalMatches) severityCounts.CRITICAL = criticalMatches.length;
   
   // Count HIGH issues
-  const highMatches = text.match(/HIGH(\s+SEVERITY|\s+ISSUE|\:)/g);
+  const highMatches = text.match(/HIGH(\s+SEVERITY|\s+ISSUE|\:|\s*$)/g);
   if (highMatches) severityCounts.HIGH = highMatches.length;
   
   // Count MEDIUM issues
-  const mediumMatches = text.match(/MEDIUM(\s+SEVERITY|\s+ISSUE|\:)/g);
+  const mediumMatches = text.match(/MEDIUM(\s+SEVERITY|\s+ISSUE|\:|\s*$)/g);
   if (mediumMatches) severityCounts.MEDIUM = mediumMatches.length;
   
   // Count LOW issues
-  const lowMatches = text.match(/LOW(\s+SEVERITY|\s+ISSUE|\:)/g);
+  const lowMatches = text.match(/LOW(\s+SEVERITY|\s+ISSUE|\:|\s*$)/g);
   if (lowMatches) severityCounts.LOW = lowMatches.length;
   
   return severityCounts;

@@ -25,29 +25,45 @@ export const buildInstructionsSection = () => {
    - Waivers of consumer rights protected by DTPA (CRITICAL)
    - Limitations of liability for gross negligence (CRITICAL)
 
-5. FORMAT YOUR RESPONSE IN THIS STRUCTURE:
+5. FORMAT YOUR RESPONSE USING PROPER MARKDOWN:
    
    ### CONTRACT REVIEW SUMMARY
    [Brief overview of the contract and 2-3 most critical issues]
    
    ### CRITICAL ISSUES
-   [Detailed analysis of all CRITICAL severity issues with Texas law citations]
+   For each critical issue:
+   - **Issue:** [Description of the issue]
+   - **Section:** [Contract section reference]
+   - **Legal Reference:** [Texas statute/case law]
+   - **Explanation:** [Why this violates Texas law]
+   - **Recommendation:** [Suggested alternative language]
    
    ### SIGNIFICANT CONCERNS
-   [Detailed analysis of all HIGH severity issues with Texas law citations]
+   For each high severity issue:
+   - **Issue:** [Description of the issue]
+   - **Section:** [Contract section reference]
+   - **Legal Reference:** [Texas statute/case law]
+   - **Explanation:** [Why this is problematic]
+   - **Recommendation:** [Suggested alternative language]
    
    ### OTHER CONSIDERATIONS
-   [Brief notes on MEDIUM and LOW severity issues]
+   Bullet list of medium/low severity issues:
+   - [Medium issue with brief citation]
+   - [Low issue with brief citation]
    
    ### RECOMMENDED ACTIONS
-   [Prioritized list of changes required to make the contract compliant with Texas law]
+   Numbered list of actions in order of priority:
+   1. [First action item]
+   2. [Second action item]
+   3. [Third action item]
 
-6. ALWAYS look for and analyze sections dealing with:
-   - Choice of law/jurisdiction (especially non-Texas)
-   - Liquidated damages or penalties
-   - Broad security interests
-   - Waivers of rights
-   - Limitations of liability
+6. IMPORTANT FORMATTING RULES:
+   - Use ### for section headers with a blank line before and after
+   - Use bullet points (- ) for lists
+   - Use bold (**text**) for subsection headers and important terms
+   - Use numbered lists (1. 2. 3.) for prioritized recommendations
+   - Include line breaks between paragraphs
+   - Make sure each section is clearly distinguished
 
 7. Your goal is to identify all provisions that might be unenforceable or problematic under Texas law.`;
 };

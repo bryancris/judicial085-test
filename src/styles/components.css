@@ -41,6 +41,40 @@
     prose-li:my-1;
 }
 
+.legal-document h3 {
+  @apply text-xl mt-6 mb-3 border-b pb-2 border-gray-200 dark:border-gray-700 font-bold;
+}
+
+.legal-document h4 {
+  @apply text-lg mt-4 mb-2 font-semibold;
+}
+
+.legal-document ul {
+  @apply my-3 pl-6 list-disc;
+}
+
+.legal-document ol {
+  @apply my-3 pl-6 list-decimal;
+}
+
+.legal-document p + ul,
+.legal-document p + ol {
+  @apply mt-2;
+}
+
+.legal-document li {
+  @apply mb-2;
+}
+
+.legal-document li > ul,
+.legal-document li > ol {
+  @apply mt-2 mb-0;
+}
+
+.legal-document strong {
+  @apply font-semibold text-gray-900 dark:text-gray-100;
+}
+
 /* Law reference styling */
 .law-reference {
   @apply font-medium text-sm px-1.5 py-0.5 rounded-md;
@@ -98,4 +132,55 @@
   @apply italic border-l-4 pl-4 py-1 my-3
     border-gray-300 dark:border-gray-600
     text-gray-600 dark:text-gray-300;
+}
+
+/* Issue section styling */
+.issue-section {
+  @apply rounded-lg border p-4 mb-4
+    bg-white/80 dark:bg-gray-800/80;
+}
+
+.critical-issue {
+  @apply border-red-200 dark:border-red-900/50;
+}
+
+.high-issue {
+  @apply border-orange-200 dark:border-orange-900/50;
+}
+
+.medium-issue {
+  @apply border-yellow-200 dark:border-yellow-900/50;
+}
+
+.low-issue {
+  @apply border-green-200 dark:border-green-900/50;
+}
+
+.issue-header {
+  @apply font-semibold text-base mb-2;
+}
+
+.issue-meta {
+  @apply text-sm text-gray-600 dark:text-gray-400 mb-2;
+}
+
+.issue-content {
+  @apply text-gray-800 dark:text-gray-200;
+}
+
+/* Recommendation styling */
+.recommendation-item {
+  @apply flex items-start gap-2 mb-2;
+}
+
+.recommendation-number {
+  @apply flex items-center justify-center rounded-full w-6 h-6 
+    bg-primary/10 text-primary font-medium text-sm flex-shrink-0;
+}
+
+/* Contract review summary box */
+.review-summary-box {
+  @apply bg-blue-50 dark:bg-blue-900/20 
+    p-4 my-4 rounded-lg 
+    border border-blue-200 dark:border-blue-800/50;
 }
