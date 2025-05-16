@@ -31,43 +31,6 @@ const CaseInfoFields = ({ control }: CaseInfoFieldsProps) => {
       
       <FormField
         control={control}
-        name="case_number"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>{isContractReview ? "Contract Type" : "Case Number"}</FormLabel>
-            <FormControl>
-              <Input 
-                placeholder={isContractReview ? "Employment, NDA, Lease, etc." : "CAS-12345"} 
-                {...field} 
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      
-      <FormField
-        control={control}
-        name="case_description"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>{isContractReview ? "Contract Description" : "Case Description"}</FormLabel>
-            <FormControl>
-              <Textarea 
-                placeholder={isContractReview 
-                  ? "Brief description of the contract..." 
-                  : "Brief description of the case..."} 
-                className="min-h-[80px]" 
-                {...field} 
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      
-      <FormField
-        control={control}
         name="referred_by"
         render={({ field }) => (
           <FormItem>

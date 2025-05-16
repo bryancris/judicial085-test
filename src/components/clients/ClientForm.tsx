@@ -42,8 +42,8 @@ const ClientForm = () => {
         city: data.city || null,
         state: data.state || null,
         zip_code: data.zip_code || null,
-        case_number: data.case_number || null,
-        case_description: data.case_description || null,
+        case_number: null, // Set to null since we removed the field
+        case_description: null, // Set to null since we removed the field
         case_types: data.case_types,
         referred_by: data.referred_by || null,
         case_notes: data.case_notes || null
@@ -67,9 +67,9 @@ const ClientForm = () => {
         const caseData = {
           client_id: newClient.id,
           case_title: `${data.first_name} ${data.last_name} - ${getCaseTypeLabel(caseType)}`,
-          case_number: data.case_number || null,
+          case_number: null, // Set to null since we removed the field
           case_type: caseType,
-          case_description: data.case_description || null,
+          case_description: null, // Set to null since we removed the field
           case_notes: data.case_notes || null,
           status: "active"
         };
@@ -128,7 +128,7 @@ const ClientForm = () => {
         </div>
         
         <div className="space-y-6">
-          <h3 className="text-lg font-medium">Case Information</h3>
+          <h3 className="text-lg font-medium">Case Types & Notes</h3>
           <CaseInfoFields control={form.control} />
         </div>
         
