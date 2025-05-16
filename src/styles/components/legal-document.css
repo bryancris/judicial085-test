@@ -1,0 +1,69 @@
+
+/* Legal document styling */
+.legal-document {
+  @apply prose prose-slate max-w-none 
+    prose-headings:font-semibold prose-headings:text-green-800 dark:prose-headings:text-green-300
+    prose-p:my-3 prose-p:leading-relaxed
+    prose-li:my-1;
+}
+
+.legal-document h3 {
+  @apply text-xl mt-6 mb-3 border-b pb-2 border-gray-200 dark:border-gray-700 font-bold;
+}
+
+.legal-document h4 {
+  @apply text-lg mt-4 mb-2 font-semibold;
+}
+
+.legal-document ul {
+  @apply my-3 pl-6 list-disc space-y-2;
+}
+
+.legal-document ol {
+  @apply my-3 pl-6 list-decimal space-y-2;
+}
+
+.legal-document p + ul,
+.legal-document p + ol {
+  @apply mt-2;
+}
+
+.legal-document li {
+  @apply mb-2;
+}
+
+.legal-document li > ul,
+.legal-document li > ol {
+  @apply mt-2 mb-0;
+}
+
+.legal-document strong {
+  @apply font-semibold text-gray-900 dark:text-gray-100;
+}
+
+/* Improved spacing for contract reviews */
+.legal-document h3 + p,
+.legal-document h3 + ul,
+.legal-document h3 + ol {
+  @apply mt-4;
+}
+
+.legal-document p + h3,
+.legal-document ul + h3,
+.legal-document ol + h3 {
+  @apply mt-8;
+}
+
+/* Better list styling for contract reviews */
+.legal-document li {
+  @apply mb-4 last:mb-0;
+}
+
+.legal-document li p {
+  @apply my-1;
+}
+
+/* Improved heading visibility */
+.legal-document h3 {
+  @apply bg-gray-50 dark:bg-gray-800/50 px-3 py-2 rounded-t-md;
+}

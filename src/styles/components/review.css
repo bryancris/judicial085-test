@@ -1,0 +1,17 @@
+
+/* Recommendation styling */
+.recommendation-item {
+  @apply flex items-start gap-2 mb-2;
+}
+
+.recommendation-number {
+  @apply flex items-center justify-center rounded-full w-6 h-6 
+    bg-primary/10 text-primary font-medium text-sm flex-shrink-0;
+}
+
+/* Contract review summary box */
+.review-summary-box {
+  @apply bg-blue-50 dark:bg-blue-900/20 
+    p-4 my-4 rounded-lg 
+    border border-blue-200 dark:border-blue-800/50;
+}

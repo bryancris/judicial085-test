@@ -1,0 +1,51 @@
+
+/* Severity markers */
+.severity-critical {
+  @apply text-red-600 dark:text-red-300 font-bold;
+}
+
+.severity-high {
+  @apply text-orange-600 dark:text-orange-300 font-semibold;
+}
+
+.severity-medium {
+  @apply text-yellow-600 dark:text-yellow-300 font-medium;
+}
+
+.severity-low {
+  @apply text-green-600 dark:text-green-300 font-normal;
+}
+
+/* Issue section styling */
+.issue-section {
+  @apply rounded-lg border p-4 mb-4
+    bg-white/80 dark:bg-gray-800/80;
+}
+
+.critical-issue {
+  @apply border-red-200 dark:border-red-900/50;
+}
+
+.high-issue {
+  @apply border-orange-200 dark:border-orange-900/50;
+}
+
+.medium-issue {
+  @apply border-yellow-200 dark:border-yellow-900/50;
+}
+
+.low-issue {
+  @apply border-green-200 dark:border-green-900/50;
+}
+
+.issue-header {
+  @apply font-semibold text-base mb-2;
+}
+
+.issue-meta {
+  @apply text-sm text-gray-600 dark:text-gray-400 mb-2;
+}
+
+.issue-content {
+  @apply text-gray-800 dark:text-gray-200;
+}

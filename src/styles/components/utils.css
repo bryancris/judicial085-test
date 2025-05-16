@@ -1,0 +1,5 @@
+
+/* Utility classes */
+.gold-text {
+  color: hsl(var(--brand-gold));
+}

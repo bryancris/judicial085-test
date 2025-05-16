@@ -1,0 +1,37 @@
+
+/* Legal analysis content styling */
+.legal-analysis-content {
+  @apply prose prose-slate max-w-none dark:prose-invert;
+}
+
+.legal-analysis-content h2, 
+.legal-analysis-content h3,
+.legal-analysis-content h4 {
+  @apply text-blue-800 dark:text-blue-300 font-semibold border-b border-gray-200 dark:border-gray-700 pb-2 mb-4;
+}
+
+.legal-analysis-content p {
+  @apply text-gray-800 dark:text-gray-100 my-3;
+}
+
+.legal-analysis-content ol {
+  @apply list-decimal pl-6 my-4;
+}
+
+.legal-analysis-content ul {
+  @apply list-disc pl-6 my-4;
+}
+
+.legal-analysis-content li {
+  @apply my-2 pl-2;
+}
+
+.legal-analysis-content strong {
+  @apply font-semibold text-gray-900 dark:text-gray-50;
+}
+
+/* Numbered items in legal analysis with better color contrast */
+.legal-analysis-content ol > li::marker,
+.legal-analysis-content ul > li::marker {
+  @apply text-blue-600 dark:text-blue-300 font-bold;
+}
