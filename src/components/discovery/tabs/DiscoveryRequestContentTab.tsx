@@ -18,7 +18,7 @@ const DiscoveryRequestContentTab: React.FC<DiscoveryRequestContentTabProps> = ({
   // Process content with markdown if it contains markdown formatting
   const processedContent = React.useMemo(() => {
     if (request.content.includes('#') || request.content.includes('-') || request.content.includes('*') || 
-        request.content.includes('\n\n')) {
+        request.content.includes('\n\n') || request.content.includes('1.')) {
       return processMarkdown(request.content);
     }
     return request.content;
@@ -31,9 +31,9 @@ const DiscoveryRequestContentTab: React.FC<DiscoveryRequestContentTabProps> = ({
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[calc(100vh-450px)] pr-4">
-          {processedContent.includes('<p>') || processedContent.includes('<h') ? (
+          {processedContent.includes('<p>') || processedContent.includes('<h') || processedContent.includes('<li>') ? (
             <div 
-              className="prose prose-sm max-w-none" 
+              className="prose prose-sm max-w-none dark:prose-invert legal-analysis-content" 
               dangerouslySetInnerHTML={{ __html: processedContent }}
             />
           ) : (

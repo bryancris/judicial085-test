@@ -11,11 +11,15 @@ export const processMarkdown = (text: string): string => {
     .replace(/## /g, '\n\n## ')  // Also ensure proper spacing for h2 headers
     .replace(/# /g, '\n\n# ');   // Also ensure proper spacing for h1 headers
 
+  // Process numbered lists to ensure proper rendering
+  const processedLists = preprocessedText
+    .replace(/(\d+\.\s+)/g, '\n$1'); // Add newline before numbered list items
+
   // Use marked to process markdown with enhanced options
   marked.setOptions({
     breaks: true,      // Add line breaks on single newlines
     gfm: true,         // Use GitHub Flavored Markdown
   });
   
-  return marked(preprocessedText) as string;
+  return marked(processedLists) as string;
 };

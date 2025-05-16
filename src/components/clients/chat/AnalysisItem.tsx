@@ -46,7 +46,7 @@ const AnalysisItem: React.FC<AnalysisItemProps> = ({ content, timestamp, onQuest
 
   return (
     <div className="mb-6 border-b pb-4 last:border-b-0">
-      <div className="prose prose-sm max-w-none">
+      <div className="legal-analysis-content prose prose-sm max-w-none dark:prose-invert">
         <div 
           ref={contentRef}
           dangerouslySetInnerHTML={{ 

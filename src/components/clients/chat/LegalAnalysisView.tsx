@@ -42,7 +42,7 @@ const LegalAnalysisView = ({ analysisItems, isLoading, error, onQuestionClick }:
       {analysisItems.length === 0 ? (
         <EmptyAnalysisState isLoading={isLoading} />
       ) : (
-        <div>
+        <div className="legal-analysis-container">
           {analysisItems.map((item, index) => (
             <AnalysisItem 
               key={index}
