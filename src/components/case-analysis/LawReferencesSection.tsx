@@ -11,14 +11,16 @@ interface LawReference {
   content?: string | null;
 }
 
-interface LawReferencesSectionProps {
+export interface LawReferencesSectionProps {
   references: LawReference[];
   isLoading?: boolean;
+  caseType?: string;
 }
 
 const LawReferencesSection: React.FC<LawReferencesSectionProps> = ({
   references,
-  isLoading = false
+  isLoading = false,
+  caseType
 }) => {
   if (!references || references.length === 0) {
     return null;

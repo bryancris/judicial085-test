@@ -5,16 +5,18 @@ import { Progress } from "@/components/ui/progress";
 import { ArrowUpIcon, ArrowDownIcon } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-interface CaseOutcomePredictionProps {
+export interface CaseOutcomePredictionProps {
   defense: number;
   prosecution: number;
   isLoading?: boolean;
+  caseType?: string;
 }
 
 const CaseOutcomePrediction: React.FC<CaseOutcomePredictionProps> = ({
   defense,
   prosecution,
-  isLoading = false
+  isLoading = false,
+  caseType
 }) => {
   return (
     <Card className="mb-6 shadow-sm">

@@ -6,11 +6,15 @@ import { useToast } from "@/hooks/use-toast";
 import SearchSimilarCasesButton from "./SearchSimilarCasesButton";
 import SimilarCasesDialog from "./SimilarCasesDialog";
 
-interface SearchSimilarCasesSectionProps {
+export interface SearchSimilarCasesSectionProps {
   clientId: string;
+  caseType?: string;
 }
 
-const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({ clientId }) => {
+const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({ 
+  clientId,
+  caseType
+}) => {
   const [isSearchingCases, setIsSearchingCases] = useState(false);
   const [similarCases, setSimilarCases] = useState<SimilarCase[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);

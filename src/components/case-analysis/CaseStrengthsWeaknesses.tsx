@@ -3,16 +3,18 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShieldCheckIcon, ShieldAlertIcon } from "lucide-react";
 
-interface CaseStrengthsWeaknessesProps {
+export interface CaseStrengthsWeaknessesProps {
   strengths: string[];
   weaknesses: string[];
   isLoading?: boolean;
+  caseType?: string;
 }
 
 const CaseStrengthsWeaknesses: React.FC<CaseStrengthsWeaknessesProps> = ({
   strengths,
   weaknesses,
-  isLoading = false
+  isLoading = false,
+  caseType
 }) => {
   return (
     <Card className="mb-6 shadow-sm">
