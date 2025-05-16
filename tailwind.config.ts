@@ -131,8 +131,110 @@ export default {
 				'fade-in': 'fade-in 0.8s ease-out forwards',
 				'float': 'float 20s infinite ease-in-out',
 				'gradient': 'gradient 15s ease infinite'
+			},
+			typography: {
+				DEFAULT: {
+					css: {
+						color: 'var(--tw-prose-body)',
+						maxWidth: '100%',
+						'h1, h2, h3, h4, h5, h6': {
+							color: 'var(--tw-prose-headings)',
+							fontWeight: '600',
+							marginTop: '1.5em',
+							marginBottom: '0.75em'
+						},
+						'h1': {
+							fontSize: '2rem',
+							lineHeight: '2.5rem'
+						},
+						'h2': {
+							fontSize: '1.5rem',
+							lineHeight: '2rem'
+						},
+						'h3': {
+							fontSize: '1.25rem',
+							lineHeight: '1.75rem'
+						},
+						'p': {
+							marginTop: '1em',
+							marginBottom: '1em'
+						},
+						'ul': {
+							marginTop: '1em',
+							marginBottom: '1em'
+						},
+						'li': {
+							marginTop: '0.25em',
+							marginBottom: '0.25em'
+						},
+						'strong': {
+							fontWeight: '600',
+							color: 'var(--tw-prose-bold)'
+						},
+						'blockquote': {
+							fontStyle: 'italic',
+							borderLeftWidth: '0.25rem',
+							borderLeftColor: 'var(--tw-prose-quote-borders)',
+							paddingLeft: '1em',
+							marginTop: '1.5em',
+							marginBottom: '1.5em'
+						},
+						'.law-reference': {
+							fontWeight: '500',
+							padding: '0.125rem 0.25rem',
+							borderRadius: '0.25rem',
+							backgroundColor: 'rgba(0, 128, 96, 0.1)',
+							border: '1px solid rgba(0, 128, 96, 0.2)'
+						},
+						'.law-reference.statute': {
+							backgroundColor: 'rgba(16, 185, 129, 0.1)', 
+							borderColor: 'rgba(16, 185, 129, 0.3)'
+						},
+						'.law-reference.case': {
+							backgroundColor: 'rgba(59, 130, 246, 0.1)',
+							borderColor: 'rgba(59, 130, 246, 0.3)'
+						}
+					}
+				},
+				lg: {
+					css: {
+						'h1': {
+							fontSize: '2.25rem',
+							lineHeight: '2.5rem'
+						},
+						'h2': {
+							fontSize: '1.75rem',
+							lineHeight: '2.25rem'
+						},
+						'h3': {
+							fontSize: '1.5rem',
+							lineHeight: '2rem'
+						}
+					}
+				},
+				sm: {
+					css: {
+						fontSize: '0.875rem',
+						lineHeight: '1.5rem',
+						'h1': {
+							fontSize: '1.5rem',
+							lineHeight: '2rem'
+						},
+						'h2': {
+							fontSize: '1.25rem',
+							lineHeight: '1.75rem'
+						},
+						'h3': {
+							fontSize: '1.125rem',
+							lineHeight: '1.75rem'
+						}
+					}
+				}
 			}
 		}
 	},
-	plugins: [require("tailwindcss-animate")],
+	plugins: [
+		require("tailwindcss-animate"),
+		require("@tailwindcss/typography")
+	],
 } satisfies Config;
