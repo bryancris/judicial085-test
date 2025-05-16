@@ -25,10 +25,25 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     return 'light';
   });
+  
+  // Add a class to control transitions when theme changes
+  const enableTransition = () => {
+    const root = window.document.documentElement;
+    root.classList.add('transition-colors');
+    root.style.setProperty('--transition-speed', '0.3s');
+  };
+
+  const disableTransition = () => {
+    const root = window.document.documentElement;
+    root.style.setProperty('--transition-speed', '0s');
+  };
 
   // Update theme when it changes
   useEffect(() => {
     const root = window.document.documentElement;
+    
+    // Enable transition before changing theme
+    enableTransition();
     
     if (theme === 'dark') {
       root.classList.add('dark');

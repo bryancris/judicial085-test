@@ -10,10 +10,10 @@ const FeatureCard: React.FC<{ title: string; description: string; icon: React.Re
   icon 
 }) => {
   return (
-    <Card className="card-highlight text-white p-4 flex flex-col items-start">
+    <Card className="dark-card text-foreground p-4 flex flex-col items-start">
       <div className="mb-2">{icon}</div>
       <h3 className="text-lg font-semibold mb-1">{title}</h3>
-      <p className="text-sm text-gray-300">{description}</p>
+      <p className="text-sm text-gray-600 dark:text-gray-300">{description}</p>
     </Card>
   );
 };
@@ -30,7 +30,7 @@ const HeroSection: React.FC = () => {
       <div className="container mx-auto px-4 py-16 relative z-10">
         <div className="grid md:grid-cols-2 gap-16 items-center">
           <div className="space-y-6 max-w-xl">
-            <div className="inline-block bg-gray-800 bg-opacity-50 px-3 py-1 rounded-full text-sm mb-4">
+            <div className="inline-block bg-gray-800/70 backdrop-blur-sm px-3 py-1 rounded-full text-sm mb-4">
               Built for Texas Attorneys
             </div>
             
@@ -48,7 +48,7 @@ const HeroSection: React.FC = () => {
                 Start Free Trial
                 <ArrowRight className="h-4 w-4" />
               </Button>
-              <Button variant="outline" className="bg-transparent border-gray-600 hover:bg-white/10 text-white hover-scale">
+              <Button variant="outline" className="bg-transparent border-gray-400 hover:bg-white/10 text-white hover-scale">
                 Book a Demo
               </Button>
             </div>

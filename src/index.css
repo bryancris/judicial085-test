@@ -72,14 +72,14 @@
     --input: 217.2 32.6% 25%;
     --ring: 212.7 26.8% 83.9%;
 
-    --brand-blue: 220 33% 35%;
+    --brand-blue: 220 33% 45%;
     --brand-gold: 41 85% 60%;
     --brand-burgundy: 354 69% 45%;
     --brand-light-grey: 220 14% 30%;
   }
 
   *, ::before, ::after {
-    @apply transition-colors duration-200;
+    @apply transition-colors duration-300;
   }
 
   body {
@@ -108,7 +108,7 @@ body {
   width: 100%;
   height: 100%;
   background: linear-gradient(-45deg, 
-    hsl(var(--brand-blue)), 
+    hsl(var(--brand-burgundy)), 
     hsl(220, 33%, 25%), 
     hsl(var(--brand-burgundy)), 
     hsl(220, 33%, 30%));
@@ -337,7 +337,7 @@ body {
 /* Glass card effect for both light and dark mode */
 .card-highlight {
   @apply border border-gray-200/30 dark:border-white/10 
-    bg-white/90 dark:bg-gray-800/50 
+    bg-white/90 dark:bg-gray-800/60 
     backdrop-filter backdrop-blur-lg
     shadow-lg dark:shadow-lg
     dark:shadow-gray-900/30
@@ -351,9 +351,17 @@ body {
 }
 
 .glass-card {
-  @apply bg-white/80 dark:bg-gray-800/50 
+  @apply bg-white/80 dark:bg-gray-800/70 
     backdrop-blur-md border border-gray-200/50 
-    dark:border-white/10 shadow-lg rounded-xl;
+    dark:border-white/20 shadow-lg rounded-xl;
+}
+
+.dark-card {
+  @apply bg-white/90 dark:bg-gray-800/90 
+    backdrop-blur-md border border-gray-200/50 
+    dark:border-gray-700/50 dark:hover:border-gray-600
+    shadow-md hover:shadow-lg rounded-xl
+    transition-all duration-300;
 }
 
 /* Dark mode specific styles */
@@ -362,7 +370,7 @@ body {
 }
 
 .dark .bg-gray-50 {
-  @apply bg-gray-900/70;
+  @apply bg-gray-800/70;
 }
 
 .dark .bg-gray-100 {
