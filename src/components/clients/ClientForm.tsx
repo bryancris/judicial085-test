@@ -42,9 +42,9 @@ const ClientForm = () => {
         city: data.city || null,
         state: data.state || null,
         zip_code: data.zip_code || null,
-        case_number: null, // Set to null since we removed the field
-        case_description: null, // Set to null since we removed the field
-        case_types: data.case_types,
+        case_number: null,
+        case_description: null,
+        case_types: [], // Empty array since we removed case types
         referred_by: data.referred_by || null,
         case_notes: data.case_notes || null
       };
@@ -58,18 +58,15 @@ const ClientForm = () => {
       
       if (error) throw error;
       
-      // Create a case if client was successfully created
-      if (newClient && data.case_types.length > 0) {
-        // Determine the case type from the first selected type
-        const caseType = data.case_types[0];
-        
-        // Create the case data
+      // Create a default case if client was successfully created
+      if (newClient) {
+        // Create a simple case with the client's name
         const caseData = {
           client_id: newClient.id,
-          case_title: `${data.first_name} ${data.last_name} - ${getCaseTypeLabel(caseType)}`,
-          case_number: null, // Set to null since we removed the field
-          case_type: caseType,
-          case_description: null, // Set to null since we removed the field
+          case_title: `${data.first_name} ${data.last_name} - General`,
+          case_number: null,
+          case_type: "general",
+          case_description: null,
           case_notes: data.case_notes || null,
           status: "active"
         };
@@ -96,24 +93,6 @@ const ClientForm = () => {
     }
   }
 
-  // Helper function to get a readable label for the case type
-  function getCaseTypeLabel(caseTypeId: string): string {
-    const caseTypeMap: Record<string, string> = {
-      "family": "Family Law",
-      "criminal": "Criminal Defense",
-      "immigration": "Immigration",
-      "personal_injury": "Personal Injury",
-      "estate": "Estate Planning",
-      "business": "Business Law",
-      "real_estate": "Real Estate",
-      "intellectual_property": "Intellectual Property",
-      "employment": "Employment",
-      "contract_review": "Contract Review"
-    };
-    
-    return caseTypeMap[caseTypeId] || "Case";
-  }
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -128,7 +107,7 @@ const ClientForm = () => {
         </div>
         
         <div className="space-y-6">
-          <h3 className="text-lg font-medium">Case Types & Notes</h3>
+          <h3 className="text-lg font-medium">Notes</h3>
           <CaseInfoFields control={form.control} />
         </div>
         

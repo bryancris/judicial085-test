@@ -12,7 +12,6 @@ export const clientSchema = z.object({
   zip_code: z.string().optional(),
   case_number: z.string().optional(),
   case_description: z.string().optional(),
-  case_types: z.array(z.string()).default([]),
   referred_by: z.string().optional(),
   case_notes: z.string().optional(),
 });
@@ -30,7 +29,6 @@ export const defaultValues: ClientFormValues = {
   zip_code: "",
   case_number: "",
   case_description: "",
-  case_types: [],
   referred_by: "",
   case_notes: "",
 };
