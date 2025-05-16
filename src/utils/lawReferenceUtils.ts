@@ -1,3 +1,4 @@
+
 import { marked } from 'marked';
 
 // Process Texas law references in a text, adding links and highlights
@@ -68,7 +69,6 @@ export const processMarkdown = (text: string): string => {
   marked.setOptions({
     breaks: true,            // Add line breaks on single newlines
     gfm: true,               // Use GitHub Flavored Markdown
-    smartLists: true,        // Use smarter list behavior
   });
   
   // Use marked to process markdown

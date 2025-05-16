@@ -9,7 +9,6 @@ export const processMarkdown = (text: string): string => {
   marked.setOptions({
     breaks: true,      // Add line breaks on single newlines
     gfm: true,         // Use GitHub Flavored Markdown
-    smartLists: true   // Use smarter list behavior
   });
   
   return marked(text) as string;
