@@ -66,10 +66,10 @@ export const processMarkdown = (text: string): string => {
   if (!text) return '';
   
   // Configure marked options to enhance rendering
+  // Fix: Remove 'headerIds' property which doesn't exist in MarkedOptions type
   marked.setOptions({
     breaks: true,            // Add line breaks on single newlines
     gfm: true,               // Use GitHub Flavored Markdown
-    headerIds: true,         // Generate IDs for headings
     mangle: false,           // Don't escape HTML
     smartLists: true,        // Use smarter list behavior
   });
