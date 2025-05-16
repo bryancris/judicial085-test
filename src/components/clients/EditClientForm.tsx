@@ -37,7 +37,7 @@ const EditClientForm = ({ client, onSuccess, onCancel }: EditClientFormProps) =>
       case_number: client.case_number || "",
       case_description: client.case_description || "",
       referred_by: client.referred_by || "",
-      case_notes: client.case_notes || "",
+      notes: client.case_notes || "",
     }
   });
 

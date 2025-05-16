@@ -6,6 +6,7 @@ import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import { clientSchema, ClientFormValues, defaultValues } from "./ClientFormSchema";
 import PersonalInfoFields from "./PersonalInfoFields";
 import AddressFields from "./AddressFields";
@@ -14,6 +15,7 @@ import { useClientCases } from "@/hooks/useClientCases";
 
 const ClientForm = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { createCase } = useClientCases();
 
@@ -73,6 +75,9 @@ const ClientForm = () => {
         
         // Create the case
         await createCase(caseData);
+        
+        // Navigate to the newly created client's page
+        navigate(`/clients/${newClient.id}`);
       }
       
       toast({
@@ -80,7 +85,6 @@ const ClientForm = () => {
         description: `${data.first_name} ${data.last_name} has been added to your client list.`,
       });
       
-      form.reset();
     } catch (error: any) {
       console.error("Error adding client:", error);
       toast({
