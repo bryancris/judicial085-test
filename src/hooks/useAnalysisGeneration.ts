@@ -52,6 +52,17 @@ export const useAnalysisGeneration = (clientId?: string, onSuccess?: () => void)
       if (analysisError) throw new Error(analysisError);
       
       if (analysis) {
+        // First delete any existing analyses for this client
+        const { error: deleteError } = await supabase
+          .from("legal_analyses")
+          .delete()
+          .eq("client_id", clientId);
+          
+        if (deleteError) {
+          console.error("Error deleting previous analyses:", deleteError);
+          // Continue with the insert even if delete fails
+        }
+
         // Save the new analysis to the database
         const timestamp = new Date().toISOString();
         const { error: saveError } = await supabase
@@ -68,7 +79,7 @@ export const useAnalysisGeneration = (clientId?: string, onSuccess?: () => void)
         
         toast({
           title: "Analysis Generated",
-          description: "A new case analysis has been generated successfully.",
+          description: "A new case analysis has been generated successfully and replaced the previous one.",
         });
         
         // Call the success callback (which should refresh the data)
