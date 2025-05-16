@@ -1,4 +1,3 @@
-
 import React from "react";
 import { ContractReviewMessage } from "@/utils/contractReviewService";
 import { cn } from "@/lib/utils";
@@ -21,6 +20,15 @@ const ContractReviewMessageContent: React.FC<ContractReviewMessageContentProps> 
     // If content already contains HTML style tags (from validation), keep it as is
     if (content.includes('<style>')) {
       return content;
+    }
+    
+    // Ensure proper paragraph spacing for contract reviews
+    if (message.role === "ai" && content.includes('CONTRACT REVIEW SUMMARY')) {
+      // Ensure headers have proper spacing
+      content = content
+        .replace(/###\s+([^\n]+)/g, '\n\n### $1\n')  // Add space before and after headers
+        .replace(/- \*\*([^*]+)\*\*/g, '\n- **$1**')  // Ensure list items with bold headers have proper spacing
+        .replace(/\n\s*\n/g, '\n\n');                // Normalize line breaks
     }
     
     // Format severity levels for better visibility
@@ -67,6 +75,12 @@ const ContractReviewMessageContent: React.FC<ContractReviewMessageContentProps> 
       '</div><h3>CRITICAL ISSUES</h3>'
     );
     
+    // Ensure proper spacing between sections
+    enhanced = enhanced.replace(
+      /<h3/g, 
+      '<div class="mt-6"></div><h3'
+    );
+    
     return enhanced;
   }, [message.role, processedContent]);
 
@@ -87,12 +101,12 @@ const ContractReviewMessageContent: React.FC<ContractReviewMessageContentProps> 
           className={cn(
             "prose prose-sm md:prose max-w-none dark:prose-invert",
             "prose-headings:font-semibold prose-headings:text-slate-800 dark:prose-headings:text-slate-100",
-            "prose-h3:text-lg prose-h3:mt-4 prose-h3:mb-2 prose-h3:border-b prose-h3:pb-1 prose-h3:border-gray-200 dark:prose-h3:border-gray-700",
-            "prose-h4:text-base prose-h4:mt-3 prose-h4:mb-1.5 prose-h4:font-medium",
-            "prose-p:my-2 prose-p:leading-relaxed",
-            "prose-ul:my-2 prose-ul:pl-6",
-            "prose-ol:my-2 prose-ol:pl-6",
-            "prose-li:my-1",
+            "prose-h3:text-lg prose-h3:mt-6 prose-h3:mb-3 prose-h3:border-b prose-h3:pb-2 prose-h3:border-gray-200 dark:prose-h3:border-gray-700",
+            "prose-h4:text-base prose-h4:mt-4 prose-h4:mb-2 prose-h4:font-medium",
+            "prose-p:my-3 prose-p:leading-relaxed",
+            "prose-ul:my-3 prose-ul:pl-6",
+            "prose-ol:my-3 prose-ol:pl-6",
+            "prose-li:my-2",
             "prose-strong:font-semibold prose-strong:text-slate-900 dark:prose-strong:text-slate-50",
             isAttorney ? "prose-a:text-green-700 dark:prose-a:text-green-300" : "prose-a:text-blue-700 dark:prose-a:text-blue-300",
             message.role === "ai" && message.content.includes('CONTRACT REVIEW') ? "legal-document" : ""
@@ -101,30 +115,28 @@ const ContractReviewMessageContent: React.FC<ContractReviewMessageContentProps> 
         />
         
         {/* Display severity summary for AI responses if available */}
-        {!isAttorney && severityCounts && (
-          severityCounts.CRITICAL > 0 || severityCounts.HIGH > 0 || severityCounts.MEDIUM > 0
-        ) && (
+        {!isAttorney && message.role === "ai" && message.content.includes('CONTRACT REVIEW') && extractSeverityLevels(message.content) && (
           <div className="mt-4 pt-3 border-t border-blue-200 dark:border-blue-700/50">
             <p className="text-xs font-medium mb-2">Issues detected:</p>
             <div className="flex flex-wrap gap-2">
-              {severityCounts.CRITICAL > 0 && (
+              {extractSeverityLevels(message.content).CRITICAL > 0 && (
                 <span className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200">
-                  {severityCounts.CRITICAL} Critical
+                  {extractSeverityLevels(message.content).CRITICAL} Critical
                 </span>
               )}
-              {severityCounts.HIGH > 0 && (
+              {extractSeverityLevels(message.content).HIGH > 0 && (
                 <span className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-200">
-                  {severityCounts.HIGH} High
+                  {extractSeverityLevels(message.content).HIGH} High
                 </span>
               )}
-              {severityCounts.MEDIUM > 0 && (
+              {extractSeverityLevels(message.content).MEDIUM > 0 && (
                 <span className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-200">
-                  {severityCounts.MEDIUM} Medium
+                  {extractSeverityLevels(message.content).MEDIUM} Medium
                 </span>
               )}
-              {severityCounts.LOW > 0 && (
+              {extractSeverityLevels(message.content).LOW > 0 && (
                 <span className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200">
-                  {severityCounts.LOW} Low
+                  {extractSeverityLevels(message.content).LOW} Low
                 </span>
               )}
             </div>
@@ -132,18 +144,18 @@ const ContractReviewMessageContent: React.FC<ContractReviewMessageContentProps> 
         )}
         
         {/* Display Texas law references for AI responses if available */}
-        {!isAttorney && lawReferences && lawReferences.length > 0 && (
+        {!isAttorney && message.role === "ai" && extractLawReferences(message.content)?.length > 0 && (
           <div className="mt-4 pt-3 border-t border-blue-200 dark:border-blue-700/50">
             <p className="text-xs font-medium mb-2">Texas law references:</p>
             <div className="flex flex-wrap gap-1">
-              {lawReferences.slice(0, 3).map((reference, index) => (
+              {extractLawReferences(message.content).slice(0, 3).map((reference, index) => (
                 <span key={index} className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">
                   {reference}
                 </span>
               ))}
-              {lawReferences.length > 3 && (
+              {extractLawReferences(message.content).length > 3 && (
                 <span className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">
-                  +{lawReferences.length - 3} more
+                  +{extractLawReferences(message.content).length - 3} more
                 </span>
               )}
             </div>
