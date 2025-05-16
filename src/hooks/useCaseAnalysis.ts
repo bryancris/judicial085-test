@@ -45,7 +45,7 @@ export const useCaseAnalysis = (clientId: string) => {
     try {
       const { data, error } = await supabase
         .from("legal_analyses")
-        .select("content, law_references")
+        .select("content, law_references, case_type")
         .eq("client_id", clientId)
         .order("created_at", { ascending: false })
         .limit(1);
@@ -74,8 +74,8 @@ export const useCaseAnalysis = (clientId: string) => {
           }
         }
 
-        // Detect case type from content since it's not stored in the database
-        const caseType = detectCaseType(content);
+        // Get case type from database or detect from content if not available
+        const caseType = analysis.case_type || detectCaseType(content);
 
         // Extract analysis sections using the enhanced utils
         const { 

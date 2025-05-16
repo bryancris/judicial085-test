@@ -532,6 +532,7 @@ export type Database = {
       legal_analyses: {
         Row: {
           case_id: string | null
+          case_type: string | null
           client_id: string
           content: string
           created_at: string
@@ -543,6 +544,7 @@ export type Database = {
         }
         Insert: {
           case_id?: string | null
+          case_type?: string | null
           client_id: string
           content: string
           created_at?: string
@@ -554,6 +556,7 @@ export type Database = {
         }
         Update: {
           case_id?: string | null
+          case_type?: string | null
           client_id?: string
           content?: string
           created_at?: string
