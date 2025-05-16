@@ -17,7 +17,8 @@ interface DiscoveryRequestContentTabProps {
 const DiscoveryRequestContentTab: React.FC<DiscoveryRequestContentTabProps> = ({ request }) => {
   // Process content with markdown if it contains markdown formatting
   const processedContent = React.useMemo(() => {
-    if (request.content.includes('#') || request.content.includes('-') || request.content.includes('*')) {
+    if (request.content.includes('#') || request.content.includes('-') || request.content.includes('*') || 
+        request.content.includes('\n\n')) {
       return processMarkdown(request.content);
     }
     return request.content;

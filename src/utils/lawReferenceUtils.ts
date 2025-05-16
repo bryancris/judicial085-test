@@ -1,3 +1,4 @@
+
 import { marked } from 'marked';
 
 // Process Texas law references in a text, adding links and highlights
@@ -67,13 +68,14 @@ export const processMarkdown = (text: string): string => {
   // Preprocess text to preserve paragraph structure
   const preprocessedText = text
     .replace(/\n\s*\n/g, '\n\n')  // Normalize multiple line breaks
-    .replace(/### /g, '\n\n### '); // Ensure headers have proper spacing
+    .replace(/### /g, '\n\n### ')  // Ensure headers have proper spacing
+    .replace(/## /g, '\n\n## ')    // Also ensure proper spacing for h2 headers
+    .replace(/# /g, '\n\n# ');     // Also ensure proper spacing for h1 headers
 
   // Configure marked options to enhance rendering
   marked.setOptions({
     breaks: true,            // Add line breaks on single newlines
     gfm: true,               // Use GitHub Flavored Markdown
-    headerIds: true,         // Generate header IDs for linking
   });
   
   // Use marked to process markdown
