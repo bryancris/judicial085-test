@@ -1,3 +1,4 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
@@ -43,42 +44,46 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 222 47% 11%;
     --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
+    --card: 222 47% 14%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 210 40% 98%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
-    --secondary: 217.2 32.6% 17.5%;
+    --secondary: 217.2 32.6% 22%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 217.2 32.6% 22%;
+    --muted-foreground: 215 20.2% 75%;
 
-    --accent: 217.2 32.6% 17.5%;
+    --accent: 217.2 32.6% 22%;
     --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 62.8% 40%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
+    --border: 217.2 32.6% 25%;
+    --input: 217.2 32.6% 25%;
     --ring: 212.7 26.8% 83.9%;
 
-    --brand-blue: 220 33% 25%;
-    --brand-gold: 41 85% 53%;
-    --brand-burgundy: 354 69% 40%;
-    --brand-light-grey: 220 14% 20%;
+    --brand-blue: 220 33% 35%;
+    --brand-gold: 41 85% 60%;
+    --brand-burgundy: 354 69% 45%;
+    --brand-light-grey: 220 14% 30%;
+  }
+
+  *, ::before, ::after {
+    @apply transition-colors duration-200;
   }
 
   body {
-    @apply bg-white dark:bg-gray-900 font-inter text-slate-900 dark:text-slate-200;
+    @apply bg-background text-foreground font-inter;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -103,9 +108,9 @@ body {
   width: 100%;
   height: 100%;
   background: linear-gradient(-45deg, 
-    hsl(220, 33%, 19%), 
+    hsl(var(--brand-blue)), 
     hsl(220, 33%, 25%), 
-    hsl(354, 69%, 31%), 
+    hsl(var(--brand-burgundy)), 
     hsl(220, 33%, 30%));
   background-size: 400% 400%;
   animation: gradient 15s ease infinite;
@@ -326,21 +331,66 @@ body {
 }
 
 .gold-text {
-  color: hsl(41, 85%, 53%);
+  color: hsl(var(--brand-gold));
 }
 
+/* Glass card effect for both light and dark mode */
 .card-highlight {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background-color: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  border-radius: 12px;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  @apply border border-gray-200/30 dark:border-white/10 
+    bg-white/90 dark:bg-gray-800/50 
+    backdrop-filter backdrop-blur-lg
+    shadow-lg dark:shadow-lg
+    dark:shadow-gray-900/30
+    rounded-xl transition-all duration-300;
 }
 
 .card-highlight:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  @apply transform -translate-y-1 
+    shadow-xl dark:shadow-xl 
+    dark:shadow-gray-900/40;
+}
+
+.glass-card {
+  @apply bg-white/80 dark:bg-gray-800/50 
+    backdrop-blur-md border border-gray-200/50 
+    dark:border-white/10 shadow-lg rounded-xl;
+}
+
+/* Dark mode specific styles */
+.dark .bg-white {
+  @apply bg-gray-800;
+}
+
+.dark .bg-gray-50 {
+  @apply bg-gray-900/70;
+}
+
+.dark .bg-gray-100 {
+  @apply bg-gray-800;
+}
+
+.dark .bg-gray-200 {
+  @apply bg-gray-700;
+}
+
+.dark .text-gray-600 {
+  @apply text-gray-300;
+}
+
+.dark .text-gray-700 {
+  @apply text-gray-200;
+}
+
+.dark .text-gray-900 {
+  @apply text-gray-50;
+}
+
+.dark .border-gray-200 {
+  @apply border-gray-700;
+}
+
+.dark .border-gray-300 {
+  @apply border-gray-600;
 }
 
 @media (prefers-reduced-motion: reduce) {
