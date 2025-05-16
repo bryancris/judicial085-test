@@ -1,4 +1,3 @@
-
 import { marked } from 'marked';
 
 // Process Texas law references in a text, adding links and highlights
@@ -66,11 +65,9 @@ export const processMarkdown = (text: string): string => {
   if (!text) return '';
   
   // Configure marked options to enhance rendering
-  // Fix: Remove 'headerIds' property which doesn't exist in MarkedOptions type
   marked.setOptions({
     breaks: true,            // Add line breaks on single newlines
     gfm: true,               // Use GitHub Flavored Markdown
-    mangle: false,           // Don't escape HTML
     smartLists: true,        // Use smarter list behavior
   });
   
