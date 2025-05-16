@@ -28,13 +28,13 @@ const CaseInfoFields = ({ control }: CaseInfoFieldsProps) => {
       
       <FormField
         control={control}
-        name="case_notes"
+        name="notes"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Case Notes</FormLabel>
+            <FormLabel>Notes</FormLabel>
             <FormControl>
               <Textarea 
-                placeholder="Enter any additional notes about the case here..." 
+                placeholder="Enter any additional notes here..." 
                 className="min-h-[120px]" 
                 {...field} 
               />

@@ -13,7 +13,7 @@ export const clientSchema = z.object({
   case_number: z.string().optional(),
   case_description: z.string().optional(),
   referred_by: z.string().optional(),
-  case_notes: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 export type ClientFormValues = z.infer<typeof clientSchema>;
@@ -30,5 +30,5 @@ export const defaultValues: ClientFormValues = {
   case_number: "",
   case_description: "",
   referred_by: "",
-  case_notes: "",
+  notes: "",
 };

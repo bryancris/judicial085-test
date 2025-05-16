@@ -46,7 +46,7 @@ const ClientForm = () => {
         case_description: null,
         case_types: [], // Empty array since we removed case types
         referred_by: data.referred_by || null,
-        case_notes: data.case_notes || null
+        case_notes: data.notes || null
       };
       
       // Insert the client and get the returned client data with the generated ID
@@ -67,7 +67,7 @@ const ClientForm = () => {
           case_number: null,
           case_type: "general",
           case_description: null,
-          case_notes: data.case_notes || null,
+          case_notes: data.notes || null,
           status: "active"
         };
         

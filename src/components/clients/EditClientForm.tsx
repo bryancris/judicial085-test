@@ -36,7 +36,6 @@ const EditClientForm = ({ client, onSuccess, onCancel }: EditClientFormProps) =>
       zip_code: client.zip_code || "",
       case_number: client.case_number || "",
       case_description: client.case_description || "",
-      case_types: client.case_types || [],
       referred_by: client.referred_by || "",
       case_notes: client.case_notes || "",
     }
@@ -65,9 +64,8 @@ const EditClientForm = ({ client, onSuccess, onCancel }: EditClientFormProps) =>
           zip_code: data.zip_code || null,
           case_number: data.case_number || null,
           case_description: data.case_description || null,
-          case_types: data.case_types,
           referred_by: data.referred_by || null,
-          case_notes: data.case_notes || null
+          case_notes: data.notes || null
         })
         .eq('id', client.id);
       
@@ -105,7 +103,7 @@ const EditClientForm = ({ client, onSuccess, onCancel }: EditClientFormProps) =>
         </div>
         
         <div className="space-y-6">
-          <h3 className="text-lg font-medium">Case Information</h3>
+          <h3 className="text-lg font-medium">Notes</h3>
           <CaseInfoFields control={form.control} />
         </div>
         
