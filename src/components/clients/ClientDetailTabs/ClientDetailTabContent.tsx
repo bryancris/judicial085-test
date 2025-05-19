@@ -12,6 +12,8 @@ import ClientDocumentsSection from "@/components/case-analysis/documents/ClientD
 import { Client } from "@/types/client";
 import FaqTabContent from "./FaqTabContent";
 import { useClientChatHistory } from "@/hooks/useClientChatHistory";
+import SearchSimilarCasesSection from "@/components/case-analysis/SearchSimilarCasesSection";
+import "@/styles/components/legal-analysis.css"; // Import the CSS for legal analysis
 
 interface ClientDetailTabContentProps {
   client: Client;
@@ -38,11 +40,21 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({ client 
       </TabsContent>
       
       <TabsContent value="analysis">
-        <LegalAnalysisView 
-          analysisItems={legalAnalysis}
-          isLoading={isLoadingHistory}
-          clientId={client.id}
-        />
+        <Card>
+          <CardContent className="p-6">
+            <LegalAnalysisView 
+              analysisItems={legalAnalysis}
+              isLoading={isLoadingHistory}
+              clientId={client.id}
+            />
+            
+            {/* Add back the search similar cases section */}
+            <SearchSimilarCasesSection 
+              clientId={client.id}
+              caseType={client.case_type}
+            />
+          </CardContent>
+        </Card>
       </TabsContent>
       
       <TabsContent value="discovery">
