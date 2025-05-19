@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { TabsContent } from "@/components/ui/tabs";
 import ClientIntakeChat from "../chat/ClientIntakeChat";
 import LegalAnalysisView from "../chat/LegalAnalysisView";
@@ -11,6 +11,7 @@ import { useClientDocuments } from "@/hooks/useClientDocuments";
 import ClientDocumentsSection from "@/components/case-analysis/documents/ClientDocumentsSection";
 import { Client } from "@/types/client";
 import FaqTabContent from "./FaqTabContent";
+import { useClientChatHistory } from "@/hooks/useClientChatHistory";
 
 interface ClientDetailTabContentProps {
   client: Client;
@@ -27,6 +28,9 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({ client 
   
   const clientName = `${client.first_name} ${client.last_name}`;
   
+  // Load legal analysis for the analysis tab
+  const { legalAnalysis, isLoadingHistory } = useClientChatHistory(client.id);
+  
   return (
     <>
       <TabsContent value="client-intake">
@@ -35,8 +39,8 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({ client 
       
       <TabsContent value="analysis">
         <LegalAnalysisView 
-          analysisItems={[]}  /* This component needs different props than what's passed */
-          isLoading={false}
+          analysisItems={legalAnalysis}
+          isLoading={isLoadingHistory}
           clientId={client.id}
         />
       </TabsContent>
