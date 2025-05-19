@@ -1,135 +1,110 @@
 
-import React from 'react';
-import { FileText, Calendar, ExternalLink, AlertCircle } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DocumentWithContent, DocumentContent } from '@/types/knowledge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FileText, Book, ChevronDown, ChevronUp } from "lucide-react";
+import { DocumentWithContent } from "@/types/knowledge";
+import { Button } from "../ui/button";
+import { cn } from "@/lib/utils";
 
 interface DocumentCardProps {
   document: DocumentWithContent;
+  searchTerm?: string;
+  onSelect?: (document: DocumentWithContent) => void;
+  clientSpecific?: boolean;
 }
 
-// Format date for display
-const formatDate = (dateString: string | null) => {
-  if (!dateString) return 'Unknown date';
-  
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'short', 
-    day: 'numeric' 
-  });
-};
+const DocumentCard: React.FC<DocumentCardProps> = ({
+  document,
+  searchTerm = "",
+  onSelect,
+  clientSpecific = false
+}) => {
+  const [expanded, setExpanded] = useState(false);
 
-// Extract page number from metadata if available
-const getPageNumber = (content: DocumentContent) => {
-  if (content.metadata?.location?.page) {
-    return content.metadata.location.page;
-  }
-  return 'N/A';
-};
+  // Get the first few contents or all if expanded
+  const visibleContents = expanded
+    ? document.contents
+    : document.contents.slice(0, 1);
 
-const DocumentCard: React.FC<DocumentCardProps> = ({ document }) => {
-  // Check if this document had an error during content fetching
-  const hasError = 'fetchError' in document && document.fetchError;
-  // Get title or use fallback
-  const title = document.title || "Untitled Document";
+  // Helper function to highlight search term
+  const highlightText = (text: string, term: string) => {
+    if (!term) return text;
+    
+    const parts = text.split(new RegExp(`(${term})`, 'gi'));
+    return parts.map((part, i) => 
+      part.toLowerCase() === term.toLowerCase() 
+        ? <mark key={i} className="bg-yellow-200 text-gray-900">{part}</mark> 
+        : part
+    );
+  };
+
+  // Helper function to get a preview of the document content
+  const getContentPreview = (content: string) => {
+    const MAX_LENGTH = 150;
+    if (content && content.length > MAX_LENGTH) {
+      return content.substring(0, MAX_LENGTH) + '...';
+    }
+    return content || 'No content available';
+  };
+
+  // Compute the proper icon based on document type
+  const DocumentIcon = clientSpecific ? FileText : Book;
 
   return (
-    <Card className="shadow-sm h-full">
-      <CardHeader className="py-3 px-3">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <CardTitle className="text-base flex items-start gap-1.5 mb-1">
-                <FileText className="h-4 w-4 text-brand-burgundy mt-0.5 flex-shrink-0" /> 
-                <span className="truncate break-words line-clamp-2 text-sm leading-tight">
-                  {title}
-                </span>
-              </CardTitle>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="max-w-[250px] break-words">
-              {title}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-        <CardDescription className="text-xs flex items-center gap-1">
-          <Calendar className="h-3 w-3 flex-shrink-0" /> 
-          {formatDate(document.created_at)}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="py-2 px-3 text-sm">
-        {hasError ? (
-          <Alert variant="destructive" className="py-1 px-2">
-            <AlertCircle className="h-3 w-3" />
-            <AlertDescription className="text-xs">
-              Content could not be loaded due to timeout. This document may be too large.
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <p className="text-xs text-muted-foreground mb-1">
-            {document.contents.length} content segments available
-          </p>
-        )}
-        {document.url && (
-          <div className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800">
-            <ExternalLink className="h-3 w-3 flex-shrink-0" />
-            <a 
-              href={document.url} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="truncate"
-              title={document.url}
-            >
-              Source Link
-            </a>
+    <Card 
+      className={cn(
+        "hover:shadow-md transition-shadow overflow-hidden",
+        onSelect && "cursor-pointer hover:border-primary"
+      )}
+      onClick={() => onSelect && onSelect(document)}
+    >
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg font-semibold flex items-center justify-between">
+          <div className="flex items-center">
+            <DocumentIcon className="h-5 w-5 mr-2 text-primary" />
+            <span className="truncate" title={document.title || undefined}>
+              {searchTerm ? highlightText(document.title || 'Untitled', searchTerm) : document.title || 'Untitled'}
+            </span>
           </div>
-        )}
+          {document.contents.length > 1 && (
+            <Button
+              variant="ghost" 
+              size="sm" 
+              className="p-1 h-auto"
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded(!expanded);
+              }}
+            >
+              {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="text-sm">
+        <div className="space-y-3">
+          {visibleContents.map((content, idx) => (
+            <div key={idx} className="text-gray-700">
+              {searchTerm 
+                ? highlightText(getContentPreview(content.content || ''), searchTerm) 
+                : getContentPreview(content.content || '')
+              }
+            </div>
+          ))}
+          
+          {!expanded && document.contents.length > 1 && (
+            <div className="text-xs text-gray-500 italic">
+              {document.contents.length - 1} more {document.contents.length === 2 ? 'section' : 'sections'}...
+            </div>
+          )}
+          
+          {clientSpecific && document.contents.length === 0 && (
+            <div className="text-xs text-gray-500 italic">
+              Processing document...
+            </div>
+          )}
+        </div>
       </CardContent>
-      <CardFooter className="py-2 px-3">
-        {!hasError && (
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="content" className="border-b-0">
-              <AccordionTrigger className="py-1 text-xs">View Content</AccordionTrigger>
-              <AccordionContent>
-                <div className="max-h-40 overflow-y-auto">
-                  {document.contents.length > 0 ? (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="py-1 text-xs">Page</TableHead>
-                          <TableHead className="py-1 text-xs">Content</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {document.contents.map((content, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell className="py-1 text-xs">
-                              {getPageNumber(content)}
-                            </TableCell>
-                            <TableCell className="py-1 text-xs max-w-xs">
-                              <span className="line-clamp-2" title={content.content || 'No content available'}>
-                                {content.content || 'No content available'}
-                              </span>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      No content available for this document.
-                    </p>
-                  )}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        )}
-      </CardFooter>
     </Card>
   );
 };

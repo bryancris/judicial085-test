@@ -1,93 +1,89 @@
 
 import React from "react";
 import { TabsContent } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
-import ClientIntakeChat from "@/components/clients/chat/ClientIntakeChat";
-import CaseAnalysisContainer from "@/components/case-analysis/CaseAnalysisContainer";
+import ClientIntakeChat from "../chat/ClientIntakeChat";
+import LegalAnalysisView from "../chat/LegalAnalysisView";
 import CaseDiscussionContainer from "@/components/case-discussion/CaseDiscussionContainer";
-import DiscoveryContainer from "@/components/discovery/DiscoveryContainer";
 import ContractReviewChat from "@/components/contract-review/ContractReviewChat";
-import FaqTabContent from "./FaqTabContent";
+import DiscoveryContainer from "@/components/discovery/DiscoveryContainer";
+import { Card, CardContent } from "@/components/ui/card";
+import { useClientDocuments } from "@/hooks/useClientDocuments";
+import ClientDocumentsSection from "@/components/case-analysis/documents/ClientDocumentsSection";
 import { Client } from "@/types/client";
+import FaqTabContent from "./FaqTabContent";
 
 interface ClientDetailTabContentProps {
   client: Client;
 }
 
-const ClientDetailTabContent = ({ client }: ClientDetailTabContentProps) => {
+const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({ client }) => {
+  // Client documents hook for the documents tab
+  const {
+    documents: clientDocuments,
+    loading: documentsLoading,
+    processDocument,
+    isProcessing: isProcessingDocument
+  } = useClientDocuments(client.id);
+  
   return (
     <>
-      <TabsContent value="client-intake" className="py-4">
-        <Card>
-          <CardContent className="pt-6">
-            <ClientIntakeChat clientId={client.id} />
-          </CardContent>
-        </Card>
+      <TabsContent value="client-intake">
+        <ClientIntakeChat clientId={client.id} clientName={`${client.first_name} ${client.last_name}`} />
+      </TabsContent>
+      
+      <TabsContent value="analysis">
+        <LegalAnalysisView clientId={client.id} clientName={`${client.first_name} ${client.last_name}`} />
+      </TabsContent>
+      
+      <TabsContent value="discovery">
+        <DiscoveryContainer clientId={client.id} />
+      </TabsContent>
+      
+      <TabsContent value="discussion">
+        <CaseDiscussionContainer clientId={client.id} clientName={`${client.first_name} ${client.last_name}`} />
       </TabsContent>
 
-      <TabsContent value="contract-review" className="py-4">
-        <Card>
-          <CardContent className="pt-6">
-            <ContractReviewChat clientId={client.id} />
-          </CardContent>
-        </Card>
+      <TabsContent value="contracts">
+        <ContractReviewChat clientId={client.id} clientName={`${client.first_name} ${client.last_name}`} />
       </TabsContent>
       
-      <TabsContent value="fact-pattern" className="py-4">
+      <TabsContent value="documents">
         <Card>
-          <CardContent className="pt-6">
-            <h2 className="text-xl font-semibold mb-4">Fact Pattern</h2>
-            <p className="text-muted-foreground">
-              Case fact pattern details will be displayed here.
-            </p>
-          </CardContent>
-        </Card>
-      </TabsContent>
-      
-      <TabsContent value="discovery" className="py-4">
-        <Card>
-          <CardContent className="pt-6">
-            <DiscoveryContainer clientId={client.id} />
-          </CardContent>
-        </Card>
-      </TabsContent>
-      
-      <TabsContent value="deposition" className="py-4">
-        <Card>
-          <CardContent className="pt-6">
-            <h2 className="text-xl font-semibold mb-4">Deposition</h2>
-            <p className="text-muted-foreground">
-              Deposition recordings and transcripts will be displayed here.
-            </p>
-          </CardContent>
-        </Card>
-      </TabsContent>
-      
-      <TabsContent value="case-analysis" className="py-4">
-        <Card>
-          <CardContent className="pt-6">
-            <CaseAnalysisContainer 
-              clientId={client.id} 
-              clientName={`${client.first_name} ${client.last_name}`} 
+          <CardContent className="p-6">
+            <ClientDocumentsSection
+              clientId={client.id}
+              documents={clientDocuments}
+              isLoading={documentsLoading}
+              onProcessDocument={processDocument}
+              isProcessing={isProcessingDocument}
+              fullView
             />
           </CardContent>
         </Card>
       </TabsContent>
       
-      <TabsContent value="discuss-case" className="py-4">
+      <TabsContent value="knowledge">
         <Card>
-          <CardContent className="pt-6">
-            <CaseDiscussionContainer clientId={client.id} />
+          <CardContent className="p-6">
+            <h2 className="text-2xl font-semibold mb-4">Legal Resources</h2>
+            <p>Resources and knowledge base content related to this client's case will appear here.</p>
+            {/* Knowledge base content would go here */}
           </CardContent>
         </Card>
       </TabsContent>
       
-      <TabsContent value="faq" className="py-4">
+      <TabsContent value="notes">
         <Card>
-          <CardContent className="pt-6">
-            <FaqTabContent />
+          <CardContent className="p-6">
+            <h2 className="text-2xl font-semibold mb-4">Client Notes</h2>
+            <p>Client notes will appear here.</p>
+            {/* Notes content would go here */}
           </CardContent>
         </Card>
+      </TabsContent>
+      
+      <TabsContent value="faq">
+        <FaqTabContent />
       </TabsContent>
     </>
   );

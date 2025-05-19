@@ -1,73 +1,86 @@
 
 import React from "react";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, BookOpen, FileSearch, Video, FileChartLine, MessageSquare, FileCheck, HelpCircle } from "lucide-react";
-import { tabColors, tabHoverColors } from "./tabStyles";
-import TabExplanationDialog from "./TabExplanationDialog";
+import { 
+  MessageSquare, 
+  FileText, 
+  Note, 
+  HelpCircle, 
+  BookOpen, 
+  Scale, 
+  MessageCircle,
+  Building,
+  FileQuestion
+} from "lucide-react";
 
 const ClientDetailTabsList = () => {
-  const [showExplanationDialog, setShowExplanationDialog] = React.useState(false);
-  
-  const tabs = [
-    // First row
-    { value: "client-intake", icon: <FileText className="h-4 w-4" /> },
-    { value: "case-analysis", icon: <FileChartLine className="h-4 w-4" /> },
-    { value: "discuss-case", icon: <MessageSquare className="h-4 w-4" /> },
-    { value: "contract-review", icon: <FileCheck className="h-4 w-4" /> },
-    
-    // Second row
-    { value: "discovery", icon: <FileSearch className="h-4 w-4" /> },
-    { value: "fact-pattern", icon: <BookOpen className="h-4 w-4" /> },
-    { value: "deposition", icon: <Video className="h-4 w-4" /> },
-  ];
-
-  const handleFaqClick = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent default tab switching
-    setShowExplanationDialog(true);
-  };
-
   return (
-    <div className="mb-6">
-      <TabsList className="w-full grid grid-cols-4 gap-2">
-        {tabs.slice(0, 4).map(({ value, icon }) => (
-          <TabsTrigger 
-            key={value}
-            value={value} 
-            className={`flex items-center gap-2 ${tabColors[value as keyof typeof tabColors]} ${tabHoverColors[value as keyof typeof tabHoverColors]} data-[state=inactive]:opacity-70`}
-          >
-            {icon}
-            {value.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")}
-          </TabsTrigger>
-        ))}
-      </TabsList>
-      
-      <div className="h-2"></div>
-      
-      <TabsList className="w-full grid grid-cols-4 gap-2">
-        {tabs.slice(4, 7).map(({ value, icon }) => (
-          <TabsTrigger 
-            key={value}
-            value={value} 
-            className={`flex items-center gap-2 ${tabColors[value as keyof typeof tabColors]} ${tabHoverColors[value as keyof typeof tabHoverColors]} data-[state=inactive]:opacity-70`}
-          >
-            {icon}
-            {value.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")}
-          </TabsTrigger>
-        ))}
-        <button
-          className={`flex items-center gap-2 rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${tabColors["faq"]} ${tabHoverColors["faq"]}`}
-          onClick={handleFaqClick}
-        >
-          <HelpCircle className="h-4 w-4" />
-          FAQ
-        </button>
-      </TabsList>
-
-      <TabExplanationDialog 
-        isOpen={showExplanationDialog} 
-        onClose={() => setShowExplanationDialog(false)} 
-      />
-    </div>
+    <TabsList className="grid w-full grid-cols-1 md:grid-cols-4 lg:grid-cols-9 mb-4 h-auto">
+      <TabsTrigger
+        value="client-intake"
+        className="data-[state=active]:bg-brand-burgundy data-[state=active]:text-white flex items-center gap-1"
+      >
+        <MessageCircle className="h-4 w-4" />
+        <span className="hidden lg:inline">Intake Chat</span>
+        <span className="lg:hidden">Intake</span>
+      </TabsTrigger>
+      <TabsTrigger
+        value="analysis"
+        className="data-[state=active]:bg-brand-burgundy data-[state=active]:text-white flex items-center gap-1"
+      >
+        <Scale className="h-4 w-4" />
+        <span>Analysis</span>
+      </TabsTrigger>
+      <TabsTrigger
+        value="discovery"
+        className="data-[state=active]:bg-brand-burgundy data-[state=active]:text-white flex items-center gap-1"
+      >
+        <FileQuestion className="h-4 w-4" />
+        <span>Discovery</span>
+      </TabsTrigger>
+      <TabsTrigger
+        value="discussion"
+        className="data-[state=active]:bg-brand-burgundy data-[state=active]:text-white flex items-center gap-1"
+      >
+        <MessageSquare className="h-4 w-4" />
+        <span>Discussion</span>
+      </TabsTrigger>
+      <TabsTrigger
+        value="contracts"
+        className="data-[state=active]:bg-brand-burgundy data-[state=active]:text-white flex items-center gap-1"
+      >
+        <FileText className="h-4 w-4" />
+        <span>Contracts</span>
+      </TabsTrigger>
+      <TabsTrigger
+        value="documents"
+        className="data-[state=active]:bg-brand-burgundy data-[state=active]:text-white flex items-center gap-1"
+      >
+        <BookOpen className="h-4 w-4" />
+        <span>Documents</span>
+      </TabsTrigger>
+      <TabsTrigger
+        value="knowledge"
+        className="data-[state=active]:bg-brand-burgundy data-[state=active]:text-white flex items-center gap-1"
+      >
+        <Building className="h-4 w-4" />
+        <span>Resources</span>
+      </TabsTrigger>
+      <TabsTrigger
+        value="notes"
+        className="data-[state=active]:bg-brand-burgundy data-[state=active]:text-white flex items-center gap-1"
+      >
+        <Note className="h-4 w-4" />
+        <span>Notes</span>
+      </TabsTrigger>
+      <TabsTrigger
+        value="faq"
+        className="data-[state=active]:bg-brand-burgundy data-[state=active]:text-white flex items-center gap-1"
+      >
+        <HelpCircle className="h-4 w-4" />
+        <span>FAQ</span>
+      </TabsTrigger>
+    </TabsList>
   );
 };
 

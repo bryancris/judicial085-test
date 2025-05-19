@@ -458,8 +458,57 @@ export type Database = {
         }
         Relationships: []
       }
+      document_chunks: {
+        Row: {
+          chunk_index: number
+          client_id: string
+          content: string | null
+          created_at: string | null
+          document_id: string
+          embedding: string | null
+          id: string
+          metadata: Json | null
+        }
+        Insert: {
+          chunk_index: number
+          client_id: string
+          content?: string | null
+          created_at?: string | null
+          document_id: string
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+        }
+        Update: {
+          chunk_index?: number
+          client_id?: string
+          content?: string | null
+          created_at?: string | null
+          document_id?: string
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_chunks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_chunks_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "document_metadata"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_metadata: {
         Row: {
+          client_id: string | null
           created_at: string | null
           id: string
           schema: string | null
@@ -467,6 +516,7 @@ export type Database = {
           url: string | null
         }
         Insert: {
+          client_id?: string | null
           created_at?: string | null
           id: string
           schema?: string | null
@@ -474,13 +524,22 @@ export type Database = {
           url?: string | null
         }
         Update: {
+          client_id?: string | null
           created_at?: string | null
           id?: string
           schema?: string | null
           title?: string | null
           url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "document_metadata_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       document_rows: {
         Row: {
@@ -670,6 +729,22 @@ export type Database = {
         Args: { query_embedding: string; match_count?: number; filter?: Json }
         Returns: {
           id: number
+          content: string
+          metadata: Json
+          similarity: number
+        }[]
+      }
+      search_document_chunks: {
+        Args: {
+          query_embedding: string
+          client_id_param: string
+          match_threshold?: number
+          match_count?: number
+        }
+        Returns: {
+          id: string
+          document_id: string
+          chunk_index: number
           content: string
           metadata: Json
           similarity: number

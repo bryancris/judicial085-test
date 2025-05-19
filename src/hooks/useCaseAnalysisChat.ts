@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ChatMessageProps } from "@/components/clients/chat/ChatMessage";
@@ -18,14 +18,8 @@ export const useCaseAnalysisChat = (clientId?: string) => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (clientId) {
-      fetchCaseAnalysisNotes();
-      fetchClientMessages(clientId);
-    }
-  }, [clientId]);
-
-  const fetchCaseAnalysisNotes = async () => {
+  // Memoized fetch functions to avoid unnecessary re-renders
+  const fetchCaseAnalysisNotes = useCallback(async () => {
     if (!clientId) return;
     
     setIsLoading(true);
@@ -49,9 +43,9 @@ export const useCaseAnalysisChat = (clientId?: string) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [clientId, toast]);
 
-  const fetchClientMessages = async (clientId: string) => {
+  const fetchClientMessages = useCallback(async (clientId: string) => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -105,7 +99,21 @@ export const useCaseAnalysisChat = (clientId?: string) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Use effect to fetch data when clientId changes
+  useEffect(() => {
+    if (clientId) {
+      fetchCaseAnalysisNotes();
+      fetchClientMessages(clientId);
+    }
+    
+    // Cleanup function
+    return () => {
+      setNotes([]);
+      setConversation([]);
+    };
+  }, [clientId, fetchCaseAnalysisNotes, fetchClientMessages]);
 
   const formatTimestamp = (): string => {
     const now = new Date();
@@ -152,6 +160,7 @@ export const useCaseAnalysisChat = (clientId?: string) => {
     loading,
     isSending,
     handleSendNote,
-    formatTimestamp
+    formatTimestamp,
+    refreshNotes: fetchCaseAnalysisNotes
   };
 };

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useCaseAnalysis } from "@/hooks/useCaseAnalysis";
 import CaseAnalysisErrorState from "./CaseAnalysisErrorState";
@@ -13,6 +14,8 @@ import CaseAnalysisHeader from "./CaseAnalysisHeader";
 import LawReferencesSection from "./LawReferencesSection";
 import { useScholarlyReferences } from "@/hooks/useScholarlyReferences";
 import { useCaseAnalysisChat } from "@/hooks/useCaseAnalysisChat";
+import { useClientDocuments } from "@/hooks/useClientDocuments";
+import ClientDocumentsSection from "./documents/ClientDocumentsSection";
 
 interface CaseAnalysisContainerProps {
   clientId: string;
@@ -43,6 +46,14 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
     loading: conversationLoading,
     isLoading: notesLoading
   } = useCaseAnalysisChat(clientId);
+
+  // Client documents hook
+  const {
+    documents: clientDocuments,
+    loading: documentsLoading,
+    processDocument,
+    isProcessing: isProcessingDocument
+  } = useClientDocuments(clientId);
 
   if (error) {
     return <CaseAnalysisErrorState error={error} onRefresh={generateNewAnalysis} />;
@@ -146,6 +157,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
               <ConversationSummary
                 summary={analysisData.conversationSummary}
                 isLoading={isLoading}
+                clientId={clientId}
               />
             </div>
             <div className="md:col-span-1">
@@ -156,6 +168,15 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
               />
             </div>
           </div>
+
+          {/* Client Documents Section */}
+          <ClientDocumentsSection
+            clientId={clientId}
+            documents={clientDocuments}
+            isLoading={documentsLoading}
+            onProcessDocument={processDocument}
+            isProcessing={isProcessingDocument}
+          />
 
           {/* Strengths and Weaknesses */}
           <CaseStrengthsWeaknesses
@@ -191,6 +212,18 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
 
       {/* Notes tab content */}
       {selectedTab === "notes" && <AttorneyNotesList notes={notes || []} isLoading={notesLoading} />}
+
+      {/* Documents tab content */}
+      {selectedTab === "documents" && (
+        <ClientDocumentsSection
+          clientId={clientId}
+          documents={clientDocuments}
+          isLoading={documentsLoading}
+          onProcessDocument={processDocument}
+          isProcessing={isProcessingDocument}
+          fullView
+        />
+      )}
     </div>
   );
 };
