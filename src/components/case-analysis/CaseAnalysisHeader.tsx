@@ -1,65 +1,89 @@
 
 import React from "react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Scale } from "lucide-react";
+import { RefreshCw } from "lucide-react";
+import ScholarResearchButton from "./ScholarResearchButton";
 
 interface CaseAnalysisHeaderProps {
-  onRefresh: () => void;
-  isLoading: boolean;
+  title: string;
+  clientId: string;
+  selectedTab: string;
+  setSelectedTab: (tab: string) => void;
+  isGenerating?: boolean;
+  onGenerate?: () => void;
   caseType?: string;
 }
 
-const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
-  onRefresh,
-  isLoading,
+const CaseAnalysisHeader = ({
+  title,
+  clientId,
+  selectedTab,
+  setSelectedTab,
+  isGenerating = false,
+  onGenerate,
   caseType
-}) => {
-  const getCaseTypeLabel = () => {
-    switch (caseType) {
-      case "consumer-protection":
-        return "Consumer Protection";
-      case "personal-injury":
-        return "Personal Injury";
-      case "premises-liability":
-        return "Premises Liability";
-      case "contract-dispute":
-        return "Contract Dispute";
-      case "employment":
-        return "Employment";
-      case "medical-malpractice":
-        return "Medical Malpractice";
-      case "motor-vehicle-accident":
-        return "Motor Vehicle Accident";
-      default:
-        return null;
-    }
-  };
-
-  const caseTypeLabel = getCaseTypeLabel();
-
+}: CaseAnalysisHeaderProps) => {
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
-      <div className="flex items-center gap-2">
-        <Scale className="h-6 w-6 text-primary" />
-        <h2 className="text-2xl font-bold leading-tight">Case Analysis</h2>
-        {caseTypeLabel && (
-          <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${
-            caseType === "consumer-protection" 
-              ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200" 
-              : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200"
-          }`}>
-            {caseTypeLabel}
-          </span>
-        )}
+    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+      <div className="flex flex-col">
+        <h1 className="text-3xl font-bold mb-2">{title}</h1>
+        <div className="flex gap-2">
+          {caseType && caseType !== "general" && (
+            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+              {caseType === "consumer-protection" ? "Consumer Protection" : caseType}
+            </Badge>
+          )}
+        </div>
       </div>
-      <Button
-        onClick={onRefresh}
-        className="mt-2 sm:mt-0"
-        disabled={isLoading}
+
+      <div className="flex items-center gap-2 self-end md:self-auto">
+        {onGenerate && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onGenerate}
+            disabled={isGenerating}
+            className="flex items-center gap-1"
+          >
+            <RefreshCw className={`h-4 w-4 ${isGenerating ? "animate-spin" : ""}`} />
+            {isGenerating ? "Generating..." : "Generate Analysis"}
+          </Button>
+        )}
+        
+        <ScholarResearchButton clientId={clientId} caseType={caseType} />
+        
+        <Tabs
+          value={selectedTab}
+          onValueChange={setSelectedTab}
+          className="hidden md:block"
+        >
+          <TabsList>
+            <TabsTrigger value="analysis">Analysis</TabsTrigger>
+            <TabsTrigger value="conversation">Conversation</TabsTrigger>
+            <TabsTrigger value="notes">Notes</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      <Tabs
+        value={selectedTab}
+        onValueChange={setSelectedTab}
+        className="block md:hidden w-full"
       >
-        <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-        {isLoading ? "Generating..." : "Generate New Analysis"}
-      </Button>
+        <TabsList className="w-full">
+          <TabsTrigger value="analysis" className="flex-1">
+            Analysis
+          </TabsTrigger>
+          <TabsTrigger value="conversation" className="flex-1">
+            Conversation
+          </TabsTrigger>
+          <TabsTrigger value="notes" className="flex-1">
+            Notes
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
     </div>
   );
 };
