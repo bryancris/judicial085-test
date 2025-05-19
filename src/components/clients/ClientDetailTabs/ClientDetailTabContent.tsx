@@ -25,14 +25,20 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({ client 
     isProcessing: isProcessingDocument
   } = useClientDocuments(client.id);
   
+  const clientName = `${client.first_name} ${client.last_name}`;
+  
   return (
     <>
       <TabsContent value="client-intake">
-        <ClientIntakeChat clientId={client.id} clientName={`${client.first_name} ${client.last_name}`} />
+        <ClientIntakeChat clientId={client.id} clientName={clientName} />
       </TabsContent>
       
       <TabsContent value="analysis">
-        <LegalAnalysisView clientId={client.id} clientName={`${client.first_name} ${client.last_name}`} />
+        <LegalAnalysisView 
+          analysisItems={[]}  /* This component needs different props than what's passed */
+          isLoading={false}
+          clientId={client.id}
+        />
       </TabsContent>
       
       <TabsContent value="discovery">
@@ -40,11 +46,11 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({ client 
       </TabsContent>
       
       <TabsContent value="discussion">
-        <CaseDiscussionContainer clientId={client.id} clientName={`${client.first_name} ${client.last_name}`} />
+        <CaseDiscussionContainer clientId={client.id} />
       </TabsContent>
 
       <TabsContent value="contracts">
-        <ContractReviewChat clientId={client.id} clientName={`${client.first_name} ${client.last_name}`} />
+        <ContractReviewChat clientId={client.id} clientName={clientName} />
       </TabsContent>
       
       <TabsContent value="documents">

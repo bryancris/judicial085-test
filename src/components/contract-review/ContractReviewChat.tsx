@@ -11,9 +11,10 @@ import { Textarea } from "@/components/ui/textarea";
 
 interface ContractReviewChatProps {
   clientId: string;
+  clientName?: string; // Added clientName as optional prop
 }
 
-const ContractReviewChat: React.FC<ContractReviewChatProps> = ({ clientId }) => {
+const ContractReviewChat: React.FC<ContractReviewChatProps> = ({ clientId, clientName }) => {
   const {
     messages,
     isLoading,

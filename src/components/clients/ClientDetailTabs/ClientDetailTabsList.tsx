@@ -4,7 +4,7 @@ import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   MessageSquare, 
   FileText, 
-  Note, 
+  Notebook, // Changed from Note to Notebook which is available
   HelpCircle, 
   BookOpen, 
   Scale, 
@@ -70,7 +70,7 @@ const ClientDetailTabsList = () => {
         value="notes"
         className="data-[state=active]:bg-brand-burgundy data-[state=active]:text-white flex items-center gap-1"
       >
-        <Note className="h-4 w-4" />
+        <Notebook className="h-4 w-4" />
         <span>Notes</span>
       </TabsTrigger>
       <TabsTrigger

@@ -10,9 +10,10 @@ import { FileText, Paperclip } from "lucide-react";
 
 interface ClientIntakeChatProps {
   clientId: string;
+  clientName?: string; // Added this prop as optional
 }
 
-const ClientIntakeChat = ({ clientId }: ClientIntakeChatProps) => {
+const ClientIntakeChat = ({ clientId, clientName }: ClientIntakeChatProps) => {
   const {
     activeTab,
     setActiveTab,

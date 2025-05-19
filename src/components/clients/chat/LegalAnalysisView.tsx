@@ -16,9 +16,10 @@ interface LegalAnalysisViewProps {
   isLoading: boolean;
   error?: string | null;
   onQuestionClick?: (question: string) => void;
+  clientId?: string; // Added clientId as optional prop
 }
 
-const LegalAnalysisView = ({ analysisItems, isLoading, error, onQuestionClick }: LegalAnalysisViewProps) => {
+const LegalAnalysisView = ({ analysisItems, isLoading, error, onQuestionClick, clientId }: LegalAnalysisViewProps) => {
   const analysisEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
