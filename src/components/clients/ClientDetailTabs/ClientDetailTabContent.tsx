@@ -66,7 +66,10 @@ const ClientDetailTabContent = ({ client }: ClientDetailTabContentProps) => {
       <TabsContent value="case-analysis" className="py-4">
         <Card>
           <CardContent className="pt-6">
-            <CaseAnalysisContainer clientId={client.id} />
+            <CaseAnalysisContainer 
+              clientId={client.id} 
+              clientName={`${client.first_name} ${client.last_name}`} 
+            />
           </CardContent>
         </Card>
       </TabsContent>

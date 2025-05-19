@@ -13,6 +13,7 @@ import SearchSimilarCasesSection from "./SearchSimilarCasesSection";
 import CaseAnalysisHeader from "./CaseAnalysisHeader";
 import LawReferencesSection from "./LawReferencesSection";
 import { useScholarlyReferences } from "@/hooks/useScholarlyReferences";
+import { useCaseAnalysisChat } from "@/hooks/useCaseAnalysisChat";
 
 interface CaseAnalysisContainerProps {
   clientId: string;
@@ -35,9 +36,13 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
     isLoading: isScholarlyReferencesLoading,
     searchReferences
   } = useScholarlyReferences(clientId, analysisData?.caseType);
+  
+  // Get conversation and notes for the respective tabs
+  const { conversation, loading: conversationLoading } = useCaseAnalysisChat(clientId);
+  const { notes, isLoading: notesLoading } = useCaseAnalysisChat(clientId);
 
   if (error) {
-    return <CaseAnalysisErrorState error={error} />;
+    return <CaseAnalysisErrorState error={error} onRefresh={generateNewAnalysis} />;
   }
 
   if (isLoading && !analysisData) {
@@ -142,8 +147,8 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
             </div>
             <div className="md:col-span-1">
               <CaseOutcomePrediction
-                defense={analysisData.outcome.defense}
-                prosecution={analysisData.outcome.prosecution}
+                defense={Number(analysisData.outcome.defense)}
+                prosecution={Number(analysisData.outcome.prosecution)}
                 isLoading={isLoading}
               />
             </div>
@@ -178,11 +183,11 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
 
       {/* Conversation tab content */}
       {selectedTab === "conversation" && (
-        <ConversationList clientId={clientId} />
+        <ConversationList conversation={conversation || []} loading={conversationLoading} />
       )}
 
       {/* Notes tab content */}
-      {selectedTab === "notes" && <AttorneyNotesList clientId={clientId} />}
+      {selectedTab === "notes" && <AttorneyNotesList notes={notes || []} isLoading={notesLoading} />}
     </div>
   );
 };
