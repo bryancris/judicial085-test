@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useCaseAnalysis } from "@/hooks/useCaseAnalysis";
 import CaseAnalysisErrorState from "./CaseAnalysisErrorState";
@@ -38,8 +37,12 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
   } = useScholarlyReferences(clientId, analysisData?.caseType);
   
   // Get conversation and notes for the respective tabs
-  const { conversation, loading: conversationLoading } = useCaseAnalysisChat(clientId);
-  const { notes, isLoading: notesLoading } = useCaseAnalysisChat(clientId);
+  const {
+    conversation,
+    notes, 
+    loading: conversationLoading,
+    isLoading: notesLoading
+  } = useCaseAnalysisChat(clientId);
 
   if (error) {
     return <CaseAnalysisErrorState error={error} onRefresh={generateNewAnalysis} />;

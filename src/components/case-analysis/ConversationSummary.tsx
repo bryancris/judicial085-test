@@ -1,8 +1,7 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageSquare, User } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { ChatMessageProps } from "@/components/clients/chat/ChatMessage";
 import { useCaseAnalysisChat } from "@/hooks/useCaseAnalysisChat";
 import ConversationList from "./conversation/ConversationList";
 import AttorneyNotesList from "./conversation/AttorneyNotesList";
@@ -19,78 +18,16 @@ const ConversationSummary: React.FC<ConversationSummaryProps> = ({
   isLoading = false,
   clientId
 }) => {
-  const [conversation, setConversation] = useState<ChatMessageProps[]>([]);
-  const [loading, setLoading] = useState(false);
   const [noteInput, setNoteInput] = useState("");
   
   const {
     notes,
+    conversation,
     isLoading: isLoadingNotes,
+    loading: conversationLoading,
     isSending,
     handleSendNote
   } = useCaseAnalysisChat(clientId);
-
-  React.useEffect(() => {
-    if (clientId) {
-      fetchClientMessages(clientId);
-    }
-  }, [clientId]);
-
-  const fetchClientMessages = async (clientId: string) => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("client_messages")
-        .select("content, role, timestamp")
-        .eq("client_id", clientId)
-        .order("created_at", { ascending: true });
-      
-      if (error) throw error;
-      
-      if (data && data.length > 0) {
-        // Get a representative sample - first few messages and most recent
-        let selectedMessages = [];
-        
-        // If we have more than 6 messages, get a sample
-        if (data.length > 6) {
-          // Get first 2 messages
-          selectedMessages = data.slice(0, 2);
-          
-          // Get middle 2 messages
-          const middleIndex = Math.floor(data.length / 2);
-          selectedMessages = [
-            ...selectedMessages,
-            data[middleIndex - 1],
-            data[middleIndex]
-          ];
-          
-          // Get last 2 messages
-          selectedMessages = [
-            ...selectedMessages,
-            ...data.slice(-2)
-          ];
-        } else {
-          // If 6 or fewer, use all messages
-          selectedMessages = data;
-        }
-        
-        // Format the messages
-        const formattedMessages = selectedMessages.map(msg => ({
-          content: msg.content,
-          timestamp: msg.timestamp,
-          role: msg.role as "attorney" | "client"
-        }));
-        
-        setConversation(formattedMessages);
-      } else {
-        setConversation([]);
-      }
-    } catch (err) {
-      console.error("Error fetching client messages:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSendClick = () => {
     if (noteInput.trim() && clientId) {
@@ -111,7 +48,7 @@ const ConversationSummary: React.FC<ConversationSummaryProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ConversationList conversation={conversation} loading={loading} />
+        <ConversationList conversation={conversation || []} loading={conversationLoading} />
         
         {/* Attorney Notes Section */}
         <div className="mt-6 border-t pt-4">

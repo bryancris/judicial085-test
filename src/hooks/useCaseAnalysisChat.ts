@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { ChatMessageProps } from "@/components/clients/chat/ChatMessage";
 
 export interface CaseAnalysisNote {
   id?: string;
@@ -11,13 +12,16 @@ export interface CaseAnalysisNote {
 
 export const useCaseAnalysisChat = (clientId?: string) => {
   const [notes, setNotes] = useState<CaseAnalysisNote[]>([]);
+  const [conversation, setConversation] = useState<ChatMessageProps[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     if (clientId) {
       fetchCaseAnalysisNotes();
+      fetchClientMessages(clientId);
     }
   }, [clientId]);
 
@@ -44,6 +48,62 @@ export const useCaseAnalysisChat = (clientId?: string) => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchClientMessages = async (clientId: string) => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("client_messages")
+        .select("content, role, timestamp")
+        .eq("client_id", clientId)
+        .order("created_at", { ascending: true });
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        // Get a representative sample - first few messages and most recent
+        let selectedMessages = [];
+        
+        // If we have more than 6 messages, get a sample
+        if (data.length > 6) {
+          // Get first 2 messages
+          selectedMessages = data.slice(0, 2);
+          
+          // Get middle 2 messages
+          const middleIndex = Math.floor(data.length / 2);
+          selectedMessages = [
+            ...selectedMessages,
+            data[middleIndex - 1],
+            data[middleIndex]
+          ];
+          
+          // Get last 2 messages
+          selectedMessages = [
+            ...selectedMessages,
+            ...data.slice(-2)
+          ];
+        } else {
+          // If 6 or fewer, use all messages
+          selectedMessages = data;
+        }
+        
+        // Format the messages
+        const formattedMessages = selectedMessages.map(msg => ({
+          content: msg.content,
+          timestamp: msg.timestamp,
+          role: msg.role as "attorney" | "client"
+        }));
+        
+        setConversation(formattedMessages);
+      } else {
+        setConversation([]);
+      }
+    } catch (err) {
+      console.error("Error fetching client messages:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -87,7 +147,9 @@ export const useCaseAnalysisChat = (clientId?: string) => {
 
   return {
     notes,
+    conversation,
     isLoading,
+    loading,
     isSending,
     handleSendNote,
     formatTimestamp
