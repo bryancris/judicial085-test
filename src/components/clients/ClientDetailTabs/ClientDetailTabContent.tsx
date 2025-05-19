@@ -48,10 +48,10 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({ client 
               clientId={client.id}
             />
             
-            {/* Add back the search similar cases section */}
+            {/* Use case_types instead of case_type */}
             <SearchSimilarCasesSection 
               clientId={client.id}
-              caseType={client.case_type}
+              caseType={client.case_types?.[0]}
             />
           </CardContent>
         </Card>
