@@ -94,16 +94,6 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({ client 
         </Card>
       </TabsContent>
       
-      <TabsContent value="notes">
-        <Card>
-          <CardContent className="p-6">
-            <h2 className="text-2xl font-semibold mb-4">Client Notes</h2>
-            <p>Client notes will appear here.</p>
-            {/* Notes content would go here */}
-          </CardContent>
-        </Card>
-      </TabsContent>
-      
       <TabsContent value="faq">
         <FaqTabContent />
       </TabsContent>

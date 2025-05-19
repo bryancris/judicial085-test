@@ -4,7 +4,6 @@ import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   MessageSquare, 
   FileText, 
-  Notebook, // Changed from Note to Notebook which is available
   HelpCircle, 
   BookOpen, 
   Scale, 
@@ -15,7 +14,7 @@ import {
 
 const ClientDetailTabsList = () => {
   return (
-    <TabsList className="grid w-full grid-cols-1 md:grid-cols-4 lg:grid-cols-9 mb-4 h-auto">
+    <TabsList className="grid w-full grid-cols-1 md:grid-cols-4 lg:grid-cols-8 mb-4 h-auto">
       <TabsTrigger
         value="client-intake"
         className="data-[state=active]:bg-brand-burgundy data-[state=active]:text-white flex items-center gap-1"
@@ -65,13 +64,6 @@ const ClientDetailTabsList = () => {
       >
         <Building className="h-4 w-4" />
         <span>Resources</span>
-      </TabsTrigger>
-      <TabsTrigger
-        value="notes"
-        className="data-[state=active]:bg-brand-burgundy data-[state=active]:text-white flex items-center gap-1"
-      >
-        <Notebook className="h-4 w-4" />
-        <span>Notes</span>
       </TabsTrigger>
       <TabsTrigger
         value="faq"
