@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { DocumentWithContent } from "@/types/knowledge";
@@ -65,29 +64,33 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
     }
   };
 
-  // Handle document delete
+  // Handle document delete with improved error handling
   const handleDelete = async () => {
-    if (!onDelete) return;
+    if (!onDelete || !document.id) {
+      setDeleteError("Cannot delete this document: Invalid document or missing delete handler");
+      return;
+    }
     
     setIsDeleting(true);
     setDeleteError(null);
     
     try {
-      // Verify we have a valid document ID
-      if (!document.id) {
-        throw new Error("Invalid document ID");
-      }
-      
       console.log(`Attempting to delete document ${document.id}`);
+      
+      // Call the delete handler and wait for the result
       const result = await onDelete(document.id);
       
+      console.log(`Delete result for document ${document.id}:`, result);
+      
       if (result.success) {
+        // Only close the dialog if deletion was truly successful
         setDeleteDialogOpen(false);
         toast({
           title: "Document deleted",
           description: "Document was successfully deleted",
         });
       } else {
+        // If there was an error message in the result, display it
         throw new Error(result.error || "Unknown error occurred during deletion");
       }
     } catch (error: any) {
@@ -230,7 +233,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation Dialog with improved UI */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => {
         // Only allow closing if we're not in the middle of deleting
         if (!isDeleting) {

@@ -38,17 +38,21 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
   const handleDeleteDocument = async (documentId: string) => {
     if (!onDeleteDocument) return { success: false, error: "Delete not available" };
     
+    console.log(`ClientDocumentsSection: Starting delete for document ${documentId}`);
+    
     // Mark this document as being deleted
     setDeletingDocIds(prev => new Set(prev).add(documentId));
     
     try {
       // Call the parent component's delete handler
+      console.log(`ClientDocumentsSection: Calling parent delete handler for ${documentId}`);
       const result = await onDeleteDocument(documentId);
       
-      // Keep tracking the document ID if delete failed
+      // Log the result for debugging
+      console.log(`ClientDocumentsSection: Delete result for ${documentId}:`, result);
+      
       if (!result.success) {
         console.error(`Failed to delete document ${documentId}:`, result.error);
-        return result;
       }
       
       return result;
@@ -62,6 +66,7 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
         updated.delete(documentId);
         return updated;
       });
+      console.log(`ClientDocumentsSection: Completed delete process for ${documentId}`);
     }
   };
 
@@ -146,13 +151,13 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
     }
   };
 
-  // Filter documents based on search term
-  const filteredDocuments = documents.filter(doc => 
+  // Filter documents based on search term with optional null check
+  const filteredDocuments = documents?.filter(doc => 
     doc.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    doc.contents.some(content => 
+    doc.contents?.some(content => 
       content.content?.toLowerCase().includes(searchTerm.toLowerCase())
     )
-  );
+  ) || [];
 
   // Display only the first few documents in summary view
   const displayedDocuments = fullView 
@@ -205,12 +210,12 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
       </CardHeader>
       
       <CardContent>
-        {isLoading && !documents.length ? (
+        {isLoading && !documents?.length ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">
             <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
             <p className="text-muted-foreground">Loading client documents...</p>
           </div>
-        ) : documents.length === 0 ? (
+        ) : !documents?.length ? (
           <div className="flex flex-col items-center justify-center py-10 border-2 border-dashed border-gray-200 rounded-lg text-center">
             <FileText className="h-12 w-12 text-gray-400 mb-2" />
             <h3 className="font-medium">No Documents Available</h3>
