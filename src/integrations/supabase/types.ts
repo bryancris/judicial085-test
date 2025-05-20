@@ -750,6 +750,22 @@ export type Database = {
           similarity: number
         }[]
       }
+      search_document_chunks_by_similarity: {
+        Args: {
+          query_embedding: string
+          client_id_param: string
+          match_threshold?: number
+          match_count?: number
+        }
+        Returns: {
+          id: string
+          document_id: string
+          chunk_index: number
+          content: string
+          metadata: Json
+          similarity: number
+        }[]
+      }
       sparsevec_out: {
         Args: { "": unknown }
         Returns: unknown

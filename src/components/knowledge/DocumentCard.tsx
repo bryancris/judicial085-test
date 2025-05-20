@@ -1,111 +1,153 @@
 
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Book, ChevronDown, ChevronUp } from "lucide-react";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { DocumentWithContent } from "@/types/knowledge";
-import { Button } from "../ui/button";
+import { FileText, FilePdf, Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 interface DocumentCardProps {
   document: DocumentWithContent;
   searchTerm?: string;
-  onSelect?: (document: DocumentWithContent) => void;
   clientSpecific?: boolean;
 }
 
 const DocumentCard: React.FC<DocumentCardProps> = ({
   document,
   searchTerm = "",
-  onSelect,
-  clientSpecific = false
+  clientSpecific = false,
 }) => {
-  const [expanded, setExpanded] = useState(false);
-
-  // Get the first few contents or all if expanded
-  const visibleContents = expanded
-    ? document.contents
-    : document.contents.slice(0, 1);
-
-  // Helper function to highlight search term
-  const highlightText = (text: string, term: string) => {
-    if (!term) return text;
+  const [previewOpen, setPreviewOpen] = useState(false);
+  
+  // Extract document content for display
+  const content = document.contents?.[0]?.content || "";
+  // Check if this is a PDF document
+  const isPdf = document.contents?.[0]?.metadata?.isPdfDocument || document.contents?.[0]?.metadata?.fileType === "pdf";
+  // Get PDF URL if available
+  const pdfUrl = document.contents?.[0]?.metadata?.pdfUrl || "";
+  
+  // Truncate content for display
+  const truncatedContent = content.length > 150 
+    ? `${content.substring(0, 150)}...` 
+    : content;
+  
+  // Highlight search term if present
+  const highlightSearchTerm = (text: string) => {
+    if (!searchTerm || searchTerm.length < 3) return text;
     
-    const parts = text.split(new RegExp(`(${term})`, 'gi'));
-    return parts.map((part, i) => 
-      part.toLowerCase() === term.toLowerCase() 
-        ? <mark key={i} className="bg-yellow-200 text-gray-900">{part}</mark> 
-        : part
-    );
+    const regex = new RegExp(`(${searchTerm})`, 'gi');
+    return text.replace(regex, '<mark class="bg-yellow-200">$1</mark>');
   };
 
-  // Helper function to get a preview of the document content
-  const getContentPreview = (content: string) => {
-    const MAX_LENGTH = 150;
-    if (content && content.length > MAX_LENGTH) {
-      return content.substring(0, MAX_LENGTH) + '...';
+  // Handle PDF download
+  const handleDownload = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (pdfUrl) {
+      window.open(pdfUrl, '_blank');
     }
-    return content || 'No content available';
   };
-
-  // Compute the proper icon based on document type
-  const DocumentIcon = clientSpecific ? FileText : Book;
 
   return (
-    <Card 
-      className={cn(
-        "hover:shadow-md transition-shadow overflow-hidden",
-        onSelect && "cursor-pointer hover:border-primary"
-      )}
-      onClick={() => onSelect && onSelect(document)}
-    >
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-semibold flex items-center justify-between">
-          <div className="flex items-center">
-            <DocumentIcon className="h-5 w-5 mr-2 text-primary" />
-            <span className="truncate" title={document.title || undefined}>
-              {searchTerm ? highlightText(document.title || 'Untitled', searchTerm) : document.title || 'Untitled'}
-            </span>
+    <>
+      <Card 
+        className="cursor-pointer h-full flex flex-col hover:shadow-md transition-shadow"
+        onClick={() => setPreviewOpen(true)}
+      >
+        <CardContent className="p-4 flex-grow">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center">
+              {isPdf ? (
+                <FilePdf className="h-5 w-5 text-red-500 mr-2 flex-shrink-0" />
+              ) : (
+                <FileText className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
+              )}
+              <h3 
+                className="font-medium text-lg line-clamp-2" 
+                dangerouslySetInnerHTML={{ 
+                  __html: highlightSearchTerm(document.title || "Untitled Document") 
+                }}
+              />
+            </div>
+            {isPdf && pdfUrl && (
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-8 w-8"
+                onClick={handleDownload}
+                title="Download PDF"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+            )}
           </div>
-          {document.contents.length > 1 && (
-            <Button
-              variant="ghost" 
-              size="sm" 
-              className="p-1 h-auto"
-              onClick={(e) => {
-                e.stopPropagation();
-                setExpanded(!expanded);
-              }}
-            >
-              {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </Button>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="text-sm">
-        <div className="space-y-3">
-          {visibleContents.map((content, idx) => (
-            <div key={idx} className="text-gray-700">
-              {searchTerm 
-                ? highlightText(getContentPreview(content.content || ''), searchTerm) 
-                : getContentPreview(content.content || '')
-              }
-            </div>
-          ))}
           
-          {!expanded && document.contents.length > 1 && (
-            <div className="text-xs text-gray-500 italic">
-              {document.contents.length - 1} more {document.contents.length === 2 ? 'section' : 'sections'}...
-            </div>
+          <div className="mt-2">
+            {isPdf ? (
+              <div className="text-gray-600 text-sm italic flex items-center">
+                <FilePdf className="h-4 w-4 mr-1 text-red-500" />
+                PDF Document - Click to preview
+              </div>
+            ) : (
+              <p 
+                className="text-gray-600 text-sm line-clamp-3 whitespace-pre-wrap"
+                dangerouslySetInnerHTML={{ 
+                  __html: highlightSearchTerm(truncatedContent) 
+                }}
+              />
+            )}
+          </div>
+        </CardContent>
+        
+        <CardFooter className="p-4 pt-0 text-xs text-gray-500 flex justify-between">
+          <span>{new Date(document.created_at || "").toLocaleDateString()}</span>
+          {clientSpecific && (
+            <span>Client Document</span>
           )}
+        </CardFooter>
+      </Card>
+
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className={cn("max-w-4xl max-h-[85vh]", isPdf ? "p-0 overflow-hidden" : "")}>
+          <DialogHeader className={isPdf ? "p-4 bg-white border-b" : ""}>
+            <DialogTitle className="flex items-center">
+              {isPdf ? (
+                <FilePdf className="h-5 w-5 text-red-500 mr-2" />
+              ) : (
+                <FileText className="h-5 w-5 text-blue-500 mr-2" />
+              )}
+              {document.title || "Untitled Document"}
+            </DialogTitle>
+          </DialogHeader>
           
-          {clientSpecific && document.contents.length === 0 && (
-            <div className="text-xs text-gray-500 italic">
-              Processing document...
+          {isPdf && pdfUrl ? (
+            <div className="h-[70vh] overflow-hidden">
+              <iframe 
+                src={`${pdfUrl}#toolbar=0&navpanes=0`}
+                className="w-full h-full"
+                title={document.title || "PDF Document"}
+              />
+              <div className="p-4 bg-white border-t flex justify-end">
+                <Button 
+                  variant="default" 
+                  onClick={() => window.open(pdfUrl, '_blank')}
+                  className="flex items-center"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download PDF
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-y-auto max-h-[60vh] whitespace-pre-wrap">
+              {document.contents.map((contentItem, i) => (
+                <p key={i} className="mb-4">{contentItem.content}</p>
+              ))}
             </div>
           )}
-        </div>
-      </CardContent>
-    </Card>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 

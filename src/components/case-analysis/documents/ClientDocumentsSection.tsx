@@ -2,14 +2,13 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FilePlus, FileText, Loader2, Search } from "lucide-react";
+import { FilePlus, FileText, Loader2, Search, FileIcon, FileTextIcon } from "lucide-react";
 import { DocumentWithContent } from "@/types/knowledge";
 import DocumentCard from "@/components/knowledge/DocumentCard";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import DocumentUploadDialog from "@/components/clients/DocumentUploadDialog";
+import { extractTextFromPdf, uploadPdfToStorage, generateEmbeddings } from "@/utils/pdfUtils";
 
 interface ClientDocumentsSectionProps {
   clientId: string;
@@ -29,38 +28,88 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
   fullView = false
 }) => {
   const [openDialog, setOpenDialog] = useState(false);
-  const [documentTitle, setDocumentTitle] = useState("");
-  const [documentContent, setDocumentContent] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
+  const [uploadProcessing, setUploadProcessing] = useState(false);
 
-  const handleDocumentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!documentTitle.trim()) {
+  // Handle document upload (both text and PDF)
+  const handleDocumentUpload = async (title: string, content: string, file?: File) => {
+    try {
+      setUploadProcessing(true);
+      
+      // Handle PDF upload
+      if (file) {
+        // Generate a document ID
+        const documentId = crypto.randomUUID();
+        
+        // Step 1: Upload the PDF to storage and get the public URL
+        const publicUrl = await uploadPdfToStorage(file, clientId, documentId);
+        
+        // Step 2: Extract text from the PDF
+        const textChunks = await extractTextFromPdf(file);
+        
+        if (textChunks.length === 0) {
+          toast({
+            title: "Processing error",
+            description: "Could not extract text from the PDF file.",
+            variant: "destructive",
+          });
+          setUploadProcessing(false);
+          return { success: false };
+        }
+        
+        // Step 3: Generate embeddings for the text chunks
+        const metadata = {
+          fileType: "pdf",
+          fileName: file.name,
+          fileSize: file.size,
+          pdfUrl: publicUrl,
+          uploadedAt: new Date().toISOString()
+        };
+        
+        // Process the document with embeddings
+        await generateEmbeddings(textChunks, documentId, clientId, metadata);
+        
+        // Update document metadata
+        const result = await onProcessDocument(title, "PDF Document", {
+          ...metadata,
+          isPdfDocument: true
+        });
+        
+        if (result.success) {
+          toast({
+            title: "Document uploaded",
+            description: `${title} has been processed and added as a client document.`,
+          });
+          setOpenDialog(false);
+        }
+        
+        setUploadProcessing(false);
+        return result;
+      } else {
+        // Handle regular text upload (use existing functionality)
+        const result = await onProcessDocument(title, content);
+        
+        if (result.success) {
+          toast({
+            title: "Document added",
+            description: `${title} has been added as a client document.`,
+          });
+          setOpenDialog(false);
+        }
+        
+        setUploadProcessing(false);
+        return result;
+      }
+    } catch (error) {
+      console.error("Error processing document:", error);
       toast({
-        title: "Title required",
-        description: "Please provide a title for the document.",
+        title: "Upload failed",
+        description: `Error uploading document: ${error.message}`,
         variant: "destructive",
       });
-      return;
-    }
-    
-    if (!documentContent.trim()) {
-      toast({
-        title: "Content required",
-        description: "Please provide content for the document.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    const result = await onProcessDocument(documentTitle, documentContent);
-    
-    if (result.success) {
-      setDocumentTitle("");
-      setDocumentContent("");
-      setOpenDialog(false);
+      setUploadProcessing(false);
+      return { success: false, error: error.message };
     }
   };
 
@@ -103,61 +152,21 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
               </div>
             )}
             
-            <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="flex items-center gap-1">
-                  <FilePlus className="h-4 w-4" />
-                  <span>Add Document</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Add Client Document</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleDocumentSubmit} className="space-y-4 mt-4">
-                  <div>
-                    <Label htmlFor="docTitle">Document Title</Label>
-                    <Input
-                      id="docTitle"
-                      value={documentTitle}
-                      onChange={(e) => setDocumentTitle(e.target.value)}
-                      placeholder="Enter document title"
-                      disabled={isProcessing}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="docContent">Document Content</Label>
-                    <Textarea
-                      id="docContent"
-                      value={documentContent}
-                      onChange={(e) => setDocumentContent(e.target.value)}
-                      placeholder="Enter document content"
-                      className="min-h-[200px]"
-                      disabled={isProcessing}
-                    />
-                  </div>
-                  <div className="flex justify-end">
-                    <Button 
-                      type="submit" 
-                      disabled={isProcessing}
-                      className="flex items-center gap-1"
-                    >
-                      {isProcessing ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" /> 
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          <FilePlus className="h-4 w-4" />
-                          Upload Document
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
+            <Button 
+              size="sm" 
+              className="flex items-center gap-1"
+              onClick={() => setOpenDialog(true)}
+            >
+              <FilePlus className="h-4 w-4" />
+              <span>Add Document</span>
+            </Button>
+            
+            <DocumentUploadDialog
+              isOpen={openDialog}
+              onClose={() => setOpenDialog(false)}
+              onUpload={handleDocumentUpload}
+              isProcessing={isProcessing || uploadProcessing}
+            />
           </div>
         </div>
       </CardHeader>
@@ -175,58 +184,7 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
             <p className="text-gray-500 mt-1 mb-4 max-w-md">
               Add documents relevant to this client's case to enhance your analysis.
             </p>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button>Add First Document</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add Client Document</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleDocumentSubmit} className="space-y-4 mt-4">
-                  <div>
-                    <Label htmlFor="docTitle">Document Title</Label>
-                    <Input
-                      id="docTitle"
-                      value={documentTitle}
-                      onChange={(e) => setDocumentTitle(e.target.value)}
-                      placeholder="Enter document title"
-                      disabled={isProcessing}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="docContent">Document Content</Label>
-                    <Textarea
-                      id="docContent"
-                      value={documentContent}
-                      onChange={(e) => setDocumentContent(e.target.value)}
-                      placeholder="Enter document content"
-                      className="min-h-[200px]"
-                      disabled={isProcessing}
-                    />
-                  </div>
-                  <div className="flex justify-end">
-                    <Button 
-                      type="submit" 
-                      disabled={isProcessing}
-                      className="flex items-center gap-1"
-                    >
-                      {isProcessing ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" /> 
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          <FilePlus className="h-4 w-4" />
-                          Upload Document
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
+            <Button onClick={() => setOpenDialog(true)}>Add First Document</Button>
           </div>
         ) : (
           <div>
