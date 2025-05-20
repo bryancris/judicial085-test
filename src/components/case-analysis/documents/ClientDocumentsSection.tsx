@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FilePlus, FileText, Loader2, Search, FileIcon, FileTextIcon } from "lucide-react";
+import { FilePlus, FileText, Loader2, Search, FileIcon } from "lucide-react";
 import { DocumentWithContent } from "@/types/knowledge";
 import DocumentCard from "@/components/knowledge/DocumentCard";
 import { Input } from "@/components/ui/input";
