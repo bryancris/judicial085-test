@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,7 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
     setLocalDocuments(documents || []);
   }, [documents]);
   
-  // Track documents being processed for deletion
+  // Track documents being processed for deletion with improved error handling
   const handleDeleteDocument = async (documentId: string) => {
     if (!onDeleteDocument) return { success: false, error: "Delete not available" };
     
@@ -71,6 +72,15 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
           title: "Delete failed",
           description: result.error || "Failed to delete document. Please try again.",
           variant: "destructive",
+        });
+      } else {
+        // On successful deletion, make sure document stays removed from UI
+        setLocalDocuments(current => current.filter(doc => doc.id !== documentId));
+        
+        // Show success toast
+        toast({
+          title: "Document deleted",
+          description: "Document successfully deleted.",
         });
       }
       

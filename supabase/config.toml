@@ -77,3 +77,6 @@ verify_jwt = true
 
 [functions.search-google-scholar]
 verify_jwt = true
+
+[functions.delete-client-document]
+verify_jwt = true

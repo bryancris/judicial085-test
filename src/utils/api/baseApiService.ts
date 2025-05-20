@@ -22,3 +22,40 @@ export const invokeFunction = async <T>(
     return { data: null, error: err.message };
   }
 };
+
+// Function to delete client document using the edge function
+export const deleteClientDocument = async (
+  documentId: string,
+  clientId: string
+): Promise<{ success: boolean; message?: string; error?: string }> => {
+  try {
+    console.log(`Calling delete-client-document function for document ${documentId}`);
+    
+    const { data, error } = await supabase.functions.invoke('delete-client-document', {
+      method: 'DELETE',
+      body: { documentId, clientId }
+    });
+    
+    if (error) {
+      console.error(`Error calling delete-client-document:`, error);
+      return { 
+        success: false, 
+        error: error.message || "Failed to delete document" 
+      };
+    }
+    
+    console.log(`Result from delete-client-document:`, data);
+    
+    return {
+      success: data?.success || false,
+      message: data?.message,
+      error: data?.error
+    };
+  } catch (err: any) {
+    console.error(`Exception in deleteClientDocument:`, err);
+    return { 
+      success: false, 
+      error: err.message || "Exception while deleting document" 
+    };
+  }
+};

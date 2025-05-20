@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DocumentWithContent } from "@/types/knowledge";
 import { extractTextFromPdf, uploadPdfToStorage, generateEmbeddings } from "@/utils/pdfUtils";
+import { deleteClientDocument } from "@/utils/api/baseApiService";
 
 export const useClientDocuments = (clientId: string | undefined, pageSize: number = 5) => {
   const [documents, setDocuments] = useState<DocumentWithContent[]>([]);
@@ -260,7 +261,7 @@ export const useClientDocuments = (clientId: string | undefined, pageSize: numbe
     }
   }, [clientId, fetchClientDocuments, toast]);
   
-  // Enhanced document deletion with forced cleanup
+  // Enhanced document deletion using the edge function
   const deleteDocument = useCallback(async (documentId: string) => {
     if (!clientId) {
       console.error("Cannot delete document: No client ID provided");
@@ -273,76 +274,46 @@ export const useClientDocuments = (clientId: string | undefined, pageSize: numbe
     }
     
     setIsProcessing(true);
-    console.log(`Starting aggressive deletion for document ${documentId} for client ${clientId}`);
+    console.log(`Starting deletion for document ${documentId} for client ${clientId}`);
     
     try {
-      // Force deletion of document chunks regardless of existence check
-      console.log(`Forcing deletion of all chunks for document ${documentId}`);
-      const { error: chunksDeleteError } = await supabase
-        .from('document_chunks')
-        .delete()
-        .eq('document_id', documentId);
-        
-      if (chunksDeleteError) {
-        console.warn(`Warning during chunk deletion: ${chunksDeleteError.message}`);
-        // Continue with deletion process despite warnings
-      }
-      
-      // Force deletion of document metadata 
-      console.log(`Forcing deletion of metadata for document ${documentId}`);
-      const { error: metadataDeleteError } = await supabase
-        .from('document_metadata')
-        .delete()
-        .eq('id', documentId);
-      
-      if (metadataDeleteError) {
-        throw new Error(`Failed to delete document metadata: ${metadataDeleteError.message}`);
-      }
-      
-      // Attempt to delete from storage (continue even if this fails)
-      try {
-        // Try to build storage path and remove the file
-        const storagePath = `${clientId}/${documentId}.pdf`;
-        console.log(`Attempting to delete storage file: ${storagePath}`);
-        
-        await supabase
-          .storage
-          .from('client_documents')
-          .remove([storagePath]);
-          
-        console.log("Storage file deletion attempt completed");
-      } catch (storageErr) {
-        // Just log storage errors but don't fail the whole operation
-        console.warn("Storage deletion error (non-critical):", storageErr);
-      }
-      
-      // Double-check database to confirm deletion
-      console.log("Verifying document deletion from database");
-      const { data: verifyData } = await supabase
-        .from('document_metadata')
-        .select('id')
-        .eq('id', documentId)
-        .maybeSingle();
-      
-      if (verifyData) {
-        // If document still exists after forced deletion, report error
-        console.error(`CRITICAL: Document ${documentId} still exists after forced deletion!`);
-        return { success: false, error: "Document deletion failed: Document still exists in database" };
-      }
-      
-      // Update UI state on successful deletion
-      console.log(`Document successfully deleted: ${documentId}`);
+      // 1. Update UI state optimistically (can be rolled back if deletion fails)
       setDocuments(prev => prev.filter(doc => doc.id !== documentId));
       
-      // Show success toast
-      toast({
-        title: "Document deleted",
-        description: "Document has been permanently removed.",
-      });
+      // 2. Call the edge function to delete the document with admin privileges
+      const result = await deleteClientDocument(documentId, clientId);
       
-      return { success: true };
+      console.log(`Document deletion result:`, result);
+      
+      if (result.success) {
+        // Show success toast
+        toast({
+          title: "Document deleted",
+          description: "Document has been permanently removed.",
+        });
+        
+        return { success: true };
+      } else {
+        // If failed, restore the document in the UI
+        setDocuments(prev => [...prev, ...documents.filter(doc => doc.id === documentId)]);
+        
+        // Show error toast with the error from the edge function
+        toast({
+          title: "Error deleting document",
+          description: result.error || "An error occurred while deleting the document.",
+          variant: "destructive",
+        });
+        
+        return { 
+          success: false, 
+          error: result.error || "Failed to delete document" 
+        };
+      }
     } catch (error: any) {
       console.error("Error in document deletion:", error);
+      
+      // Restore document in UI on error
+      setDocuments(prev => [...prev, ...documents.filter(doc => doc.id === documentId)]);
       
       toast({
         title: "Error deleting document",
@@ -354,7 +325,7 @@ export const useClientDocuments = (clientId: string | undefined, pageSize: numbe
     } finally {
       setIsProcessing(false);
     }
-  }, [clientId, toast]);
+  }, [clientId, documents, toast]);
   
   // Helper function to chunk document content
   const chunkDocument = (content: string): string[] => {
