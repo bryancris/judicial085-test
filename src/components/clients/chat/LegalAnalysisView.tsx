@@ -4,11 +4,14 @@ import EmptyAnalysisState from "./EmptyAnalysisState";
 import AnalysisLoadingState from "./AnalysisLoadingState";
 import AnalysisItem from "./AnalysisItem";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, File } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface AnalysisItem {
   content: string;
   timestamp: string;
+  documentsUsed?: any[];
 }
 
 interface LegalAnalysisViewProps {
@@ -45,12 +48,35 @@ const LegalAnalysisView = ({ analysisItems, isLoading, error, onQuestionClick, c
       ) : (
         <div className="legal-analysis-container">
           {analysisItems.map((item, index) => (
-            <AnalysisItem 
-              key={index}
-              content={item.content}
-              timestamp={item.timestamp}
-              onQuestionClick={onQuestionClick}
-            />
+            <div key={index} className="relative">
+              {item.documentsUsed && item.documentsUsed.length > 0 && (
+                <div className="mb-2">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge variant="outline" className="flex items-center gap-1 px-2 py-1 font-normal text-xs bg-amber-50">
+                          <File className="h-3 w-3" />
+                          {item.documentsUsed.length} document{item.documentsUsed.length !== 1 ? 's' : ''} used
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs font-medium">Documents used in this analysis:</p>
+                        <ul className="text-xs mt-1">
+                          {item.documentsUsed.map((doc, idx) => (
+                            <li key={idx}>• {doc.title}</li>
+                          ))}
+                        </ul>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              )}
+              <AnalysisItem 
+                content={item.content}
+                timestamp={item.timestamp}
+                onQuestionClick={onQuestionClick}
+              />
+            </div>
           ))}
           <div ref={analysisEndRef} />
         </div>

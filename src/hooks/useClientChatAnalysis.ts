@@ -11,6 +11,7 @@ export const useClientChatAnalysis = (
 ) => {
   const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [documentsUsed, setDocumentsUsed] = useState<any[]>([]);
   const { toast } = useToast();
 
   const generateAnalysis = async (currentMessages: ChatMessageProps[]) => {
@@ -24,10 +25,23 @@ export const useClientChatAnalysis = (
     
     setIsAnalysisLoading(true);
     setAnalysisError(null);
+    setDocumentsUsed([]);
     
     try {
       // Send the conversation to generate legal analysis
-      const { analysis, error, lawReferences } = await generateLegalAnalysis(clientId, currentMessages);
+      const { analysis, error, lawReferences, documentsUsed: docsUsed } = await generateLegalAnalysis(clientId, currentMessages);
+      
+      // Update state with documents used in the analysis
+      if (docsUsed && docsUsed.length > 0) {
+        setDocumentsUsed(docsUsed);
+        console.log("Documents used in analysis:", docsUsed);
+        
+        // Notify user that documents were used in analysis
+        toast({
+          title: "Documents Used in Analysis",
+          description: `${docsUsed.length} client document${docsUsed.length > 1 ? 's were' : ' was'} used in generating this analysis.`,
+        });
+      }
       
       if (error) {
         console.error("Error generating analysis:", error);
@@ -43,13 +57,14 @@ export const useClientChatAnalysis = (
         // Add analysis to state
         const newAnalysis = {
           content: analysis,
-          timestamp
+          timestamp,
+          documentsUsed: docsUsed || []
         };
         
         setLegalAnalysis(prev => [...prev, newAnalysis]);
         
         // Save analysis to database
-        const { success, error: saveError } = await saveLegalAnalysis(clientId, analysis, timestamp);
+        const { success, error: saveError } = await saveLegalAnalysis(clientId, analysis, timestamp, docsUsed);
         
         if (!success) {
           toast({
@@ -82,6 +97,7 @@ export const useClientChatAnalysis = (
   return {
     isAnalysisLoading,
     analysisError,
+    documentsUsed,
     generateAnalysis
   };
 };

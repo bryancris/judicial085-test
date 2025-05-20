@@ -7,6 +7,7 @@ import { ChatMessageProps } from "@/components/clients/chat/ChatMessage";
 export interface AnalysisItem {
   content: string;
   timestamp: string;
+  documentsUsed?: any[];
 }
 
 export const useClientChatHistory = (clientId: string) => {

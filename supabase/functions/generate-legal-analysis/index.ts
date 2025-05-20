@@ -102,6 +102,89 @@ async function searchRelevantLaw(searchTerms) {
   }
 }
 
+// New function to fetch client-specific documents from document_chunks
+async function fetchClientDocuments(clientId) {
+  console.log(`Fetching client-specific documents for client: ${clientId}`);
+  try {
+    // Get Supabase credentials from environment
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Supabase credentials not configured');
+      return [];
+    }
+
+    // Fetch document chunks for this client
+    const response = await fetch(
+      `${supabaseUrl}/rest/v1/document_chunks?select=document_id,content,metadata,chunk_index&client_id=eq.${clientId}&order=document_id.asc,chunk_index.asc`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseServiceKey}`,
+          'apikey': supabaseServiceKey
+        }
+      }
+    );
+    
+    if (!response.ok) {
+      console.warn(`Client documents fetch failed with status: ${response.status}`);
+      return [];
+    }
+    
+    const chunks = await response.json();
+    console.log(`Found ${chunks?.length || 0} document chunks for client ${clientId}`);
+    
+    if (!chunks || chunks.length === 0) {
+      return [];
+    }
+    
+    // Group chunks by document_id and combine their content
+    const documentMap = new Map();
+    
+    chunks.forEach(chunk => {
+      if (!documentMap.has(chunk.document_id)) {
+        documentMap.set(chunk.document_id, {
+          id: chunk.document_id,
+          content: chunk.content || "",
+          metadata: chunk.metadata || {},
+          chunks: [chunk]
+        });
+      } else {
+        const doc = documentMap.get(chunk.document_id);
+        // Append content with a space to avoid merging words
+        doc.content += " " + (chunk.content || "");
+        doc.chunks.push(chunk);
+      }
+    });
+    
+    // Format documents for context inclusion
+    return Array.from(documentMap.values()).map(doc => {
+      // Get a descriptive title from metadata
+      const title = doc.metadata?.title || 
+                   doc.metadata?.fileName || 
+                   (doc.metadata?.isPdfDocument ? "PDF Document" : "Client Document");
+      
+      // Limit content to a reasonable size for context
+      const snippet = doc.content.length > 1000 
+        ? doc.content.substring(0, 1000) + "..." 
+        : doc.content;
+      
+      return {
+        id: doc.id,
+        title: title,
+        content: snippet,
+        isPdfDocument: !!doc.metadata?.isPdfDocument,
+        fileName: doc.metadata?.fileName,
+        uploadedAt: doc.metadata?.uploadedAt
+      };
+    });
+  } catch (error) {
+    console.error("Error fetching client documents:", error);
+    return [];
+  }
+}
+
 // Enhanced function to extract key legal topics from conversation with improved consumer protection coverage
 function extractLegalTopics(conversation) {
   const combinedText = conversation.map(msg => msg.content).join(" ");
@@ -223,6 +306,16 @@ serve(async (req) => {
       }
     }
 
+    // Fetch client-specific documents
+    let clientDocuments = [];
+    try {
+      clientDocuments = await fetchClientDocuments(clientId);
+      console.log(`Retrieved ${clientDocuments.length} client documents for analysis`);
+    } catch (documentError) {
+      console.error("Error fetching client documents:", documentError);
+      // Continue without client documents if fetch fails
+    }
+
     // Detect if this is a consumer protection case
     const isConsumerCase = isConsumerProtectionCase(legalContext);
     console.log(`Case identified as consumer protection case: ${isConsumerCase}`);
@@ -260,6 +353,22 @@ Make sure each question:
 
 After the last follow-up question, don't add any additional content, comments, or new sections. Generate exactly 4 follow-up questions, no more and no less.
 `;
+
+    // Add client documents section to the prompt if available
+    if (clientDocuments.length > 0) {
+      const clientDocumentsPrompt = `
+IMPORTANT: The client has provided the following documents related to this case that should be prioritized in your analysis:
+
+${clientDocuments.map((doc, index) => 
+  `DOCUMENT ${index + 1}: ${doc.title} ${doc.uploadedAt ? `(Uploaded: ${new Date(doc.uploadedAt).toLocaleDateString()})` : ''}
+${doc.content}`
+).join('\n\n')}
+
+When analyzing this case, SPECIFICALLY reference information from these client documents where relevant. When you use information from a client document, clearly indicate which document you're referencing. These client-provided documents should take precedence over general legal information when there are conflicts.
+`;
+      systemPrompt += clientDocumentsPrompt;
+      console.log("Added client documents to prompt");
+    }
 
     // Add enhanced prompt for consumer protection cases
     if (isConsumerCase) {
@@ -358,6 +467,14 @@ When analyzing these issues, connect specific facts from the conversation to the
       }
     }
 
+    // Add note about client documents if they were used
+    if (clientDocuments.length > 0 && analysis) {
+      // Add a note at the beginning of the analysis about the documents used
+      const documentsNote = `*Analysis includes review of ${clientDocuments.length} client document${clientDocuments.length > 1 ? 's' : ''}: ${clientDocuments.map(doc => doc.title).join(', ')}*\n\n`;
+      analysis = documentsNote + analysis;
+      console.log("Added note about client documents used in analysis");
+    }
+
     if (analysis) {
       console.log("Legal analysis generated successfully with enhanced context and post-processing");
     }
@@ -366,6 +483,11 @@ When analyzing these issues, connect specific facts from the conversation to the
       JSON.stringify({ 
         analysis, 
         lawReferences: relevantLawReferences,
+        documentsUsed: clientDocuments.map(doc => ({
+          id: doc.id,
+          title: doc.title,
+          isPdfDocument: doc.isPdfDocument
+        })),
         caseType: isConsumerCase ? "consumer-protection" : "general"
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

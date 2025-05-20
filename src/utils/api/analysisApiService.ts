@@ -7,9 +7,19 @@ import { invokeFunction } from "./baseApiService";
 export const generateLegalAnalysis = async (
   clientId: string, 
   conversation: ChatMessageProps[]
-): Promise<{ analysis: string; lawReferences?: any[]; error?: string }> => {
+): Promise<{ 
+  analysis: string; 
+  lawReferences?: any[]; 
+  documentsUsed?: any[];
+  error?: string 
+}> => {
   try {
-    const { data, error } = await invokeFunction<{ analysis: string; lawReferences?: any[] }>(
+    const { data, error } = await invokeFunction<{ 
+      analysis: string; 
+      lawReferences?: any[];
+      documentsUsed?: any[];
+      caseType?: string;
+    }>(
       "generate-legal-analysis", 
       { clientId, conversation }
     );
@@ -20,7 +30,8 @@ export const generateLegalAnalysis = async (
 
     return { 
       analysis: data?.analysis || "",
-      lawReferences: data?.lawReferences || []
+      lawReferences: data?.lawReferences || [],
+      documentsUsed: data?.documentsUsed || []
     };
   } catch (err: any) {
     console.error("Error generating legal analysis:", err);
