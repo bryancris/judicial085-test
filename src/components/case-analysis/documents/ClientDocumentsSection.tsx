@@ -15,6 +15,7 @@ interface ClientDocumentsSectionProps {
   documents: DocumentWithContent[];
   isLoading: boolean;
   onProcessDocument: (title: string, content: string, metadata?: any) => Promise<any>;
+  onDeleteDocument?: (documentId: string) => Promise<{ success: boolean; error?: string }>;
   isProcessing: boolean;
   fullView?: boolean;
 }
@@ -24,6 +25,7 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
   documents,
   isLoading,
   onProcessDocument,
+  onDeleteDocument,
   isProcessing,
   fullView = false
 }) => {
@@ -101,7 +103,7 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
         setUploadProcessing(false);
         return result;
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error processing document:", error);
       toast({
         title: "Upload failed",
@@ -195,6 +197,7 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
                   document={doc}
                   searchTerm={searchTerm}
                   clientSpecific={true}
+                  onDelete={onDeleteDocument}
                 />
               ))}
             </div>

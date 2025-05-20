@@ -261,6 +261,104 @@ export const useClientDocuments = (clientId: string | undefined, pageSize: numbe
     }
   }, [clientId, fetchClientDocuments, toast]);
   
+  // Delete a document and its associated content
+  const deleteDocument = useCallback(async (documentId: string) => {
+    if (!clientId) {
+      return { success: false, error: "No client ID provided" };
+    }
+    
+    setIsProcessing(true);
+    
+    try {
+      console.log(`Deleting document ${documentId} for client ${clientId}`);
+      
+      // 1. Check if there's a PDF file in storage to delete
+      const { data: metadataData, error: metadataError } = await supabase
+        .from('document_metadata')
+        .select('*')
+        .eq('id', documentId)
+        .eq('client_id', clientId)
+        .single();
+      
+      if (metadataError) {
+        console.error("Error fetching document metadata for deletion:", metadataError);
+        throw new Error(`Failed to fetch document metadata: ${metadataError.message}`);
+      }
+      
+      // If there's a PDF file, delete it from storage
+      if (metadataData?.url) {
+        try {
+          // Extract the file path from the URL
+          const urlParts = metadataData.url.split('/');
+          const filePath = `${clientId}/${documentId}.pdf`;
+          
+          // Delete the file from storage
+          const { error: storageError } = await supabase
+            .storage
+            .from('client_documents')
+            .remove([filePath]);
+          
+          if (storageError) {
+            console.warn("Error deleting file from storage:", storageError);
+            // Continue with deletion of database records even if storage deletion fails
+          } else {
+            console.log("Successfully deleted file from storage");
+          }
+        } catch (storageErr) {
+          console.warn("Error during storage deletion:", storageErr);
+          // Continue with deletion of database records even if storage deletion fails
+        }
+      }
+      
+      // 2. Delete all document chunks
+      const { error: chunksError } = await supabase
+        .from('document_chunks')
+        .delete()
+        .eq('document_id', documentId)
+        .eq('client_id', clientId);
+      
+      if (chunksError) {
+        console.error("Error deleting document chunks:", chunksError);
+        throw new Error(`Failed to delete document chunks: ${chunksError.message}`);
+      }
+      
+      // 3. Delete document metadata
+      const { error: deleteError } = await supabase
+        .from('document_metadata')
+        .delete()
+        .eq('id', documentId)
+        .eq('client_id', clientId);
+      
+      if (deleteError) {
+        console.error("Error deleting document metadata:", deleteError);
+        throw new Error(`Failed to delete document metadata: ${deleteError.message}`);
+      }
+      
+      // 4. Update the documents state to remove the deleted document
+      setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+      
+      // 5. Show success toast
+      toast({
+        title: "Document deleted",
+        description: "Document and associated data has been removed.",
+      });
+      
+      return { success: true };
+    } catch (error: any) {
+      console.error("Error deleting document:", error);
+      
+      toast({
+        title: "Error deleting document",
+        description: error.message || "An error occurred while deleting the document.",
+        variant: "destructive",
+      });
+      
+      return { success: false, error: error.message };
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [clientId, toast]);
+  
   // Helper function to chunk document content
   const chunkDocument = (content: string): string[] => {
     // Simple chunking by paragraphs with a max length
@@ -355,6 +453,7 @@ export const useClientDocuments = (clientId: string | undefined, pageSize: numbe
     loadMore,
     isProcessing,
     processDocument,
+    deleteDocument,
     searchDocumentsBySimilarity,
     refreshDocuments: (reset: boolean = true) => fetchClientDocuments(reset ? 0 : currentPage.current, reset)
   };

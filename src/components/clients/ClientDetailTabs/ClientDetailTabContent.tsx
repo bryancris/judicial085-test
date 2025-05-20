@@ -1,115 +1,74 @@
 
-import React, { useEffect, useState } from "react";
-import { TabsContent } from "@/components/ui/tabs";
-import ClientIntakeChat from "../chat/ClientIntakeChat";
-import LegalAnalysisView from "../chat/LegalAnalysisView";
-import CaseDiscussionContainer from "@/components/case-discussion/CaseDiscussionContainer";
-import ContractReviewChat from "@/components/contract-review/ContractReviewChat";
-import DiscoveryContainer from "@/components/discovery/DiscoveryContainer";
-import { Card, CardContent } from "@/components/ui/card";
+import React from "react";
+import { ClientWithCases } from "@/types/client";
+import { useClientChat } from "@/hooks/useClientChat";
 import { useClientDocuments } from "@/hooks/useClientDocuments";
+import ClientChatView from "@/components/clients/chat/ClientIntakeChat";
+import CaseAnalysisContainer from "@/components/case-analysis/CaseAnalysisContainer";
 import ClientDocumentsSection from "@/components/case-analysis/documents/ClientDocumentsSection";
-import { Client } from "@/types/client";
-import FaqTabContent from "./FaqTabContent";
-import { useClientChatHistory } from "@/hooks/useClientChatHistory";
-import SearchSimilarCasesSection from "@/components/case-analysis/SearchSimilarCasesSection";
-import CaseOutcomePrediction from "@/components/case-analysis/CaseOutcomePrediction";
-import "@/styles/components/legal-analysis.css"; // Import the CSS for legal analysis
 
 interface ClientDetailTabContentProps {
-  client: Client;
+  client: ClientWithCases;
+  activeTab: string;
 }
 
-const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({ client }) => {
-  // Client documents hook for the documents tab
-  const {
-    documents: clientDocuments,
-    loading: documentsLoading,
+const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
+  client,
+  activeTab,
+}) => {
+  const { messages, setMessages, legalAnalysis, isProcessing, generateAnalysis } = useClientChat(client.id);
+  
+  const { 
+    documents, 
+    loading: documentsLoading, 
     processDocument,
-    isProcessing: isProcessingDocument,
-    refreshDocuments
+    deleteDocument,
+    isProcessing: isDocProcessing
   } = useClientDocuments(client.id);
-  
-  const clientName = `${client.first_name} ${client.last_name}`;
-  
-  // Load legal analysis for the analysis tab
-  const { legalAnalysis, isLoadingHistory } = useClientChatHistory(client.id);
-  
-  return (
-    <>
-      <TabsContent value="client-intake">
-        <ClientIntakeChat clientId={client.id} clientName={clientName} />
-      </TabsContent>
-      
-      <TabsContent value="analysis">
-        <Card>
-          <CardContent className="p-6">
-            {/* Add outcome prediction with default values for HOA cases */}
-            {client.case_types?.includes("HOA") && (
-              <div className="mb-6">
-                <CaseOutcomePrediction 
-                  defense={75} 
-                  prosecution={25}
-                  caseType="HOA"
-                />
-              </div>
-            )}
-            
-            <LegalAnalysisView 
-              analysisItems={legalAnalysis}
-              isLoading={isLoadingHistory}
-              clientId={client.id}
-            />
-            
-            <SearchSimilarCasesSection 
-              clientId={client.id}
-              caseType={client.case_types?.[0]}
-            />
-          </CardContent>
-        </Card>
-      </TabsContent>
-      
-      <TabsContent value="discovery">
-        <DiscoveryContainer clientId={client.id} />
-      </TabsContent>
-      
-      <TabsContent value="discussion">
-        <CaseDiscussionContainer clientId={client.id} />
-      </TabsContent>
 
-      <TabsContent value="contracts">
-        <ContractReviewChat clientId={client.id} clientName={clientName} />
-      </TabsContent>
-      
-      <TabsContent value="documents">
-        <Card>
-          <CardContent className="p-6">
-            <ClientDocumentsSection
+  // Determine which tab content to show
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "chat":
+        return (
+          <ClientChatView
+            client={client}
+            messages={messages}
+            setMessages={setMessages}
+            legalAnalysis={legalAnalysis}
+            generateAnalysis={generateAnalysis}
+            isProcessing={isProcessing}
+          />
+        );
+      case "documents":
+        return (
+          <div className="p-4">
+            <ClientDocumentsSection 
               clientId={client.id}
-              documents={clientDocuments}
+              documents={documents}
               isLoading={documentsLoading}
               onProcessDocument={processDocument}
-              isProcessing={isProcessingDocument}
-              fullView
+              onDeleteDocument={deleteDocument}
+              isProcessing={isDocProcessing}
+              fullView={true}
             />
-          </CardContent>
-        </Card>
-      </TabsContent>
-      
-      <TabsContent value="knowledge">
-        <Card>
-          <CardContent className="p-6">
-            <h2 className="text-2xl font-semibold mb-4">Legal Resources</h2>
-            <p>Resources and knowledge base content related to this client's case will appear here.</p>
-            {/* Knowledge base content would go here */}
-          </CardContent>
-        </Card>
-      </TabsContent>
-      
-      <TabsContent value="faq">
-        <FaqTabContent />
-      </TabsContent>
-    </>
+          </div>
+        );
+      case "analysis":
+        return <CaseAnalysisContainer clientId={client.id} />;
+      default:
+        return (
+          <div className="p-6 text-center">
+            <p className="text-gray-500">Select a tab to view content</p>
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className="flex-1 overflow-hidden flex flex-col">
+      {renderTabContent()}
+    </div>
   );
 };
 
