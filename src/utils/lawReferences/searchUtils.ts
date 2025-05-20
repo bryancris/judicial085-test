@@ -93,7 +93,10 @@ export const extractLegalTopics = (text: string): string[] => {
     "real estate", "landlord tenant", "eviction", "workers compensation",
     "employment", "discrimination", "estate planning", "probate", "will", 
     "trust", "guardianship", "business formation", "LLC", "corporation",
-    "insurance", "malpractice", "wrongful death", "product liability"
+    "insurance", "malpractice", "wrongful death", "product liability",
+    "homeowners association", "HOA", "property code", "bylaws", "community rules",
+    "covenant", "deed restriction", "board meeting", "open meeting", "assessment",
+    "due process", "fines", "notice requirement"
   ];
   
   // Convert to lowercase for case-insensitive matching
@@ -111,7 +114,7 @@ export const extractLegalTopics = (text: string): string[] => {
  * @returns Array of potential statute references
  */
 export const extractStatuteReferences = (text: string): string[] => {
-  // Extract potential statute references like "Section 101.021"
+  // Extract potential statute references like "Section 101.021" or "§ 209.006"
   const statutePattern = /\b(section|§)\s*\d+(\.\d+)*\b/gi;
   const matches = text.match(statutePattern) || [];
   

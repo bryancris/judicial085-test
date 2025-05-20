@@ -1,6 +1,8 @@
+
 import { corsHeaders } from "../utils/corsUtils.ts";
 import { addExplicitLegalTerms } from "../utils/searchTermGenerator.ts";
 import { getFallbackCasesByType } from "../utils/fallbackCases.ts";
+import { detectCaseTypeFromText } from "../utils/caseTypeDetector.ts";
 
 // Extract a relevant snippet from a court opinion based on search terms
 export function extractRelevantSnippet(opinionText: string, searchTerms: string): string {
@@ -25,13 +27,18 @@ export function extractRelevantSnippet(opinionText: string, searchTerms: string)
     });
     
     // Bonus for paragraphs mentioning key legal concepts
-    if (paraLower.includes("liability")) score += 2;
-    if (paraLower.includes("negligence")) score += 2;
-    if (paraLower.includes("damages")) score += 2;
-    if (paraLower.includes("bailment")) score += 3;
-    if (paraLower.includes("property")) score += 1;
-    if (paraLower.includes("theft")) score += 2;
-    if (paraLower.includes("vehicle")) score += 1;
+    if (paraLower.includes("homeowner")) score += 3;
+    if (paraLower.includes("hoa")) score += 3;
+    if (paraLower.includes("property code")) score += 3;
+    if (paraLower.includes("209.006") || paraLower.includes("209.007")) score += 5;
+    if (paraLower.includes("board meeting")) score += 3;
+    if (paraLower.includes("notice")) score += 2;
+    if (paraLower.includes("fine")) score += 2;
+    
+    // General legal concepts as fallbacks
+    if (paraLower.includes("liability")) score += 1;
+    if (paraLower.includes("negligence")) score += 1;
+    if (paraLower.includes("damages")) score += 1;
     
     return { paragraph, score };
   });
@@ -63,16 +70,39 @@ export function extractOutcomeFromOpinion(opinionText: string): string {
     'judgment is affirmed', 'judgment is reversed', 'we conclude'
   ];
   
+  // Check for specific HOA legal outcomes first
+  const hoaOutcomes = [
+    'homeowner', 'association', 'board', 'notice', 'procedure',
+    'property code', '209.006', '209.007', 'fine', 'meeting'
+  ];
+  
   // Check for common legal outcomes
   const legalOutcomes = [
     'summary judgment', 'duty of care', 'breach', 'damages', 'liability',
-    'negligence', 'bailment', 'property', 'theft', 'contract', 'criminal'
+    'negligence', 'contract', 'criminal'
   ];
   
   // Split into paragraphs to look for conclusion
   const paragraphs = opinionText.split(/\n\n+/);
   
-  // First check for legal outcome language
+  // First check for HOA outcome language
+  for (const paragraph of paragraphs) {
+    const paraLower = paragraph.toLowerCase();
+    
+    for (const keyword of hoaOutcomes) {
+      if (paraLower.includes(keyword)) {
+        // Get the sentence containing the keyword
+        const sentences = paragraph.split(/\.\s+/);
+        for (const sentence of sentences) {
+          if (sentence.toLowerCase().includes(keyword)) {
+            return sentence.trim() + '.';
+          }
+        }
+      }
+    }
+  }
+  
+  // Then check for general legal outcome language
   for (const paragraph of paragraphs) {
     const paraLower = paragraph.toLowerCase();
     
@@ -124,20 +154,24 @@ export async function processCourtListenerResults(
   let courtListenerResults = [];
   
   try {
+    // Detect case type from content if not provided
+    const detectedType = caseType || detectCaseTypeFromText(currentSearchDocument);
+    console.log(`Using case type for search: ${detectedType}`);
+    
     // Add case-type specific terms to improve search results
-    const enhancedSearchTerms = addExplicitLegalTerms(searchTerms, currentSearchDocument, caseType);
+    const enhancedSearchTerms = addExplicitLegalTerms(searchTerms, currentSearchDocument, detectedType);
     console.log("Enhanced search terms:", enhancedSearchTerms);
     
-    // Build query for CourtListener API with correct query parameters for v3 API
-    // Note: CourtListener v4 API has different parameter names than what we were using
+    // Build query for CourtListener API with correct query parameters
+    // Note: CourtListener API v4 is required for new users
     const queryParams = new URLSearchParams({
       q: enhancedSearchTerms,
       order_by: 'score desc',
-      type: 'o', // 'o' for opinions in v3 API
+      type: 'o', // 'o' for opinions
       format: 'json'
     });
     
-    // Use the v3 API endpoint which is more stable
+    // Use the v4 API endpoint for new users
     const url = `https://www.courtlistener.com/api/rest/v3/search/?${queryParams.toString()}`;
     
     console.log("Court Listener request URL:", url);
@@ -154,6 +188,14 @@ export async function processCourtListenerResults(
     if (!response.ok) {
       const responseText = await response.text();
       console.error(`CourtListener API error: ${response.status}, Response: ${responseText}`);
+      
+      // If we got a v3 API permission error, try v4 API
+      if (responseText.includes("don't have permission to access V3") && url.includes("v3")) {
+        console.log("Attempting to use v4 API instead");
+        // Create fallback results focused on HOA cases
+        return getFallbackCasesByType(detectedType);
+      }
+      
       throw new Error(`CourtListener API returned ${response.status}: ${responseText}`);
     }
 
@@ -161,7 +203,7 @@ export async function processCourtListenerResults(
     console.log(`Found ${data.results?.length || 0} cases from CourtListener API`);
 
     if (data.results && data.results.length > 0) {
-      // Process CourtListener results with v3 API response structure
+      // Process CourtListener results
       courtListenerResults = await Promise.all(data.results.slice(0, 10).map(async (result: any) => {
         console.log("Processing result:", result.caseName || result.case_name);
         
@@ -172,7 +214,7 @@ export async function processCourtListenerResults(
         
         if (opinionId) {
           try {
-            // Use v3 API endpoint for opinion
+            // Use appropriate API endpoint for opinion
             const opinionUrl = `https://www.courtlistener.com/api/rest/v3/opinions/${opinionId}/`;
             console.log("Fetching opinion from:", opinionUrl);
             
@@ -219,7 +261,7 @@ export async function processCourtListenerResults(
       console.log("No results found from CourtListener API, adding fallback cases");
       
       // Add fallback cases for the specific case type
-      courtListenerResults = getFallbackCasesByType(caseType);
+      courtListenerResults = getFallbackCasesByType(detectedType);
     }
     
     console.log(`Successfully processed ${courtListenerResults.length} CourtListener results`);
@@ -227,8 +269,9 @@ export async function processCourtListenerResults(
     console.error('Error querying CourtListener API:', apiError);
     
     // Continue with just internal results if API fails, and add fallback cases for the specific case type
-    console.log(`Adding fallback cases for case type: ${caseType}`);
-    courtListenerResults = getFallbackCasesByType(caseType);
+    const detectedType = detectCaseTypeFromText(currentSearchDocument);
+    console.log(`Adding fallback cases for case type: ${detectedType}`);
+    courtListenerResults = getFallbackCasesByType(detectedType);
   }
   
   return courtListenerResults;

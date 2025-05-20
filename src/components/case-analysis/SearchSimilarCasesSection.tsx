@@ -107,7 +107,10 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
       (c.relevantFacts || "") + " " + (c.outcome || "")
     ).join(" ").toLowerCase();
     
-    if (allText.includes("bailment") || allText.includes("vehicle theft") || 
+    if (allText.includes("hoa") || allText.includes("homeowner") || 
+        allText.includes("property code") || allText.includes("209.006")) {
+      return "HOA";
+    } else if (allText.includes("bailment") || allText.includes("vehicle theft") || 
         allText.includes("property") && allText.includes("stolen")) {
       return "Bailment/Property";
     } else if (allText.includes("slip and fall") || allText.includes("premises liability")) {

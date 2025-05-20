@@ -16,6 +16,15 @@ export function generateSearchTerms(
   // Extract potential statutes
   const statuteMatches = relevantLaw.match(/([A-Z][\w\s]+Code\s+§+\s*\d+[\w\.\-]*)/g) || [];
   
+  // Check for HOA-related content specifically
+  const isHoaCase = [relevantLaw, legalIssues, preliminaryAnalysis].some(text => {
+    const lowerText = (text || "").toLowerCase();
+    return lowerText.includes("hoa") || 
+           lowerText.includes("homeowner") || 
+           lowerText.includes("property code § 209") ||
+           lowerText.includes("property code section 209");
+  });
+  
   // Extract key legal terms
   const legalTerms = new Set<string>();
   
@@ -50,11 +59,33 @@ export function generateSearchTerms(
     legalTerms.add("employment dispute");
     legalTerms.add("wrongful termination");
     legalTerms.add("workplace discrimination");
+  } else if (caseType === "real-estate" || isHoaCase) {
+    // Add HOA-specific terms if this appears to be an HOA case
+    legalTerms.add("homeowners association");
+    legalTerms.add("HOA");
+    legalTerms.add("property code 209");
+    legalTerms.add("Texas Property Code");
+    legalTerms.add("board meeting");
+    legalTerms.add("covenant");
+    legalTerms.add("fine");
+    legalTerms.add("notice requirement");
+  }
+  
+  // If we detected an HOA case but didn't add the terms yet
+  if (isHoaCase) {
+    legalTerms.add("homeowners association");
+    legalTerms.add("HOA");
+    legalTerms.add("property code 209");
+    legalTerms.add("Texas Property Code");
+    legalTerms.add("board meeting");
   }
   
   // Always add negligence as it's common across many case types
-  legalTerms.add("negligence");
-  legalTerms.add("damages");
+  // But for HOA cases, prioritize specific terms
+  if (!isHoaCase) {
+    legalTerms.add("negligence");
+    legalTerms.add("damages");
+  }
   
   // Process relevant law for legal terms
   const lawWords = relevantLaw.split(/\W+/);
@@ -91,8 +122,18 @@ export function generateSearchTerms(
 export function addExplicitLegalTerms(searchTerms: string, caseText: string, caseType: string): string {
   let enhancedTerms = searchTerms;
   
+  // Check for HOA terms in the case text
+  const isHoaCase = caseText.toLowerCase().includes("hoa") || 
+                   caseText.toLowerCase().includes("homeowner") ||
+                   caseText.toLowerCase().includes("property code § 209") ||
+                   caseText.includes("209.006") ||
+                   caseText.includes("209.007");
+  
   // Add case-type specific terms
-  if (caseType === "bailment") {
+  if (isHoaCase || caseType === "real-estate" || caseType === "hoa") {
+    enhancedTerms = `${enhancedTerms} "homeowners association" "HOA" "property code" "board meeting" "due process" notice 209.006 209.007 fines bylaws covenant`;
+  }
+  else if (caseType === "bailment") {
     enhancedTerms = `${enhancedTerms} "bailment" "bailee" "property" "duty of care" vehicle valuable theft stolen`;
   } 
   else if (caseType === "premises-liability") {

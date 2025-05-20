@@ -5,7 +5,7 @@ import { processCourtListenerResults } from "./courtListenerHandler.ts";
 import { processInternalAnalyses } from "./internalAnalysisHandler.ts";
 import { generateFallbackCases, getFallbackCasesByType } from "../utils/fallbackCases.ts";
 import { extractSection } from "../utils/textUtils.ts";
-import { identifyCaseType } from "../utils/caseTypeDetector.ts";
+import { identifyCaseType, detectCaseTypeFromText } from "../utils/caseTypeDetector.ts";
 import { generateSearchTerms } from "../utils/searchTermGenerator.ts";
 
 export async function handleClientSearch(clientId: string, courtListenerApiKey: string) {
@@ -24,7 +24,7 @@ export async function handleClientSearch(clientId: string, courtListenerApiKey: 
   // Fetch the current client's legal analysis
   const { data: currentAnalysis, error: analysisError } = await supabase
     .from('legal_analyses')
-    .select('content')
+    .select('content, case_type')
     .eq('client_id', clientId)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -52,7 +52,7 @@ export async function handleClientSearch(clientId: string, courtListenerApiKey: 
   // First try to find similar cases from our own database
   const { data: otherAnalyses, error: otherAnalysesError } = await supabase
     .from('legal_analyses')
-    .select('content, client_id, created_at')
+    .select('content, client_id, created_at, case_type')
     .neq('client_id', clientId)
     .order('created_at', { ascending: false });
 
@@ -80,9 +80,17 @@ export async function handleClientSearch(clientId: string, courtListenerApiKey: 
     issues: currentIssues.substring(0, 100) + "..."
   });
 
-  // Detect the case type
-  const caseType = identifyCaseType(currentPreliminaryAnalysis, currentIssues, currentRelevantLaw);
-  console.log("Detected case type:", caseType);
+  // Detect the case type directly from the analysis text
+  const detectedCaseType = detectCaseTypeFromText(currentSearchDocument);
+  console.log("Detected case type from content:", detectedCaseType);
+  
+  // Use case_type from database or detected type, with preference for HOA type
+  let caseType = currentAnalysis.case_type || await identifyCaseType(clientId);
+  if (detectedCaseType === "hoa" || 
+      (currentAnalysis.content && currentAnalysis.content.toLowerCase().includes("hoa"))) {
+    caseType = "hoa";
+  }
+  console.log("Final case type for search:", caseType);
 
   // Generate search terms based on analysis content and case type
   const searchTerms = generateSearchTerms(currentRelevantLaw, currentIssues, currentPreliminaryAnalysis, caseType);
