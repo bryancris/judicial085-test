@@ -34,7 +34,7 @@ export const saveLegalAnalysis = async (
         .update({ 
           content, 
           timestamp,
-          updated_at: new Date(),
+          updated_at: new Date().toISOString(),
           law_references: documentsUsed ? JSON.stringify(documentsUsed) : null
         })
         .eq('client_id', clientId);
