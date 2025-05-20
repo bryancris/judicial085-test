@@ -14,6 +14,7 @@ export const caseTypes = [
   { id: "real_estate", label: "Real Estate" },
   { id: "intellectual_property", label: "Intellectual Property" },
   { id: "employment", label: "Employment" },
+  { id: "HOA", label: "HOA" },
   { id: "deceptive_trade", label: "Deceptive Trade Practices" },
   { id: "contract_review", label: "Contract Review" }
 ];
