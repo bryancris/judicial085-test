@@ -1,3 +1,4 @@
+
 // Re-export all functionality from refactored files
 export * from './api/chatApiService';
 export * from './api/analysisApiService';
@@ -5,6 +6,7 @@ export * from './api/messageApiService';
 export * from './api/legalContentApiService';
 export * from './api/notesApiService';
 export * from './types/chatTypes';
+import { supabase } from '@/integrations/supabase/client';
 
 // Save legal analysis to database
 export const saveLegalAnalysis = async (
