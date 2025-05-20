@@ -13,6 +13,7 @@ import { Client } from "@/types/client";
 import FaqTabContent from "./FaqTabContent";
 import { useClientChatHistory } from "@/hooks/useClientChatHistory";
 import SearchSimilarCasesSection from "@/components/case-analysis/SearchSimilarCasesSection";
+import CaseOutcomePrediction from "@/components/case-analysis/CaseOutcomePrediction";
 import "@/styles/components/legal-analysis.css"; // Import the CSS for legal analysis
 
 interface ClientDetailTabContentProps {
@@ -42,13 +43,23 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({ client 
       <TabsContent value="analysis">
         <Card>
           <CardContent className="p-6">
+            {/* Add outcome prediction with default values for HOA cases */}
+            {client.case_types?.includes("HOA") && (
+              <div className="mb-6">
+                <CaseOutcomePrediction 
+                  defense={75} 
+                  prosecution={25}
+                  caseType="HOA"
+                />
+              </div>
+            )}
+            
             <LegalAnalysisView 
               analysisItems={legalAnalysis}
               isLoading={isLoadingHistory}
               clientId={client.id}
             />
             
-            {/* Use case_types instead of case_type */}
             <SearchSimilarCasesSection 
               clientId={client.id}
               caseType={client.case_types?.[0]}

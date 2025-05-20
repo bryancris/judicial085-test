@@ -4,7 +4,6 @@ import { useCaseAnalysis } from "@/hooks/useCaseAnalysis";
 import CaseAnalysisErrorState from "./CaseAnalysisErrorState";
 import CaseAnalysisLoadingSkeleton from "./CaseAnalysisLoadingSkeleton";
 import DetailedLegalAnalysis from "./DetailedLegalAnalysis";
-import CaseOutcomePrediction from "./CaseOutcomePrediction";
 import CaseStrengthsWeaknesses from "./CaseStrengthsWeaknesses";
 import ConversationSummary from "./ConversationSummary";
 import ConversationList from "./conversation/ConversationList";
@@ -161,11 +160,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
               />
             </div>
             <div className="md:col-span-1">
-              <CaseOutcomePrediction
-                defense={Number(analysisData.outcome.defense)}
-                prosecution={Number(analysisData.outcome.prosecution)}
-                isLoading={isLoading}
-              />
+              {/* Removed standalone CaseOutcomePrediction here since we've moved it to SearchSimilarCasesSection */}
             </div>
           </div>
 
@@ -186,7 +181,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
             caseType={analysisData.caseType}
           />
 
-          {/* Similar Cases */}
+          {/* Similar Cases with integrated Outcome Prediction */}
           <SearchSimilarCasesSection clientId={clientId} caseType={analysisData.caseType} />
 
           {/* Detailed Legal Analysis */}

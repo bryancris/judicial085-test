@@ -96,7 +96,7 @@ export const extractLegalTopics = (text: string): string[] => {
     "insurance", "malpractice", "wrongful death", "product liability",
     "homeowners association", "HOA", "property code", "bylaws", "community rules",
     "covenant", "deed restriction", "board meeting", "open meeting", "assessment",
-    "due process", "fines", "notice requirement"
+    "due process", "fines", "notice requirement", "property code 209", "209.006", "209.007"
   ];
   
   // Convert to lowercase for case-insensitive matching
@@ -118,8 +118,17 @@ export const extractStatuteReferences = (text: string): string[] => {
   const statutePattern = /\b(section|§)\s*\d+(\.\d+)*\b/gi;
   const matches = text.match(statutePattern) || [];
   
+  // Look specifically for Property Code references common in HOA cases
+  const propCodePattern = /\bproperty\s+code\s+(?:section\s+)?(\d+(\.\d+)*)\b/gi;
+  const propCodeMatches = [];
+  let match;
+  
+  while ((match = propCodePattern.exec(text)) !== null) {
+    propCodeMatches.push(match[1]);
+  }
+  
   // Clean up the references (remove "Section" prefix)
-  return matches.map(s => s.replace(/^(section|§)\s*/i, ''));
+  return [...matches.map(s => s.replace(/^(section|§)\s*/i, '')), ...propCodeMatches];
 };
 
 /**
@@ -131,4 +140,20 @@ export const extractCaseNames = (text: string): string[] => {
   // Extract case names like "Roe v. Wade"
   const casePattern = /\b[A-Z][a-z]+\s+v\.?\s+[A-Z][a-z]+\b/g;
   return text.match(casePattern) || [];
+};
+
+/**
+ * Check if text is related to HOA/Property Code cases
+ * @param text The text to analyze
+ * @returns boolean indicating if this is an HOA case
+ */
+export const isHOARelated = (text: string): boolean => {
+  const hoaKeywords = [
+    "homeowners association", "property owners association", "hoa", "poa",
+    "deed restriction", "restrictive covenant", "property code 209", "209.006",
+    "209.007", "board meeting", "community rules", "property code chapter 209"
+  ];
+  
+  const lowerText = text.toLowerCase();
+  return hoaKeywords.some(keyword => lowerText.includes(keyword));
 };

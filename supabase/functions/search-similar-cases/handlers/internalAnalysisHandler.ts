@@ -17,6 +17,16 @@ export function calculateSimilarity(text1: string, text2: string): number {
   return intersection.size / union.size;
 }
 
+// Detect if content relates to HOA case
+export function isHOACase(content: string): boolean {
+  const hoaKeywords = ["hoa", "homeowner", "association", "property code", "209.006", "209.007", 
+                      "board meeting", "restrictive covenant", "deed restriction", "community rules", 
+                      "bylaws", "assessment", "fine", "homeowners association"];
+                      
+  const lowerContent = content.toLowerCase();
+  return hoaKeywords.some(keyword => lowerContent.includes(keyword));
+}
+
 // Extract relevant facts from the analysis content
 export function extractRelevantFacts(content: string): string {
   if (!content) return "No relevant facts available";
@@ -54,6 +64,9 @@ export function extractOutcomePrediction(content: string): string {
 
 // Process internal analyses to find similar cases
 export async function processInternalAnalyses(otherAnalyses: any[], currentSearchDocument: string): Promise<any[]> {
+  // Check if the current case is an HOA case
+  const isCurrentHOACase = isHOACase(currentSearchDocument);
+  
   // Group analyses by client and take the most recent one for each
   const latestAnalysesByClient = otherAnalyses.reduce((acc, analysis) => {
     if (!acc[analysis.client_id] || new Date(analysis.created_at) > new Date(acc[analysis.client_id].created_at)) {
@@ -62,18 +75,24 @@ export async function processInternalAnalyses(otherAnalyses: any[], currentSearc
     return acc;
   }, {});
 
-  // For each client, calculate similarity score
-  return await Promise.all(
+  // For each client, calculate similarity score with higher weight for same case type
+  const similarCases = await Promise.all(
     Object.values(latestAnalysesByClient).map(async (analysis: any) => {
       const relevantLaw = extractSection(analysis.content, 'RELEVANT TEXAS LAW');
       const preliminaryAnalysis = extractSection(analysis.content, 'PRELIMINARY ANALYSIS');
       const issues = extractSection(analysis.content, 'POTENTIAL LEGAL ISSUES');
 
       const searchDocument = [relevantLaw, preliminaryAnalysis, issues].join(' ');
+      const isOtherHOACase = isHOACase(searchDocument);
       
-      // Calculate similarity score (simple text-based similarity for now)
-      const similarityScore = calculateSimilarity(currentSearchDocument, searchDocument);
-
+      // Calculate basic similarity score
+      let similarityScore = calculateSimilarity(currentSearchDocument, searchDocument);
+      
+      // Boost similarity for matching case types (HOA with HOA)
+      if (isCurrentHOACase && isOtherHOACase) {
+        similarityScore = Math.min(1.0, similarityScore * 1.5); // Increase similarity by 50% but cap at 1.0
+      }
+      
       // Get the client details
       const { data: otherClient } = await supabase
         .from('clients')
@@ -98,4 +117,7 @@ export async function processInternalAnalyses(otherAnalyses: any[], currentSearc
       };
     })
   );
+  
+  // Sort by similarity and return
+  return similarCases.sort((a, b) => b.similarity - a.similarity);
 }
