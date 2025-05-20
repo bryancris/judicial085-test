@@ -11,7 +11,7 @@ interface CaseInformationSectionProps {
 const CaseInformationSection = ({ client }: CaseInformationSectionProps) => {
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-4">Case Information</h3>
+      <h3 className="text-lg font-semibold mb-4">Additional Information</h3>
       <div className="grid grid-cols-1 gap-6">
         <Card>
           <CardContent className="pt-6">
