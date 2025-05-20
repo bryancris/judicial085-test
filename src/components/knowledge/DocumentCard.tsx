@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { DocumentWithContent } from "@/types/knowledge";
-import { FileText, FilePdf, Download } from "lucide-react";
+import { FileText, Download, FileIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -58,7 +58,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
           <div className="flex items-start justify-between">
             <div className="flex items-center">
               {isPdf ? (
-                <FilePdf className="h-5 w-5 text-red-500 mr-2 flex-shrink-0" />
+                <FileIcon className="h-5 w-5 text-red-500 mr-2 flex-shrink-0" />
               ) : (
                 <FileText className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
               )}
@@ -85,7 +85,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
           <div className="mt-2">
             {isPdf ? (
               <div className="text-gray-600 text-sm italic flex items-center">
-                <FilePdf className="h-4 w-4 mr-1 text-red-500" />
+                <FileIcon className="h-4 w-4 mr-1 text-red-500" />
                 PDF Document - Click to preview
               </div>
             ) : (
@@ -112,7 +112,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
           <DialogHeader className={isPdf ? "p-4 bg-white border-b" : ""}>
             <DialogTitle className="flex items-center">
               {isPdf ? (
-                <FilePdf className="h-5 w-5 text-red-500 mr-2" />
+                <FileIcon className="h-5 w-5 text-red-500 mr-2" />
               ) : (
                 <FileText className="h-5 w-5 text-blue-500 mr-2" />
               )}

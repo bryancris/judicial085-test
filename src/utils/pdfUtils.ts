@@ -5,9 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 export const extractTextFromPdf = async (file: File): Promise<string[]> => {
   // We'll use PDF.js for extracting text from PDFs
   const pdfjs = await import('pdfjs-dist');
-  const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.entry');
   
-  pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+  // Set the worker source directly without importing the worker entry
+  pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
   
   return new Promise(async (resolve, reject) => {
     try {
@@ -101,11 +101,14 @@ export const generateEmbeddings = async (
 ): Promise<any> => {
   try {
     // Call the Edge Function to generate embeddings
+    // Updated to use the current Supabase Auth API instead of session()
+    const { data: { session } } = await supabase.auth.getSession();
+    
     const response = await fetch('/functions/v1/generate-embeddings', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabase.auth.session()?.access_token}`
+        'Authorization': `Bearer ${session?.access_token}`
       },
       body: JSON.stringify({
         texts: textChunks,
