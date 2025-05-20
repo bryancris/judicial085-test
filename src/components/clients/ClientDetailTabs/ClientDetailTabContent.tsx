@@ -26,7 +26,8 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({ client 
     documents: clientDocuments,
     loading: documentsLoading,
     processDocument,
-    isProcessing: isProcessingDocument
+    isProcessing: isProcessingDocument,
+    refreshDocuments
   } = useClientDocuments(client.id);
   
   const clientName = `${client.first_name} ${client.last_name}`;

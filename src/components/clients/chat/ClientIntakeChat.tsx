@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { useState } from "react";
 import ChatView from "./ChatView";
 import ChatInput from "./ChatInput";
 import LegalAnalysisView from "./LegalAnalysisView";
@@ -7,6 +6,12 @@ import { useClientChat } from "@/hooks/useClientChat";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { FileText, Paperclip } from "lucide-react";
+import { useClientDocuments } from "@/hooks/useClientDocuments";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 interface ClientIntakeChatProps {
   clientId: string;
@@ -29,15 +34,52 @@ const ClientIntakeChat = ({ clientId, clientName }: ClientIntakeChatProps) => {
     formatTimestamp
   } = useClientChat(clientId);
 
+  // Document upload state
+  const [openDocDialog, setOpenDocDialog] = useState(false);
+  const [documentTitle, setDocumentTitle] = useState("");
+  const [documentContent, setDocumentContent] = useState("");
+  const { toast } = useToast();
+
+  // Use the client documents hook
+  const { processDocument, isProcessing } = useClientDocuments(clientId);
+
+  const handleDocumentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!documentTitle.trim()) {
+      toast({
+        title: "Title required",
+        description: "Please provide a title for the document.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!documentContent.trim()) {
+      toast({
+        title: "Content required",
+        description: "Please provide content for the document.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const result = await processDocument(documentTitle, documentContent);
+    
+    if (result.success) {
+      setDocumentTitle("");
+      setDocumentContent("");
+      setOpenDocDialog(false);
+      
+      toast({
+        title: "Document added",
+        description: `${documentTitle} has been added as a supporting document.`,
+      });
+    }
+  };
+
   const handleAddDocuments = () => {
-    // This is a placeholder function that will be implemented in the future
-    console.log("Add supporting documents clicked");
-    // For now, show a toast notification
-    const { toast } = require("@/hooks/use-toast");
-    toast({
-      title: "Feature coming soon",
-      description: "Document upload functionality will be implemented soon.",
-    });
+    setOpenDocDialog(true);
   };
 
   if (isLoadingHistory) {
@@ -119,6 +161,57 @@ const ClientIntakeChat = ({ clientId, clientName }: ClientIntakeChatProps) => {
           onQuestionClick={handleFollowUpQuestionClick}
         />
       </div>
+
+      {/* Document Upload Dialog */}
+      <Dialog open={openDocDialog} onOpenChange={setOpenDocDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Add Supporting Document</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleDocumentSubmit} className="space-y-4 mt-4">
+            <div>
+              <Label htmlFor="docTitle">Document Title</Label>
+              <Input
+                id="docTitle"
+                value={documentTitle}
+                onChange={(e) => setDocumentTitle(e.target.value)}
+                placeholder="Enter document title"
+                disabled={isProcessing}
+              />
+            </div>
+            <div>
+              <Label htmlFor="docContent">Document Content</Label>
+              <Textarea
+                id="docContent"
+                value={documentContent}
+                onChange={(e) => setDocumentContent(e.target.value)}
+                placeholder="Enter document content"
+                className="min-h-[200px]"
+                disabled={isProcessing}
+              />
+            </div>
+            <div className="flex justify-end">
+              <Button 
+                type="submit" 
+                disabled={isProcessing}
+                className="flex items-center gap-1"
+              >
+                {isProcessing ? (
+                  <>
+                    <FileText className="h-4 w-4 mr-2 animate-spin" /> 
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Upload Document
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
