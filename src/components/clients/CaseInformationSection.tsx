@@ -15,19 +15,7 @@ const CaseInformationSection = ({ client }: CaseInformationSectionProps) => {
       <div className="grid grid-cols-1 gap-6">
         <Card>
           <CardContent className="pt-6">
-            <div className="space-y-6">
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">Case Number</Label>
-                <div className="mt-1 p-2 border rounded-md">{client.case_number || "Not provided"}</div>
-              </div>
-              
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">Case Description</Label>
-                <div className="mt-1 p-2 border rounded-md whitespace-pre-wrap min-h-[80px]">
-                  {client.case_description || "Not provided"}
-                </div>
-              </div>
-              
+            <div className="space-y-6">              
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Referred By</Label>
                 <div className="mt-1 p-2 border rounded-md">{client.referred_by || "Not provided"}</div>
