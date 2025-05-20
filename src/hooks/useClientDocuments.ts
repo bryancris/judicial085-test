@@ -264,15 +264,23 @@ export const useClientDocuments = (clientId: string | undefined, pageSize: numbe
   // Delete a document and its associated content
   const deleteDocument = useCallback(async (documentId: string) => {
     if (!clientId) {
+      console.error("Cannot delete document: No client ID provided");
       return { success: false, error: "No client ID provided" };
     }
     
+    if (!documentId) {
+      console.error("Cannot delete document: No document ID provided");
+      return { success: false, error: "No document ID provided" };
+    }
+    
     setIsProcessing(true);
+    let deletionSuccess = false;
+    let storageFilePath = null;
     
     try {
       console.log(`Deleting document ${documentId} for client ${clientId}`);
       
-      // 1. Check if there's a PDF file in storage to delete
+      // 1. First verify document exists and belongs to this client
       const { data: metadataData, error: metadataError } = await supabase
         .from('document_metadata')
         .select('*')
@@ -285,32 +293,23 @@ export const useClientDocuments = (clientId: string | undefined, pageSize: numbe
         throw new Error(`Failed to fetch document metadata: ${metadataError.message}`);
       }
       
-      // If there's a PDF file, delete it from storage
+      if (!metadataData) {
+        throw new Error(`Document ${documentId} not found or doesn't belong to client ${clientId}`);
+      }
+      
+      // If there's a PDF file, prepare to delete it from storage
       if (metadataData?.url) {
         try {
           // Extract the file path from the URL
-          const urlParts = metadataData.url.split('/');
           const filePath = `${clientId}/${documentId}.pdf`;
-          
-          // Delete the file from storage
-          const { error: storageError } = await supabase
-            .storage
-            .from('client_documents')
-            .remove([filePath]);
-          
-          if (storageError) {
-            console.warn("Error deleting file from storage:", storageError);
-            // Continue with deletion of database records even if storage deletion fails
-          } else {
-            console.log("Successfully deleted file from storage");
-          }
+          storageFilePath = filePath;
         } catch (storageErr) {
-          console.warn("Error during storage deletion:", storageErr);
-          // Continue with deletion of database records even if storage deletion fails
+          console.warn("Error processing storage path:", storageErr);
         }
       }
       
-      // 2. Delete all document chunks
+      // Start a transaction-like operation (Supabase doesn't support true transactions in JS SDK)
+      // 2. Delete all document chunks first
       const { error: chunksError } = await supabase
         .from('document_chunks')
         .delete()
@@ -322,7 +321,7 @@ export const useClientDocuments = (clientId: string | undefined, pageSize: numbe
         throw new Error(`Failed to delete document chunks: ${chunksError.message}`);
       }
       
-      // 3. Delete document metadata
+      // 3. Then delete document metadata
       const { error: deleteError } = await supabase
         .from('document_metadata')
         .delete()
@@ -334,14 +333,34 @@ export const useClientDocuments = (clientId: string | undefined, pageSize: numbe
         throw new Error(`Failed to delete document metadata: ${deleteError.message}`);
       }
       
-      // 4. Update the documents state to remove the deleted document
-      setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+      // If we got here, the database deletion was successful
+      deletionSuccess = true;
       
-      // 5. Show success toast
-      toast({
-        title: "Document deleted",
-        description: "Document and associated data has been removed.",
-      });
+      // 4. Now attempt to delete the file from storage if it exists
+      if (storageFilePath) {
+        const { error: storageError } = await supabase
+          .storage
+          .from('client_documents')
+          .remove([storageFilePath]);
+        
+        if (storageError) {
+          // Just log this error but don't throw - the important part (database records) is deleted
+          console.warn("Error deleting file from storage:", storageError);
+        } else {
+          console.log("Successfully deleted file from storage");
+        }
+      }
+      
+      // 5. Only update the UI state if the database deletion was successful
+      if (deletionSuccess) {
+        setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+        
+        // Show success toast
+        toast({
+          title: "Document deleted",
+          description: "Document and associated data has been removed.",
+        });
+      }
       
       return { success: true };
     } catch (error: any) {

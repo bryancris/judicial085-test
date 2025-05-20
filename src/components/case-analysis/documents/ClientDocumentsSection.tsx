@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FilePlus, FileText, Loader2, Search, FileIcon } from "lucide-react";
@@ -33,6 +32,38 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const [uploadProcessing, setUploadProcessing] = useState(false);
+  const [deletingDocIds, setDeletingDocIds] = useState<Set<string>>(new Set());
+  
+  // Track documents being processed for deletion
+  const handleDeleteDocument = async (documentId: string) => {
+    if (!onDeleteDocument) return { success: false, error: "Delete not available" };
+    
+    // Mark this document as being deleted
+    setDeletingDocIds(prev => new Set(prev).add(documentId));
+    
+    try {
+      // Call the parent component's delete handler
+      const result = await onDeleteDocument(documentId);
+      
+      // Keep tracking the document ID if delete failed
+      if (!result.success) {
+        console.error(`Failed to delete document ${documentId}:`, result.error);
+        return result;
+      }
+      
+      return result;
+    } catch (error: any) {
+      console.error(`Error deleting document ${documentId}:`, error);
+      return { success: false, error: error.message };
+    } finally {
+      // Remove from tracking regardless of outcome
+      setDeletingDocIds(prev => {
+        const updated = new Set(prev);
+        updated.delete(documentId);
+        return updated;
+      });
+    }
+  };
 
   // Handle document upload (both text and PDF)
   const handleDocumentUpload = async (title: string, content: string, file?: File) => {
@@ -197,14 +228,14 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
                   document={doc}
                   searchTerm={searchTerm}
                   clientSpecific={true}
-                  onDelete={onDeleteDocument}
+                  onDelete={onDeleteDocument ? handleDeleteDocument : undefined}
                 />
               ))}
             </div>
             
             {!fullView && filteredDocuments.length > 3 && (
               <div className="mt-4 text-center">
-                <Button variant="outline" size="sm" onClick={() => {}}>
+                <Button variant="outline" size="sm">
                   View All Documents ({filteredDocuments.length})
                 </Button>
               </div>

@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { DocumentWithContent } from "@/types/knowledge";
-import { FileText, Download, FileIcon, Trash2, AlertCircle } from "lucide-react";
+import { FileText, Download, FileIcon, Trash2, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface DocumentCardProps {
   document: DocumentWithContent;
@@ -33,6 +34,8 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const { toast } = useToast();
   
   // Extract document content for display
   const content = document.contents?.[0]?.content || "";
@@ -67,13 +70,34 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
     if (!onDelete) return;
     
     setIsDeleting(true);
+    setDeleteError(null);
+    
     try {
+      // Verify we have a valid document ID
+      if (!document.id) {
+        throw new Error("Invalid document ID");
+      }
+      
+      console.log(`Attempting to delete document ${document.id}`);
       const result = await onDelete(document.id);
+      
       if (result.success) {
         setDeleteDialogOpen(false);
+        toast({
+          title: "Document deleted",
+          description: "Document was successfully deleted",
+        });
+      } else {
+        throw new Error(result.error || "Unknown error occurred during deletion");
       }
-    } catch (error) {
-      console.error("Error deleting document:", error);
+    } catch (error: any) {
+      console.error("Error in document deletion:", error);
+      setDeleteError(error.message || "Failed to delete document");
+      toast({
+        title: "Delete failed",
+        description: error.message || "Failed to delete document. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsDeleting(false);
     }
@@ -102,6 +126,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
             onClick={(e) => {
               e.stopPropagation();
               setDeleteDialogOpen(true);
+              setDeleteError(null);
             }}
             title="Delete document"
           >
@@ -206,7 +231,15 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => {
+        // Only allow closing if we're not in the middle of deleting
+        if (!isDeleting) {
+          setDeleteDialogOpen(open);
+          if (!open) {
+            setDeleteError(null);
+          }
+        }
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Document</AlertDialogTitle>
@@ -215,6 +248,14 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
               This action cannot be undone and will permanently remove the document and all its data.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          
+          {deleteError && (
+            <div className="bg-destructive/10 text-destructive p-3 rounded-md mb-3 flex items-start">
+              <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
+              <p>{deleteError}</p>
+            </div>
+          )}
+          
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
@@ -227,7 +268,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
             >
               {isDeleting ? (
                 <>
-                  <AlertCircle className="h-4 w-4 mr-2 animate-pulse" />
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Deleting...
                 </>
               ) : (
