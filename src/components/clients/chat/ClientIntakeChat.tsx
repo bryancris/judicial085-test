@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import ChatView from "./ChatView";
 import ChatInput from "./ChatInput";
@@ -12,10 +13,10 @@ import { useToast } from "@/hooks/use-toast";
 
 interface ClientIntakeChatProps {
   clientId: string;
-  clientName?: string; // Added this prop as optional
+  clientName: string;
 }
 
-const ClientIntakeChat = ({ clientId, clientName }: ClientIntakeChatProps) => {
+const ClientIntakeChat: React.FC<ClientIntakeChatProps> = ({ clientId, clientName }) => {
   const {
     activeTab,
     setActiveTab,

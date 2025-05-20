@@ -16,3 +16,8 @@ export interface Client {
   case_notes: string | null;
   created_at: string;
 }
+
+// Extended interface that includes cases
+export interface ClientWithCases extends Client {
+  cases?: any[]; // You can define a more specific type for cases if needed
+}

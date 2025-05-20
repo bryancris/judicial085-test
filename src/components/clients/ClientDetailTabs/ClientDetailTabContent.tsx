@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { ClientWithCases } from "@/types/client";
 import { useClientChat } from "@/hooks/useClientChat";
 import { useClientDocuments } from "@/hooks/useClientDocuments";
@@ -16,7 +16,16 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
   client,
   activeTab,
 }) => {
-  const { messages, setMessages, legalAnalysis, isProcessing, generateAnalysis } = useClientChat(client.id);
+  // Using hook with client.id
+  const {
+    messages,
+    legalAnalysis,
+    isLoadingHistory,
+    isAnalysisLoading,
+    handleSendMessage,
+    handleFollowUpQuestionClick,
+    formatTimestamp,
+  } = useClientChat(client.id);
   
   const { 
     documents, 
@@ -29,15 +38,11 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
   // Determine which tab content to show
   const renderTabContent = () => {
     switch (activeTab) {
-      case "chat":
+      case "client-intake":
         return (
           <ClientChatView
-            client={client}
-            messages={messages}
-            setMessages={setMessages}
-            legalAnalysis={legalAnalysis}
-            generateAnalysis={generateAnalysis}
-            isProcessing={isProcessing}
+            clientId={client.id}
+            clientName={`${client.first_name} ${client.last_name}`}
           />
         );
       case "documents":
@@ -55,7 +60,10 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
           </div>
         );
       case "analysis":
-        return <CaseAnalysisContainer clientId={client.id} />;
+        return <CaseAnalysisContainer 
+          clientId={client.id} 
+          clientName={`${client.first_name} ${client.last_name}`}
+        />;
       default:
         return (
           <div className="p-6 text-center">

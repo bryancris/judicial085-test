@@ -22,6 +22,7 @@ const ClientDetail = () => {
   const { client, loading, error, session, refreshClient, deleteClient, isDeleting } = useClientDetail(id);
   const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("client-intake");
 
   // If not authenticated, redirect to auth page
   if (!session && !loading) {
@@ -84,6 +85,10 @@ const ClientDetail = () => {
     }
   };
 
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
+
   return (
     <CaseProvider>
       <div className="min-h-screen flex flex-col">
@@ -106,9 +111,17 @@ const ClientDetail = () => {
           <CasesSection clientId={client.id} />
 
           <div className="mt-8">
-            <Tabs defaultValue="client-intake" className="w-full">
+            <Tabs 
+              defaultValue="client-intake" 
+              className="w-full"
+              value={activeTab}
+              onValueChange={handleTabChange}
+            >
               <ClientDetailTabsList />
-              <ClientDetailTabContent client={client} />
+              <ClientDetailTabContent 
+                client={client} 
+                activeTab={activeTab}
+              />
             </Tabs>
           </div>
         </main>
