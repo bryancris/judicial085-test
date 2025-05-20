@@ -7,10 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { FileText, Paperclip } from "lucide-react";
 import { useClientDocuments } from "@/hooks/useClientDocuments";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import DocumentUploadDialog from "@/components/clients/DocumentUploadDialog";
 import { useToast } from "@/hooks/use-toast";
 
 interface ClientIntakeChatProps {
@@ -36,45 +33,39 @@ const ClientIntakeChat = ({ clientId, clientName }: ClientIntakeChatProps) => {
 
   // Document upload state
   const [openDocDialog, setOpenDocDialog] = useState(false);
-  const [documentTitle, setDocumentTitle] = useState("");
-  const [documentContent, setDocumentContent] = useState("");
   const { toast } = useToast();
 
   // Use the client documents hook
   const { processDocument, isProcessing } = useClientDocuments(clientId);
 
-  const handleDocumentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!documentTitle.trim()) {
-      toast({
-        title: "Title required",
-        description: "Please provide a title for the document.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (!documentContent.trim()) {
-      toast({
-        title: "Content required",
-        description: "Please provide content for the document.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    const result = await processDocument(documentTitle, documentContent);
-    
-    if (result.success) {
-      setDocumentTitle("");
-      setDocumentContent("");
-      setOpenDocDialog(false);
+  // Handle document upload (supports both text and PDF)
+  const handleDocumentUpload = async (title: string, content: string, file?: File) => {
+    try {
+      const result = await processDocument(title, content, file ? {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        uploadedAt: new Date().toISOString()
+      } : undefined);
       
+      if (result.success) {
+        setOpenDocDialog(false);
+        
+        toast({
+          title: "Document added",
+          description: `${title} has been added as a supporting document.`,
+        });
+      }
+      
+      return result;
+    } catch (err: any) {
+      console.error("Error uploading document:", err);
       toast({
-        title: "Document added",
-        description: `${documentTitle} has been added as a supporting document.`,
+        title: "Upload failed",
+        description: err.message || "Something went wrong uploading the document.",
+        variant: "destructive",
       });
+      return { success: false };
     }
   };
 
@@ -163,55 +154,12 @@ const ClientIntakeChat = ({ clientId, clientName }: ClientIntakeChatProps) => {
       </div>
 
       {/* Document Upload Dialog */}
-      <Dialog open={openDocDialog} onOpenChange={setOpenDocDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Add Supporting Document</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleDocumentSubmit} className="space-y-4 mt-4">
-            <div>
-              <Label htmlFor="docTitle">Document Title</Label>
-              <Input
-                id="docTitle"
-                value={documentTitle}
-                onChange={(e) => setDocumentTitle(e.target.value)}
-                placeholder="Enter document title"
-                disabled={isProcessing}
-              />
-            </div>
-            <div>
-              <Label htmlFor="docContent">Document Content</Label>
-              <Textarea
-                id="docContent"
-                value={documentContent}
-                onChange={(e) => setDocumentContent(e.target.value)}
-                placeholder="Enter document content"
-                className="min-h-[200px]"
-                disabled={isProcessing}
-              />
-            </div>
-            <div className="flex justify-end">
-              <Button 
-                type="submit" 
-                disabled={isProcessing}
-                className="flex items-center gap-1"
-              >
-                {isProcessing ? (
-                  <>
-                    <FileText className="h-4 w-4 mr-2 animate-spin" /> 
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="h-4 w-4 mr-2" />
-                    Upload Document
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <DocumentUploadDialog
+        isOpen={openDocDialog}
+        onClose={() => setOpenDocDialog(false)}
+        onUpload={handleDocumentUpload}
+        isProcessing={isProcessing}
+      />
     </div>
   );
 };
