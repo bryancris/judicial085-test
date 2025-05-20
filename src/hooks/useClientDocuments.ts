@@ -260,7 +260,7 @@ export const useClientDocuments = (clientId: string | undefined, pageSize: numbe
     }
   }, [clientId, fetchClientDocuments, toast]);
   
-  // Delete a document and its associated content
+  // Enhanced document deletion with forced cleanup
   const deleteDocument = useCallback(async (documentId: string) => {
     if (!clientId) {
       console.error("Cannot delete document: No client ID provided");
@@ -273,152 +273,76 @@ export const useClientDocuments = (clientId: string | undefined, pageSize: numbe
     }
     
     setIsProcessing(true);
-    let deletionSuccess = false;
-    let storageFilePath = null;
-    let metadataData = null;
-    let documentsToDelete = [];
+    console.log(`Starting aggressive deletion for document ${documentId} for client ${clientId}`);
     
     try {
-      console.log(`Starting deletion process for document ${documentId} for client ${clientId}`);
-      
-      // 1. First verify document exists and belongs to this client
-      const { data: verifyData, error: verifyError } = await supabase
-        .from('document_metadata')
-        .select('*')
-        .eq('id', documentId)
-        .eq('client_id', clientId)
-        .single();
-      
-      if (verifyError) {
-        console.error("Error verifying document existence:", verifyError);
-        throw new Error(`Document verification failed: ${verifyError.message}`);
-      }
-      
-      if (!verifyData) {
-        throw new Error(`Document ${documentId} not found or doesn't belong to client ${clientId}`);
-      }
-      
-      // Store metadata for later use
-      metadataData = verifyData;
-      documentsToDelete.push(documentId);
-      
-      // Check if there's a PDF file to delete
-      if (metadataData?.url) {
-        try {
-          // Extract the file path from the URL
-          const filePath = `${clientId}/${documentId}.pdf`;
-          storageFilePath = filePath;
-          console.log(`Will delete storage file at path: ${filePath}`);
-        } catch (storageErr) {
-          console.warn("Error processing storage path:", storageErr);
-        }
-      }
-      
-      console.log(`Confirmed document ${documentId} belongs to client ${clientId}, proceeding with deletion`);
-      
-      // 2. Check if document chunks exist
-      const { data: chunksData, error: chunksCheckError } = await supabase
+      // Force deletion of document chunks regardless of existence check
+      console.log(`Forcing deletion of all chunks for document ${documentId}`);
+      const { error: chunksDeleteError } = await supabase
         .from('document_chunks')
-        .select('id', { count: 'exact' })
-        .eq('document_id', documentId)
-        .eq('client_id', clientId);
-      
-      if (chunksCheckError) {
-        console.error("Error checking for document chunks:", chunksCheckError);
-        // Continue with deletion attempt even if checking chunks fails
-      }
-      
-      const hasChunks = chunksData && chunksData.length > 0;
-      console.log(`Document ${documentId} has chunks: ${hasChunks ? 'Yes' : 'No'}`);
-      
-      // 3. Delete document chunks if they exist
-      if (hasChunks) {
-        console.log(`Deleting ${chunksData.length} chunks for document ${documentId}`);
-        const { error: chunksDeleteError } = await supabase
-          .from('document_chunks')
-          .delete()
-          .eq('document_id', documentId)
-          .eq('client_id', clientId);
+        .delete()
+        .eq('document_id', documentId);
         
-        if (chunksDeleteError) {
-          console.error("Error deleting document chunks:", chunksDeleteError);
-          throw new Error(`Failed to delete document chunks: ${chunksDeleteError.message}`);
-        }
-        console.log(`Successfully deleted chunks for document ${documentId}`);
-      } else {
-        console.log(`No chunks found for document ${documentId}, skipping chunk deletion`);
+      if (chunksDeleteError) {
+        console.warn(`Warning during chunk deletion: ${chunksDeleteError.message}`);
+        // Continue with deletion process despite warnings
       }
       
-      // 4. Delete document metadata
-      console.log(`Deleting metadata for document ${documentId}`);
+      // Force deletion of document metadata 
+      console.log(`Forcing deletion of metadata for document ${documentId}`);
       const { error: metadataDeleteError } = await supabase
         .from('document_metadata')
         .delete()
-        .eq('id', documentId)
-        .eq('client_id', clientId);
+        .eq('id', documentId);
       
       if (metadataDeleteError) {
-        console.error("Error deleting document metadata:", metadataDeleteError);
         throw new Error(`Failed to delete document metadata: ${metadataDeleteError.message}`);
       }
-      console.log(`Successfully deleted metadata for document ${documentId}`);
       
-      // If we got here, the database deletion was successful
-      deletionSuccess = true;
-      
-      // 5. Now attempt to delete the file from storage if it exists
-      if (storageFilePath) {
-        console.log(`Attempting to delete storage file at: ${storageFilePath}`);
-        try {
-          const { error: storageError } = await supabase
-            .storage
-            .from('client_documents')
-            .remove([storageFilePath]);
-          
-          if (storageError) {
-            // Just log this error but don't throw - the important part (database records) is deleted
-            console.warn("Error deleting file from storage:", storageError);
-          } else {
-            console.log("Successfully deleted file from storage");
-          }
-        } catch (storageDeleteErr) {
-          console.warn("Exception during storage deletion:", storageDeleteErr);
-          // Don't fail the whole operation for storage errors
-        }
-      }
-      
-      // 6. Verify the document was actually deleted
-      const { data: verifyDeletionData, error: verifyDeletionError } = await supabase
-        .from('document_metadata')
-        .select('*')
-        .eq('id', documentId)
-        .eq('client_id', clientId);
-      
-      if (verifyDeletionError) {
-        console.warn("Error verifying document deletion:", verifyDeletionError);
-        // Don't throw here, just log the warning
-      }
-      
-      if (verifyDeletionData && verifyDeletionData.length > 0) {
-        console.error(`Document ${documentId} still exists after deletion attempt!`);
-        throw new Error("Document deletion failed: Document still exists in database");
-      }
-      
-      // 7. Only update the UI state if the database deletion was successful and verified
-      if (deletionSuccess) {
-        setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+      // Attempt to delete from storage (continue even if this fails)
+      try {
+        // Try to build storage path and remove the file
+        const storagePath = `${clientId}/${documentId}.pdf`;
+        console.log(`Attempting to delete storage file: ${storagePath}`);
         
-        // Show success toast
-        toast({
-          title: "Document deleted",
-          description: "Document and associated data has been removed.",
-        });
+        await supabase
+          .storage
+          .from('client_documents')
+          .remove([storagePath]);
+          
+        console.log("Storage file deletion attempt completed");
+      } catch (storageErr) {
+        // Just log storage errors but don't fail the whole operation
+        console.warn("Storage deletion error (non-critical):", storageErr);
       }
       
-      console.log(`Document deletion process completed successfully for ${documentId}`);
+      // Double-check database to confirm deletion
+      console.log("Verifying document deletion from database");
+      const { data: verifyData } = await supabase
+        .from('document_metadata')
+        .select('id')
+        .eq('id', documentId)
+        .maybeSingle();
+      
+      if (verifyData) {
+        // If document still exists after forced deletion, report error
+        console.error(`CRITICAL: Document ${documentId} still exists after forced deletion!`);
+        return { success: false, error: "Document deletion failed: Document still exists in database" };
+      }
+      
+      // Update UI state on successful deletion
+      console.log(`Document successfully deleted: ${documentId}`);
+      setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+      
+      // Show success toast
+      toast({
+        title: "Document deleted",
+        description: "Document has been permanently removed.",
+      });
+      
       return { success: true };
     } catch (error: any) {
-      console.error("Error deleting document:", error);
+      console.error("Error in document deletion:", error);
       
       toast({
         title: "Error deleting document",

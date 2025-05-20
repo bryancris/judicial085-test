@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { DocumentWithContent } from "@/types/knowledge";
@@ -22,17 +23,19 @@ interface DocumentCardProps {
   searchTerm?: string;
   clientSpecific?: boolean;
   onDelete?: (documentId: string) => Promise<{ success: boolean; error?: string }>;
+  isDeleting?: boolean;
 }
 
 const DocumentCard: React.FC<DocumentCardProps> = ({
   document,
   searchTerm = "",
   clientSpecific = false,
-  onDelete
+  onDelete,
+  isDeleting = false
 }) => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [localIsDeleting, setLocalIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const { toast } = useToast();
   
@@ -71,16 +74,16 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
       return;
     }
     
-    setIsDeleting(true);
+    setLocalIsDeleting(true);
     setDeleteError(null);
     
     try {
-      console.log(`Attempting to delete document ${document.id}`);
+      console.log(`DocumentCard: Initiating delete for document ${document.id}`);
       
       // Call the delete handler and wait for the result
       const result = await onDelete(document.id);
       
-      console.log(`Delete result for document ${document.id}:`, result);
+      console.log(`DocumentCard: Delete result for document ${document.id}:`, result);
       
       if (result.success) {
         // Only close the dialog if deletion was truly successful
@@ -102,7 +105,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
         variant: "destructive",
       });
     } finally {
-      setIsDeleting(false);
+      setLocalIsDeleting(false);
     }
   };
 
@@ -115,25 +118,39 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
     setPreviewOpen(true);
   };
 
+  // Combined deleting state (from props or local)
+  const isCurrentlyDeleting = isDeleting || localIsDeleting;
+
   return (
     <>
       <Card 
-        className="cursor-pointer h-full flex flex-col hover:shadow-md transition-shadow relative group"
+        className={cn(
+          "cursor-pointer h-full flex flex-col hover:shadow-md transition-shadow relative group",
+          isCurrentlyDeleting && "opacity-50"
+        )}
         onClick={handleCardClick}
       >
         {onDelete && (
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+            className={cn(
+              "absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10",
+              isCurrentlyDeleting && "pointer-events-none"
+            )}
             onClick={(e) => {
               e.stopPropagation();
               setDeleteDialogOpen(true);
               setDeleteError(null);
             }}
             title="Delete document"
+            disabled={isCurrentlyDeleting}
           >
-            <Trash2 className="h-4 w-4" />
+            {isCurrentlyDeleting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
           </Button>
         )}
         
@@ -159,6 +176,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
                 className="h-8 w-8"
                 onClick={handleDownload}
                 title="Download PDF"
+                disabled={isCurrentlyDeleting}
               >
                 <Download className="h-4 w-4" />
               </Button>
@@ -236,7 +254,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
       {/* Delete Confirmation Dialog with improved UI */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => {
         // Only allow closing if we're not in the middle of deleting
-        if (!isDeleting) {
+        if (!isCurrentlyDeleting) {
           setDeleteDialogOpen(open);
           if (!open) {
             setDeleteError(null);
@@ -260,16 +278,16 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
           )}
           
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isCurrentlyDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={(e) => {
                 e.preventDefault();
                 handleDelete();
               }}
-              disabled={isDeleting}
+              disabled={isCurrentlyDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting ? (
+              {isCurrentlyDeleting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Deleting...

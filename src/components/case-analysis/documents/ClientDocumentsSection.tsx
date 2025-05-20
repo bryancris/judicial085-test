@@ -33,6 +33,12 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
   const { toast } = useToast();
   const [uploadProcessing, setUploadProcessing] = useState(false);
   const [deletingDocIds, setDeletingDocIds] = useState<Set<string>>(new Set());
+  const [localDocuments, setLocalDocuments] = useState<DocumentWithContent[]>([]);
+  
+  // Keep local state in sync with prop
+  useEffect(() => {
+    setLocalDocuments(documents || []);
+  }, [documents]);
   
   // Track documents being processed for deletion
   const handleDeleteDocument = async (documentId: string) => {
@@ -44,6 +50,9 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
     setDeletingDocIds(prev => new Set(prev).add(documentId));
     
     try {
+      // Optimistically update UI first
+      setLocalDocuments(current => current.filter(doc => doc.id !== documentId));
+      
       // Call the parent component's delete handler
       console.log(`ClientDocumentsSection: Calling parent delete handler for ${documentId}`);
       const result = await onDeleteDocument(documentId);
@@ -53,11 +62,25 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
       
       if (!result.success) {
         console.error(`Failed to delete document ${documentId}:`, result.error);
+        
+        // If deletion failed, restore the document in the UI
+        setLocalDocuments(current => [...current, ...documents.filter(doc => doc.id === documentId)]);
+        
+        // Show error toast
+        toast({
+          title: "Delete failed",
+          description: result.error || "Failed to delete document. Please try again.",
+          variant: "destructive",
+        });
       }
       
       return result;
     } catch (error: any) {
       console.error(`Error deleting document ${documentId}:`, error);
+      
+      // Restore document in UI on error
+      setLocalDocuments(current => [...current, ...documents.filter(doc => doc.id === documentId)]);
+      
       return { success: false, error: error.message };
     } finally {
       // Remove from tracking regardless of outcome
@@ -152,7 +175,7 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
   };
 
   // Filter documents based on search term with optional null check
-  const filteredDocuments = documents?.filter(doc => 
+  const filteredDocuments = localDocuments?.filter(doc => 
     doc.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
     doc.contents?.some(content => 
       content.content?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -210,12 +233,12 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
       </CardHeader>
       
       <CardContent>
-        {isLoading && !documents?.length ? (
+        {isLoading && !localDocuments?.length ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">
             <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
             <p className="text-muted-foreground">Loading client documents...</p>
           </div>
-        ) : !documents?.length ? (
+        ) : !localDocuments?.length ? (
           <div className="flex flex-col items-center justify-center py-10 border-2 border-dashed border-gray-200 rounded-lg text-center">
             <FileText className="h-12 w-12 text-gray-400 mb-2" />
             <h3 className="font-medium">No Documents Available</h3>
@@ -234,6 +257,7 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
                   searchTerm={searchTerm}
                   clientSpecific={true}
                   onDelete={onDeleteDocument ? handleDeleteDocument : undefined}
+                  isDeleting={deletingDocIds.has(doc.id)}
                 />
               ))}
             </div>
