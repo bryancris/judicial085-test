@@ -9,7 +9,7 @@ import { useCaseAnalysisChat } from "@/hooks/useCaseAnalysisChat";
 import { useClientDocuments } from "@/hooks/useClientDocuments";
 import EmptyAnalysisState from "./EmptyAnalysisState";
 import TabsContainer from "./tabs/TabsContainer";
-import { AnalysisData } from "@/hooks/useAnalysisData"; // Import AnalysisData from useAnalysisData
+import { AnalysisData } from "@/hooks/useAnalysisData"; // Import directly from useAnalysisData
 
 interface CaseAnalysisContainerProps {
   clientId: string;
@@ -84,7 +84,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
   
   // Ensure the analysisData has numeric values for defense and prosecution
   // and a valid timestamp
-  const completeAnalysisData = {
+  const completeAnalysisData: AnalysisData = {
     ...analysisData,
     timestamp: analysisData.timestamp || new Date().toISOString(),
     outcome: {
