@@ -3,17 +3,12 @@ import React, { useState } from "react";
 import { useCaseAnalysis } from "@/hooks/useCaseAnalysis";
 import CaseAnalysisErrorState from "./CaseAnalysisErrorState";
 import CaseAnalysisLoadingSkeleton from "./CaseAnalysisLoadingSkeleton";
-import DetailedLegalAnalysis from "./DetailedLegalAnalysis";
-import CaseStrengthsWeaknesses from "./CaseStrengthsWeaknesses";
-import ConversationList from "./conversation/ConversationList";
-import AttorneyNotesList from "./conversation/AttorneyNotesList";
-import SearchSimilarCasesSection from "./SearchSimilarCasesSection";
 import CaseAnalysisHeader from "./CaseAnalysisHeader";
-import LawReferencesSection from "./LawReferencesSection";
 import { useScholarlyReferences } from "@/hooks/useScholarlyReferences";
 import { useCaseAnalysisChat } from "@/hooks/useCaseAnalysisChat";
 import { useClientDocuments } from "@/hooks/useClientDocuments";
-import ClientDocumentsSection from "./documents/ClientDocumentsSection";
+import EmptyAnalysisState from "./EmptyAnalysisState";
+import TabsContainer from "./tabs/TabsContainer";
 
 interface CaseAnalysisContainerProps {
   clientId: string;
@@ -53,10 +48,12 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
     isProcessing: isProcessingDocument
   } = useClientDocuments(clientId);
 
+  // Handle error state
   if (error) {
     return <CaseAnalysisErrorState error={error} onRefresh={generateNewAnalysis} />;
   }
 
+  // Handle loading state
   if (isLoading && !analysisData) {
     return <CaseAnalysisLoadingSkeleton />;
   }
@@ -64,57 +61,14 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
   // Handle case where there is no analysis data yet
   if (!analysisData) {
     return (
-      <div className="container mx-auto py-8">
-        <CaseAnalysisHeader
-          title={`${clientName} - Case Analysis`}
-          clientId={clientId}
-          selectedTab={selectedTab}
-          setSelectedTab={setSelectedTab}
-          isGenerating={isLoading}
-          onGenerate={generateNewAnalysis}
-        />
-
-        <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-          <h2 className="text-2xl font-semibold mb-4">No Analysis Available</h2>
-          <p className="text-gray-600 mb-6">
-            There is no case analysis yet for this client. Generate one to get
-            started.
-          </p>
-          <button
-            onClick={generateNewAnalysis}
-            disabled={isLoading}
-            className="bg-brand-burgundy text-white px-4 py-2 rounded-md flex items-center gap-2 mx-auto"
-          >
-            {isLoading ? (
-              <>
-                <svg
-                  className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  ></path>
-                </svg>
-                Generating...
-              </>
-            ) : (
-              <>Generate Analysis</>
-            )}
-          </button>
-        </div>
-      </div>
+      <EmptyAnalysisState 
+        clientName={clientName}
+        clientId={clientId}
+        selectedTab={selectedTab}
+        setSelectedTab={setSelectedTab}
+        isGenerating={isLoading}
+        onGenerate={generateNewAnalysis}
+      />
     );
   }
   
@@ -137,75 +91,24 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
         caseType={analysisData?.caseType}
       />
 
-      {/* Main content area with conditional rendering based on selected tab */}
-      {selectedTab === "analysis" && (
-        <div className="space-y-8">
-          {/* Law References Section */}
-          {analysisData.lawReferences && analysisData.lawReferences.length > 0 && (
-            <LawReferencesSection
-              references={analysisData.lawReferences}
-              isLoading={isLoading}
-              caseType={analysisData.caseType}
-            />
-          )}
-
-          {/* Case Overview section - Removed ConversationSummary component */}
-
-          {/* Strengths and Weaknesses */}
-          <CaseStrengthsWeaknesses
-            strengths={analysisData.strengths}
-            weaknesses={analysisData.weaknesses}
-            isLoading={isLoading}
-            caseType={analysisData.caseType}
-          />
-
-          {/* Similar Cases with integrated Outcome Prediction */}
-          <SearchSimilarCasesSection clientId={clientId} caseType={analysisData.caseType} />
-
-          {/* Detailed Legal Analysis */}
-          <DetailedLegalAnalysis
-            relevantLaw={analysisData.legalAnalysis.relevantLaw}
-            preliminaryAnalysis={analysisData.legalAnalysis.preliminaryAnalysis}
-            potentialIssues={analysisData.legalAnalysis.potentialIssues}
-            followUpQuestions={analysisData.legalAnalysis.followUpQuestions}
-            isLoading={isLoading}
-            remedies={analysisData.remedies}
-            caseType={analysisData.caseType}
-            scholarlyReferences={scholarlyReferences}
-            isScholarlyReferencesLoading={isScholarlyReferencesLoading}
-            onScholarSearch={handleScholarSearch}
-          />
-          
-          {/* Client Documents Section - At the bottom */}
-          <ClientDocumentsSection
-            clientId={clientId}
-            documents={clientDocuments}
-            isLoading={documentsLoading}
-            onProcessDocument={processDocument}
-            isProcessing={isProcessingDocument}
-          />
-        </div>
-      )}
-
-      {/* Conversation tab content */}
-      {selectedTab === "conversation" && (
-        <ConversationList conversation={conversation || []} loading={conversationLoading} />
-      )}
-
-      {/* Notes tab content */}
-      {selectedTab === "notes" && <AttorneyNotesList notes={notes || []} isLoading={notesLoading} />}
-
-      {/* Documents tab content */}
-      {selectedTab === "documents" && (
-        <ClientDocumentsSection
-          clientId={clientId}
-          documents={clientDocuments}
-          isLoading={documentsLoading}
-          onProcessDocument={processDocument}
-          isProcessing={isProcessingDocument}
-          fullView
-        />
-      )}
+      {/* Main content area with tabs */}
+      <TabsContainer 
+        selectedTab={selectedTab}
+        analysisData={analysisData}
+        isLoading={isLoading}
+        clientId={clientId}
+        conversation={conversation}
+        conversationLoading={conversationLoading}
+        notes={notes}
+        notesLoading={notesLoading}
+        clientDocuments={clientDocuments}
+        documentsLoading={documentsLoading}
+        processDocument={processDocument}
+        isProcessingDocument={isProcessingDocument}
+        scholarlyReferences={scholarlyReferences}
+        isScholarlyReferencesLoading={isScholarlyReferencesLoading}
+        onScholarSearch={handleScholarSearch}
+      />
     </div>
   );
 };
