@@ -1,15 +1,16 @@
 
 import React from "react";
-import { CaseAnalysisData, ProcessDocumentContentFunction } from "@/types/caseAnalysis";
+import { ProcessDocumentContentFunction } from "@/types/caseAnalysis";
 import DetailedLegalAnalysis from "../DetailedLegalAnalysis";
 import CaseStrengthsWeaknesses from "../CaseStrengthsWeaknesses";
 import SearchSimilarCasesSection from "../SearchSimilarCasesSection";
 import LawReferencesSection from "../LawReferencesSection";
 import ClientDocumentsSection from "../documents/ClientDocumentsSection";
 import { ScholarlyArticle } from "@/utils/api/scholarApiService";
+import { AnalysisData } from "@/hooks/useAnalysisData";
 
 interface AnalysisTabContentProps {
-  analysisData: CaseAnalysisData;
+  analysisData: AnalysisData;
   isLoading: boolean;
   clientId: string;
   scholarlyReferences: ScholarlyArticle[];

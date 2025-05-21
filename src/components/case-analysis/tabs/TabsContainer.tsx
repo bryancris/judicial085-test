@@ -4,12 +4,13 @@ import ConversationList from "../conversation/ConversationList";
 import AttorneyNotesList from "../conversation/AttorneyNotesList";
 import ClientDocumentsSection from "../documents/ClientDocumentsSection";
 import AnalysisTabContent from "./AnalysisTabContent";
-import { CaseAnalysisData, ProcessDocumentContentFunction } from "@/types/caseAnalysis";
+import { ProcessDocumentContentFunction } from "@/types/caseAnalysis";
 import { ScholarlyArticle } from "@/utils/api/scholarApiService";
+import { AnalysisData } from "@/hooks/useAnalysisData";
 
 interface TabsContainerProps {
   selectedTab: string;
-  analysisData: CaseAnalysisData;
+  analysisData: AnalysisData;
   isLoading: boolean;
   clientId: string;
   conversation: any[];

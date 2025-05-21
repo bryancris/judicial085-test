@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { CaseAnalysisData } from "@/types/caseAnalysis";
-import { useAnalysisData } from "@/hooks/useAnalysisData";
+import { useAnalysisData, AnalysisData } from "@/hooks/useAnalysisData";
 import { useAnalysisGeneration } from "@/hooks/useAnalysisGeneration";
 
 export type { CaseAnalysisData } from "@/types/caseAnalysis";

@@ -9,6 +9,7 @@ import { useCaseAnalysisChat } from "@/hooks/useCaseAnalysisChat";
 import { useClientDocuments } from "@/hooks/useClientDocuments";
 import EmptyAnalysisState from "./EmptyAnalysisState";
 import TabsContainer from "./tabs/TabsContainer";
+import { AnalysisData } from "@/hooks/useAnalysisData"; // Import AnalysisData from useAnalysisData
 
 interface CaseAnalysisContainerProps {
   clientId: string;
@@ -87,12 +88,12 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
     ...analysisData,
     timestamp: analysisData.timestamp || new Date().toISOString(),
     outcome: {
-      defense: typeof analysisData.outcome.defense === 'string' 
-        ? parseFloat(analysisData.outcome.defense) 
-        : analysisData.outcome.defense,
-      prosecution: typeof analysisData.outcome.prosecution === 'string' 
-        ? parseFloat(analysisData.outcome.prosecution) 
-        : analysisData.outcome.prosecution
+      defense: typeof analysisData.outcome.defense === 'number' 
+        ? analysisData.outcome.defense 
+        : parseFloat(String(analysisData.outcome.defense)),
+      prosecution: typeof analysisData.outcome.prosecution === 'number'
+        ? analysisData.outcome.prosecution
+        : parseFloat(String(analysisData.outcome.prosecution))
     }
   };
   
