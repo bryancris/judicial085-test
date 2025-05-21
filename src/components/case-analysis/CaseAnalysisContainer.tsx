@@ -5,7 +5,6 @@ import CaseAnalysisErrorState from "./CaseAnalysisErrorState";
 import CaseAnalysisLoadingSkeleton from "./CaseAnalysisLoadingSkeleton";
 import DetailedLegalAnalysis from "./DetailedLegalAnalysis";
 import CaseStrengthsWeaknesses from "./CaseStrengthsWeaknesses";
-import ConversationSummary from "./ConversationSummary";
 import ConversationList from "./conversation/ConversationList";
 import AttorneyNotesList from "./conversation/AttorneyNotesList";
 import SearchSimilarCasesSection from "./SearchSimilarCasesSection";
@@ -150,19 +149,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
             />
           )}
 
-          {/* Case Overview and Outcome Prediction */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2">
-              <ConversationSummary
-                summary={analysisData.conversationSummary}
-                isLoading={isLoading}
-                clientId={clientId}
-              />
-            </div>
-            <div className="md:col-span-1">
-              {/* Removed standalone CaseOutcomePrediction here since we've moved it to SearchSimilarCasesSection */}
-            </div>
-          </div>
+          {/* Case Overview section - Removed ConversationSummary component */}
 
           {/* Strengths and Weaknesses */}
           <CaseStrengthsWeaknesses
@@ -189,7 +176,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
             onScholarSearch={handleScholarSearch}
           />
           
-          {/* Client Documents Section - Moved to bottom */}
+          {/* Client Documents Section - At the bottom */}
           <ClientDocumentsSection
             clientId={clientId}
             documents={clientDocuments}
