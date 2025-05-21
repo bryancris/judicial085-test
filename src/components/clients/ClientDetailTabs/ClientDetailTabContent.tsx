@@ -7,6 +7,7 @@ import ClientChatView from "@/components/clients/chat/ClientIntakeChat";
 import CaseAnalysisContainer from "@/components/case-analysis/CaseAnalysisContainer";
 import ClientDocumentsSection from "@/components/case-analysis/documents/ClientDocumentsSection";
 import ContractReviewChat from "@/components/contract-review/ContractReviewChat";
+import FaqTabContent from "@/components/clients/ClientDetailTabs/FaqTabContent";
 
 interface ClientDetailTabContentProps {
   client: ClientWithCases;
@@ -70,6 +71,8 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
           clientId={client.id} 
           clientName={`${client.first_name} ${client.last_name}`}
         />;
+      case "faq":
+        return <FaqTabContent />;
       default:
         return (
           <div className="p-6 text-center">
