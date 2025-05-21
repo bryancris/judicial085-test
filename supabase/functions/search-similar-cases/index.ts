@@ -23,21 +23,42 @@ serve(async (req) => {
     const { clientId } = await req.json();
     console.log(`Searching for similar cases to client ID: ${clientId}`);
     
-    // Handle the client search request
-    return await handleClientSearch(clientId, courtListenerApiKey);
+    if (!clientId) {
+      throw new Error("Client ID is required");
+    }
+    
+    // Detect the case type for this client to provide better search results
+    const caseType = await identifyCaseType(clientId);
+    console.log(`Final case type for search: ${caseType}`);
+    
+    // Handle the client search request with the detected case type
+    return await handleClientSearch(clientId, courtListenerApiKey, caseType);
     
   } catch (error) {
     console.error('Error in search-similar-cases function:', error);
     
-    // Default to general liability if we can't detect the case type
-    const fallbackType = "general-liability";
+    // Attempt to get a meaningful case type even if the process failed
+    let fallbackType = "general-liability";
+    try {
+      // Extract client ID from the error if possible
+      const clientIdMatch = error.message?.match(/client ID: ([a-zA-Z0-9-]+)/);
+      const clientId = clientIdMatch ? clientIdMatch[1] : null;
+      
+      if (clientId) {
+        fallbackType = await identifyCaseType(clientId);
+      }
+    } catch (innerError) {
+      console.error("Error getting fallback case type:", innerError);
+    }
+    
     console.log(`Using fallback case type: ${fallbackType} due to error`);
     
     return new Response(
       JSON.stringify({ 
         error: error.message || 'Failed to search for similar cases',
         similarCases: getFallbackCasesByType(fallbackType),
-        fallbackUsed: true 
+        fallbackUsed: true,
+        analysisFound: false
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

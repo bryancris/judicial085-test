@@ -44,9 +44,29 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
   const {
     documents: clientDocuments,
     loading: documentsLoading,
-    processDocument,
+    processDocument: processDocumentContent,
     isProcessing: isProcessingDocument
   } = useClientDocuments(clientId);
+
+  // Create a wrapper function to adapt processDocumentContent to expect a File
+  const processDocument = async (file: File): Promise<void> => {
+    try {
+      // Extract text from the PDF file
+      const reader = new FileReader();
+      await new Promise<void>((resolve, reject) => {
+        reader.onload = () => resolve();
+        reader.onerror = reject;
+        reader.readAsText(file);
+      });
+      
+      const content = reader.result as string;
+      const title = file.name;
+      
+      await processDocumentContent(title, content, { isPdfDocument: file.type === 'application/pdf' });
+    } catch (error) {
+      console.error("Error processing document file:", error);
+    }
+  };
 
   // Handle error state
   if (error) {
@@ -72,6 +92,12 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
     );
   }
   
+  // Ensure the analysisData has a timestamp
+  const completeAnalysisData = {
+    ...analysisData,
+    timestamp: analysisData.timestamp || new Date().toISOString()
+  };
+  
   // Handle the search for scholarly references
   const handleScholarSearch = (query: string) => {
     if (query) {
@@ -94,7 +120,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
       {/* Main content area with tabs */}
       <TabsContainer 
         selectedTab={selectedTab}
-        analysisData={analysisData}
+        analysisData={completeAnalysisData}
         isLoading={isLoading}
         clientId={clientId}
         conversation={conversation}

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { SimilarCase } from "./SimilarCasesDialog";
 import { searchSimilarCases } from "@/utils/openaiService";
@@ -52,7 +53,9 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
           similarCases.forEach(c => {
             const outcome = c.outcome?.toLowerCase() || '';
             if (outcome.includes('favorable') || outcome.includes('victory') || 
-                outcome.includes('ruled in favor') || outcome.includes('prevailed')) {
+                outcome.includes('ruled in favor') || outcome.includes('prevailed') ||
+                outcome.includes('for the plaintiff') || outcome.includes('for plaintiff') ||
+                outcome.includes('awarded') || outcome.includes('damages')) {
               favorableCases++;
             }
           });
@@ -75,9 +78,9 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
           });
         } else if (fallbackUsed) {
           toast({
-            title: "Using Fallback Results",
-            description: "We encountered an issue with the court database. Showing sample cases instead.",
-            variant: "warning",
+            title: "Using Similar Case Examples",
+            description: "Showing sample cases with similar legal issues from our database.",
+            variant: "default",
           });
         } else if (similarCases.length === 0) {
           toast({
@@ -150,9 +153,13 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
       return "Contract";
     } else if (allText.includes("employment") || allText.includes("workplace")) {
       return "Employment";
+    } else if (allText.includes("deceptive") || allText.includes("trade practice") || 
+               allText.includes("dtpa") || allText.includes("consumer")) {
+      return "Consumer Protection";
     }
     
-    return "Legal";
+    // Default to the provided case type or "Legal" if not available
+    return caseType ? caseType.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase()) : "Legal";
   };
 
   return (

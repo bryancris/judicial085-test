@@ -4,7 +4,7 @@ import ConversationList from "../conversation/ConversationList";
 import AttorneyNotesList from "../conversation/AttorneyNotesList";
 import ClientDocumentsSection from "../documents/ClientDocumentsSection";
 import AnalysisTabContent from "./AnalysisTabContent";
-import { CaseAnalysisData } from "@/types/caseAnalysis";
+import { CaseAnalysisData, ProcessDocumentFileFunction } from "@/types/caseAnalysis";
 import { ScholarlyArticle } from "@/utils/api/scholarApiService";
 
 interface TabsContainerProps {
@@ -18,7 +18,7 @@ interface TabsContainerProps {
   notesLoading: boolean;
   clientDocuments: any[];
   documentsLoading: boolean;
-  processDocument: (file: File) => Promise<void>;
+  processDocument: ProcessDocumentFileFunction;
   isProcessingDocument: boolean;
   scholarlyReferences: ScholarlyArticle[];
   isScholarlyReferencesLoading: boolean;

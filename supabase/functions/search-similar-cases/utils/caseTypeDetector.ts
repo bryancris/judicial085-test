@@ -20,15 +20,15 @@ export async function identifyCaseType(clientId: string): Promise<string> {
     if (analysesError) {
       console.error("Error fetching analyses:", analysesError);
     } else if (analyses && analyses.length > 0) {
-      // Check content for HOA references regardless of the stored case type
+      // Check content for specific case type indicators regardless of the stored case type
       const analysisContent = analyses[0].content || "";
-      if (analysisContent.toLowerCase().includes("hoa") || 
-          analysisContent.toLowerCase().includes("homeowner") ||
-          analysisContent.toLowerCase().includes("property code § 209") ||
-          analysisContent.includes("209.006") || 
-          analysisContent.includes("209.007")) {
-        console.log("HOA case detected from analysis content");
-        return "hoa";
+      const detectedTypeFromContent = detectCaseTypeFromText(analysisContent);
+      
+      // If we detect a specific type from content that's different from stored type,
+      // use the content-based detection as it may be more accurate
+      if (detectedTypeFromContent !== "general" && detectedTypeFromContent !== analyses[0].case_type) {
+        console.log(`Detected more specific case type from analysis content: ${detectedTypeFromContent}`);
+        return detectedTypeFromContent;
       }
       
       if (analyses[0].case_type) {
@@ -40,7 +40,7 @@ export async function identifyCaseType(clientId: string): Promise<string> {
     // Check cases table for case_type
     const { data: cases, error: casesError } = await supabase
       .from('cases')
-      .select('case_type')
+      .select('case_type, description')
       .eq('client_id', clientId)
       .order('created_at', { ascending: false })
       .limit(1);
@@ -49,6 +49,16 @@ export async function identifyCaseType(clientId: string): Promise<string> {
       console.error("Error fetching cases:", casesError);
     } else if (cases && cases.length > 0 && cases[0].case_type) {
       console.log(`Found case type in cases table: ${cases[0].case_type}`);
+      
+      // Also check case description for more specific indicators
+      if (cases[0].description) {
+        const detectedTypeFromDescription = detectCaseTypeFromText(cases[0].description);
+        if (detectedTypeFromDescription !== "general" && detectedTypeFromDescription !== cases[0].case_type) {
+          console.log(`Detected more specific case type from case description: ${detectedTypeFromDescription}`);
+          return detectedTypeFromDescription;
+        }
+      }
+      
       return cases[0].case_type;
     }
     
@@ -72,113 +82,152 @@ export async function identifyCaseType(clientId: string): Promise<string> {
     // Combine all messages to analyze content
     const combinedContent = messages.map(msg => msg.content).join(' ');
     
-    // Check for HOA-specific indicators
-    if (combinedContent.toLowerCase().includes("hoa") || 
-        combinedContent.toLowerCase().includes("homeowner") ||
-        combinedContent.toLowerCase().includes("property code § 209") ||
-        combinedContent.includes("209.006") || 
-        combinedContent.includes("209.007")) {
-      console.log("HOA case detected from client messages");
-      return "hoa";
-    }
-    
-    // Define case type patterns
-    const caseTypePatterns = [
-      { type: "hoa", patterns: [
-        /homeowner[s']?\s+association/i, /hoa/i, /property\s+code\s+.*?209/i,
-        /board\s+meeting/i, /property\s+code/i, /fine/i, /209\.00[0-9]/i
-      ]},
-      { type: "consumer-protection", patterns: [
-        /deceptive trade practice/i, /dtpa/i, /consumer protection/i, /false advertising/i,
-        /warranty breach/i, /misleading/i, /section 17\.4[0-9]/i
-      ]},
-      { type: "personal-injury", patterns: [
-        /personal injury/i, /injury/i, /negligence/i, /damages/i, /slip and fall/i,
-        /accident/i, /wrongful death/i, /medical malpractice/i
-      ]},
-      { type: "real-estate", patterns: [
-        /real estate/i, /property/i, /title/i, /deed/i, /lease/i,
-        /landlord/i, /tenant/i, /eviction/i, /foreclosure/i
-      ]},
-      { type: "contract", patterns: [
-        /contract/i, /agreement/i, /breach/i, /terms/i, /consideration/i,
-        /void/i, /voidable/i, /enforceable/i, /specific performance/i
-      ]},
-      { type: "family", patterns: [
-        /divorce/i, /custody/i, /child support/i, /alimony/i, /spousal support/i,
-        /visitation/i, /conservatorship/i, /adoption/i, /family/i
-      ]},
-      { type: "criminal", patterns: [
-        /criminal/i, /misdemeanor/i, /felony/i, /arrest/i, /charge/i,
-        /defendant/i, /guilty/i, /innocent/i, /plea/i, /bail/i
-      ]}
-    ];
-    
-    // Check each pattern against the combined content
-    for (const { type, patterns } of caseTypePatterns) {
-      if (patterns.some(pattern => pattern.test(combinedContent))) {
-        console.log(`Detected case type from messages: ${type}`);
-        return type;
-      }
-    }
-    
-    // Default case type if no patterns match
-    console.log("No specific case type detected, using general");
-    return "general";
+    // Detect case type from combined message content
+    const messageBasedCaseType = detectCaseTypeFromText(combinedContent);
+    console.log(`Detected case type from messages: ${messageBasedCaseType}`);
+    return messageBasedCaseType;
   } catch (error) {
     console.error("Error identifying case type:", error);
     return "general";
   }
 }
 
-// Extract the case type directly from text content
+// Extract the case type directly from text content with improved detection patterns
 export function detectCaseTypeFromText(text: string): string {
   if (!text) return "general";
   
   const lowerText = text.toLowerCase();
   
-  // Check for HOA terms first as they're very specific
+  // Define pattern matching scores for different case types
+  let scores: Record<string, number> = {
+    "hoa": 0,
+    "consumer-protection": 0,
+    "personal-injury": 0,
+    "real-estate": 0,
+    "contract": 0,
+    "family": 0,
+    "criminal": 0,
+    "deceptive-trade": 0,
+    "bailment": 0,
+    "negligence": 0,
+    "product-liability": 0
+  };
+  
+  // Check for highly specific terms first
+  
+  // HOA/Property terms
   if (lowerText.includes("hoa") || 
       lowerText.includes("homeowner") ||
       lowerText.includes("property code § 209") ||
       lowerText.includes("209.006") || 
       lowerText.includes("209.007") ||
       lowerText.includes("board meeting")) {
-    return "hoa";
+    scores["hoa"] += 10;
   }
   
-  // Define case type patterns in order of specificity
-  const caseTypePatterns = [
-    { type: "hoa", patterns: [
-      /homeowner[s']?\s+association/i, /hoa/i, /property\s+code\s+.*?209/i,
-      /board\s+meeting/i, /fine/i, /covenant/i, /deed\s+restriction/i
-    ]},
-    { type: "consumer-protection", patterns: [
-      /deceptive trade practice/i, /dtpa/i, /consumer protection/i, /false advertising/i
-    ]},
-    { type: "personal-injury", patterns: [
-      /personal injury/i, /slip and fall/i, /wrongful death/i, /medical malpractice/i
-    ]},
-    { type: "real-estate", patterns: [
-      /real estate/i, /land/i, /deed/i, /lease/i, /eviction/i, /foreclosure/i
-    ]},
-    { type: "contract", patterns: [
-      /contract dispute/i, /breach of contract/i, /specific performance/i
-    ]},
-    { type: "family", patterns: [
-      /divorce/i, /custody/i, /child support/i, /alimony/i, /family/i
-    ]},
-    { type: "criminal", patterns: [
-      /criminal/i, /misdemeanor/i, /felony/i, /arrest/i, /guilty/i
-    ]}
-  ];
+  // Dog/animal related cases
+  if ((lowerText.includes("dog") || lowerText.includes("pet") || lowerText.includes("animal")) && 
+      (lowerText.includes("injury") || lowerText.includes("bite") || lowerText.includes("attack"))) {
+    scores["negligence"] += 8;
+    scores["personal-injury"] += 5;
+  }
   
-  // Check each pattern against the content
-  for (const { type, patterns } of caseTypePatterns) {
-    if (patterns.some(pattern => pattern.test(lowerText))) {
-      return type;
+  // Bailment/property cases
+  if (lowerText.includes("bailment") || 
+     (lowerText.includes("property") && lowerText.includes("stolen")) ||
+     (lowerText.includes("vehicle") && lowerText.includes("theft"))) {
+    scores["bailment"] += 10;
+  }
+  
+  // DTPA specific references
+  if (lowerText.includes("dtpa") || 
+      lowerText.includes("deceptive trade") || 
+      lowerText.includes("section 17.4")) {
+    scores["deceptive-trade"] += 10;
+    scores["consumer-protection"] += 8;
+  }
+  
+  // Now score based on more general patterns
+  
+  // HOA/Property terms
+  if (countMatches(lowerText, ["association", "covenant", "restriction", "deed", "board", "bylaw", "fine", "common area", "property code"])) {
+    scores["hoa"] += countMatches(lowerText, ["association", "covenant", "restriction", "deed", "board", "bylaw", "fine", "common area", "property code"]);
+  }
+  
+  // Consumer protection terms
+  if (countMatches(lowerText, ["consumer", "warranty", "false advertising", "misleading", "protection", "dtpa", "product", "service", "representation"])) {
+    scores["consumer-protection"] += countMatches(lowerText, ["consumer", "warranty", "false advertising", "misleading", "protection", "dtpa", "product", "service", "representation"]);
+  }
+  
+  // Personal injury terms
+  if (countMatches(lowerText, ["injury", "accident", "negligence", "hurt", "damage", "slip and fall", "pain", "medical", "wrongful death"])) {
+    scores["personal-injury"] += countMatches(lowerText, ["injury", "accident", "negligence", "hurt", "damage", "slip and fall", "pain", "medical", "wrongful death"]);
+  }
+  
+  // Real estate terms
+  if (countMatches(lowerText, ["real estate", "property", "land", "title", "deed", "lease", "landlord", "tenant", "eviction", "foreclosure"])) {
+    scores["real-estate"] += countMatches(lowerText, ["real estate", "property", "land", "title", "deed", "lease", "landlord", "tenant", "eviction", "foreclosure"]);
+  }
+  
+  // Contract terms
+  if (countMatches(lowerText, ["contract", "agreement", "breach", "terms", "consideration", "void", "enforceable", "specific performance"])) {
+    scores["contract"] += countMatches(lowerText, ["contract", "agreement", "breach", "terms", "consideration", "void", "enforceable", "specific performance"]);
+  }
+  
+  // Family law terms
+  if (countMatches(lowerText, ["divorce", "custody", "child support", "alimony", "spousal support", "visitation", "conservatorship", "adoption", "family"])) {
+    scores["family"] += countMatches(lowerText, ["divorce", "custody", "child support", "alimony", "spousal support", "visitation", "conservatorship", "adoption", "family"]);
+  }
+  
+  // Criminal law terms
+  if (countMatches(lowerText, ["criminal", "misdemeanor", "felony", "arrest", "charge", "defendant", "guilty", "innocent", "plea", "bail"])) {
+    scores["criminal"] += countMatches(lowerText, ["criminal", "misdemeanor", "felony", "arrest", "charge", "defendant", "guilty", "innocent", "plea", "bail"]);
+  }
+  
+  // Product liability terms
+  if (countMatches(lowerText, ["product", "defect", "dangerous", "manufacturer", "failure", "recall", "warning", "design"])) {
+    scores["product-liability"] += countMatches(lowerText, ["product", "defect", "dangerous", "manufacturer", "failure", "recall", "warning", "design"]);
+  }
+  
+  // Check for specific phrases that strongly indicate case types
+  if (lowerText.includes("slip and fall") || lowerText.includes("premises liability")) {
+    scores["personal-injury"] += 8;
+  }
+  
+  if (lowerText.includes("car accident") || lowerText.includes("motor vehicle")) {
+    scores["personal-injury"] += 8;
+  }
+  
+  if (lowerText.includes("medical malpractice") || lowerText.includes("hospital")) {
+    scores["personal-injury"] += 8;
+  }
+  
+  // Find the highest scoring case type
+  let highestScore = 0;
+  let detectedType = "general";
+  
+  for (const [caseType, score] of Object.entries(scores)) {
+    if (score > highestScore) {
+      highestScore = score;
+      detectedType = caseType;
     }
   }
   
+  // Only return a specific case type if the score is significant
+  if (highestScore >= 3) {
+    return detectedType;
+  }
+  
   return "general";
+}
+
+// Helper function to count matches of terms in text
+function countMatches(text: string, terms: string[]): number {
+  let count = 0;
+  for (const term of terms) {
+    if (text.includes(term)) {
+      count++;
+    }
+  }
+  return count;
 }

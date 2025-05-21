@@ -1,163 +1,178 @@
 
-import { extractNamedEntities } from "./textUtils.ts";
-
-// Generate search terms for CourtListener API based on legal analysis and case type
-export function generateSearchTerms(
-  relevantLaw: string, 
-  legalIssues: string, 
-  preliminaryAnalysis: string,
-  caseType: string
-): string {
-  // Default search terms if sections are empty
-  if (!relevantLaw && !legalIssues && !preliminaryAnalysis) {
-    return "liability negligence damages";
-  }
-  
-  // Extract potential statutes
-  const statuteMatches = relevantLaw.match(/([A-Z][\w\s]+Code\s+§+\s*\d+[\w\.\-]*)/g) || [];
-  
-  // Check for HOA-related content specifically
-  const isHoaCase = [relevantLaw, legalIssues, preliminaryAnalysis].some(text => {
-    const lowerText = (text || "").toLowerCase();
-    return lowerText.includes("hoa") || 
-           lowerText.includes("homeowner") || 
-           lowerText.includes("property code § 209") ||
-           lowerText.includes("property code section 209");
-  });
-  
-  // Extract key legal terms
-  const legalTerms = new Set<string>();
-  
-  // Add case type specific terms
-  if (caseType === "bailment") {
-    legalTerms.add("bailment");
-    legalTerms.add("bailee");
-    legalTerms.add("property");
-    legalTerms.add("vehicle theft");
-    legalTerms.add("duty of care");
-  } else if (caseType === "premises-liability") {
-    legalTerms.add("slip and fall");
-    legalTerms.add("premises liability");
-    legalTerms.add("dangerous condition");
-  } else if (caseType === "motor-vehicle-accident") {
-    legalTerms.add("motor vehicle accident");
-    legalTerms.add("collision");
-    legalTerms.add("automobile negligence");
-  } else if (caseType === "medical-malpractice") {
-    legalTerms.add("medical malpractice");
-    legalTerms.add("doctor negligence");
-    legalTerms.add("standard of care");
-  } else if (caseType === "product-liability") {
-    legalTerms.add("product liability");
-    legalTerms.add("defective product");
-    legalTerms.add("manufacturer liability");
-  } else if (caseType === "contract-dispute") {
-    legalTerms.add("breach of contract");
-    legalTerms.add("contract dispute");
-    legalTerms.add("contract terms");
-  } else if (caseType === "employment") {
-    legalTerms.add("employment dispute");
-    legalTerms.add("wrongful termination");
-    legalTerms.add("workplace discrimination");
-  } else if (caseType === "real-estate" || isHoaCase) {
-    // Add HOA-specific terms if this appears to be an HOA case
-    legalTerms.add("homeowners association");
-    legalTerms.add("HOA");
-    legalTerms.add("property code 209");
-    legalTerms.add("Texas Property Code");
-    legalTerms.add("board meeting");
-    legalTerms.add("covenant");
-    legalTerms.add("fine");
-    legalTerms.add("notice requirement");
-  }
-  
-  // If we detected an HOA case but didn't add the terms yet
-  if (isHoaCase) {
-    legalTerms.add("homeowners association");
-    legalTerms.add("HOA");
-    legalTerms.add("property code 209");
-    legalTerms.add("Texas Property Code");
-    legalTerms.add("board meeting");
-  }
-  
-  // Always add negligence as it's common across many case types
-  // But for HOA cases, prioritize specific terms
-  if (!isHoaCase) {
-    legalTerms.add("negligence");
-    legalTerms.add("damages");
-  }
-  
-  // Process relevant law for legal terms
-  const lawWords = relevantLaw.split(/\W+/);
-  for (let i = 0; i < lawWords.length - 1; i++) {
-    if (lawWords[i].length > 3 && lawWords[i][0].toUpperCase() === lawWords[i][0]) {
-      const term = lawWords[i] + ' ' + lawWords[i+1];
-      if (term.length > 7) legalTerms.add(term);
+// Generate search terms for case similarity search
+export function generateSearchTerms(content: string, caseType: string): string {
+  try {
+    if (!content) {
+      console.log("No content provided for search term generation");
+      return `${caseType} case law Texas`;
     }
+    
+    // Extract key phrases from the content
+    const keyPhrases = extractKeyPhrases(content);
+    
+    console.log(`Generated search terms: ${keyPhrases}`);
+    return keyPhrases;
+  } catch (error) {
+    console.error("Error generating search terms:", error);
+    return `${caseType} liability damages`;
   }
-  
-  // Process legal issues for additional terms
-  const issueWords = legalIssues.split(/\W+/);
-  for (let i = 0; i < issueWords.length - 1; i++) {
-    if (issueWords[i].length > 4) {
-      const term = issueWords[i] + ' ' + issueWords[i+1];
-      if (term.length > 7) legalTerms.add(term);
-    }
-  }
-  
-  // Extract named entities that might be relevant
-  extractNamedEntities(preliminaryAnalysis).forEach(entity => {
-    legalTerms.add(entity);
-  });
-  
-  // Combine statutes and best legal terms
-  const statutes = statuteMatches.slice(0, 2).join(' ');
-  const bestTerms = Array.from(legalTerms).slice(0, 5).join(' ');
-  
-  const combinedTerms = `${statutes} ${bestTerms}`.trim();
-  return combinedTerms.length > 0 ? combinedTerms : "liability negligence damages";
 }
 
-// Add explicit legal terms to improve search results based on case type
-export function addExplicitLegalTerms(searchTerms: string, caseText: string, caseType: string): string {
-  let enhancedTerms = searchTerms;
+// Extract key phrases from case content
+function extractKeyPhrases(content: string): string {
+  // Extract legal concepts
+  const legalConcepts = extractLegalConcepts(content);
   
-  // Check for HOA terms in the case text
-  const isHoaCase = caseText.toLowerCase().includes("hoa") || 
-                   caseText.toLowerCase().includes("homeowner") ||
-                   caseText.toLowerCase().includes("property code § 209") ||
-                   caseText.includes("209.006") ||
-                   caseText.includes("209.007");
+  // Extract case citations
+  const caseCitations = extractCaseCitations(content);
   
-  // Add case-type specific terms
-  if (isHoaCase || caseType === "real-estate" || caseType === "hoa") {
-    enhancedTerms = `${enhancedTerms} "homeowners association" "HOA" "property code" "board meeting" "due process" notice 209.006 209.007 fines bylaws covenant`;
-  }
-  else if (caseType === "bailment") {
-    enhancedTerms = `${enhancedTerms} "bailment" "bailee" "property" "duty of care" vehicle valuable theft stolen`;
-  } 
-  else if (caseType === "premises-liability") {
-    enhancedTerms = `${enhancedTerms} "slip and fall" "premises liability" negligence duty dangerous condition owner occupier hazard unsafe`;
-  }
-  else if (caseType === "motor-vehicle-accident") {
-    enhancedTerms = `${enhancedTerms} "motor vehicle" "car accident" collision automobile traffic negligence driver`;
-  }
-  else if (caseType === "medical-malpractice") {
-    enhancedTerms = `${enhancedTerms} "medical malpractice" "standard of care" doctor hospital treatment negligence patient`;
-  }
-  else if (caseType === "product-liability") {
-    enhancedTerms = `${enhancedTerms} "product liability" defective manufacturer warranty unsafe consumer`;
-  }
-  else if (caseType === "contract-dispute") {
-    enhancedTerms = `${enhancedTerms} "breach of contract" agreement terms violation damages performance`;
-  }
-  else if (caseType === "employment") {
-    enhancedTerms = `${enhancedTerms} "wrongful termination" discrimination harassment workplace employer employee`;
-  }
-  else {
-    // Generic terms for other case types
-    enhancedTerms = `${enhancedTerms} liability negligence damages duty breach`;
+  // Extract statute references
+  const statuteReferences = extractStatuteReferences(content);
+  
+  // Combine all terms
+  let terms = [...legalConcepts, ...caseCitations, ...statuteReferences];
+  
+  // If we have 3 or more terms, that's good enough
+  if (terms.length >= 3) {
+    return terms.slice(0, 5).join(" ");
   }
   
-  return enhancedTerms;
+  // If not enough terms, extract some key nouns and adjectives
+  const keyWords = extractKeyWords(content);
+  terms = [...terms, ...keyWords];
+  
+  // Limit to 5 terms for effective search
+  return terms.slice(0, 5).join(" ");
+}
+
+// Extract legal concepts from content
+function extractLegalConcepts(content: string): string[] {
+  const lowerContent = content.toLowerCase();
+  const concepts = [];
+  
+  // Common legal concepts to check for
+  const legalConceptPatterns = [
+    { term: "negligence", regex: /negligen[ct]/i },
+    { term: "duty of care", regex: /duty\s+of\s+care/i },
+    { term: "breach", regex: /breach/i },
+    { term: "damages", regex: /damages/i },
+    { term: "liability", regex: /liab[il]l?it[yi]/i },
+    { term: "contract", regex: /contract/i },
+    { term: "warranty", regex: /warrant[yi]/i },
+    { term: "fraud", regex: /fraud/i },
+    { term: "injury", regex: /injur[yi]/i },
+    { term: "property", regex: /property/i },
+    { term: "trespass", regex: /trespass/i },
+    { term: "easement", regex: /easement/i },
+    { term: "nuisance", regex: /nuisance/i },
+    { term: "discrimination", regex: /discriminat/i },
+    { term: "harassment", regex: /harass/i },
+    { term: "defamation", regex: /defam/i },
+    { term: "slander", regex: /slander/i },
+    { term: "libel", regex: /libel/i },
+    { term: "consent", regex: /consent/i },
+    { term: "reasonable", regex: /reasonable/i }
+  ];
+  
+  // Check for each legal concept
+  legalConceptPatterns.forEach(concept => {
+    if (concept.regex.test(lowerContent)) {
+      concepts.push(concept.term);
+    }
+  });
+  
+  return concepts;
+}
+
+// Extract case citations
+function extractCaseCitations(content: string): string[] {
+  // Look for patterns like "Smith v. Jones"
+  const caseCitations = [];
+  const casePattern = /([A-Z][a-z]+)\s+v\.\s+([A-Z][a-z]+)/g;
+  let match;
+  
+  while ((match = casePattern.exec(content)) !== null) {
+    caseCitations.push(`${match[1]} v. ${match[2]}`);
+  }
+  
+  return caseCitations;
+}
+
+// Extract statute references
+function extractStatuteReferences(content: string): string[] {
+  const statutes = [];
+  
+  // Look for common statute patterns
+  const statutePatterns = [
+    /(\d+\.\d+)/g,  // Like 17.46 (DTPA)
+    /(\d+\.\d+\.\d+)/g,  // Like 17.46.1
+    /§\s*(\d+)/g,   // Like § 17
+    /section\s+(\d+)/gi  // Like Section 17
+  ];
+  
+  statutePatterns.forEach(pattern => {
+    let match;
+    while ((match = pattern.exec(content)) !== null) {
+      statutes.push(match[1]);
+    }
+  });
+  
+  return statutes;
+}
+
+// Extract key words (nouns and legal terminology)
+function extractKeyWords(content: string): string[] {
+  const words = content.split(/\W+/).filter(word => word.length > 3);
+  
+  // Count word frequency
+  const wordCounts = new Map<string, number>();
+  words.forEach(word => {
+    const lower = word.toLowerCase();
+    wordCounts.set(lower, (wordCounts.get(lower) || 0) + 1);
+  });
+  
+  // Sort by frequency
+  const sortedWords = [...wordCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(entry => entry[0]);
+  
+  // Return top words
+  return sortedWords.slice(0, 5);
+}
+
+// Add additional legal terms based on case type
+export function addExplicitLegalTerms(searchTerms: string, content: string, caseType: string): string {
+  const normalizedType = (caseType || "").toLowerCase().replace(/[-_\s]/g, "");
+  
+  // Add case-specific terms
+  if (normalizedType.includes("hoa") || normalizedType.includes("homeowner")) {
+    return `${searchTerms} homeowners association property code restrictions covenant`;
+  }
+  
+  if (normalizedType.includes("personal") || normalizedType.includes("injury")) {
+    return `${searchTerms} negligence damages duty breach`;
+  }
+  
+  if (normalizedType.includes("consumer") || normalizedType.includes("dtpa")) {
+    return `${searchTerms} deceptive trade practice consumer warranty misrepresentation`;
+  }
+  
+  if (normalizedType.includes("contract")) {
+    return `${searchTerms} contract agreement breach performance consideration`;
+  }
+  
+  if (normalizedType.includes("realestate") || normalizedType.includes("property")) {
+    return `${searchTerms} property deed title easement restriction`;
+  }
+  
+  if (normalizedType.includes("deceptive") || normalizedType.includes("trade")) {
+    return `${searchTerms} deceptive trade practice dtpa consumer protection`;
+  }
+  
+  if (normalizedType.includes("bailment") || normalizedType.includes("property")) {
+    return `${searchTerms} bailment property possession duty care`;
+  }
+  
+  // Default added terms for general liability
+  return `${searchTerms} liability negligence Texas law`;
 }

@@ -1,6 +1,6 @@
 
 import React from "react";
-import { CaseAnalysisData } from "@/types/caseAnalysis";
+import { CaseAnalysisData, ProcessDocumentFileFunction } from "@/types/caseAnalysis";
 import DetailedLegalAnalysis from "../DetailedLegalAnalysis";
 import CaseStrengthsWeaknesses from "../CaseStrengthsWeaknesses";
 import SearchSimilarCasesSection from "../SearchSimilarCasesSection";
@@ -17,7 +17,7 @@ interface AnalysisTabContentProps {
   onScholarSearch: (query: string) => void;
   clientDocuments: any[];
   documentsLoading: boolean;
-  processDocument: (file: File) => Promise<void>;
+  processDocument: ProcessDocumentFileFunction;
   isProcessingDocument: boolean;
 }
 
