@@ -8,6 +8,7 @@ import CaseAnalysisContainer from "@/components/case-analysis/CaseAnalysisContai
 import ClientDocumentsSection from "@/components/case-analysis/documents/ClientDocumentsSection";
 import ContractReviewChat from "@/components/contract-review/ContractReviewChat";
 import FaqTabContent from "@/components/clients/ClientDetailTabs/FaqTabContent";
+import CaseDiscussionContainer from "@/components/case-discussion/CaseDiscussionContainer";
 
 interface ClientDetailTabContentProps {
   client: ClientWithCases;
@@ -71,6 +72,8 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
           clientId={client.id} 
           clientName={`${client.first_name} ${client.last_name}`}
         />;
+      case "discussion":
+        return <CaseDiscussionContainer clientId={client.id} />;
       case "faq":
         return <FaqTabContent />;
       default:
