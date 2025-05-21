@@ -49,22 +49,11 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
   } = useClientDocuments(clientId);
 
   // Create a wrapper function to adapt processDocumentContent to expect a File
-  const processDocument = async (file: File): Promise<void> => {
+  const processDocument = async (title: string, content: string, metadata: any = {}): Promise<any> => {
     try {
-      // Extract text from the PDF file
-      const reader = new FileReader();
-      await new Promise<void>((resolve, reject) => {
-        reader.onload = () => resolve();
-        reader.onerror = reject;
-        reader.readAsText(file);
-      });
-      
-      const content = reader.result as string;
-      const title = file.name;
-      
-      await processDocumentContent(title, content, { isPdfDocument: file.type === 'application/pdf' });
+      return await processDocumentContent(title, content, metadata);
     } catch (error) {
-      console.error("Error processing document file:", error);
+      console.error("Error processing document content:", error);
     }
   };
 
@@ -92,10 +81,18 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
     );
   }
   
-  // Ensure the analysisData has a timestamp
+  // Ensure the analysisData has numeric values for defense and prosecution
   const completeAnalysisData = {
     ...analysisData,
-    timestamp: analysisData.timestamp || new Date().toISOString()
+    timestamp: analysisData.timestamp || new Date().toISOString(),
+    outcome: {
+      defense: typeof analysisData.outcome.defense === 'string' 
+        ? parseFloat(analysisData.outcome.defense) 
+        : analysisData.outcome.defense,
+      prosecution: typeof analysisData.outcome.prosecution === 'string' 
+        ? parseFloat(analysisData.outcome.prosecution) 
+        : analysisData.outcome.prosecution
+    }
   };
   
   // Handle the search for scholarly references

@@ -51,7 +51,9 @@ export interface ConsumerProtectionReference {
   type: 'dtpa' | 'home-solicitation' | 'debt-collection' | 'other';
 }
 
-// Define common document processing function types
+// Define both types of document processing functions
 export type ProcessDocumentFileFunction = (file: File) => Promise<void>;
 export type ProcessDocumentContentFunction = (title: string, content: string, metadata?: any) => Promise<any>;
 
+// Create a union type that combines both function types
+export type ProcessDocumentFunction = ProcessDocumentFileFunction | ProcessDocumentContentFunction;
