@@ -27,7 +27,7 @@ export interface AnalysisData {
   lawReferences?: LawReference[];
   caseType?: string;
   remedies?: string;
-  timestamp: string;
+  timestamp: string; // Explicitly adding this property to fix the error
 }
 
 interface LawReference {
