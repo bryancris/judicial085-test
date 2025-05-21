@@ -82,6 +82,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
   }
   
   // Ensure the analysisData has numeric values for defense and prosecution
+  // and a valid timestamp
   const completeAnalysisData = {
     ...analysisData,
     timestamp: analysisData.timestamp || new Date().toISOString(),

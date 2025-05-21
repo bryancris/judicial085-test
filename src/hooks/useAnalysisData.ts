@@ -10,8 +10,35 @@ import {
 } from "@/utils/analysisParsingUtils";
 import { createConversationSummary } from "@/utils/conversationSummaryUtils";
 
+export interface AnalysisData {
+  outcome: {
+    defense: number;
+    prosecution: number;
+  };
+  legalAnalysis: {
+    relevantLaw: string;
+    preliminaryAnalysis: string;
+    potentialIssues: string;
+    followUpQuestions: string[];
+  };
+  strengths: string[];
+  weaknesses: string[];
+  conversationSummary: string;
+  lawReferences?: LawReference[];
+  caseType?: string;
+  remedies?: string;
+  timestamp: string;
+}
+
+interface LawReference {
+  id: string;
+  title: string | null;
+  url: string | null;
+  content?: string | null;
+}
+
 export const useAnalysisData = (clientId?: string) => {
-  const [analysisData, setAnalysisData] = useState<CaseAnalysisData | null>(null);
+  const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -36,7 +63,7 @@ export const useAnalysisData = (clientId?: string) => {
       // Fetch the latest analysis
       const { data: existingAnalysis, error: fetchError } = await supabase
         .from("legal_analyses")
-        .select("content")
+        .select("content, created_at, timestamp")
         .eq("client_id", clientId)
         .order("created_at", { ascending: false })
         .limit(1);
@@ -45,6 +72,7 @@ export const useAnalysisData = (clientId?: string) => {
 
       if (existingAnalysis && existingAnalysis.length > 0) {
         const latestAnalysis = existingAnalysis[0].content;
+        const analysisTimestamp = existingAnalysis[0].timestamp || existingAnalysis[0].created_at;
         
         // Extract data from analysis content
         const strengthsAndWeaknesses = extractStrengthsWeaknesses(latestAnalysis);
@@ -57,7 +85,7 @@ export const useAnalysisData = (clientId?: string) => {
         // Create the summarized conversation text
         const conversationSummary = createConversationSummary(messages);
         
-        const parsedData: CaseAnalysisData = {
+        const parsedData: AnalysisData = {
           outcome: {
             defense: predictionPercentages.defense,
             prosecution: predictionPercentages.prosecution
@@ -71,7 +99,9 @@ export const useAnalysisData = (clientId?: string) => {
           strengths: strengthsAndWeaknesses.strengths,
           weaknesses: strengthsAndWeaknesses.weaknesses,
           conversationSummary,
-          timestamp: new Date().toISOString()
+          timestamp: typeof analysisTimestamp === 'string' ? 
+            analysisTimestamp : 
+            new Date(analysisTimestamp).toISOString()
         };
         
         setAnalysisData(parsedData);
