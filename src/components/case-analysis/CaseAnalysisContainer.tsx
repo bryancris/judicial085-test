@@ -164,15 +164,6 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
             </div>
           </div>
 
-          {/* Client Documents Section */}
-          <ClientDocumentsSection
-            clientId={clientId}
-            documents={clientDocuments}
-            isLoading={documentsLoading}
-            onProcessDocument={processDocument}
-            isProcessing={isProcessingDocument}
-          />
-
           {/* Strengths and Weaknesses */}
           <CaseStrengthsWeaknesses
             strengths={analysisData.strengths}
@@ -196,6 +187,15 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
             scholarlyReferences={scholarlyReferences}
             isScholarlyReferencesLoading={isScholarlyReferencesLoading}
             onScholarSearch={handleScholarSearch}
+          />
+          
+          {/* Client Documents Section - Moved to bottom */}
+          <ClientDocumentsSection
+            clientId={clientId}
+            documents={clientDocuments}
+            isLoading={documentsLoading}
+            onProcessDocument={processDocument}
+            isProcessing={isProcessingDocument}
           />
         </div>
       )}
