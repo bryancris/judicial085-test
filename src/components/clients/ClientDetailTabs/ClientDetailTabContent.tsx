@@ -6,6 +6,7 @@ import { useClientDocuments } from "@/hooks/useClientDocuments";
 import ClientChatView from "@/components/clients/chat/ClientIntakeChat";
 import CaseAnalysisContainer from "@/components/case-analysis/CaseAnalysisContainer";
 import ClientDocumentsSection from "@/components/case-analysis/documents/ClientDocumentsSection";
+import ContractReviewChat from "@/components/contract-review/ContractReviewChat";
 
 interface ClientDetailTabContentProps {
   client: ClientWithCases;
@@ -61,6 +62,11 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
         );
       case "analysis":
         return <CaseAnalysisContainer 
+          clientId={client.id} 
+          clientName={`${client.first_name} ${client.last_name}`}
+        />;
+      case "contracts":
+        return <ContractReviewChat 
           clientId={client.id} 
           clientName={`${client.first_name} ${client.last_name}`}
         />;
