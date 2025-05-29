@@ -47,13 +47,17 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
   const handleDocumentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!documentTitle.trim()) {
-      toast({
-        title: "Title required",
-        description: "Please provide a title for the document.",
-        variant: "destructive",
-      });
-      return;
+    // Determine the final title to use
+    let finalTitle = documentTitle.trim();
+    
+    if (!finalTitle) {
+      if (uploadMethod === "pdf" && selectedFile) {
+        // Use filename without extension for PDF uploads
+        finalTitle = selectedFile.name.replace(/\.[^/.]+$/, "");
+      } else {
+        // Use default title for text uploads
+        finalTitle = "Untitled Document";
+      }
     }
     
     if (uploadMethod === "text" && !documentContent.trim()) {
@@ -84,7 +88,7 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
         
         const result = await processPdfDocument(
           selectedFile, 
-          documentTitle, 
+          finalTitle, 
           clientId,
           selectedCaseId
         );
@@ -106,14 +110,14 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
           
           // Trigger a refresh of the documents list if available
           if (onUpload) {
-            await onUpload(documentTitle, "", selectedFile);
+            await onUpload(finalTitle, "", selectedFile);
           }
         } else {
           throw new Error(result.error || "Failed to process PDF");
         }
       } else {
         // Handle text document upload
-        await onUpload(documentTitle, documentContent);
+        await onUpload(finalTitle, documentContent);
         
         // Reset the form
         setDocumentTitle("");
@@ -200,14 +204,19 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
           )}
 
           <div>
-            <Label htmlFor="docTitle">Document Title</Label>
+            <Label htmlFor="docTitle">Document Title (Optional)</Label>
             <Input
               id="docTitle"
               value={documentTitle}
               onChange={(e) => setDocumentTitle(e.target.value)}
-              placeholder="Enter document title"
+              placeholder={uploadMethod === "pdf" ? "Leave empty to use filename" : "Leave empty for default title"}
               disabled={isCurrentlyProcessing}
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              {uploadMethod === "pdf" 
+                ? "If left empty, the filename will be used as the title"
+                : "If left empty, 'Untitled Document' will be used"}
+            </p>
           </div>
           
           <Tabs 
