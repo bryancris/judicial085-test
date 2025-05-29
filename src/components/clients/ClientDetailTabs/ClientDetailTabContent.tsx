@@ -4,6 +4,7 @@ import { ClientWithCases } from "@/types/client";
 import { useClientChat } from "@/hooks/useClientChat";
 import { useClientDocuments } from "@/hooks/useClientDocuments";
 import { useCaseDocuments } from "@/hooks/useCaseDocuments";
+import { useClientCases } from "@/hooks/useClientCases";
 import { useCase } from "@/contexts/CaseContext";
 import ClientChatView from "@/components/clients/chat/ClientIntakeChat";
 import CaseAnalysisContainer from "@/components/case-analysis/CaseAnalysisContainer";
@@ -26,6 +27,9 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
 }) => {
   // Get current case from context
   const { currentCase, isLoading: caseLoading } = useCase();
+  
+  // Fetch cases for this client using the dedicated hook
+  const { cases, loading: casesLoading } = useClientCases(client.id);
   
   // Set document scope - "client" for client-level documents or a specific caseId
   const [documentScope, setDocumentScope] = useState<string>("client");
@@ -131,7 +135,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
         
         <div className="w-full sm:w-auto">
           <DocumentScopeSelector
-            cases={client.cases || []}
+            cases={cases || []}
             selectedScope={documentScope}
             onScopeChange={setDocumentScope}
             currentCase={currentCase}
@@ -154,7 +158,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
             ? currentCase.case_title 
             : undefined
         }
-        cases={client.cases}
+        cases={cases || []}
         allowCaseSelection={true}
       />
     </div>
