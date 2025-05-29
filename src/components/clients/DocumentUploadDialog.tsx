@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import CaseSelector from "@/components/clients/cases/CaseSelector";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Case } from "@/types/client";
+import { Case } from "@/types/case";
 
 interface DocumentUploadDialogProps {
   isOpen: boolean;
@@ -79,9 +78,9 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
       };
       
       if (uploadMethod === "pdf") {
-        await onUpload(documentTitle, "", selectedFile!, metadata);
+        await onUpload(documentTitle, "", selectedFile!);
       } else {
-        await onUpload(documentTitle, documentContent, undefined, metadata);
+        await onUpload(documentTitle, documentContent);
       }
       
       // Reset the form

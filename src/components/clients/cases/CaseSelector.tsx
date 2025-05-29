@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { BookOpenCheck, User, FolderOpen } from "lucide-react";
-import { Case } from "@/types/client";
+import { Case } from "@/types/case";
 
 interface CaseSelectorProps {
   cases: Case[];

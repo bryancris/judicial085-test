@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Case } from "@/types/client";
+import { Case } from "@/types/case";
 
 interface ClientDocumentsSectionProps {
   clientId: string;
