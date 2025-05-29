@@ -1,26 +1,9 @@
 import { supabase } from '@/integrations/supabase/client';
 import * as pdfjs from 'pdfjs-dist';
 
-// Set the PDF.js worker path with fallback options
-const setWorkerSrc = () => {
-  try {
-    // Try unpkg CDN first (more reliable)
-    pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
-  } catch (error) {
-    console.warn('Failed to set unpkg worker, trying jsdelivr:', error);
-    try {
-      // Fallback to jsdelivr
-      pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
-    } catch (fallbackError) {
-      console.error('Failed to set any CDN worker source:', fallbackError);
-      // Last resort: use a fixed version
-      pdfjs.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.4.168/build/pdf.worker.min.js';
-    }
-  }
-};
-
-// Initialize worker
-setWorkerSrc();
+// Disable PDF.js workers to avoid CDN loading issues
+// This makes processing synchronous but functional
+pdfjs.GlobalWorkerOptions.workerSrc = '';
 
 // Extract text from a PDF file
 export const extractTextFromPdf = async (file: File): Promise<string> => {
@@ -30,9 +13,10 @@ export const extractTextFromPdf = async (file: File): Promise<string> => {
     const fileArrayBuffer = await file.arrayBuffer();
     const pdfData = new Uint8Array(fileArrayBuffer);
     
-    // Load PDF document with error handling
+    // Load PDF document with workers disabled
     const loadingTask = pdfjs.getDocument({ 
       data: pdfData,
+      disableWorker: true,
       cMapUrl: 'https://unpkg.com/pdfjs-dist@' + pdfjs.version + '/cmaps/',
       cMapPacked: true,
     });
