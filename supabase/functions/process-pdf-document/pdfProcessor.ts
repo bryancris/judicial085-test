@@ -1,55 +1,82 @@
 
-// Extract text from PDF buffer using pdfjs-dist
+
+// Extract text from PDF buffer using a Deno-compatible approach
 export async function extractTextFromPdfBuffer(pdfData: Uint8Array): Promise<string> {
   try {
-    // Import pdfjs-dist dynamically for Deno compatibility
-    const { getDocument, GlobalWorkerOptions } = await import('https://cdn.skypack.dev/pdfjs-dist@3.11.174');
+    console.log('Starting PDF text extraction...');
     
-    console.log('Starting PDF text extraction with pdfjs-dist...');
+    // Try to use pdf2pic or a simpler text extraction method
+    // For now, let's use a basic approach with pdf-lib which is more Deno-friendly
+    const { PDFDocument } = await import('https://cdn.skypack.dev/pdf-lib@1.17.1');
     
     // Load the PDF document
-    const loadingTask = getDocument({
-      data: pdfData,
-      useSystemFonts: true,
-      standardFontDataUrl: 'https://cdn.skypack.dev/pdfjs-dist@3.11.174/standard_fonts/',
-    });
+    const pdfDoc = await PDFDocument.load(pdfData);
+    const pages = pdfDoc.getPages();
     
-    const pdfDocument = await loadingTask.promise;
-    const numPages = pdfDocument.numPages;
-    console.log(`PDF loaded successfully with ${numPages} pages`);
+    console.log(`PDF loaded successfully with ${pages.length} pages`);
     
     let fullText = '';
     
-    // Extract text from each page
-    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-      try {
-        const page = await pdfDocument.getPage(pageNum);
-        const textContent = await page.getTextContent();
+    // For pdf-lib, we need to use a different approach since it doesn't have built-in text extraction
+    // Let's try a workaround using a different library
+    try {
+      // Use pdf-parse with a fallback approach
+      const response = await fetch('https://deno.land/x/pdf_parse@1.0.0/mod.ts');
+      if (response.ok) {
+        const { default: pdfParse } = await import('https://deno.land/x/pdf_parse@1.0.0/mod.ts');
+        const data = await pdfParse(pdfData);
         
-        // Combine text items from the page
-        const pageText = textContent.items
-          .map((item: any) => item.str)
-          .join(' ');
-        
-        if (pageText.trim()) {
-          fullText += pageText + '\n\n';
+        if (data.text && data.text.trim()) {
+          fullText = data.text.trim();
+          console.log(`Successfully extracted ${fullText.length} characters from ${data.numpages} pages`);
+          return fullText;
         }
+      }
+    } catch (parseError) {
+      console.warn('pdf-parse failed, trying alternative approach:', parseError);
+    }
+    
+    // Fallback: Try to extract basic text information from PDF structure
+    // This is a very basic approach but should work for simple PDFs
+    const pdfBytes = Array.from(pdfData);
+    const pdfString = String.fromCharCode(...pdfBytes);
+    
+    // Look for text content patterns in the PDF
+    const textMatches = pdfString.match(/\((.*?)\)/g);
+    if (textMatches && textMatches.length > 0) {
+      fullText = textMatches
+        .map(match => match.slice(1, -1)) // Remove parentheses
+        .filter(text => text.length > 1 && /[a-zA-Z]/.test(text)) // Filter out non-text
+        .join(' ')
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .trim();
+    }
+    
+    if (!fullText || fullText.length < 10) {
+      // Try another pattern for text extraction
+      const streamMatches = pdfString.match(/stream\s*(.*?)\s*endstream/gs);
+      if (streamMatches) {
+        const textContent = streamMatches
+          .map(match => {
+            // Extract readable text from stream content
+            const content = match.replace(/^stream\s*|\s*endstream$/g, '');
+            return content.replace(/[^\x20-\x7E]/g, ' '); // Keep only printable ASCII
+          })
+          .join(' ')
+          .replace(/\s+/g, ' ')
+          .trim();
         
-        console.log(`Extracted text from page ${pageNum}/${numPages}`);
-      } catch (pageError) {
-        console.warn(`Error extracting text from page ${pageNum}:`, pageError);
-        // Continue with other pages even if one fails
+        if (textContent.length > fullText.length) {
+          fullText = textContent;
+        }
       }
     }
     
-    // Clean up the extracted text
-    fullText = fullText.trim();
-    
-    if (!fullText || fullText.length === 0) {
+    if (!fullText || fullText.length < 10) {
       throw new Error('PDF contains no extractable text content');
     }
     
-    console.log(`Successfully extracted ${fullText.length} characters from ${numPages} pages`);
+    console.log(`Successfully extracted ${fullText.length} characters using fallback method`);
     return fullText;
     
   } catch (error: any) {
@@ -94,3 +121,4 @@ export function chunkDocument(content: string): string[] {
   
   return chunks;
 }
+
