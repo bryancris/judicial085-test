@@ -11,9 +11,8 @@ import ClientDocumentsSection from "@/components/case-analysis/documents/ClientD
 import ContractReviewChat from "@/components/contract-review/ContractReviewChat";
 import FaqTabContent from "@/components/clients/ClientDetailTabs/FaqTabContent";
 import CaseDiscussionContainer from "@/components/case-discussion/CaseDiscussionContainer";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import DocumentScopeSelector from "@/components/clients/documents/DocumentScopeSelector";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { BookOpenCheck } from "lucide-react";
 
 interface ClientDetailTabContentProps {
@@ -114,6 +113,53 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
     }
   };
 
+  // Render documents tab with enhanced UI
+  const renderDocumentsTab = () => (
+    <div className="p-4">
+      <div className="mb-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        <div>
+          <h2 className="text-lg font-medium mb-1 flex items-center gap-2">
+            <BookOpenCheck className="h-5 w-5" />
+            Document Library
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {currentCase 
+              ? `Managing documents for ${client.first_name}'s cases` 
+              : `Managing documents for ${client.first_name} ${client.last_name}`}
+          </p>
+        </div>
+        
+        <div className="w-full sm:w-auto">
+          <DocumentScopeSelector
+            cases={client.cases || []}
+            selectedScope={documentScope}
+            onScopeChange={setDocumentScope}
+            currentCase={currentCase}
+            className="w-full sm:w-[220px]"
+          />
+        </div>
+      </div>
+      
+      <ClientDocumentsSection 
+        clientId={client.id}
+        documents={documents}
+        isLoading={documentsLoading}
+        onProcessDocument={processDocument}
+        onDeleteDocument={deleteDocument}
+        isProcessing={isDocProcessing}
+        fullView={true}
+        caseId={documentScope !== "client" && documentScope !== "all" ? documentScope : undefined}
+        caseName={
+          currentCase && (documentScope === "case" || documentScope === currentCase.id) 
+            ? currentCase.case_title 
+            : undefined
+        }
+        cases={client.cases}
+        allowCaseSelection={true}
+      />
+    </div>
+  );
+
   // Determine which tab content to show
   const renderTabContent = () => {
     switch (activeTab) {
@@ -125,81 +171,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
           />
         );
       case "documents":
-        return (
-          <div className="p-4">
-            <div className="mb-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-              <div>
-                <h2 className="text-lg font-medium mb-1 flex items-center gap-2">
-                  <BookOpenCheck className="h-5 w-5" />
-                  Document Library
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  {currentCase 
-                    ? `Managing documents for ${client.first_name}'s cases` 
-                    : `Managing documents for ${client.first_name} ${client.last_name}`}
-                </p>
-              </div>
-              
-              <div className="w-full sm:w-auto">
-                <Select 
-                  value={documentScope} 
-                  onValueChange={setDocumentScope}
-                >
-                  <SelectTrigger className="w-full sm:w-[220px]">
-                    <SelectValue placeholder="Select document scope" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="client">
-                      <span className="flex items-center gap-2">
-                        Client Level
-                        <Badge variant="outline">General</Badge>
-                      </span>
-                    </SelectItem>
-                    <SelectItem value="all">
-                      <span className="flex items-center gap-2">
-                        All Documents
-                        <Badge variant="outline">Everything</Badge>
-                      </span>
-                    </SelectItem>
-                    {client.cases && client.cases.length > 0 && (
-                      <>
-                        <SelectItem value="case" disabled={!currentCase}>
-                          <span className="flex items-center gap-2">
-                            Current Case
-                            <Badge>{currentCase?.case_title || "None Selected"}</Badge>
-                          </span>
-                        </SelectItem>
-                        {client.cases.map(caseItem => (
-                          <SelectItem key={caseItem.id} value={caseItem.id}>
-                            <span className="flex items-center gap-2 truncate max-w-[180px]">
-                              {caseItem.case_title}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <ClientDocumentsSection 
-              clientId={client.id}
-              documents={documents}
-              isLoading={documentsLoading}
-              onProcessDocument={processDocument}
-              onDeleteDocument={deleteDocument}
-              isProcessing={isDocProcessing}
-              fullView={true}
-              caseId={documentScope !== "client" && documentScope !== "all" ? documentScope : undefined}
-              caseName={
-                currentCase && (documentScope === "case" || documentScope === currentCase.id) 
-                  ? currentCase.case_title 
-                  : undefined
-              }
-            />
-          </div>
-        );
+        return renderDocumentsTab();
       case "analysis":
         return <CaseAnalysisContainer 
           clientId={client.id} 

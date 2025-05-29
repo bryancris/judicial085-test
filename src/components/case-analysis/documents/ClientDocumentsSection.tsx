@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Case } from "@/types/client";
 
 interface ClientDocumentsSectionProps {
   clientId: string;
@@ -21,6 +22,8 @@ interface ClientDocumentsSectionProps {
   fullView?: boolean;
   caseId?: string;
   caseName?: string;
+  cases?: Case[];
+  allowCaseSelection?: boolean;
 }
 
 const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
@@ -32,7 +35,9 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
   isProcessing,
   fullView = false,
   caseId,
-  caseName
+  caseName,
+  cases = [],
+  allowCaseSelection = false
 }) => {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<DocumentWithContent | null>(null);
@@ -41,9 +46,13 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
     setSelectedDocument(document);
   };
 
-  const handleDocumentUpload = async (title: string, content: string, file?: File) => {
+  const handleDocumentUpload = async (title: string, content: string, file?: File, metadata?: any) => {
     try {
-      await onProcessDocument(title, content, { isPdfDocument: !!file, caseId });
+      await onProcessDocument(title, content, { 
+        isPdfDocument: !!file, 
+        caseId: metadata?.caseId || caseId,
+        ...metadata 
+      });
       setUploadDialogOpen(false);
     } catch (error) {
       console.error("Error processing document:", error);
@@ -251,6 +260,8 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
           isProcessing={isProcessing}
           caseId={caseId}
           caseName={caseName}
+          cases={cases}
+          allowCaseSelection={allowCaseSelection}
         />
 
         {renderDocumentPreview()}

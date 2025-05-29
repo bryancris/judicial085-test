@@ -5,11 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Loader2, FilePlus, FileText, BookOpenCheck } from "lucide-react";
+import { Loader2, FilePlus, FileText, BookOpenCheck, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import FileUploadInput from "@/components/clients/chat/FileUploadInput";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import CaseSelector from "@/components/clients/cases/CaseSelector";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Case } from "@/types/client";
 
 interface DocumentUploadDialogProps {
   isOpen: boolean;
@@ -18,6 +21,8 @@ interface DocumentUploadDialogProps {
   isProcessing: boolean;
   caseId?: string;
   caseName?: string;
+  cases?: Case[];
+  allowCaseSelection?: boolean;
 }
 
 const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
@@ -26,12 +31,15 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
   onUpload,
   isProcessing,
   caseId,
-  caseName
+  caseName,
+  cases = [],
+  allowCaseSelection = false
 }) => {
   const [documentTitle, setDocumentTitle] = useState("");
   const [documentContent, setDocumentContent] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadMethod, setUploadMethod] = useState<"text" | "pdf">("text");
+  const [selectedCaseId, setSelectedCaseId] = useState<string | undefined>(caseId);
   const { toast } = useToast();
 
   const handleDocumentSubmit = async (e: React.FormEvent) => {
@@ -65,10 +73,15 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
     }
     
     try {
+      const metadata = { 
+        isPdfDocument: uploadMethod === "pdf",
+        caseId: selectedCaseId 
+      };
+      
       if (uploadMethod === "pdf") {
-        await onUpload(documentTitle, "", selectedFile!);
+        await onUpload(documentTitle, "", selectedFile!, metadata);
       } else {
-        await onUpload(documentTitle, documentContent);
+        await onUpload(documentTitle, documentContent, undefined, metadata);
       }
       
       // Reset the form
@@ -76,6 +89,7 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
       setDocumentContent("");
       setSelectedFile(null);
       setUploadMethod("text");
+      setSelectedCaseId(caseId);
     } catch (error) {
       console.error("Error uploading document:", error);
     }
@@ -85,20 +99,21 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
     setSelectedFile(file);
   };
 
+  const getSelectedCaseName = () => {
+    if (!selectedCaseId) return "Client-Level";
+    const selectedCase = cases.find(c => c.id === selectedCaseId);
+    return selectedCase?.case_title || caseName || "Selected Case";
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {caseId ? (
+            {selectedCaseId ? (
               <>
                 <BookOpenCheck className="h-5 w-5" />
                 Add Case Document
-                {caseName && (
-                  <Badge className="ml-2" variant="secondary">
-                    {caseName}
-                  </Badge>
-                )}
               </>
             ) : (
               <>
@@ -108,7 +123,41 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
             )}
           </DialogTitle>
         </DialogHeader>
+        
         <form onSubmit={handleDocumentSubmit} className="space-y-4 mt-4">
+          {/* Case Selection */}
+          {allowCaseSelection && (
+            <div className="space-y-2">
+              <Label>Document Scope</Label>
+              <CaseSelector
+                cases={cases}
+                selectedCaseId={selectedCaseId}
+                onCaseSelect={setSelectedCaseId}
+                allowClientLevel={true}
+                placeholder="Select where to store this document"
+              />
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  {selectedCaseId 
+                    ? `This document will be associated with: ${getSelectedCaseName()}`
+                    : "This document will be stored at the client level (accessible across all cases)"}
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
+
+          {/* Fixed case display */}
+          {!allowCaseSelection && (caseId || caseName) && (
+            <Alert>
+              <BookOpenCheck className="h-4 w-4" />
+              <AlertDescription>
+                This document will be added to case: <strong>{caseName || "Selected Case"}</strong>
+                <Badge className="ml-2" variant="secondary">Case Document</Badge>
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div>
             <Label htmlFor="docTitle">Document Title</Label>
             <Input
@@ -172,7 +221,7 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
               ) : (
                 <>
                   <FilePlus className="h-4 w-4 mr-2" />
-                  {caseId ? "Upload Case Document" : "Upload Document"}
+                  {selectedCaseId ? "Upload Case Document" : "Upload Client Document"}
                 </>
               )}
             </Button>
