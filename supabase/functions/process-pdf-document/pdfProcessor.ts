@@ -1,4 +1,3 @@
-
 // Extract text from PDF buffer using a Deno-compatible approach
 export async function extractTextFromPdfBuffer(pdfData: Uint8Array): Promise<string> {
   try {
@@ -26,9 +25,16 @@ export async function extractTextFromPdfBuffer(pdfData: Uint8Array): Promise<str
         const data = await pdfParse(pdfData);
         
         if (data.text && data.text.trim()) {
-          fullText = sanitizeText(data.text.trim());
-          console.log(`Successfully extracted ${fullText.length} characters from ${data.numpages} pages`);
-          return fullText;
+          const rawText = data.text.trim();
+          console.log(`Raw extracted text length: ${rawText.length}`);
+          
+          // Clean and filter the extracted text
+          fullText = cleanExtractedText(rawText);
+          
+          if (fullText && fullText.length > 50) {
+            console.log(`Successfully extracted and cleaned ${fullText.length} characters from ${data.numpages} pages`);
+            return fullText;
+          }
         }
       }
     } catch (parseError) {
@@ -43,16 +49,18 @@ export async function extractTextFromPdfBuffer(pdfData: Uint8Array): Promise<str
     // Look for text content patterns in the PDF
     const textMatches = pdfString.match(/\((.*?)\)/g);
     if (textMatches && textMatches.length > 0) {
-      fullText = textMatches
+      const extractedText = textMatches
         .map(match => match.slice(1, -1)) // Remove parentheses
         .filter(text => text.length > 1 && /[a-zA-Z]/.test(text)) // Filter out non-text
         .join(' ')
         .replace(/\s+/g, ' ') // Normalize whitespace
         .trim();
+      
+      fullText = cleanExtractedText(extractedText);
     }
     
-    if (!fullText || fullText.length < 10) {
-      // Try another pattern for text extraction
+    if (!fullText || fullText.length < 20) {
+      // Try another pattern for text extraction with better filtering
       const streamMatches = pdfString.match(/stream\s*(.*?)\s*endstream/gs);
       if (streamMatches) {
         const textContent = streamMatches
@@ -65,17 +73,18 @@ export async function extractTextFromPdfBuffer(pdfData: Uint8Array): Promise<str
           .replace(/\s+/g, ' ')
           .trim();
         
-        if (textContent.length > fullText.length) {
-          fullText = textContent;
+        const cleanedContent = cleanExtractedText(textContent);
+        if (cleanedContent.length > fullText.length) {
+          fullText = cleanedContent;
         }
       }
     }
     
-    if (!fullText || fullText.length < 10) {
-      throw new Error('PDF contains no extractable text content');
+    if (!fullText || fullText.length < 20) {
+      throw new Error('PDF contains no extractable readable text content');
     }
     
-    // Sanitize the extracted text
+    // Final sanitization
     fullText = sanitizeText(fullText);
     
     console.log(`Successfully extracted ${fullText.length} characters using fallback method`);
@@ -94,6 +103,64 @@ export async function extractTextFromPdfBuffer(pdfData: Uint8Array): Promise<str
       throw new Error('Failed to extract text from PDF file. Please ensure the file is a valid, readable PDF.');
     }
   }
+}
+
+// Clean extracted text to remove technical metadata and encoded content
+function cleanExtractedText(rawText: string): string {
+  if (!rawText) return '';
+  
+  console.log('Cleaning extracted text...');
+  
+  // Remove common PDF metadata patterns
+  let cleanText = rawText
+    // Remove Mozilla/browser user agent strings
+    .replace(/Mozilla\/[\d.]+\s*\\[^\\]*\\[^\\]*\s*/gi, '')
+    // Remove email metadata patterns
+    .replace(/mailto:[^\s]+/gi, '')
+    // Remove node references (like node00065288 node00065289)
+    .replace(/node\d{8,}\s*/gi, '')
+    // Remove URLs and technical identifiers
+    .replace(/https?:\/\/[^\s]+/gi, '')
+    // Remove encoded strings with lots of special characters
+    .replace(/[^\w\s.,!?;:()\-'"]+/g, ' ')
+    // Remove strings that are mostly numbers and special characters
+    .replace(/\b[\d\W]{10,}\b/g, ' ')
+    // Remove single characters surrounded by spaces (artifacts)
+    .replace(/\s[a-zA-Z]\s/g, ' ')
+    // Remove excessive punctuation
+    .replace(/[.,;:!?]{3,}/g, '. ')
+    // Clean up whitespace
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  // Filter out lines that are mostly technical garbage
+  const lines = cleanText.split(/[\r\n]+/);
+  const meaningfulLines = lines.filter(line => {
+    const trimmed = line.trim();
+    if (trimmed.length < 3) return false;
+    
+    // Skip lines that are mostly special characters or numbers
+    const alphaCount = (trimmed.match(/[a-zA-Z]/g) || []).length;
+    const totalChars = trimmed.length;
+    
+    // Keep lines that are at least 30% alphabetic characters
+    return alphaCount / totalChars >= 0.3;
+  });
+  
+  cleanText = meaningfulLines.join(' ').trim();
+  
+  // If we still have very little meaningful content, try a different approach
+  if (cleanText.length < 50) {
+    // Look for email-like patterns in the original text
+    const emailPatterns = rawText.match(/(?:from|to|subject|date)[:\s]+([^\n\r]+)/gi);
+    if (emailPatterns && emailPatterns.length > 0) {
+      cleanText = emailPatterns.join(' ').replace(/[^\w\s.,!?;:()\-'"]/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+  }
+  
+  console.log(`Text cleaning: ${rawText.length} -> ${cleanText.length} characters`);
+  
+  return cleanText;
 }
 
 // Sanitize text to remove problematic Unicode characters
