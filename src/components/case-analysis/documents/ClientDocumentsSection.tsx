@@ -1,23 +1,27 @@
 
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { FilePlus, FileText, Loader2, Search, FileIcon } from "lucide-react";
 import { DocumentWithContent } from "@/types/knowledge";
-import DocumentCard from "@/components/knowledge/DocumentCard";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Loader2, FilePdf, FileText, Trash2, PlusCircle, BookText } from "lucide-react";
 import DocumentUploadDialog from "@/components/clients/DocumentUploadDialog";
-import { extractTextFromPdf, uploadPdfToStorage, generateEmbeddings } from "@/utils/pdfUtils";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { formatDistanceToNow } from 'date-fns';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface ClientDocumentsSectionProps {
   clientId: string;
   documents: DocumentWithContent[];
   isLoading: boolean;
   onProcessDocument: (title: string, content: string, metadata?: any) => Promise<any>;
-  onDeleteDocument?: (documentId: string) => Promise<{ success: boolean; error?: string }>;
+  onDeleteDocument: (documentId: string) => Promise<any>;
   isProcessing: boolean;
   fullView?: boolean;
+  caseId?: string;
+  caseName?: string;
 }
 
 const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
@@ -27,272 +31,232 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
   onProcessDocument,
   onDeleteDocument,
   isProcessing,
-  fullView = false
+  fullView = false,
+  caseId,
+  caseName
 }) => {
-  const [openDialog, setOpenDialog] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const { toast } = useToast();
-  const [uploadProcessing, setUploadProcessing] = useState(false);
-  const [deletingDocIds, setDeletingDocIds] = useState<Set<string>>(new Set());
-  const [localDocuments, setLocalDocuments] = useState<DocumentWithContent[]>([]);
-  
-  // Keep local state in sync with prop
-  useEffect(() => {
-    setLocalDocuments(documents || []);
-  }, [documents]);
-  
-  // Track documents being processed for deletion with improved error handling
-  const handleDeleteDocument = async (documentId: string) => {
-    if (!onDeleteDocument) return { success: false, error: "Delete not available" };
-    
-    console.log(`ClientDocumentsSection: Starting delete for document ${documentId}`);
-    
-    // Mark this document as being deleted
-    setDeletingDocIds(prev => new Set(prev).add(documentId));
-    
-    try {
-      // Optimistically update UI first
-      setLocalDocuments(current => current.filter(doc => doc.id !== documentId));
-      
-      // Call the parent component's delete handler
-      console.log(`ClientDocumentsSection: Calling parent delete handler for ${documentId}`);
-      const result = await onDeleteDocument(documentId);
-      
-      // Log the result for debugging
-      console.log(`ClientDocumentsSection: Delete result for ${documentId}:`, result);
-      
-      if (!result.success) {
-        console.error(`Failed to delete document ${documentId}:`, result.error);
-        
-        // If deletion failed, restore the document in the UI
-        setLocalDocuments(current => [...current, ...documents.filter(doc => doc.id === documentId)]);
-        
-        // Show error toast
-        toast({
-          title: "Delete failed",
-          description: result.error || "Failed to delete document. Please try again.",
-          variant: "destructive",
-        });
-      } else {
-        // On successful deletion, make sure document stays removed from UI
-        setLocalDocuments(current => current.filter(doc => doc.id !== documentId));
-        
-        // Show success toast
-        toast({
-          title: "Document deleted",
-          description: "Document successfully deleted.",
-        });
-      }
-      
-      return result;
-    } catch (error: any) {
-      console.error(`Error deleting document ${documentId}:`, error);
-      
-      // Restore document in UI on error
-      setLocalDocuments(current => [...current, ...documents.filter(doc => doc.id === documentId)]);
-      
-      return { success: false, error: error.message };
-    } finally {
-      // Remove from tracking regardless of outcome
-      setDeletingDocIds(prev => {
-        const updated = new Set(prev);
-        updated.delete(documentId);
-        return updated;
-      });
-      console.log(`ClientDocumentsSection: Completed delete process for ${documentId}`);
-    }
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<DocumentWithContent | null>(null);
+
+  const handleDocumentOpen = (document: DocumentWithContent) => {
+    setSelectedDocument(document);
   };
 
-  // Handle document upload (both text and PDF)
   const handleDocumentUpload = async (title: string, content: string, file?: File) => {
     try {
-      setUploadProcessing(true);
-      
-      // Handle PDF upload
-      if (file) {
-        // Generate a document ID
-        const documentId = crypto.randomUUID();
-        
-        // Step 1: Upload the PDF to storage and get the public URL
-        const publicUrl = await uploadPdfToStorage(file, clientId, documentId);
-        
-        // Step 2: Extract text from the PDF
-        const textChunks = await extractTextFromPdf(file);
-        
-        if (textChunks.length === 0) {
-          toast({
-            title: "Processing error",
-            description: "Could not extract text from the PDF file.",
-            variant: "destructive",
-          });
-          setUploadProcessing(false);
-          return { success: false };
-        }
-        
-        // Step 3: Generate embeddings for the text chunks
-        const metadata = {
-          fileType: "pdf",
-          fileName: file.name,
-          fileSize: file.size,
-          pdfUrl: publicUrl,
-          uploadedAt: new Date().toISOString()
-        };
-        
-        // Process the document with embeddings
-        await generateEmbeddings(textChunks, documentId, clientId, metadata);
-        
-        // Update document metadata
-        const result = await onProcessDocument(title, "PDF Document", {
-          ...metadata,
-          isPdfDocument: true
-        });
-        
-        if (result.success) {
-          toast({
-            title: "Document uploaded",
-            description: `${title} has been processed and added as a client document.`,
-          });
-          setOpenDialog(false);
-        }
-        
-        setUploadProcessing(false);
-        return result;
-      } else {
-        // Handle regular text upload (use existing functionality)
-        const result = await onProcessDocument(title, content);
-        
-        if (result.success) {
-          toast({
-            title: "Document added",
-            description: `${title} has been added as a client document.`,
-          });
-          setOpenDialog(false);
-        }
-        
-        setUploadProcessing(false);
-        return result;
-      }
-    } catch (error: any) {
+      await onProcessDocument(title, content, { isPdfDocument: !!file, caseId });
+      setUploadDialogOpen(false);
+    } catch (error) {
       console.error("Error processing document:", error);
-      toast({
-        title: "Upload failed",
-        description: `Error uploading document: ${error.message}`,
-        variant: "destructive",
-      });
-      setUploadProcessing(false);
-      return { success: false, error: error.message };
     }
   };
 
-  // Filter documents based on search term with optional null check
-  const filteredDocuments = localDocuments?.filter(doc => 
-    doc.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    doc.contents?.some(content => 
-      content.content?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  ) || [];
+  const handleDeleteDocument = async (documentId: string) => {
+    try {
+      await onDeleteDocument(documentId);
+    } catch (error) {
+      console.error("Error deleting document:", error);
+    }
+  };
 
-  // Display only the first few documents in summary view
-  const displayedDocuments = fullView 
-    ? filteredDocuments 
-    : filteredDocuments.slice(0, 3);
+  const renderDocumentSkeletons = () => (
+    <>
+      {Array.from({ length: 3 }).map((_, index) => (
+        <Card key={`skeleton-${index}`} className="col-span-1">
+          <CardHeader>
+            <Skeleton className="h-6 w-3/4 mb-2" />
+            <Skeleton className="h-4 w-1/2" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-4 w-full mb-2" />
+            <Skeleton className="h-4 w-full mb-2" />
+            <Skeleton className="h-4 w-3/4" />
+          </CardContent>
+          <CardFooter className="flex justify-between">
+            <Skeleton className="h-8 w-20" />
+            <Skeleton className="h-8 w-8 rounded-full" />
+          </CardFooter>
+        </Card>
+      ))}
+    </>
+  );
+
+  // Format date to be more readable
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "Unknown date";
+    
+    try {
+      const date = new Date(dateString);
+      return formatDistanceToNow(date, { addSuffix: true });
+    } catch (e) {
+      return dateString;
+    }
+  };
+
+  // Sort documents by created date (newest first)
+  const sortedDocuments = [...documents].sort((a, b) => {
+    const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return dateB - dateA;
+  });
+
+  // Show document preview modal
+  const renderDocumentPreview = () => {
+    if (!selectedDocument) return null;
+    
+    const documentContent = selectedDocument.contents.map(item => item.content).join("\n\n");
+    
+    return (
+      <Dialog open={!!selectedDocument} onOpenChange={() => setSelectedDocument(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              {selectedDocument.title || "Document"}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
+            <span>{formatDate(selectedDocument.created_at)}</span>
+            {selectedDocument.case_id && (
+              <Badge variant="outline" className="ml-2">
+                Case Document
+              </Badge>
+            )}
+          </div>
+          
+          <ScrollArea className="flex-grow max-h-[calc(80vh-120px)]">
+            <div className="p-4 whitespace-pre-wrap font-mono text-sm">
+              {documentContent || "No content available"}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+    );
+  };
 
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-xl font-semibold flex items-center">
-            <FileText className="h-5 w-5 mr-2" />
-            Client Documents
-            {isLoading && (
-              <Loader2 className="ml-2 h-4 w-4 animate-spin text-gray-500" />
-            )}
-          </CardTitle>
-          
-          <div className="flex items-center gap-2">
-            {fullView && (
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-                <Input
-                  type="search"
-                  placeholder="Search documents..."
-                  className="pl-8 w-[200px] h-9"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-            )}
-            
-            <Button 
-              size="sm" 
-              className="flex items-center gap-1"
-              onClick={() => setOpenDialog(true)}
-            >
-              <FilePlus className="h-4 w-4" />
-              <span>Add Document</span>
-            </Button>
-            
-            <DocumentUploadDialog
-              isOpen={openDialog}
-              onClose={() => setOpenDialog(false)}
-              onUpload={handleDocumentUpload}
-              isProcessing={isProcessing || uploadProcessing}
-            />
-          </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent>
-        {isLoading && !localDocuments?.length ? (
-          <div className="flex flex-col items-center justify-center py-10 text-center">
-            <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
-            <p className="text-muted-foreground">Loading client documents...</p>
-          </div>
-        ) : !localDocuments?.length ? (
-          <div className="flex flex-col items-center justify-center py-10 border-2 border-dashed border-gray-200 rounded-lg text-center">
-            <FileText className="h-12 w-12 text-gray-400 mb-2" />
-            <h3 className="font-medium">No Documents Available</h3>
-            <p className="text-gray-500 mt-1 mb-4 max-w-md">
-              Add documents relevant to this client's case to enhance your analysis.
-            </p>
-            <Button onClick={() => setOpenDialog(true)}>Add First Document</Button>
-          </div>
-        ) : (
-          <div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
-              {displayedDocuments.map((doc) => (
-                <DocumentCard
-                  key={doc.id}
-                  document={doc}
-                  searchTerm={searchTerm}
-                  clientSpecific={true}
-                  onDelete={onDeleteDocument ? handleDeleteDocument : undefined}
-                  isDeleting={deletingDocIds.has(doc.id)}
-                />
-              ))}
-            </div>
-            
-            {!fullView && filteredDocuments.length > 3 && (
-              <div className="mt-4 text-center">
-                <Button variant="outline" size="sm">
-                  View All Documents ({filteredDocuments.length})
-                </Button>
-              </div>
-            )}
-            
-            {fullView && filteredDocuments.length === 0 && searchTerm && (
-              <div className="flex flex-col items-center justify-center py-10 text-center">
-                <Search className="h-12 w-12 text-gray-400 mb-2" />
-                <h3 className="font-medium">No matching documents</h3>
-                <p className="text-gray-500 mt-1">
-                  No documents found matching "{searchTerm}"
-                </p>
-              </div>
-            )}
-          </div>
+    <>
+      <div className="space-y-4">
+        {caseId && caseName && (
+          <Alert variant="default" className="bg-muted/50">
+            <AlertTitle className="flex items-center">
+              <BookText className="h-4 w-4 mr-2" />
+              Case Documents
+            </AlertTitle>
+            <AlertDescription>
+              Showing documents for case: <strong>{caseName}</strong>
+            </AlertDescription>
+          </Alert>
         )}
-      </CardContent>
-    </Card>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {isLoading ? (
+            renderDocumentSkeletons()
+          ) : documents.length === 0 ? (
+            <div className="col-span-full p-8 text-center border rounded-lg bg-muted/30">
+              <h3 className="text-xl font-semibold mb-2">No Documents Found</h3>
+              <p className="text-muted-foreground mb-4">
+                {caseId 
+                  ? "This case doesn't have any documents yet." 
+                  : "You haven't uploaded any documents for this client yet."}
+              </p>
+              <Button onClick={() => setUploadDialogOpen(true)}>
+                <PlusCircle className="h-4 w-4 mr-2" />
+                {caseId ? "Add Case Document" : "Add Document"}
+              </Button>
+            </div>
+          ) : (
+            <>
+              {sortedDocuments.map((document) => (
+                <Card key={document.id} className="col-span-1 overflow-hidden">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-md font-medium truncate">
+                      {document.title || "Untitled Document"}
+                    </CardTitle>
+                    <div className="text-xs text-muted-foreground">
+                      {formatDate(document.created_at)}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pb-2">
+                    <div className="flex items-center gap-2 mb-3">
+                      {document.schema === 'client_document' ? (
+                        <Badge variant="secondary">Client</Badge>
+                      ) : document.schema === 'case_document' ? (
+                        <Badge variant="secondary">Case</Badge>
+                      ) : (
+                        <Badge variant="outline">Document</Badge>
+                      )}
+                      
+                      {document.case_id && (
+                        <Badge variant="outline">Case Document</Badge>
+                      )}
+                      
+                      {document.url && (
+                        <Badge variant="outline">
+                          <FilePdf className="h-3 w-3 mr-1" /> PDF
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    <p className="text-sm text-muted-foreground line-clamp-3">
+                      {document.contents.length > 0
+                        ? document.contents[0].content
+                        : "No preview available"}
+                    </p>
+                  </CardContent>
+                  <CardFooter className="flex justify-between pt-2">
+                    <Button 
+                      variant="secondary" 
+                      size="sm"
+                      onClick={() => handleDocumentOpen(document)}
+                    >
+                      View
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteDocument(document.id)}
+                      disabled={isProcessing}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive-foreground" />
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </>
+          )}
+        </div>
+
+        <div className="flex justify-end mt-4">
+          <Button
+            onClick={() => setUploadDialogOpen(true)}
+            className="flex items-center gap-2"
+            disabled={isProcessing}
+          >
+            {isProcessing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <PlusCircle className="h-4 w-4" />
+            )}
+            {caseId 
+              ? "Add Case Document" 
+              : "Add Client Document"}
+          </Button>
+        </div>
+
+        <DocumentUploadDialog
+          isOpen={uploadDialogOpen}
+          onClose={() => setUploadDialogOpen(false)}
+          onUpload={handleDocumentUpload}
+          isProcessing={isProcessing}
+          caseId={caseId}
+          caseName={caseName}
+        />
+
+        {renderDocumentPreview()}
+      </div>
+    </>
   );
 };
 

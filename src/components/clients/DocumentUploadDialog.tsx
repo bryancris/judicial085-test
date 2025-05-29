@@ -5,23 +5,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Loader2, FilePlus, FileText } from "lucide-react";
+import { Loader2, FilePlus, FileText, BookOpenCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import FileUploadInput from "@/components/clients/chat/FileUploadInput";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 interface DocumentUploadDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onUpload: (title: string, content: string, file?: File) => Promise<any>;
   isProcessing: boolean;
+  caseId?: string;
+  caseName?: string;
 }
 
 const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
   isOpen,
   onClose,
   onUpload,
-  isProcessing
+  isProcessing,
+  caseId,
+  caseName
 }) => {
   const [documentTitle, setDocumentTitle] = useState("");
   const [documentContent, setDocumentContent] = useState("");
@@ -84,7 +89,24 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Add Client Document</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            {caseId ? (
+              <>
+                <BookOpenCheck className="h-5 w-5" />
+                Add Case Document
+                {caseName && (
+                  <Badge className="ml-2" variant="secondary">
+                    {caseName}
+                  </Badge>
+                )}
+              </>
+            ) : (
+              <>
+                <FileText className="h-5 w-5" />
+                Add Client Document
+              </>
+            )}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleDocumentSubmit} className="space-y-4 mt-4">
           <div>
@@ -150,7 +172,7 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
               ) : (
                 <>
                   <FilePlus className="h-4 w-4 mr-2" />
-                  Upload Document
+                  {caseId ? "Upload Case Document" : "Upload Document"}
                 </>
               )}
             </Button>

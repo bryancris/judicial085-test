@@ -1,138 +1,215 @@
 
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from '@/integrations/supabase/client';
+import * as pdfjs from 'pdfjs-dist';
 
-// PDF processing utility functions
-export const extractTextFromPdf = async (file: File): Promise<string[]> => {
-  // We'll use PDF.js for extracting text from PDFs
-  const pdfjs = await import('pdfjs-dist');
-  
-  // Set the worker source directly without importing the worker entry
-  pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
-  
-  return new Promise(async (resolve, reject) => {
-    try {
-      // Convert file to ArrayBuffer
-      const arrayBuffer = await file.arrayBuffer();
-      // Load the PDF document
-      const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
-      
-      const textChunks: string[] = [];
-      const MAX_CHUNK_LENGTH = 1000; // Same size as in the existing chunking function
-      let currentChunk = '';
-      
-      // Process each page
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .map((item: any) => item.str)
-          .join(' ');
-        
-        // Split text by paragraphs
-        const paragraphs = pageText.split(/\n\s*\n/);
-        
-        for (const paragraph of paragraphs) {
-          if (paragraph.trim().length === 0) continue;
-          
-          // If adding this paragraph would exceed the max length, start a new chunk
-          if (currentChunk.length + paragraph.length > MAX_CHUNK_LENGTH && currentChunk.length > 0) {
-            textChunks.push(currentChunk);
-            currentChunk = '';
-          }
-          
-          // Add paragraph to current chunk
-          if (currentChunk.length > 0) {
-            currentChunk += '\n\n' + paragraph;
-          } else {
-            currentChunk = paragraph;
-          }
-        }
-      }
-      
-      // Add the last chunk if there's anything left
-      if (currentChunk.length > 0) {
-        textChunks.push(currentChunk);
-      }
-      
-      resolve(textChunks);
-    } catch (error) {
-      console.error("Error extracting text from PDF:", error);
-      reject(error);
+// Set the PDF.js worker path
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+
+// Extract text from a PDF file
+export const extractTextFromPdf = async (file: File): Promise<string> => {
+  try {
+    const fileArrayBuffer = await file.arrayBuffer();
+    const pdfData = new Uint8Array(fileArrayBuffer);
+    
+    // Load PDF document
+    const loadingTask = pdfjs.getDocument({ data: pdfData });
+    const pdf = await loadingTask.promise;
+    
+    let fullText = '';
+    
+    // Extract text from each page
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items.map((item: any) => item.str).join(' ');
+      fullText += pageText + '\n\n';
     }
-  });
-};
-
-export const uploadPdfToStorage = async (
-  file: File, 
-  clientId: string, 
-  documentId: string
-): Promise<string> => {
-  // Generate a storage path: client_documents/{clientId}/{documentId}.pdf
-  const filePath = `${clientId}/${documentId}.pdf`;
-  
-  // Upload the file to Supabase storage
-  const { data, error } = await supabase
-    .storage
-    .from('client_documents')
-    .upload(filePath, file, {
-      contentType: 'application/pdf',
-      upsert: true
-    });
-  
-  if (error) {
-    console.error("Error uploading PDF to storage:", error);
-    throw error;
+    
+    return fullText;
+  } catch (error) {
+    console.error('Error extracting text from PDF:', error);
+    throw new Error('Failed to extract text from PDF file');
   }
-  
-  // Return the public URL of the uploaded file
-  const { data: publicUrlData } = supabase
-    .storage
-    .from('client_documents')
-    .getPublicUrl(filePath);
-  
-  return publicUrlData.publicUrl;
 };
 
+// Upload PDF file to Supabase Storage
+export const uploadPdfToStorage = async (file: File, clientId: string, caseId?: string): Promise<string> => {
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+    const filePath = `${clientId}/${fileName}`;
+    
+    // Upload file to client_documents bucket
+    const { data, error } = await supabase.storage
+      .from('client_documents')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+    
+    if (error) {
+      throw error;
+    }
+    
+    // Get public URL for the uploaded file
+    const { data: urlData } = await supabase.storage
+      .from('client_documents')
+      .getPublicUrl(filePath);
+    
+    return urlData.publicUrl;
+  } catch (error) {
+    console.error('Error uploading PDF to storage:', error);
+    throw new Error('Failed to upload PDF file to storage');
+  }
+};
+
+// Generate embeddings for document chunks
 export const generateEmbeddings = async (
   textChunks: string[], 
   documentId: string, 
-  clientId: string,
+  clientId: string, 
   metadata: any = {}
-): Promise<any> => {
+): Promise<void> => {
   try {
-    // Call the Edge Function to generate embeddings
-    // Updated to use the current Supabase Auth API instead of session()
-    const { data: { session } } = await supabase.auth.getSession();
+    // Set metadata
+    const metadataWithDocId = {
+      ...metadata,
+      documentId,
+      clientId
+    };
     
-    const response = await fetch('/functions/v1/generate-embeddings', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session?.access_token}`
-      },
-      body: JSON.stringify({
-        texts: textChunks,
-        documentId,
-        clientId,
-        metadata
-      })
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`Error generating embeddings: ${error.error || 'Unknown error'}`);
+    // Process each text chunk
+    for (let i = 0; i < textChunks.length; i++) {
+      // Get embedding for this chunk from OpenAI API
+      const response = await fetch('https://api.openai.com/v1/embeddings', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: "text-embedding-3-small",
+          input: textChunks[i],
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`OpenAI API error: ${errorData.error?.message || "Unknown error"}`);
+      }
+      
+      const data = await response.json();
+      const embedding = data.data[0].embedding;
+      
+      // Store the chunk and its embedding in the database
+      const { error } = await supabase
+        .from('document_chunks')
+        .insert({
+          document_id: documentId,
+          client_id: clientId,
+          case_id: metadata.caseId || null,
+          chunk_index: i,
+          content: textChunks[i],
+          embedding,
+          metadata: { 
+            ...metadataWithDocId, 
+            chunkIndex: i, 
+            totalChunks: textChunks.length 
+          }
+        });
+      
+      if (error) {
+        throw new Error(`Error storing chunk ${i}: ${error.message}`);
+      }
     }
-    
-    return await response.json();
   } catch (error) {
-    console.error("Error calling generate-embeddings function:", error);
+    console.error('Error generating embeddings:', error);
     throw error;
   }
 };
 
-// Helper function to get PDF preview URL
-export const getPdfPreviewUrl = (pdfUrl: string): string => {
-  // You can customize this to work with different PDF preview services
-  // For now, we'll just return the direct PDF URL
-  return pdfUrl;
+// Process PDF document for a client/case
+export const processPdfDocument = async (
+  file: File, 
+  title: string, 
+  clientId: string,
+  caseId?: string
+): Promise<{success: boolean, documentId?: string, error?: string}> => {
+  try {
+    // Step 1: Extract text from PDF
+    const extractedText = await extractTextFromPdf(file);
+    
+    if (!extractedText || extractedText.trim() === '') {
+      throw new Error('No text could be extracted from the PDF');
+    }
+    
+    // Step 2: Upload PDF to storage
+    const pdfUrl = await uploadPdfToStorage(file, clientId, caseId);
+    
+    // Step 3: Generate a unique ID for the document
+    const documentId = crypto.randomUUID();
+    
+    // Step 4: Insert document metadata with case_id if provided
+    const { error: metadataError } = await supabase
+      .from('document_metadata')
+      .insert({
+        id: documentId,
+        title,
+        client_id: clientId,
+        case_id: caseId || null,
+        schema: caseId ? 'case_document' : 'client_document',
+        url: pdfUrl
+      });
+    
+    if (metadataError) {
+      throw new Error(`Error creating document metadata: ${metadataError.message}`);
+    }
+    
+    // Step 5: Chunk the extracted text
+    const chunks = chunkDocument(extractedText);
+    
+    // Step 6: Generate embeddings and store chunks
+    await generateEmbeddings(chunks, documentId, clientId, { 
+      pdfUrl, 
+      isPdfDocument: true,
+      caseId: caseId || null
+    });
+    
+    return { success: true, documentId };
+  } catch (error: any) {
+    console.error('Error processing PDF document:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Helper function to chunk document content
+const chunkDocument = (content: string): string[] => {
+  // Simple chunking by paragraphs with a max length
+  const MAX_CHUNK_LENGTH = 1000;
+  const paragraphs = content.split(/\n\s*\n/);
+  const chunks: string[] = [];
+  
+  let currentChunk = '';
+  
+  for (const paragraph of paragraphs) {
+    // If adding this paragraph would exceed the max length, start a new chunk
+    if (currentChunk.length + paragraph.length > MAX_CHUNK_LENGTH && currentChunk.length > 0) {
+      chunks.push(currentChunk);
+      currentChunk = '';
+    }
+    
+    // Add paragraph to current chunk
+    if (currentChunk.length > 0) {
+      currentChunk += '\n\n' + paragraph;
+    } else {
+      currentChunk = paragraph;
+    }
+  }
+  
+  // Add the last chunk if there's anything left
+  if (currentChunk.length > 0) {
+    chunks.push(currentChunk);
+  }
+  
+  return chunks;
 };

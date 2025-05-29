@@ -6,6 +6,8 @@ export interface DocumentMetadata {
   url: string | null;
   created_at: string | null;
   schema: string | null;
+  case_id?: string | null;
+  client_id?: string | null;
 }
 
 export interface DocumentContent {
@@ -22,10 +24,29 @@ export interface DocumentMetadataDetail {
   title?: string;
   file_path?: string;
   created_at?: string;
+  case_id?: string;
+  client_id?: string;
   [key: string]: any; // Allow for other properties that might exist
 }
 
 export interface DocumentWithContent extends DocumentMetadata {
   contents: DocumentContent[];
   fetchError?: string | null; // Track if there was an error fetching content
+}
+
+// Interface for document search results
+export interface DocumentSearchResult {
+  id: string;
+  document_id: string;
+  chunk_index: number;
+  content: string | null;
+  metadata: any;
+  similarity: number;
+  case_id?: string | null;
+}
+
+// Interface for case document
+export interface CaseDocument extends DocumentWithContent {
+  case_id: string;
+  case_title?: string;
 }

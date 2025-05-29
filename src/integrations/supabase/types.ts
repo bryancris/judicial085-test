@@ -460,6 +460,7 @@ export type Database = {
       }
       document_chunks: {
         Row: {
+          case_id: string | null
           chunk_index: number
           client_id: string
           content: string | null
@@ -470,6 +471,7 @@ export type Database = {
           metadata: Json | null
         }
         Insert: {
+          case_id?: string | null
           chunk_index: number
           client_id: string
           content?: string | null
@@ -480,6 +482,7 @@ export type Database = {
           metadata?: Json | null
         }
         Update: {
+          case_id?: string | null
           chunk_index?: number
           client_id?: string
           content?: string | null
@@ -490,6 +493,13 @@ export type Database = {
           metadata?: Json | null
         }
         Relationships: [
+          {
+            foreignKeyName: "document_chunks_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "document_chunks_client_id_fkey"
             columns: ["client_id"]
@@ -508,6 +518,7 @@ export type Database = {
       }
       document_metadata: {
         Row: {
+          case_id: string | null
           client_id: string | null
           created_at: string | null
           id: string
@@ -516,6 +527,7 @@ export type Database = {
           url: string | null
         }
         Insert: {
+          case_id?: string | null
           client_id?: string | null
           created_at?: string | null
           id: string
@@ -524,6 +536,7 @@ export type Database = {
           url?: string | null
         }
         Update: {
+          case_id?: string | null
           client_id?: string | null
           created_at?: string | null
           id?: string
@@ -532,6 +545,13 @@ export type Database = {
           url?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "document_metadata_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "document_metadata_client_id_fkey"
             columns: ["client_id"]
@@ -673,6 +693,31 @@ export type Database = {
         Args: { client_id_param: string }
         Returns: undefined
       }
+      get_case_documents: {
+        Args: { case_id_param: string }
+        Returns: {
+          id: string
+          title: string
+          url: string
+          created_at: string
+          schema: string
+          client_id: string
+          case_id: string
+        }[]
+      }
+      get_client_documents_with_cases: {
+        Args: { client_id_param: string; case_id_filter?: string }
+        Returns: {
+          id: string
+          title: string
+          url: string
+          created_at: string
+          schema: string
+          client_id: string
+          case_id: string
+          case_title: string
+        }[]
+      }
       halfvec_avg: {
         Args: { "": number[] }
         Returns: unknown
@@ -732,6 +777,40 @@ export type Database = {
           content: string
           metadata: Json
           similarity: number
+        }[]
+      }
+      search_case_document_chunks_by_similarity: {
+        Args: {
+          query_embedding: string
+          case_id_param: string
+          match_threshold?: number
+          match_count?: number
+        }
+        Returns: {
+          id: string
+          document_id: string
+          chunk_index: number
+          content: string
+          metadata: Json
+          similarity: number
+        }[]
+      }
+      search_client_and_case_documents_by_similarity: {
+        Args: {
+          query_embedding: string
+          client_id_param: string
+          case_id_param?: string
+          match_threshold?: number
+          match_count?: number
+        }
+        Returns: {
+          id: string
+          document_id: string
+          chunk_index: number
+          content: string
+          metadata: Json
+          similarity: number
+          case_id: string
         }[]
       }
       search_document_chunks: {
