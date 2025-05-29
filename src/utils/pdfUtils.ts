@@ -1,34 +1,80 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import * as pdfjs from 'pdfjs-dist';
 
-// Set the PDF.js worker path
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// Set the PDF.js worker path with fallback options
+const setWorkerSrc = () => {
+  try {
+    // Try unpkg CDN first (more reliable)
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+  } catch (error) {
+    console.warn('Failed to set unpkg worker, trying jsdelivr:', error);
+    try {
+      // Fallback to jsdelivr
+      pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+    } catch (fallbackError) {
+      console.error('Failed to set any CDN worker source:', fallbackError);
+      // Last resort: use a fixed version
+      pdfjs.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.4.168/build/pdf.worker.min.js';
+    }
+  }
+};
+
+// Initialize worker
+setWorkerSrc();
 
 // Extract text from a PDF file
 export const extractTextFromPdf = async (file: File): Promise<string> => {
   try {
+    console.log(`Starting text extraction from PDF: ${file.name}`);
+    
     const fileArrayBuffer = await file.arrayBuffer();
     const pdfData = new Uint8Array(fileArrayBuffer);
     
-    // Load PDF document
-    const loadingTask = pdfjs.getDocument({ data: pdfData });
+    // Load PDF document with error handling
+    const loadingTask = pdfjs.getDocument({ 
+      data: pdfData,
+      cMapUrl: 'https://unpkg.com/pdfjs-dist@' + pdfjs.version + '/cmaps/',
+      cMapPacked: true,
+    });
+    
     const pdf = await loadingTask.promise;
+    console.log(`PDF loaded successfully. Pages: ${pdf.numPages}`);
     
     let fullText = '';
     
     // Extract text from each page
     for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items.map((item: any) => item.str).join(' ');
-      fullText += pageText + '\n\n';
+      try {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map((item: any) => item.str).join(' ');
+        fullText += pageText + '\n\n';
+        console.log(`Extracted text from page ${i}: ${pageText.length} characters`);
+      } catch (pageError) {
+        console.warn(`Error extracting text from page ${i}:`, pageError);
+        // Continue with other pages
+      }
     }
     
+    if (!fullText.trim()) {
+      throw new Error('No text content could be extracted from the PDF');
+    }
+    
+    console.log(`Total text extracted: ${fullText.length} characters`);
     return fullText;
   } catch (error) {
     console.error('Error extracting text from PDF:', error);
-    throw new Error('Failed to extract text from PDF file');
+    
+    // Provide more specific error messages
+    if (error.message?.includes('worker')) {
+      throw new Error('PDF processing service unavailable. Please try again later.');
+    } else if (error.message?.includes('Invalid PDF')) {
+      throw new Error('The uploaded file appears to be corrupted or not a valid PDF.');
+    } else if (error.message?.includes('Password')) {
+      throw new Error('Password-protected PDFs are not supported.');
+    } else {
+      throw new Error('Failed to extract text from PDF file. Please ensure the file is a valid, readable PDF.');
+    }
   }
 };
 
