@@ -258,6 +258,7 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
           onClose={() => setUploadDialogOpen(false)}
           onUpload={handleDocumentUpload}
           isProcessing={isProcessing}
+          clientId={clientId}
           caseId={caseId}
           caseName={caseName}
           cases={cases}

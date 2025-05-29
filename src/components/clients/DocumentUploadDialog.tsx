@@ -17,6 +17,7 @@ interface DocumentUploadDialogProps {
   onClose: () => void;
   onUpload: (title: string, content: string, file?: File) => Promise<any>;
   isProcessing: boolean;
+  clientId: string; // Make this required instead of optional
   caseId?: string;
   caseName?: string;
   cases?: Case[];
@@ -28,6 +29,7 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
   onClose,
   onUpload,
   isProcessing,
+  clientId, // Now required
   caseId,
   caseName,
   cases = [],
@@ -43,6 +45,16 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
 
   const handleDocumentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate client ID
+    if (!clientId) {
+      toast({
+        title: "Error",
+        description: "Client ID is required for document upload.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     // Determine the final title to use
     let finalTitle = documentTitle.trim();
@@ -80,8 +92,7 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
         // Handle PDF processing directly using our utility
         setIsProcessingPdf(true);
         
-        // Get client ID from the onUpload function context
-        const clientId = selectedCaseId || caseId || 'default-client-id'; // You may need to pass this as a prop
+        console.log(`Processing PDF with clientId: ${clientId}, selectedCaseId: ${selectedCaseId}`);
         
         const result = await processPdfDocument(
           selectedFile, 

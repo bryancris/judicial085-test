@@ -522,6 +522,9 @@ export type Database = {
           client_id: string | null
           created_at: string | null
           id: string
+          processed_at: string | null
+          processing_error: string | null
+          processing_status: string | null
           schema: string | null
           title: string | null
           url: string | null
@@ -531,6 +534,9 @@ export type Database = {
           client_id?: string | null
           created_at?: string | null
           id: string
+          processed_at?: string | null
+          processing_error?: string | null
+          processing_status?: string | null
           schema?: string | null
           title?: string | null
           url?: string | null
@@ -540,6 +546,9 @@ export type Database = {
           client_id?: string | null
           created_at?: string | null
           id?: string
+          processed_at?: string | null
+          processing_error?: string | null
+          processing_status?: string | null
           schema?: string | null
           title?: string | null
           url?: string | null

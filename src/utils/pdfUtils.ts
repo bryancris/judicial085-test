@@ -65,6 +65,8 @@ export const extractTextFromPdf = async (file: File): Promise<string> => {
 // Upload PDF file to Supabase Storage
 export const uploadPdfToStorage = async (file: File, clientId: string, caseId?: string): Promise<string> => {
   try {
+    console.log(`Uploading PDF to storage for client: ${clientId}, case: ${caseId || 'none'}`);
+    
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
     const filePath = `${clientId}/${fileName}`;
@@ -78,18 +80,128 @@ export const uploadPdfToStorage = async (file: File, clientId: string, caseId?: 
       });
     
     if (error) {
+      console.error('Storage upload error:', error);
       throw error;
     }
+    
+    console.log('File uploaded successfully:', data.path);
     
     // Get public URL for the uploaded file
     const { data: urlData } = await supabase.storage
       .from('client_documents')
       .getPublicUrl(filePath);
     
+    console.log('Public URL generated:', urlData.publicUrl);
     return urlData.publicUrl;
   } catch (error) {
     console.error('Error uploading PDF to storage:', error);
-    throw new Error('Failed to upload PDF file to storage');
+    throw new Error(`Failed to upload PDF file to storage: ${error.message}`);
+  }
+};
+
+// Process PDF document for a client/case with improved status tracking
+export const processPdfDocument = async (
+  file: File, 
+  title: string, 
+  clientId: string,
+  caseId?: string
+): Promise<{success: boolean, documentId?: string, error?: string}> => {
+  let documentId: string | null = null;
+  
+  try {
+    console.log(`Starting PDF processing for file: ${file.name}, client: ${clientId}, case: ${caseId || 'none'}`);
+    
+    // Generate a unique ID for the document
+    documentId = crypto.randomUUID();
+    
+    // Step 1: Create document metadata with 'processing' status
+    const { error: metadataError } = await supabase
+      .from('document_metadata')
+      .insert({
+        id: documentId,
+        title,
+        client_id: clientId,
+        case_id: caseId || null,
+        schema: caseId ? 'case_document' : 'client_document',
+        processing_status: 'processing'
+      });
+    
+    if (metadataError) {
+      throw new Error(`Error creating document metadata: ${metadataError.message}`);
+    }
+    
+    console.log(`Document metadata created with ID: ${documentId}, status: processing`);
+    
+    // Step 2: Extract text from PDF
+    const extractedText = await extractTextFromPdf(file);
+    
+    if (!extractedText || extractedText.trim() === '') {
+      throw new Error('No text could be extracted from the PDF');
+    }
+    
+    console.log(`Extracted ${extractedText.length} characters from PDF`);
+    
+    // Step 3: Upload PDF to storage
+    const pdfUrl = await uploadPdfToStorage(file, clientId, caseId);
+    console.log(`PDF uploaded to: ${pdfUrl}`);
+    
+    // Step 4: Update document metadata with URL
+    const { error: updateError } = await supabase
+      .from('document_metadata')
+      .update({ url: pdfUrl })
+      .eq('id', documentId);
+    
+    if (updateError) {
+      console.warn(`Warning: Could not update document URL: ${updateError.message}`);
+    }
+    
+    // Step 5: Chunk the extracted text
+    const chunks = chunkDocument(extractedText);
+    console.log(`Document chunked into ${chunks.length} pieces`);
+    
+    // Step 6: Generate embeddings and store chunks using edge function
+    await generateEmbeddings(chunks, documentId, clientId, { 
+      pdfUrl, 
+      isPdfDocument: true,
+      caseId: caseId || null,
+      fileName: file.name
+    });
+    
+    // Step 7: Mark as completed
+    const { error: completeError } = await supabase
+      .from('document_metadata')
+      .update({ 
+        processing_status: 'completed',
+        processed_at: new Date().toISOString()
+      })
+      .eq('id', documentId);
+    
+    if (completeError) {
+      console.warn(`Warning: Could not update processing status: ${completeError.message}`);
+    }
+    
+    console.log(`PDF processing completed successfully for document: ${documentId}`);
+    return { success: true, documentId };
+  } catch (error: any) {
+    console.error('Error processing PDF document:', error);
+    
+    // Mark as failed if we have a document ID
+    if (documentId) {
+      try {
+        await supabase
+          .from('document_metadata')
+          .update({ 
+            processing_status: 'failed',
+            processing_error: error.message,
+            processed_at: new Date().toISOString()
+          })
+          .eq('id', documentId);
+      } catch (updateError) {
+        console.error('Error updating failed status:', updateError);
+      }
+    }
+    
+    return { success: false, error: error.message };
   }
 };
 
@@ -132,70 +244,6 @@ export const generateEmbeddings = async (
   } catch (error) {
     console.error('Error generating embeddings:', error);
     throw error;
-  }
-};
-
-// Process PDF document for a client/case
-export const processPdfDocument = async (
-  file: File, 
-  title: string, 
-  clientId: string,
-  caseId?: string
-): Promise<{success: boolean, documentId?: string, error?: string}> => {
-  try {
-    console.log(`Starting PDF processing for file: ${file.name}`);
-    
-    // Step 1: Extract text from PDF
-    const extractedText = await extractTextFromPdf(file);
-    
-    if (!extractedText || extractedText.trim() === '') {
-      throw new Error('No text could be extracted from the PDF');
-    }
-    
-    console.log(`Extracted ${extractedText.length} characters from PDF`);
-    
-    // Step 2: Upload PDF to storage
-    const pdfUrl = await uploadPdfToStorage(file, clientId, caseId);
-    console.log(`PDF uploaded to: ${pdfUrl}`);
-    
-    // Step 3: Generate a unique ID for the document
-    const documentId = crypto.randomUUID();
-    
-    // Step 4: Insert document metadata with case_id if provided
-    const { error: metadataError } = await supabase
-      .from('document_metadata')
-      .insert({
-        id: documentId,
-        title,
-        client_id: clientId,
-        case_id: caseId || null,
-        schema: caseId ? 'case_document' : 'client_document',
-        url: pdfUrl
-      });
-    
-    if (metadataError) {
-      throw new Error(`Error creating document metadata: ${metadataError.message}`);
-    }
-    
-    console.log(`Document metadata created with ID: ${documentId}`);
-    
-    // Step 5: Chunk the extracted text
-    const chunks = chunkDocument(extractedText);
-    console.log(`Document chunked into ${chunks.length} pieces`);
-    
-    // Step 6: Generate embeddings and store chunks using edge function
-    await generateEmbeddings(chunks, documentId, clientId, { 
-      pdfUrl, 
-      isPdfDocument: true,
-      caseId: caseId || null,
-      fileName: file.name
-    });
-    
-    console.log(`PDF processing completed successfully for document: ${documentId}`);
-    return { success: true, documentId };
-  } catch (error: any) {
-    console.error('Error processing PDF document:', error);
-    return { success: false, error: error.message };
   }
 };
 
