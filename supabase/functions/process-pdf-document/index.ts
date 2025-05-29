@@ -48,7 +48,7 @@ serve(async (req) => {
     
     console.log(`PDF downloaded successfully, size: ${pdfData.length} bytes`);
 
-    // Step 2: Extract text using pdf-parse
+    // Step 2: Extract text using pdfjs-dist
     const extractedText = await extractTextFromPdfBuffer(pdfData);
     
     if (!extractedText || extractedText.trim() === '') {
@@ -85,15 +85,22 @@ serve(async (req) => {
   } catch (error: any) {
     console.error('Error processing PDF:', error);
     
-    // Try to extract document ID from request body to update status
+    // Try to extract document ID from request for error handling
+    let documentId: string | null = null;
     try {
-      const body = await req.text();
-      const parsedBody = JSON.parse(body);
-      if (parsedBody.documentId) {
-        await updateDocumentStatus(parsedBody.documentId, 'failed', supabase, error.message);
-      }
+      const body = await req.clone().json();
+      documentId = body.documentId;
     } catch (e) {
       console.error('Could not parse request body for error handling:', e);
+    }
+
+    // Update document status to failed if we have the ID
+    if (documentId) {
+      try {
+        await updateDocumentStatus(documentId, 'failed', supabase, error.message);
+      } catch (updateError) {
+        console.error('Failed to update document status:', updateError);
+      }
     }
 
     return new Response(JSON.stringify({ 

@@ -1,19 +1,57 @@
 
-// Extract text from PDF buffer using pdf-parse
+// Extract text from PDF buffer using pdfjs-dist
 export async function extractTextFromPdfBuffer(pdfData: Uint8Array): Promise<string> {
   try {
-    // Import pdf-parse dynamically
-    const { default: pdfParse } = await import('https://esm.sh/pdf-parse@1.1.1');
+    // Import pdfjs-dist dynamically for Deno compatibility
+    const { getDocument, GlobalWorkerOptions } = await import('https://cdn.skypack.dev/pdfjs-dist@3.11.174');
     
-    console.log('Starting PDF text extraction...');
-    const data = await pdfParse(pdfData);
+    console.log('Starting PDF text extraction with pdfjs-dist...');
     
-    if (!data.text || data.text.trim() === '') {
+    // Load the PDF document
+    const loadingTask = getDocument({
+      data: pdfData,
+      useSystemFonts: true,
+      standardFontDataUrl: 'https://cdn.skypack.dev/pdfjs-dist@3.11.174/standard_fonts/',
+    });
+    
+    const pdfDocument = await loadingTask.promise;
+    const numPages = pdfDocument.numPages;
+    console.log(`PDF loaded successfully with ${numPages} pages`);
+    
+    let fullText = '';
+    
+    // Extract text from each page
+    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+      try {
+        const page = await pdfDocument.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        
+        // Combine text items from the page
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(' ');
+        
+        if (pageText.trim()) {
+          fullText += pageText + '\n\n';
+        }
+        
+        console.log(`Extracted text from page ${pageNum}/${numPages}`);
+      } catch (pageError) {
+        console.warn(`Error extracting text from page ${pageNum}:`, pageError);
+        // Continue with other pages even if one fails
+      }
+    }
+    
+    // Clean up the extracted text
+    fullText = fullText.trim();
+    
+    if (!fullText || fullText.length === 0) {
       throw new Error('PDF contains no extractable text content');
     }
     
-    console.log(`Successfully extracted ${data.text.length} characters from ${data.numpages} pages`);
-    return data.text;
+    console.log(`Successfully extracted ${fullText.length} characters from ${numPages} pages`);
+    return fullText;
+    
   } catch (error: any) {
     console.error('PDF parsing error:', error);
     
@@ -21,6 +59,8 @@ export async function extractTextFromPdfBuffer(pdfData: Uint8Array): Promise<str
       throw new Error('The uploaded file appears to be corrupted or not a valid PDF.');
     } else if (error.message?.includes('Password')) {
       throw new Error('Password-protected PDFs are not supported.');
+    } else if (error.message?.includes('no extractable text')) {
+      throw new Error('PDF contains no extractable text content. This may be a scanned document or image-based PDF.');
     } else {
       throw new Error('Failed to extract text from PDF file. Please ensure the file is a valid, readable PDF.');
     }
