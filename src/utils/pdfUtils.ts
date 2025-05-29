@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import * as pdfjs from 'pdfjs-dist';
 
@@ -16,7 +17,6 @@ export const extractTextFromPdf = async (file: File): Promise<string> => {
     // Load PDF document with workers disabled
     const loadingTask = pdfjs.getDocument({ 
       data: pdfData,
-      disableWorker: true,
       cMapUrl: 'https://unpkg.com/pdfjs-dist@' + pdfjs.version + '/cmaps/',
       cMapPacked: true,
     });
