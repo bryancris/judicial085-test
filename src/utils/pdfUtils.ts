@@ -1,66 +1,4 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import * as pdfjs from 'pdfjs-dist';
-
-// Disable PDF.js workers to avoid CDN loading issues
-// This makes processing synchronous but functional
-pdfjs.GlobalWorkerOptions.workerSrc = '';
-
-// Extract text from a PDF file
-export const extractTextFromPdf = async (file: File): Promise<string> => {
-  try {
-    console.log(`Starting text extraction from PDF: ${file.name}`);
-    
-    const fileArrayBuffer = await file.arrayBuffer();
-    const pdfData = new Uint8Array(fileArrayBuffer);
-    
-    // Load PDF document with workers disabled
-    const loadingTask = pdfjs.getDocument({ 
-      data: pdfData,
-      cMapUrl: 'https://unpkg.com/pdfjs-dist@' + pdfjs.version + '/cmaps/',
-      cMapPacked: true,
-    });
-    
-    const pdf = await loadingTask.promise;
-    console.log(`PDF loaded successfully. Pages: ${pdf.numPages}`);
-    
-    let fullText = '';
-    
-    // Extract text from each page
-    for (let i = 1; i <= pdf.numPages; i++) {
-      try {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items.map((item: any) => item.str).join(' ');
-        fullText += pageText + '\n\n';
-        console.log(`Extracted text from page ${i}: ${pageText.length} characters`);
-      } catch (pageError) {
-        console.warn(`Error extracting text from page ${i}:`, pageError);
-        // Continue with other pages
-      }
-    }
-    
-    if (!fullText.trim()) {
-      throw new Error('No text content could be extracted from the PDF');
-    }
-    
-    console.log(`Total text extracted: ${fullText.length} characters`);
-    return fullText;
-  } catch (error) {
-    console.error('Error extracting text from PDF:', error);
-    
-    // Provide more specific error messages
-    if (error.message?.includes('worker')) {
-      throw new Error('PDF processing service unavailable. Please try again later.');
-    } else if (error.message?.includes('Invalid PDF')) {
-      throw new Error('The uploaded file appears to be corrupted or not a valid PDF.');
-    } else if (error.message?.includes('Password')) {
-      throw new Error('Password-protected PDFs are not supported.');
-    } else {
-      throw new Error('Failed to extract text from PDF file. Please ensure the file is a valid, readable PDF.');
-    }
-  }
-};
 
 // Upload PDF file to Supabase Storage
 export const uploadPdfToStorage = async (file: File, clientId: string, caseId?: string): Promise<string> => {
@@ -99,7 +37,7 @@ export const uploadPdfToStorage = async (file: File, clientId: string, caseId?: 
   }
 };
 
-// Process PDF document for a client/case with improved status tracking
+// Process PDF document using server-side edge function
 export const processPdfDocument = async (
   file: File, 
   title: string, 
@@ -109,7 +47,7 @@ export const processPdfDocument = async (
   let documentId: string | null = null;
   
   try {
-    console.log(`Starting PDF processing for file: ${file.name}, client: ${clientId}, case: ${caseId || 'none'}`);
+    console.log(`Starting server-side PDF processing for file: ${file.name}, client: ${clientId}, case: ${caseId || 'none'}`);
     
     // Generate a unique ID for the document
     documentId = crypto.randomUUID();
@@ -132,20 +70,11 @@ export const processPdfDocument = async (
     
     console.log(`Document metadata created with ID: ${documentId}, status: processing`);
     
-    // Step 2: Extract text from PDF
-    const extractedText = await extractTextFromPdf(file);
-    
-    if (!extractedText || extractedText.trim() === '') {
-      throw new Error('No text could be extracted from the PDF');
-    }
-    
-    console.log(`Extracted ${extractedText.length} characters from PDF`);
-    
-    // Step 3: Upload PDF to storage
+    // Step 2: Upload PDF to storage
     const pdfUrl = await uploadPdfToStorage(file, clientId, caseId);
     console.log(`PDF uploaded to: ${pdfUrl}`);
     
-    // Step 4: Update document metadata with URL
+    // Step 3: Update document metadata with URL
     const { error: updateError } = await supabase
       .from('document_metadata')
       .update({ url: pdfUrl })
@@ -155,33 +84,30 @@ export const processPdfDocument = async (
       console.warn(`Warning: Could not update document URL: ${updateError.message}`);
     }
     
-    // Step 5: Chunk the extracted text
-    const chunks = chunkDocument(extractedText);
-    console.log(`Document chunked into ${chunks.length} pieces`);
-    
-    // Step 6: Generate embeddings and store chunks using edge function
-    await generateEmbeddings(chunks, documentId, clientId, { 
-      pdfUrl, 
-      isPdfDocument: true,
-      caseId: caseId || null,
-      fileName: file.name
+    // Step 4: Call server-side processing edge function
+    console.log('Calling server-side PDF processing function...');
+    const { data, error: functionError } = await supabase.functions.invoke('process-pdf-document', {
+      body: {
+        documentId,
+        clientId,
+        caseId: caseId || null,
+        title,
+        fileUrl: pdfUrl,
+        fileName: file.name
+      }
     });
     
-    // Step 7: Mark as completed
-    const { error: completeError } = await supabase
-      .from('document_metadata')
-      .update({ 
-        processing_status: 'completed',
-        processed_at: new Date().toISOString()
-      })
-      .eq('id', documentId);
-    
-    if (completeError) {
-      console.warn(`Warning: Could not update processing status: ${completeError.message}`);
+    if (functionError) {
+      throw new Error(`Server-side processing failed: ${functionError.message}`);
     }
     
-    console.log(`PDF processing completed successfully for document: ${documentId}`);
+    if (!data || !data.success) {
+      throw new Error(data?.error || 'Server-side processing failed');
+    }
+    
+    console.log(`Server-side PDF processing completed successfully for document: ${documentId}`);
     return { success: true, documentId };
+    
   } catch (error: any) {
     console.error('Error processing PDF document:', error);
     
@@ -205,76 +131,24 @@ export const processPdfDocument = async (
   }
 };
 
-// Generate embeddings using the edge function
+// Legacy client-side functions removed - now using server-side processing
+// The following functions are no longer needed:
+// - extractTextFromPdf
+// - generateEmbeddings  
+// - chunkDocument (moved to server-side)
+
+// Keep these utility functions for backward compatibility if needed elsewhere
 export const generateEmbeddings = async (
   textChunks: string[], 
   documentId: string, 
   clientId: string, 
   metadata: any = {}
 ): Promise<void> => {
-  try {
-    console.log(`Generating embeddings for ${textChunks.length} chunks using edge function`);
-    
-    // Call the generate-embeddings edge function
-    const { data, error } = await supabase.functions.invoke('generate-embeddings', {
-      body: {
-        texts: textChunks,
-        documentId,
-        clientId,
-        metadata
-      }
-    });
-    
-    if (error) {
-      console.error('Error from generate-embeddings function:', error);
-      throw new Error(`Failed to generate embeddings: ${error.message}`);
-    }
-    
-    if (!data || !data.results) {
-      throw new Error('Invalid response from embeddings function');
-    }
-    
-    // Check if any chunks failed
-    const failedChunks = data.results.filter((result: any) => !result.success);
-    if (failedChunks.length > 0) {
-      console.warn(`${failedChunks.length} chunks failed to process:`, failedChunks);
-    }
-    
-    console.log(`Successfully processed ${data.results.filter((r: any) => r.success).length} chunks`);
-  } catch (error) {
-    console.error('Error generating embeddings:', error);
-    throw error;
-  }
+  console.warn('generateEmbeddings: This function is deprecated. PDF processing now happens server-side.');
+  throw new Error('This function has been replaced by server-side processing. Use processPdfDocument instead.');
 };
 
-// Helper function to chunk document content
-const chunkDocument = (content: string): string[] => {
-  // Simple chunking by paragraphs with a max length
-  const MAX_CHUNK_LENGTH = 1000;
-  const paragraphs = content.split(/\n\s*\n/);
-  const chunks: string[] = [];
-  
-  let currentChunk = '';
-  
-  for (const paragraph of paragraphs) {
-    // If adding this paragraph would exceed the max length, start a new chunk
-    if (currentChunk.length + paragraph.length > MAX_CHUNK_LENGTH && currentChunk.length > 0) {
-      chunks.push(currentChunk);
-      currentChunk = '';
-    }
-    
-    // Add paragraph to current chunk
-    if (currentChunk.length > 0) {
-      currentChunk += '\n\n' + paragraph;
-    } else {
-      currentChunk = paragraph;
-    }
-  }
-  
-  // Add the last chunk if there's anything left
-  if (currentChunk.length > 0) {
-    chunks.push(currentChunk);
-  }
-  
-  return chunks;
+export const extractTextFromPdf = async (file: File): Promise<string> => {
+  console.warn('extractTextFromPdf: This function is deprecated. PDF processing now happens server-side.');
+  throw new Error('This function has been replaced by server-side processing. Use processPdfDocument instead.');
 };
