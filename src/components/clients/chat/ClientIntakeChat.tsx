@@ -160,6 +160,7 @@ const ClientIntakeChat: React.FC<ClientIntakeChatProps> = ({ clientId, clientNam
         onClose={() => setOpenDocDialog(false)}
         onUpload={handleDocumentUpload}
         isProcessing={isProcessing}
+        clientId={clientId}
       />
     </div>
   );
