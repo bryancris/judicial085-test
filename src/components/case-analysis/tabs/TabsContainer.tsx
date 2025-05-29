@@ -43,6 +43,12 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
   isScholarlyReferencesLoading,
   onScholarSearch
 }) => {
+  // Add a dummy delete function since this component doesn't need delete functionality
+  const handleDeleteDocument = async (documentId: string) => {
+    console.log("Delete not implemented in tabs container:", documentId);
+    return { success: false, error: "Delete not available in this view" };
+  };
+
   // Render appropriate tab content based on selectedTab
   switch (selectedTab) {
     case "analysis":
@@ -74,6 +80,7 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
           documents={clientDocuments}
           isLoading={documentsLoading}
           onProcessDocument={processDocument}
+          onDeleteDocument={handleDeleteDocument}
           isProcessing={isProcessingDocument}
           fullView
         />

@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { DocumentWithContent } from "@/types/knowledge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, FilePdf, FileText, Trash2, PlusCircle, BookText } from "lucide-react";
+import { Loader2, FileText, Trash2, PlusCircle, BookText } from "lucide-react";
 import DocumentUploadDialog from "@/components/clients/DocumentUploadDialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -194,7 +193,7 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
                       
                       {document.url && (
                         <Badge variant="outline">
-                          <FilePdf className="h-3 w-3 mr-1" /> PDF
+                          <FileText className="h-3 w-3 mr-1" /> PDF
                         </Badge>
                       )}
                     </div>

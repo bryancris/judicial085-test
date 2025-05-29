@@ -34,6 +34,12 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
   processDocument,
   isProcessingDocument
 }) => {
+  // Add a dummy delete function since this component doesn't need delete functionality
+  const handleDeleteDocument = async (documentId: string) => {
+    console.log("Delete not implemented in analysis tab:", documentId);
+    return { success: false, error: "Delete not available in analysis view" };
+  };
+
   return (
     <div className="space-y-8">
       {/* Law References Section */}
@@ -76,6 +82,7 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
         documents={clientDocuments}
         isLoading={documentsLoading}
         onProcessDocument={processDocument}
+        onDeleteDocument={handleDeleteDocument}
         isProcessing={isProcessingDocument}
       />
     </div>
