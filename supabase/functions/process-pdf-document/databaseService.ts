@@ -2,7 +2,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 import { generateEmbedding } from './openaiService.ts';
 
-// Generate embeddings and store chunks with enhanced validation
+// Generate embeddings and store chunks with enhanced validation for email content
 export async function generateAndStoreEmbeddings(
   textChunks: string[], 
   documentId: string, 
@@ -11,26 +11,24 @@ export async function generateAndStoreEmbeddings(
   supabase: any,
   openaiApiKey: string
 ): Promise<void> {
-  console.log(`Generating embeddings for ${textChunks.length} validated chunks`);
+  console.log(`Generating embeddings for ${textChunks.length} validated email chunks`);
   
   for (let i = 0; i < textChunks.length; i++) {
     const chunk = textChunks[i];
     
     try {
-      console.log(`Processing chunk ${i + 1}/${textChunks.length} (${chunk.length} chars)`);
+      console.log(`Processing email chunk ${i + 1}/${textChunks.length} (${chunk.length} chars)`);
       
-      // Validate chunk content before generating embedding
-      if (!chunk || chunk.trim().length < 20) {
+      // Enhanced validation for email content
+      if (!chunk || chunk.trim().length < 50) {
         console.warn(`Skipping chunk ${i}: too short or empty`);
         continue;
       }
       
-      // Check for readable content
-      const alphaChars = (chunk.match(/[a-zA-Z]/g) || []).length;
-      const alphaRatio = alphaChars / chunk.length;
-      
-      if (alphaRatio < 0.3) {
-        console.warn(`Skipping chunk ${i}: low alpha ratio (${alphaRatio})`);
+      // Check for meaningful email content
+      const meaningfulContent = validateEmailChunk(chunk);
+      if (!meaningfulContent) {
+        console.warn(`Skipping chunk ${i}: not meaningful email content`);
         continue;
       }
       
@@ -51,24 +49,77 @@ export async function generateAndStoreEmbeddings(
             ...metadata,
             chunk_length: chunk.length,
             total_chunks: textChunks.length,
-            alpha_ratio: alphaRatio,
             word_count: chunk.split(/\s+/).length,
+            content_type: 'email',
             validated: true
           }
         });
       
       if (error) {
-        throw new Error(`Failed to store chunk ${i}: ${error.message}`);
+        throw new Error(`Failed to store email chunk ${i}: ${error.message}`);
       }
       
-      console.log(`Successfully stored validated chunk ${i + 1}/${textChunks.length}`);
+      console.log(`Successfully stored validated email chunk ${i + 1}/${textChunks.length}`);
     } catch (error: any) {
-      console.error(`Error processing chunk ${i}:`, error);
+      console.error(`Error processing email chunk ${i}:`, error);
       throw error;
     }
   }
   
-  console.log(`Successfully generated and stored embeddings for ${textChunks.length} validated chunks`);
+  console.log(`Successfully generated and stored embeddings for ${textChunks.length} validated email chunks`);
+}
+
+// Validate if chunk contains meaningful email content
+function validateEmailChunk(chunk: string): boolean {
+  if (!chunk || chunk.length < 50) return false;
+  
+  // Check for readable content indicators
+  const alphaChars = (chunk.match(/[a-zA-Z]/g) || []).length;
+  const totalChars = chunk.length;
+  const alphaRatio = alphaChars / totalChars;
+  
+  // Must be at least 60% alphabetic characters for email content
+  if (alphaRatio < 0.6) {
+    console.log(`Email chunk failed alpha ratio test: ${alphaRatio}`);
+    return false;
+  }
+  
+  // Check for repetitive content (common in corrupted extractions)
+  const words = chunk.split(/\s+/);
+  const uniqueWords = new Set(words.map(w => w.toLowerCase()));
+  const uniqueRatio = uniqueWords.size / words.length;
+  
+  if (uniqueRatio < 0.3) {
+    console.log(`Email chunk failed uniqueness test: ${uniqueRatio}`);
+    return false;
+  }
+  
+  // Check for email-specific garbage patterns
+  const garbagePatterns = [
+    /^[^a-zA-Z\s]{20,}/,      // Long strings without letters
+    /^\s*[0-9\W]{50,}/,       // Mostly numbers and symbols
+    /^[A-F0-9\s]{100,}$/i,    // Hex-like patterns
+    /%PDF-/gi,                // PDF headers
+    /stream.*endstream/gi,    // PDF stream objects
+    /^(\w+@\w+\.\w+\s*){5,}/, // Repeated email addresses
+  ];
+  
+  for (const pattern of garbagePatterns) {
+    if (pattern.test(chunk)) {
+      console.log(`Email chunk failed garbage pattern test: ${pattern}`);
+      return false;
+    }
+  }
+  
+  // Check for meaningful sentence structure
+  const sentences = chunk.split(/[.!?]+/).filter(s => s.trim().length > 10);
+  if (sentences.length === 0) {
+    console.log('Email chunk has no meaningful sentences');
+    return false;
+  }
+  
+  console.log(`Email chunk validation passed: ${alphaRatio} alpha ratio, ${uniqueRatio} unique ratio`);
+  return true;
 }
 
 // Update document processing status

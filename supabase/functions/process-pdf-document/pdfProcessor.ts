@@ -1,3 +1,4 @@
+
 // Enhanced PDF text extraction using multiple strategies
 export async function extractTextFromPdfBuffer(pdfData: Uint8Array): Promise<string> {
   try {
@@ -17,59 +18,56 @@ export async function extractTextFromPdfBuffer(pdfData: Uint8Array): Promise<str
         extractedText = data.text.trim();
         console.log(`pdf-parse extracted ${extractedText.length} characters from ${data.numpages} pages`);
         
-        // Validate the extracted text quality
-        if (isValidExtractedText(extractedText)) {
-          const cleanedText = cleanAndValidateText(extractedText);
-          if (cleanedText && cleanedText.length > 50) {
-            console.log(`Successfully extracted ${cleanedText.length} characters of readable text`);
-            return cleanedText;
-          }
+        // Clean and validate the extracted text
+        const cleanedText = cleanEmailContent(extractedText);
+        if (cleanedText && cleanedText.length > 100) {
+          console.log(`Successfully extracted ${cleanedText.length} characters of cleaned email content`);
+          return cleanedText;
         }
       }
     } catch (parseError) {
       console.warn('pdf-parse failed:', parseError);
     }
     
-    // Strategy 2: Try alternative pdf2pic approach
+    // Strategy 2: Try alternative pdf-lib approach for email PDFs
     try {
-      console.log('Attempting alternative PDF text extraction...');
+      console.log('Attempting pdf-lib extraction for email content...');
       
-      // Use pdf-lib for basic structure reading
       const { PDFDocument } = await import('https://cdn.skypack.dev/pdf-lib@1.17.1');
       const pdfDoc = await PDFDocument.load(pdfData);
       const pages = pdfDoc.getPages();
       
       console.log(`PDF loaded with ${pages.length} pages`);
       
-      // Try to extract text objects from PDF structure
+      // Try to extract text objects from PDF structure with email focus
       const pdfString = new TextDecoder('utf-8', { fatal: false }).decode(pdfData);
-      extractedText = extractTextFromPdfStructure(pdfString);
+      extractedText = extractEmailContentFromPdf(pdfString);
       
-      if (extractedText && isValidExtractedText(extractedText)) {
-        const cleanedText = cleanAndValidateText(extractedText);
-        if (cleanedText && cleanedText.length > 50) {
-          console.log(`Alternative method extracted ${cleanedText.length} characters`);
+      if (extractedText && extractedText.length > 100) {
+        const cleanedText = cleanEmailContent(extractedText);
+        if (cleanedText && cleanedText.length > 100) {
+          console.log(`Email extraction method yielded ${cleanedText.length} characters`);
           return cleanedText;
         }
       }
     } catch (structureError) {
-      console.warn('Structure-based extraction failed:', structureError);
+      console.warn('PDF-lib extraction failed:', structureError);
     }
     
-    // Strategy 3: Manual text pattern extraction as last resort
-    console.log('Attempting manual pattern extraction...');
-    const manualText = extractTextManually(pdfData);
+    // Strategy 3: Manual text pattern extraction focused on email content
+    console.log('Attempting manual email pattern extraction...');
+    const manualText = extractEmailPatterns(pdfData);
     
-    if (manualText && isValidExtractedText(manualText)) {
-      const cleanedText = cleanAndValidateText(manualText);
-      if (cleanedText && cleanedText.length > 50) {
-        console.log(`Manual extraction yielded ${cleanedText.length} characters`);
+    if (manualText && manualText.length > 100) {
+      const cleanedText = cleanEmailContent(manualText);
+      if (cleanedText && cleanedText.length > 100) {
+        console.log(`Manual email extraction yielded ${cleanedText.length} characters`);
         return cleanedText;
       }
     }
     
     // If all strategies fail
-    throw new Error('Unable to extract readable text from PDF. The document may be image-based, corrupted, or contain no extractable text content.');
+    throw new Error('Unable to extract meaningful email content from PDF. The document may be image-based, corrupted, or contain no readable text content.');
     
   } catch (error: any) {
     console.error('PDF text extraction error:', error);
@@ -77,61 +75,101 @@ export async function extractTextFromPdfBuffer(pdfData: Uint8Array): Promise<str
   }
 }
 
-// Validate if extracted text is actual readable content vs technical metadata
-function isValidExtractedText(text: string): boolean {
-  if (!text || text.length < 20) return false;
+// Clean email content and remove repetitive fragments
+function cleanEmailContent(rawText: string): string {
+  if (!rawText) return '';
   
-  // Check for readable content indicators
-  const alphaChars = (text.match(/[a-zA-Z]/g) || []).length;
-  const totalChars = text.length;
-  const alphaRatio = alphaChars / totalChars;
+  console.log('Cleaning email content...');
   
-  // Must be at least 40% alphabetic characters
-  if (alphaRatio < 0.4) {
-    console.log(`Text failed alpha ratio test: ${alphaRatio}`);
-    return false;
+  // Remove repeated email addresses and fragments
+  let cleanText = rawText
+    // Normalize whitespace
+    .replace(/\s+/g, ' ')
+    // Remove control characters
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Remove repeated email address patterns
+    .replace(/(\b[\w.-]+@[\w.-]+\.\w+\b)\s*(\1\s*){2,}/g, '$1 ')
+    // Remove excessive punctuation
+    .replace(/[.,;:!?]{3,}/g, '. ')
+    // Remove repeated phrases
+    .replace(/(\b\w+\b)\s*(\1\s*){3,}/g, '$1 ')
+    .trim();
+  
+  // Extract meaningful email components
+  const emailParts = extractMeaningfulEmailParts(cleanText);
+  if (emailParts.length > 0) {
+    cleanText = emailParts.join('\n\n');
   }
   
-  // Check for common technical garbage patterns
-  const garbagePatterns = [
-    /node\d{8,}/gi,           // Node references
-    /^[^a-zA-Z\s]{20,}/,      // Long strings without letters
-    /^\s*[0-9\W]{50,}/,       // Mostly numbers and symbols
-    /^[A-F0-9\s]{100,}$/i,    // Hex-like patterns
-    /mozilla.*gecko/gi,       // Browser strings
-    /%PDF-/gi,                // PDF headers
-    /stream.*endstream/gi,    // PDF stream objects
+  // Split into sentences and filter out repetitive/garbage content
+  const sentences = cleanText.split(/[.!?]+/).filter(sentence => {
+    const trimmed = sentence.trim();
+    if (trimmed.length < 20) return false;
+    
+    // Check for repetitive email addresses
+    const emailMatches = (trimmed.match(/[\w.-]+@[\w.-]+\.\w+/g) || []);
+    if (emailMatches.length > 3) return false;
+    
+    // Check for meaningful content
+    const words = trimmed.split(/\s+/);
+    const meaningfulWords = words.filter(word => 
+      word.length > 2 && 
+      !/^[\w.-]+@[\w.-]+\.\w+$/.test(word) && // Not just an email
+      word.length < 30 &&
+      /^[a-zA-Z]/.test(word)
+    );
+    
+    return meaningfulWords.length >= Math.min(5, words.length * 0.4);
+  });
+  
+  cleanText = sentences.join('. ').trim();
+  
+  // Final validation
+  if (cleanText.length < 100) {
+    console.warn('Cleaned email content too short after filtering');
+    return '';
+  }
+  
+  console.log(`Email content cleaning completed: ${rawText.length} -> ${cleanText.length} characters`);
+  return cleanText;
+}
+
+// Extract meaningful email parts (subject, body, etc.)
+function extractMeaningfulEmailParts(text: string): string[] {
+  const parts: string[] = [];
+  
+  // Look for email headers and content
+  const patterns = [
+    // Subject line
+    /(?:subject|re|fwd?):\s*([^\r\n]+)/gi,
+    // From/To lines with context
+    /(?:from|to):\s*([^\r\n]+)/gi,
+    // Email body content (sentences with actual words)
+    /([A-Z][^.!?]*[.!?])/g,
+    // Quoted text or replies
+    />\s*([^>\r\n]+)/g
   ];
   
-  for (const pattern of garbagePatterns) {
-    if (pattern.test(text)) {
-      console.log(`Text failed garbage pattern test: ${pattern}`);
-      return false;
+  for (const pattern of patterns) {
+    const matches = text.match(pattern);
+    if (matches) {
+      for (const match of matches) {
+        const cleaned = match.replace(/^(subject|from|to|re|fwd?):\s*/gi, '').trim();
+        if (cleaned.length > 10 && !parts.includes(cleaned)) {
+          parts.push(cleaned);
+        }
+      }
     }
   }
   
-  // Check for readable words
-  const words = text.split(/\s+/).filter(word => 
-    word.length > 2 && 
-    /^[a-zA-Z]/.test(word) && 
-    word.length < 50
-  );
-  
-  const readableWordRatio = words.length / text.split(/\s+/).length;
-  if (readableWordRatio < 0.3) {
-    console.log(`Text failed readable word ratio test: ${readableWordRatio}`);
-    return false;
-  }
-  
-  console.log(`Text validation passed: ${alphaRatio} alpha ratio, ${readableWordRatio} readable word ratio`);
-  return true;
+  return parts;
 }
 
-// Extract text from PDF internal structure
-function extractTextFromPdfStructure(pdfString: string): string {
+// Extract email content from PDF structure
+function extractEmailContentFromPdf(pdfString: string): string {
   let extractedText = '';
   
-  // Look for text content in PDF streams
+  // Look for text content in PDF streams with email focus
   const textObjectPattern = /BT\s*(.*?)\s*ET/gs;
   const textMatches = pdfString.match(textObjectPattern);
   
@@ -141,13 +179,17 @@ function extractTextFromPdfStructure(pdfString: string): string {
       const textContent = match.match(/\((.*?)\)/g) || match.match(/\[(.*?)\]/g);
       if (textContent) {
         for (const content of textContent) {
-          const cleaned = content.slice(1, -1) // Remove brackets/parentheses
+          let cleaned = content.slice(1, -1) // Remove brackets/parentheses
             .replace(/\\[rn]/g, ' ') // Replace escaped newlines
             .replace(/\\\(/g, '(')   // Unescape parentheses
             .replace(/\\\)/g, ')')
             .trim();
           
-          if (cleaned.length > 2 && /[a-zA-Z]/.test(cleaned)) {
+          // Only include if it looks like meaningful email content
+          if (cleaned.length > 5 && 
+              /[a-zA-Z]/.test(cleaned) && 
+              !cleaned.match(/^[\d\s<>@.]+$/) &&
+              !cleaned.match(/^[A-F0-9\s]+$/i)) {
             extractedText += cleaned + ' ';
           }
         }
@@ -158,19 +200,26 @@ function extractTextFromPdfStructure(pdfString: string): string {
   return extractedText.trim();
 }
 
-// Manual extraction for difficult PDFs
-function extractTextManually(pdfData: Uint8Array): string {
+// Manual extraction for email PDFs
+function extractEmailPatterns(pdfData: Uint8Array): string {
   try {
     const decoder = new TextDecoder('utf-8', { fatal: false });
     const pdfString = decoder.decode(pdfData);
     
-    // Look for common email/document patterns
+    // Look for email-specific patterns
     const patterns = [
-      /(?:from|to|subject|date):\s*([^\r\n]+)/gi,
-      /[A-Z][a-z]+\s+[A-Z][a-z]+/g, // Names
-      /\b[A-Za-z]{3,}\s+[A-Za-z]{3,}\s+[A-Za-z]{3,}/g, // Word sequences
-      /\b\w+@\w+\.\w+\b/g, // Email addresses
-      /\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/g, // Dates
+      // Email headers
+      /(?:subject|from|to|date|cc|bcc):\s*([^\r\n]+)/gi,
+      // Email content lines
+      /^[A-Z][a-z\s]+[.!?]$/gm,
+      // Quoted text
+      />\s*([A-Z][^\r\n<>]+)/g,
+      // Email addresses with context
+      /(\w+[\w\s,.-]*)\s+([\w.-]+@[\w.-]+\.\w+)/g,
+      // Date patterns
+      /\b(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+\w+\s+\d{1,2},?\s+\d{4}/g,
+      // Time patterns
+      /\b\d{1,2}:\d{2}\s*(?:AM|PM)\b/gi
     ];
     
     let extractedText = '';
@@ -178,62 +227,24 @@ function extractTextManually(pdfData: Uint8Array): string {
     for (const pattern of patterns) {
       const matches = pdfString.match(pattern);
       if (matches) {
-        extractedText += matches.join(' ') + ' ';
+        for (const match of matches) {
+          // Clean and validate each match
+          const cleaned = match.replace(/[<>]/g, '').trim();
+          if (cleaned.length > 5 && /[a-zA-Z]/.test(cleaned)) {
+            extractedText += cleaned + ' ';
+          }
+        }
       }
     }
     
     return extractedText.trim();
   } catch (error) {
-    console.error('Manual extraction failed:', error);
+    console.error('Manual email extraction failed:', error);
     return '';
   }
 }
 
-// Clean and validate extracted text
-function cleanAndValidateText(rawText: string): string {
-  if (!rawText) return '';
-  
-  console.log('Cleaning and validating extracted text...');
-  
-  // Basic cleaning
-  let cleanText = rawText
-    // Normalize whitespace
-    .replace(/\s+/g, ' ')
-    // Remove control characters but keep basic punctuation
-    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
-    // Remove excessive punctuation
-    .replace(/[.,;:!?]{3,}/g, '. ')
-    .trim();
-  
-  // Split into sentences and filter out junk
-  const sentences = cleanText.split(/[.!?]+/).filter(sentence => {
-    const trimmed = sentence.trim();
-    if (trimmed.length < 10) return false;
-    
-    // Check if sentence has reasonable word composition
-    const words = trimmed.split(/\s+/);
-    const validWords = words.filter(word => 
-      word.length > 1 && 
-      word.length < 30 && 
-      /^[a-zA-Z0-9@.-]+$/.test(word)
-    );
-    
-    return validWords.length >= Math.min(3, words.length * 0.6);
-  });
-  
-  cleanText = sentences.join('. ').trim();
-  
-  // Final validation
-  if (cleanText.length < 50) {
-    console.warn('Cleaned text too short after filtering');
-    return '';
-  }
-  
-  console.log(`Text cleaning completed: ${rawText.length} -> ${cleanText.length} characters`);
-  return cleanText;
-}
-
-// Enhanced chunking with better content preservation
+// Enhanced chunking with better content preservation for emails
 export function chunkDocument(content: string): string[] {
   const MAX_CHUNK_CHARS = 2000; // ~500 tokens
   const OVERLAP_CHARS = 200;    // ~50 tokens overlap
@@ -241,47 +252,43 @@ export function chunkDocument(content: string): string[] {
   
   console.log(`Starting enhanced chunking for ${content.length} characters`);
   
-  // Validate and clean content first
-  if (!isValidExtractedText(content)) {
-    throw new Error('Content failed validation - appears to be technical metadata rather than readable text');
-  }
-  
-  const cleanContent = cleanAndValidateText(content);
-  if (!cleanContent) {
-    throw new Error('No valid content remaining after cleaning');
+  // Validate content first
+  const cleanContent = cleanEmailContent(content);
+  if (!cleanContent || cleanContent.length < MIN_CHUNK_CHARS) {
+    throw new Error('No valid email content remaining after cleaning');
   }
   
   const chunks: string[] = [];
   
-  // Try paragraph-based chunking first
-  const paragraphs = cleanContent.split(/\n\s*\n|\. {2,}/).filter(p => p.trim().length > 20);
+  // Try email-based chunking (by headers, paragraphs, etc.)
+  const emailParts = cleanContent.split(/\n\s*\n|\r\n\s*\r\n/).filter(p => p.trim().length > 20);
   
-  if (paragraphs.length === 0) {
+  if (emailParts.length === 0) {
     // Fallback to sentence-based chunking
     return sentenceBasedChunking(cleanContent, MAX_CHUNK_CHARS, OVERLAP_CHARS);
   }
   
   let currentChunk = '';
   
-  for (const paragraph of paragraphs) {
-    const trimmedParagraph = paragraph.trim();
+  for (const part of emailParts) {
+    const trimmedPart = part.trim();
     
-    // If paragraph is too large, split it
-    if (trimmedParagraph.length > MAX_CHUNK_CHARS) {
+    // If part is too large, split it
+    if (trimmedPart.length > MAX_CHUNK_CHARS) {
       if (currentChunk.trim()) {
         chunks.push(currentChunk.trim());
         currentChunk = '';
       }
-      chunks.push(...splitLargeParagraph(trimmedParagraph, MAX_CHUNK_CHARS, OVERLAP_CHARS));
+      chunks.push(...splitLargePart(trimmedPart, MAX_CHUNK_CHARS, OVERLAP_CHARS));
       continue;
     }
     
-    // Check if adding this paragraph would exceed the limit
-    const potentialChunk = currentChunk ? currentChunk + '\n\n' + trimmedParagraph : trimmedParagraph;
+    // Check if adding this part would exceed the limit
+    const potentialChunk = currentChunk ? currentChunk + '\n\n' + trimmedPart : trimmedPart;
     
     if (potentialChunk.length > MAX_CHUNK_CHARS && currentChunk.length > MIN_CHUNK_CHARS) {
       chunks.push(currentChunk.trim());
-      currentChunk = trimmedParagraph;
+      currentChunk = trimmedPart;
     } else {
       currentChunk = potentialChunk;
     }
@@ -294,23 +301,19 @@ export function chunkDocument(content: string): string[] {
   
   // Validate all chunks
   const validatedChunks = chunks.filter(chunk => {
-    if (!isValidExtractedText(chunk)) {
-      console.warn('Filtering out invalid chunk');
-      return false;
-    }
     const tokenCount = estimateTokenCount(chunk);
     if (tokenCount > 600) {
       console.warn(`Chunk too large (${tokenCount} tokens), filtering out`);
       return false;
     }
-    return true;
+    return chunk.length >= MIN_CHUNK_CHARS;
   });
   
   if (validatedChunks.length === 0) {
-    throw new Error('No valid chunks could be created from the content');
+    throw new Error('No valid chunks could be created from the email content');
   }
   
-  console.log(`Enhanced chunking completed: ${validatedChunks.length} valid chunks created`);
+  console.log(`Enhanced email chunking completed: ${validatedChunks.length} valid chunks created`);
   return validatedChunks;
 }
 
@@ -339,10 +342,10 @@ function sentenceBasedChunking(content: string, maxChars: number, overlapChars: 
   return chunks;
 }
 
-// Split large paragraphs while preserving meaning
-function splitLargeParagraph(paragraph: string, maxChars: number, overlapChars: number): string[] {
+// Split large parts while preserving meaning
+function splitLargePart(part: string, maxChars: number, overlapChars: number): string[] {
   const chunks: string[] = [];
-  const sentences = paragraph.split(/[.!?]+/).filter(s => s.trim().length > 5);
+  const sentences = part.split(/[.!?]+/).filter(s => s.trim().length > 5);
   
   let currentChunk = '';
   
