@@ -5,7 +5,6 @@ import DetailedLegalAnalysis from "../DetailedLegalAnalysis";
 import CaseStrengthsWeaknesses from "../CaseStrengthsWeaknesses";
 import SearchSimilarCasesSection from "../SearchSimilarCasesSection";
 import LawReferencesSection from "../LawReferencesSection";
-import ClientDocumentsSection from "../documents/ClientDocumentsSection";
 import { ScholarlyArticle } from "@/utils/api/scholarApiService";
 import { AnalysisData } from "@/hooks/useAnalysisData";
 
@@ -16,10 +15,6 @@ interface AnalysisTabContentProps {
   scholarlyReferences: ScholarlyArticle[];
   isScholarlyReferencesLoading: boolean;
   onScholarSearch: (query: string) => void;
-  clientDocuments: any[];
-  documentsLoading: boolean;
-  processDocument: ProcessDocumentContentFunction;
-  isProcessingDocument: boolean;
 }
 
 const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
@@ -28,18 +23,8 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
   clientId,
   scholarlyReferences,
   isScholarlyReferencesLoading,
-  onScholarSearch,
-  clientDocuments,
-  documentsLoading,
-  processDocument,
-  isProcessingDocument
+  onScholarSearch
 }) => {
-  // Add a dummy delete function since this component doesn't need delete functionality
-  const handleDeleteDocument = async (documentId: string) => {
-    console.log("Delete not implemented in analysis tab:", documentId);
-    return { success: false, error: "Delete not available in analysis view" };
-  };
-
   return (
     <div className="space-y-8">
       {/* Law References Section */}
@@ -74,16 +59,6 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
         scholarlyReferences={scholarlyReferences}
         isScholarlyReferencesLoading={isScholarlyReferencesLoading}
         onScholarSearch={onScholarSearch}
-      />
-      
-      {/* Client Documents Section - At the bottom */}
-      <ClientDocumentsSection
-        clientId={clientId}
-        documents={clientDocuments}
-        isLoading={documentsLoading}
-        onProcessDocument={processDocument}
-        onDeleteDocument={handleDeleteDocument}
-        isProcessing={isProcessingDocument}
       />
     </div>
   );

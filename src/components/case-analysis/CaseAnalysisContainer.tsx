@@ -41,7 +41,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
     isLoading: notesLoading
   } = useCaseAnalysisChat(clientId);
 
-  // Client documents hook
+  // Client documents hook - still needed for the documents tab
   const {
     documents: clientDocuments,
     loading: documentsLoading,

@@ -60,10 +60,6 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
           scholarlyReferences={scholarlyReferences}
           isScholarlyReferencesLoading={isScholarlyReferencesLoading}
           onScholarSearch={onScholarSearch}
-          clientDocuments={clientDocuments}
-          documentsLoading={documentsLoading}
-          processDocument={processDocument}
-          isProcessingDocument={isProcessingDocument}
         />
       );
     
