@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import CaseSelector from "@/components/clients/cases/CaseSelector";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Case } from "@/types/case";
+import { processPdfDocument } from "@/utils/pdfUtils";
 
 interface DocumentUploadDialogProps {
   isOpen: boolean;
@@ -39,6 +41,7 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadMethod, setUploadMethod] = useState<"text" | "pdf">("text");
   const [selectedCaseId, setSelectedCaseId] = useState<string | undefined>(caseId);
+  const [isProcessingPdf, setIsProcessingPdf] = useState(false);
   const { toast } = useToast();
 
   const handleDocumentSubmit = async (e: React.FormEvent) => {
@@ -72,25 +75,62 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
     }
     
     try {
-      const metadata = { 
-        isPdfDocument: uploadMethod === "pdf",
-        caseId: selectedCaseId 
-      };
-      
-      if (uploadMethod === "pdf") {
-        await onUpload(documentTitle, "", selectedFile!);
+      if (uploadMethod === "pdf" && selectedFile) {
+        // Handle PDF processing directly using our utility
+        setIsProcessingPdf(true);
+        
+        // Get client ID from the onUpload function context
+        const clientId = selectedCaseId || caseId || 'default-client-id'; // You may need to pass this as a prop
+        
+        const result = await processPdfDocument(
+          selectedFile, 
+          documentTitle, 
+          clientId,
+          selectedCaseId
+        );
+        
+        if (result.success) {
+          toast({
+            title: "PDF processed successfully",
+            description: "Your PDF has been uploaded and vectorized for search.",
+          });
+          
+          // Reset the form
+          setDocumentTitle("");
+          setDocumentContent("");
+          setSelectedFile(null);
+          setUploadMethod("text");
+          setSelectedCaseId(caseId);
+          
+          onClose();
+          
+          // Trigger a refresh of the documents list if available
+          if (onUpload) {
+            await onUpload(documentTitle, "", selectedFile);
+          }
+        } else {
+          throw new Error(result.error || "Failed to process PDF");
+        }
       } else {
+        // Handle text document upload
         await onUpload(documentTitle, documentContent);
+        
+        // Reset the form
+        setDocumentTitle("");
+        setDocumentContent("");
+        setSelectedFile(null);
+        setUploadMethod("text");
+        setSelectedCaseId(caseId);
       }
-      
-      // Reset the form
-      setDocumentTitle("");
-      setDocumentContent("");
-      setSelectedFile(null);
-      setUploadMethod("text");
-      setSelectedCaseId(caseId);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error uploading document:", error);
+      toast({
+        title: "Upload failed",
+        description: error.message || "An error occurred while uploading the document.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingPdf(false);
     }
   };
 
@@ -103,6 +143,8 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
     const selectedCase = cases.find(c => c.id === selectedCaseId);
     return selectedCase?.case_title || caseName || "Selected Case";
   };
+
+  const isCurrentlyProcessing = isProcessing || isProcessingPdf;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -164,7 +206,7 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
               value={documentTitle}
               onChange={(e) => setDocumentTitle(e.target.value)}
               placeholder="Enter document title"
-              disabled={isProcessing}
+              disabled={isCurrentlyProcessing}
             />
           </div>
           
@@ -187,7 +229,7 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
                   onChange={(e) => setDocumentContent(e.target.value)}
                   placeholder="Enter document content"
                   className="min-h-[200px]"
-                  disabled={isProcessing}
+                  disabled={isCurrentlyProcessing}
                 />
               </div>
             </TabsContent>
@@ -198,10 +240,18 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
                 <div className="mt-2">
                   <FileUploadInput 
                     onFileSelected={handleFileSelected} 
-                    isProcessing={isProcessing}
+                    isProcessing={isCurrentlyProcessing}
                     accept="application/pdf"
                   />
                 </div>
+                {uploadMethod === "pdf" && (
+                  <Alert className="mt-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Your PDF will be processed, text extracted, and vectorized for AI search and analysis.
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
             </TabsContent>
           </Tabs>
@@ -209,13 +259,13 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
           <div className="flex justify-end">
             <Button 
               type="submit" 
-              disabled={isProcessing}
+              disabled={isCurrentlyProcessing}
               className="flex items-center gap-1"
             >
-              {isProcessing ? (
+              {isCurrentlyProcessing ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" /> 
-                  Processing...
+                  {uploadMethod === "pdf" ? "Processing PDF..." : "Processing..."}
                 </>
               ) : (
                 <>

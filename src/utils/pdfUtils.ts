@@ -63,7 +63,7 @@ export const uploadPdfToStorage = async (file: File, clientId: string, caseId?: 
   }
 };
 
-// Generate embeddings for document chunks
+// Generate embeddings using the edge function
 export const generateEmbeddings = async (
   textChunks: string[], 
   documentId: string, 
@@ -71,57 +71,34 @@ export const generateEmbeddings = async (
   metadata: any = {}
 ): Promise<void> => {
   try {
-    // Set metadata
-    const metadataWithDocId = {
-      ...metadata,
-      documentId,
-      clientId
-    };
+    console.log(`Generating embeddings for ${textChunks.length} chunks using edge function`);
     
-    // Process each text chunk
-    for (let i = 0; i < textChunks.length; i++) {
-      // Get embedding for this chunk from OpenAI API
-      const response = await fetch('https://api.openai.com/v1/embeddings', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: "text-embedding-3-small",
-          input: textChunks[i],
-        }),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`OpenAI API error: ${errorData.error?.message || "Unknown error"}`);
+    // Call the generate-embeddings edge function
+    const { data, error } = await supabase.functions.invoke('generate-embeddings', {
+      body: {
+        texts: textChunks,
+        documentId,
+        clientId,
+        metadata
       }
-      
-      const data = await response.json();
-      const embedding = data.data[0].embedding;
-      
-      // Store the chunk and its embedding in the database
-      const { error } = await supabase
-        .from('document_chunks')
-        .insert({
-          document_id: documentId,
-          client_id: clientId,
-          case_id: metadata.caseId || null,
-          chunk_index: i,
-          content: textChunks[i],
-          embedding,
-          metadata: { 
-            ...metadataWithDocId, 
-            chunkIndex: i, 
-            totalChunks: textChunks.length 
-          }
-        });
-      
-      if (error) {
-        throw new Error(`Error storing chunk ${i}: ${error.message}`);
-      }
+    });
+    
+    if (error) {
+      console.error('Error from generate-embeddings function:', error);
+      throw new Error(`Failed to generate embeddings: ${error.message}`);
     }
+    
+    if (!data || !data.results) {
+      throw new Error('Invalid response from embeddings function');
+    }
+    
+    // Check if any chunks failed
+    const failedChunks = data.results.filter((result: any) => !result.success);
+    if (failedChunks.length > 0) {
+      console.warn(`${failedChunks.length} chunks failed to process:`, failedChunks);
+    }
+    
+    console.log(`Successfully processed ${data.results.filter((r: any) => r.success).length} chunks`);
   } catch (error) {
     console.error('Error generating embeddings:', error);
     throw error;
@@ -136,6 +113,8 @@ export const processPdfDocument = async (
   caseId?: string
 ): Promise<{success: boolean, documentId?: string, error?: string}> => {
   try {
+    console.log(`Starting PDF processing for file: ${file.name}`);
+    
     // Step 1: Extract text from PDF
     const extractedText = await extractTextFromPdf(file);
     
@@ -143,8 +122,11 @@ export const processPdfDocument = async (
       throw new Error('No text could be extracted from the PDF');
     }
     
+    console.log(`Extracted ${extractedText.length} characters from PDF`);
+    
     // Step 2: Upload PDF to storage
     const pdfUrl = await uploadPdfToStorage(file, clientId, caseId);
+    console.log(`PDF uploaded to: ${pdfUrl}`);
     
     // Step 3: Generate a unique ID for the document
     const documentId = crypto.randomUUID();
@@ -165,16 +147,21 @@ export const processPdfDocument = async (
       throw new Error(`Error creating document metadata: ${metadataError.message}`);
     }
     
+    console.log(`Document metadata created with ID: ${documentId}`);
+    
     // Step 5: Chunk the extracted text
     const chunks = chunkDocument(extractedText);
+    console.log(`Document chunked into ${chunks.length} pieces`);
     
-    // Step 6: Generate embeddings and store chunks
+    // Step 6: Generate embeddings and store chunks using edge function
     await generateEmbeddings(chunks, documentId, clientId, { 
       pdfUrl, 
       isPdfDocument: true,
-      caseId: caseId || null
+      caseId: caseId || null,
+      fileName: file.name
     });
     
+    console.log(`PDF processing completed successfully for document: ${documentId}`);
     return { success: true, documentId };
   } catch (error: any) {
     console.error('Error processing PDF document:', error);

@@ -3,13 +3,13 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DocumentWithContent } from "@/types/knowledge";
-import { extractTextFromPdf, uploadPdfToStorage, generateEmbeddings } from "@/utils/pdfUtils";
+import { processPdfDocument } from "@/utils/pdfUtils";
 import { deleteClientDocument } from "@/utils/api/baseApiService";
 
 export const useClientDocuments = (
   clientId: string | undefined, 
   pageSize: number = 5,
-  caseFilter?: string | null
+  scope: "client-level" | string = "client-level"
 ) => {
   const [documents, setDocuments] = useState<DocumentWithContent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,15 +17,15 @@ export const useClientDocuments = (
   const [hasMore, setHasMore] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const currentPage = useRef(0);
-  const isMounted =  useRef(true);
+  const isMounted = useRef(true);
   const { toast } = useToast();
 
-  // Fetch client-specific documents
+  // Fetch documents based on scope
   const fetchClientDocuments = useCallback(async (pageIndex: number, resetResults: boolean = false) => {
     if (!clientId) return { hasMore: false };
     
     try {
-      console.log(`Fetching client documents for client ${clientId}, page ${pageIndex}, caseFilter: ${caseFilter || 'none'}`);
+      console.log(`Fetching client documents for client ${clientId}, scope ${scope}, page ${pageIndex}`);
       
       if (resetResults && isMounted.current) {
         setLoading(true);
@@ -40,28 +40,24 @@ export const useClientDocuments = (
       const from = pageIndex * pageSize;
       const to = from + pageSize - 1;
       
-      // Base query for document metadata
+      // Build query based on scope
       let query = supabase
         .from('document_metadata')
         .select('*')
-        .eq('client_id', clientId)
-        .order('created_at', { ascending: false });
+        .eq('client_id', clientId);
       
-      // Add case filter if specified
-      if (caseFilter === 'none' || caseFilter === 'client-level') {
-        // Only fetch client-level documents (no case_id)
+      // Apply scope filtering
+      if (scope === "client-level") {
         query = query.is('case_id', null);
-      } else if (caseFilter) {
-        // Fetch documents for a specific case
-        query = query.eq('case_id', caseFilter);
+      } else if (scope !== "all") {
+        // Specific case ID
+        query = query.eq('case_id', scope);
       }
-      // If caseFilter is undefined or null, fetch all documents for this client
-
-      // Apply pagination
-      query = query.range(from, to);
+      // For "all" scope, we don't add any case_id filter
       
-      // Execute query
-      const { data: metadataData, error: metadataError } = await query;
+      const { data: metadataData, error: metadataError } = await query
+        .order('created_at', { ascending: false })
+        .range(from, to);
       
       if (metadataError) {
         console.error("Error fetching client document metadata:", metadataError);
@@ -77,7 +73,7 @@ export const useClientDocuments = (
       setHasMore(hasMore);
       
       if (!metadataData || metadataData.length === 0) {
-        console.log("No document metadata found for this client");
+        console.log("No document metadata found for this client and scope");
         
         if (resetResults && isMounted.current) {
           setDocuments([]);
@@ -109,24 +105,22 @@ export const useClientDocuments = (
       // Fetch content chunks for documents
       for (const docStub of documentStubs) {
         try {
-          // Base query for document chunks
-          let chunksQuery = supabase
+          // Fetch document chunks for this document
+          let chunkQuery = supabase
             .from('document_chunks')
             .select('*')
             .eq('document_id', docStub.id)
-            .eq('client_id', clientId)
-            .order('chunk_index', { ascending: true });
-          
-          // Add case filter if specified
-          if (caseFilter === 'none' || caseFilter === 'client-level') {
-            // Only fetch client-level document chunks
-            chunksQuery = chunksQuery.is('case_id', null);
-          } else if (caseFilter) {
-            // Fetch document chunks for a specific case
-            chunksQuery = chunksQuery.eq('case_id', caseFilter);
+            .eq('client_id', clientId);
+            
+          // Apply case filtering for chunks too
+          if (scope === "client-level") {
+            chunkQuery = chunkQuery.is('case_id', null);
+          } else if (scope !== "all") {
+            chunkQuery = chunkQuery.eq('case_id', scope);
           }
           
-          const { data: chunkData, error: chunkError } = await chunksQuery;
+          const { data: chunkData, error: chunkError } = await chunkQuery
+            .order('chunk_index', { ascending: true });
             
           if (chunkError) {
             console.error(`Error fetching chunks for document ${docStub.id}:`, chunkError);
@@ -174,7 +168,7 @@ export const useClientDocuments = (
       }
       return { hasMore: false };
     }
-  }, [clientId, pageSize, caseFilter]);
+  }, [clientId, scope, pageSize]);
 
   // Initial fetch
   useEffect(() => {
@@ -190,7 +184,7 @@ export const useClientDocuments = (
     return () => {
       isMounted.current = false;
     };
-  }, [clientId, fetchClientDocuments, caseFilter]);
+  }, [clientId, scope, fetchClientDocuments]);
 
   // Load more documents
   const loadMore = useCallback(async () => {
@@ -200,11 +194,12 @@ export const useClientDocuments = (
     }
   }, [hasMore, loading, fetchClientDocuments]);
 
-  // Process and chunk a document for a specific client
+  // Process document - handles both text and PDF
   const processDocument = useCallback(async (
     title: string, 
     content: string, 
-    metadata: any = {}
+    metadata: any = {},
+    file?: File
   ) => {
     if (!clientId) {
       console.error("Cannot process document: No client ID provided");
@@ -214,8 +209,30 @@ export const useClientDocuments = (
     setIsProcessing(true);
     
     try {
-      // Generate a unique ID for the document
+      // If it's a PDF file, use the PDF processing pipeline
+      if (file && file.type === 'application/pdf') {
+        console.log("Processing PDF file:", file.name);
+        
+        const caseId = scope !== "client-level" && scope !== "all" ? scope : undefined;
+        const result = await processPdfDocument(file, title, clientId, caseId);
+        
+        if (result.success) {
+          toast({
+            title: "PDF processed successfully",
+            description: "Your PDF has been uploaded and vectorized for search.",
+          });
+          
+          // Refresh the document list
+          await fetchClientDocuments(0, true);
+          return result;
+        } else {
+          throw new Error(result.error || "Failed to process PDF");
+        }
+      }
+      
+      // Handle text documents
       const documentId = crypto.randomUUID();
+      const caseId = scope !== "client-level" && scope !== "all" ? scope : null;
       
       // Insert document metadata
       const { error: metadataError } = await supabase
@@ -224,55 +241,42 @@ export const useClientDocuments = (
           id: documentId,
           title,
           client_id: clientId,
-          schema: 'client_document',
-          url: metadata.pdfUrl || null,
-          case_id: metadata.caseId || null // Add case_id if provided
+          case_id: caseId,
+          schema: caseId ? 'case_document' : 'client_document',
+          url: metadata.url || null
         });
       
       if (metadataError) {
         throw new Error(`Error creating document metadata: ${metadataError.message}`);
       }
       
-      // Check if this is a PDF document with embeddings already generated
-      if (metadata.isPdfDocument) {
-        // Embeddings already generated by the upload process
-        // Refresh the document list
-        await fetchClientDocuments(0, true);
-        
-        return { success: true, documentId };
-      }
-      
-      // For text documents, use the original chunking logic
+      // For text documents, create simple chunks
       const chunks = chunkDocument(content);
       
-      // Get embeddings for each chunk from OpenAI
-      try {
-        await generateEmbeddings(chunks, documentId, clientId, metadata);
-      } catch (embeddingError) {
-        console.error("Error generating embeddings:", embeddingError);
+      // Store chunks directly (without embeddings for now - you may want to add this)
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
         
-        // If embedding fails, we'll still store the chunks without embeddings
-        // Upload each chunk
-        for (let i = 0; i < chunks.length; i++) {
-          const chunk = chunks[i];
-          
-          // Store each chunk in the database
-          const { error: chunkError } = await supabase
-            .from('document_chunks')
-            .insert({
-              document_id: documentId,
-              client_id: clientId,
-              case_id: metadata.caseId || null, // Add case_id if provided
-              chunk_index: i,
-              content: chunk,
-              metadata: { ...metadata, chunkIndex: i, totalChunks: chunks.length }
-            });
-          
-          if (chunkError) {
-            throw new Error(`Error storing chunk ${i}: ${chunkError.message}`);
-          }
+        const { error: chunkError } = await supabase
+          .from('document_chunks')
+          .insert({
+            document_id: documentId,
+            client_id: clientId,
+            case_id: caseId,
+            chunk_index: i,
+            content: chunk,
+            metadata: { ...metadata, chunkIndex: i, totalChunks: chunks.length }
+          });
+        
+        if (chunkError) {
+          throw new Error(`Error storing chunk ${i}: ${chunkError.message}`);
         }
       }
+      
+      toast({
+        title: "Document uploaded successfully",
+        description: "Your document has been saved.",
+      });
       
       // Refresh the document list
       await fetchClientDocuments(0, true);
@@ -292,9 +296,9 @@ export const useClientDocuments = (
     } finally {
       setIsProcessing(false);
     }
-  }, [clientId, fetchClientDocuments, toast]);
+  }, [clientId, scope, fetchClientDocuments, toast]);
   
-  // Enhanced document deletion using the edge function
+  // Delete document
   const deleteDocument = useCallback(async (documentId: string) => {
     if (!clientId) {
       console.error("Cannot delete document: No client ID provided");
@@ -310,16 +314,15 @@ export const useClientDocuments = (
     console.log(`Starting deletion for document ${documentId} for client ${clientId}`);
     
     try {
-      // 1. Update UI state optimistically (can be rolled back if deletion fails)
+      // Update UI state optimistically
       setDocuments(prev => prev.filter(doc => doc.id !== documentId));
       
-      // 2. Call the edge function to delete the document with admin privileges
+      // Call the edge function to delete the document
       const result = await deleteClientDocument(documentId, clientId);
       
       console.log(`Document deletion result:`, result);
       
       if (result.success) {
-        // Show success toast
         toast({
           title: "Document deleted",
           description: "Document has been permanently removed.",
@@ -327,10 +330,9 @@ export const useClientDocuments = (
         
         return { success: true };
       } else {
-        // If failed, restore the document in the UI
+        // Restore the document in the UI
         setDocuments(prev => [...prev, ...documents.filter(doc => doc.id === documentId)]);
         
-        // Show error toast with the error from the edge function
         toast({
           title: "Error deleting document",
           description: result.error || "An error occurred while deleting the document.",
@@ -362,7 +364,6 @@ export const useClientDocuments = (
   
   // Helper function to chunk document content
   const chunkDocument = (content: string): string[] => {
-    // Simple chunking by paragraphs with a max length
     const MAX_CHUNK_LENGTH = 1000;
     const paragraphs = content.split(/\n\s*\n/);
     const chunks: string[] = [];
@@ -370,13 +371,11 @@ export const useClientDocuments = (
     let currentChunk = '';
     
     for (const paragraph of paragraphs) {
-      // If adding this paragraph would exceed the max length, start a new chunk
       if (currentChunk.length + paragraph.length > MAX_CHUNK_LENGTH && currentChunk.length > 0) {
         chunks.push(currentChunk);
         currentChunk = '';
       }
       
-      // Add paragraph to current chunk
       if (currentChunk.length > 0) {
         currentChunk += '\n\n' + paragraph;
       } else {
@@ -384,88 +383,12 @@ export const useClientDocuments = (
       }
     }
     
-    // Add the last chunk if there's anything left
     if (currentChunk.length > 0) {
       chunks.push(currentChunk);
     }
     
     return chunks;
   };
-
-  // Search documents by vector similarity
-  const searchDocumentsBySimilarity = useCallback(async (
-    query: string,
-    match_threshold: number = 0.7,
-    match_count: number = 5
-  ) => {
-    if (!clientId || !query.trim()) {
-      return { results: [], error: null };
-    }
-
-    try {
-      // Get embedding for the query from OpenAI
-      const response = await fetch('https://api.openai.com/v1/embeddings', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: "text-embedding-3-small",
-          input: query,
-        }),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`OpenAI API error: ${errorData.error?.message || "Unknown error"}`);
-      }
-      
-      const embeddingData = await response.json();
-      const queryEmbedding = embeddingData.data[0].embedding;
-      
-      // Use the database function to search by similarity
-      // If caseFilter is provided, use the case-aware search function
-      if (caseFilter && caseFilter !== 'none' && caseFilter !== 'client-level') {
-        const { data: searchResults, error: searchError } = await supabase.rpc(
-          'search_client_and_case_documents_by_similarity',
-          {
-            query_embedding: queryEmbedding,
-            client_id_param: clientId,
-            case_id_param: caseFilter,
-            match_threshold,
-            match_count
-          }
-        );
-        
-        if (searchError) {
-          throw new Error(`Search error: ${searchError.message}`);
-        }
-        
-        return { results: searchResults || [], error: null };
-      } else {
-        // Original client-level search
-        const { data: searchResults, error: searchError } = await supabase.rpc(
-          'search_document_chunks_by_similarity',
-          {
-            query_embedding: queryEmbedding,
-            client_id_param: clientId,
-            match_threshold,
-            match_count
-          }
-        );
-        
-        if (searchError) {
-          throw new Error(`Search error: ${searchError.message}`);
-        }
-        
-        return { results: searchResults || [], error: null };
-      }
-    } catch (error: any) {
-      console.error("Error searching documents by similarity:", error);
-      return { results: [], error: error.message };
-    }
-  }, [clientId, caseFilter]);
 
   return {
     documents,
@@ -476,7 +399,6 @@ export const useClientDocuments = (
     isProcessing,
     processDocument,
     deleteDocument,
-    searchDocumentsBySimilarity,
     refreshDocuments: (reset: boolean = true) => fetchClientDocuments(reset ? 0 : currentPage.current, reset)
   };
 };
