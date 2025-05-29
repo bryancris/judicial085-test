@@ -23,13 +23,16 @@ serve(async (req) => {
     });
   }
 
+  let documentId: string | null = null;
+  
   try {
     console.log('PDF processing function called');
     
     const requestBody = await req.json();
     console.log('Request body:', requestBody);
     
-    const { documentId, clientId, caseId, title, fileUrl, fileName }: ProcessPdfRequest = requestBody;
+    const { documentId: reqDocumentId, clientId, caseId, title, fileUrl, fileName }: ProcessPdfRequest = requestBody;
+    documentId = reqDocumentId;
     
     console.log(`Starting PDF processing for document ${documentId}, file: ${fileName}`);
 
@@ -48,7 +51,7 @@ serve(async (req) => {
     
     console.log(`PDF downloaded successfully, size: ${pdfData.length} bytes`);
 
-    // Step 2: Extract text using pdfjs-dist
+    // Step 2: Extract text using our custom extractor
     const extractedText = await extractTextFromPdfBuffer(pdfData);
     
     if (!extractedText || extractedText.trim() === '') {
@@ -57,9 +60,13 @@ serve(async (req) => {
     
     console.log(`Text extraction completed: ${extractedText.length} characters`);
 
-    // Step 3: Chunk the extracted text
+    // Step 3: Chunk the extracted text with improved algorithm
     const chunks = chunkDocument(extractedText);
     console.log(`Document chunked into ${chunks.length} pieces`);
+
+    if (chunks.length === 0) {
+      throw new Error('Failed to create valid chunks from extracted text');
+    }
 
     // Step 4: Generate embeddings and store chunks
     await generateAndStoreEmbeddings(chunks, documentId, clientId, {
@@ -77,6 +84,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({ 
       success: true, 
       documentId,
+      chunksCreated: chunks.length,
       message: 'PDF processed successfully'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -85,15 +93,6 @@ serve(async (req) => {
   } catch (error: any) {
     console.error('Error processing PDF:', error);
     
-    // Try to extract document ID from request for error handling
-    let documentId: string | null = null;
-    try {
-      const body = await req.clone().json();
-      documentId = body.documentId;
-    } catch (e) {
-      console.error('Could not parse request body for error handling:', e);
-    }
-
     // Update document status to failed if we have the ID
     if (documentId) {
       try {

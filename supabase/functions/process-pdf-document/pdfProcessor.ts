@@ -94,29 +94,164 @@ export async function extractTextFromPdfBuffer(pdfData: Uint8Array): Promise<str
   }
 }
 
-// Chunk document content
+// Estimate token count (rough approximation: 1 token ≈ 4 characters)
+function estimateTokenCount(text: string): number {
+  return Math.ceil(text.length / 4);
+}
+
+// Improved chunking with character-based splitting and overlap
 export function chunkDocument(content: string): string[] {
-  const MAX_CHUNK_LENGTH = 1000;
-  const paragraphs = content.split(/\n\s*\n/);
+  // Target chunk size in characters (aiming for ~600-800 tokens max)
+  const MAX_CHUNK_CHARS = 2400; // ~600 tokens
+  const OVERLAP_CHARS = 200;    // ~50 tokens overlap
+  const MIN_CHUNK_CHARS = 100;  // Minimum viable chunk size
+  
+  console.log(`Starting chunking for ${content.length} characters`);
+  
   const chunks: string[] = [];
+  
+  // First try paragraph-based chunking for better semantic boundaries
+  const paragraphs = content.split(/\n\s*\n/);
   
   let currentChunk = '';
   
   for (const paragraph of paragraphs) {
-    if (currentChunk.length + paragraph.length > MAX_CHUNK_LENGTH && currentChunk.length > 0) {
-      chunks.push(currentChunk);
+    const trimmedParagraph = paragraph.trim();
+    if (!trimmedParagraph) continue;
+    
+    // If this paragraph alone is too large, we need to split it
+    if (trimmedParagraph.length > MAX_CHUNK_CHARS) {
+      // Save current chunk if it has content
+      if (currentChunk.trim()) {
+        chunks.push(currentChunk.trim());
+        console.log(`Created chunk ${chunks.length} with ${currentChunk.length} chars (~${estimateTokenCount(currentChunk)} tokens)`);
+      }
+      
+      // Split the large paragraph into smaller chunks
+      const subChunks = splitLargeParagraph(trimmedParagraph, MAX_CHUNK_CHARS, OVERLAP_CHARS);
+      chunks.push(...subChunks);
       currentChunk = '';
+      continue;
     }
     
-    if (currentChunk.length > 0) {
-      currentChunk += '\n\n' + paragraph;
+    // Check if adding this paragraph would exceed the limit
+    const potentialChunk = currentChunk ? currentChunk + '\n\n' + trimmedParagraph : trimmedParagraph;
+    
+    if (potentialChunk.length > MAX_CHUNK_CHARS && currentChunk.length > MIN_CHUNK_CHARS) {
+      // Save current chunk and start new one with overlap
+      chunks.push(currentChunk.trim());
+      console.log(`Created chunk ${chunks.length} with ${currentChunk.length} chars (~${estimateTokenCount(currentChunk)} tokens)`);
+      
+      // Start new chunk with overlap from the end of the previous chunk
+      const overlapText = getOverlapText(currentChunk, OVERLAP_CHARS);
+      currentChunk = overlapText ? overlapText + '\n\n' + trimmedParagraph : trimmedParagraph;
     } else {
-      currentChunk = paragraph;
+      currentChunk = potentialChunk;
     }
   }
   
-  if (currentChunk.length > 0) {
-    chunks.push(currentChunk);
+  // Add the final chunk if it has content
+  if (currentChunk.trim() && currentChunk.length >= MIN_CHUNK_CHARS) {
+    chunks.push(currentChunk.trim());
+    console.log(`Created final chunk ${chunks.length} with ${currentChunk.length} chars (~${estimateTokenCount(currentChunk)} tokens)`);
+  }
+  
+  // Fallback: if we couldn't create good chunks, use character-based splitting
+  if (chunks.length === 0) {
+    console.warn('Paragraph-based chunking failed, falling back to character-based chunking');
+    return characterBasedChunking(content, MAX_CHUNK_CHARS, OVERLAP_CHARS);
+  }
+  
+  // Validate all chunks are within token limits
+  const validatedChunks = chunks.filter(chunk => {
+    const tokenCount = estimateTokenCount(chunk);
+    if (tokenCount > 800) {
+      console.warn(`Chunk too large (${tokenCount} tokens), skipping`);
+      return false;
+    }
+    return true;
+  });
+  
+  console.log(`Successfully created ${validatedChunks.length} chunks`);
+  return validatedChunks;
+}
+
+// Split a large paragraph into smaller chunks
+function splitLargeParagraph(paragraph: string, maxChars: number, overlapChars: number): string[] {
+  const chunks: string[] = [];
+  let start = 0;
+  
+  while (start < paragraph.length) {
+    let end = start + maxChars;
+    
+    // If we're not at the end, try to find a good breaking point
+    if (end < paragraph.length) {
+      // Look for sentence endings first
+      const sentenceEnd = paragraph.lastIndexOf('.', end);
+      const questionEnd = paragraph.lastIndexOf('?', end);
+      const exclamationEnd = paragraph.lastIndexOf('!', end);
+      
+      const bestSentenceEnd = Math.max(sentenceEnd, questionEnd, exclamationEnd);
+      
+      if (bestSentenceEnd > start + (maxChars * 0.5)) {
+        end = bestSentenceEnd + 1;
+      } else {
+        // Look for word boundaries
+        const spaceIndex = paragraph.lastIndexOf(' ', end);
+        if (spaceIndex > start + (maxChars * 0.5)) {
+          end = spaceIndex;
+        }
+      }
+    }
+    
+    const chunk = paragraph.slice(start, end).trim();
+    if (chunk) {
+      chunks.push(chunk);
+      console.log(`Created sub-chunk with ${chunk.length} chars (~${estimateTokenCount(chunk)} tokens)`);
+    }
+    
+    // Move start position with overlap
+    start = Math.max(start + 1, end - overlapChars);
+  }
+  
+  return chunks;
+}
+
+// Get overlap text from the end of a chunk
+function getOverlapText(text: string, overlapChars: number): string {
+  if (text.length <= overlapChars) return text;
+  
+  const overlapStart = text.length - overlapChars;
+  // Try to start at a word boundary
+  const spaceIndex = text.indexOf(' ', overlapStart);
+  const actualStart = spaceIndex !== -1 ? spaceIndex + 1 : overlapStart;
+  
+  return text.slice(actualStart);
+}
+
+// Character-based chunking as fallback
+function characterBasedChunking(content: string, maxChars: number, overlapChars: number): string[] {
+  const chunks: string[] = [];
+  let start = 0;
+  
+  while (start < content.length) {
+    let end = Math.min(start + maxChars, content.length);
+    
+    // Try to end at a word boundary if not at the end
+    if (end < content.length) {
+      const spaceIndex = content.lastIndexOf(' ', end);
+      if (spaceIndex > start + (maxChars * 0.5)) {
+        end = spaceIndex;
+      }
+    }
+    
+    const chunk = content.slice(start, end).trim();
+    if (chunk) {
+      chunks.push(chunk);
+      console.log(`Created fallback chunk with ${chunk.length} chars (~${estimateTokenCount(chunk)} tokens)`);
+    }
+    
+    start = Math.max(start + 1, end - overlapChars);
   }
   
   return chunks;
