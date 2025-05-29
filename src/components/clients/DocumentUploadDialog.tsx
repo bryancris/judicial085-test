@@ -2,18 +2,15 @@
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Loader2, FilePlus, FileText, BookOpenCheck, AlertCircle } from "lucide-react";
+import { Loader2, FilePlus, FileText, BookOpenCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import FileUploadInput from "@/components/clients/chat/FileUploadInput";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import CaseSelector from "@/components/clients/cases/CaseSelector";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Case } from "@/types/case";
 import { processPdfDocument } from "@/utils/pdfUtils";
+import DocumentTitleInput from "@/components/clients/documents/DocumentTitleInput";
+import DocumentContentTabs from "@/components/clients/documents/DocumentContentTabs";
+import DocumentScopeAlert from "@/components/clients/documents/DocumentScopeAlert";
 
 interface DocumentUploadDialogProps {
   isOpen: boolean;
@@ -100,12 +97,7 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
           });
           
           // Reset the form
-          setDocumentTitle("");
-          setDocumentContent("");
-          setSelectedFile(null);
-          setUploadMethod("text");
-          setSelectedCaseId(caseId);
-          
+          resetForm();
           onClose();
           
           // Trigger a refresh of the documents list if available
@@ -120,11 +112,7 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
         await onUpload(finalTitle, documentContent);
         
         // Reset the form
-        setDocumentTitle("");
-        setDocumentContent("");
-        setSelectedFile(null);
-        setUploadMethod("text");
-        setSelectedCaseId(caseId);
+        resetForm();
       }
     } catch (error: any) {
       console.error("Error uploading document:", error);
@@ -138,14 +126,16 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
     }
   };
 
-  const handleFileSelected = (file: File) => {
-    setSelectedFile(file);
+  const resetForm = () => {
+    setDocumentTitle("");
+    setDocumentContent("");
+    setSelectedFile(null);
+    setUploadMethod("text");
+    setSelectedCaseId(caseId);
   };
 
-  const getSelectedCaseName = () => {
-    if (!selectedCaseId) return "Client-Level";
-    const selectedCase = cases.find(c => c.id === selectedCaseId);
-    return selectedCase?.case_title || caseName || "Selected Case";
+  const handleFileSelected = (file: File) => {
+    setSelectedFile(file);
   };
 
   const isCurrentlyProcessing = isProcessing || isProcessingPdf;
@@ -181,89 +171,42 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
                 allowClientLevel={true}
                 placeholder="Select where to store this document"
               />
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  {selectedCaseId 
-                    ? `This document will be associated with: ${getSelectedCaseName()}`
-                    : "This document will be stored at the client level (accessible across all cases)"}
-                </AlertDescription>
-              </Alert>
+              <DocumentScopeAlert
+                allowCaseSelection={allowCaseSelection}
+                selectedCaseId={selectedCaseId}
+                caseId={caseId}
+                caseName={caseName}
+                cases={cases}
+              />
             </div>
           )}
 
           {/* Fixed case display */}
-          {!allowCaseSelection && (caseId || caseName) && (
-            <Alert>
-              <BookOpenCheck className="h-4 w-4" />
-              <AlertDescription>
-                This document will be added to case: <strong>{caseName || "Selected Case"}</strong>
-                <Badge className="ml-2" variant="secondary">Case Document</Badge>
-              </AlertDescription>
-            </Alert>
+          {!allowCaseSelection && (
+            <DocumentScopeAlert
+              allowCaseSelection={allowCaseSelection}
+              selectedCaseId={selectedCaseId}
+              caseId={caseId}
+              caseName={caseName}
+              cases={cases}
+            />
           )}
 
-          <div>
-            <Label htmlFor="docTitle">Document Title (Optional)</Label>
-            <Input
-              id="docTitle"
-              value={documentTitle}
-              onChange={(e) => setDocumentTitle(e.target.value)}
-              placeholder={uploadMethod === "pdf" ? "Leave empty to use filename" : "Leave empty for default title"}
-              disabled={isCurrentlyProcessing}
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              {uploadMethod === "pdf" 
-                ? "If left empty, the filename will be used as the title"
-                : "If left empty, 'Untitled Document' will be used"}
-            </p>
-          </div>
+          <DocumentTitleInput
+            value={documentTitle}
+            onChange={setDocumentTitle}
+            uploadMethod={uploadMethod}
+            disabled={isCurrentlyProcessing}
+          />
           
-          <Tabs 
-            value={uploadMethod} 
-            onValueChange={(value) => setUploadMethod(value as "text" | "pdf")} 
-            className="w-full"
-          >
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="text">Text Input</TabsTrigger>
-              <TabsTrigger value="pdf">PDF Upload</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="text" className="mt-4">
-              <div>
-                <Label htmlFor="docContent">Document Content</Label>
-                <Textarea
-                  id="docContent"
-                  value={documentContent}
-                  onChange={(e) => setDocumentContent(e.target.value)}
-                  placeholder="Enter document content"
-                  className="min-h-[200px]"
-                  disabled={isCurrentlyProcessing}
-                />
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="pdf" className="mt-4">
-              <div>
-                <Label>Upload PDF Document</Label>
-                <div className="mt-2">
-                  <FileUploadInput 
-                    onFileSelected={handleFileSelected} 
-                    isProcessing={isCurrentlyProcessing}
-                    accept="application/pdf"
-                  />
-                </div>
-                {uploadMethod === "pdf" && (
-                  <Alert className="mt-2">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      Your PDF will be processed, text extracted, and vectorized for AI search and analysis.
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
+          <DocumentContentTabs
+            uploadMethod={uploadMethod}
+            onMethodChange={setUploadMethod}
+            documentContent={documentContent}
+            onContentChange={setDocumentContent}
+            onFileSelected={handleFileSelected}
+            disabled={isCurrentlyProcessing}
+          />
           
           <div className="flex justify-end">
             <Button 
