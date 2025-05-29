@@ -6,6 +6,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 interface ProcessPdfRequest {
@@ -27,11 +28,19 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      status: 200,
+      headers: corsHeaders 
+    });
   }
 
   try {
-    const { documentId, clientId, caseId, title, fileUrl, fileName }: ProcessPdfRequest = await req.json();
+    console.log('PDF processing function called');
+    
+    const requestBody = await req.json();
+    console.log('Request body:', requestBody);
+    
+    const { documentId, clientId, caseId, title, fileUrl, fileName }: ProcessPdfRequest = requestBody;
     
     console.log(`Starting PDF processing for document ${documentId}, file: ${fileName}`);
 
@@ -87,14 +96,15 @@ serve(async (req) => {
   } catch (error: any) {
     console.error('Error processing PDF:', error);
     
-    // Try to update status to failed if we have document info
+    // Try to extract document ID from request body to update status
     try {
-      const body = await req.json();
-      if (body.documentId) {
-        await updateDocumentStatus(body.documentId, 'failed', error.message);
+      const body = await req.text();
+      const parsedBody = JSON.parse(body);
+      if (parsedBody.documentId) {
+        await updateDocumentStatus(parsedBody.documentId, 'failed', error.message);
       }
     } catch (e) {
-      console.error('Could not update document status:', e);
+      console.error('Could not parse request body for error handling:', e);
     }
 
     return new Response(JSON.stringify({ 
