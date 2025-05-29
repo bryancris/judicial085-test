@@ -17,7 +17,7 @@ interface DocumentUploadDialogProps {
   onClose: () => void;
   onUpload: (title: string, content: string, file?: File) => Promise<any>;
   isProcessing: boolean;
-  clientId: string; // Make this required instead of optional
+  clientId: string;
   caseId?: string;
   caseName?: string;
   cases?: Case[];
@@ -29,7 +29,7 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
   onClose,
   onUpload,
   isProcessing,
-  clientId, // Now required
+  clientId,
   caseId,
   caseName,
   cases = [],
@@ -46,7 +46,6 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
   const handleDocumentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate client ID
     if (!clientId) {
       toast({
         title: "Error",
@@ -56,15 +55,12 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
       return;
     }
     
-    // Determine the final title to use
     let finalTitle = documentTitle.trim();
     
     if (!finalTitle) {
       if (uploadMethod === "pdf" && selectedFile) {
-        // Use filename without extension for PDF uploads
         finalTitle = selectedFile.name.replace(/\.[^/.]+$/, "");
       } else {
-        // Use default title for text uploads
         finalTitle = "Untitled Document";
       }
     }
@@ -89,7 +85,6 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
     
     try {
       if (uploadMethod === "pdf" && selectedFile) {
-        // Handle PDF processing directly using our utility
         setIsProcessingPdf(true);
         
         console.log(`Processing PDF with clientId: ${clientId}, selectedCaseId: ${selectedCaseId}`);
@@ -107,22 +102,16 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
             description: "Your PDF has been uploaded and vectorized for search.",
           });
           
-          // Reset the form
           resetForm();
           onClose();
           
-          // Trigger a refresh of the documents list if available
-          if (onUpload) {
-            await onUpload(finalTitle, "", selectedFile);
-          }
+          // Note: Removed the redundant onUpload call that was causing duplicates
+          // The processPdfDocument function handles everything internally
         } else {
           throw new Error(result.error || "Failed to process PDF");
         }
       } else {
-        // Handle text document upload
         await onUpload(finalTitle, documentContent);
-        
-        // Reset the form
         resetForm();
       }
     } catch (error: any) {
@@ -171,7 +160,6 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
         </DialogHeader>
         
         <form onSubmit={handleDocumentSubmit} className="space-y-4 mt-4">
-          {/* Case Selection */}
           {allowCaseSelection && (
             <div className="space-y-2">
               <Label>Document Scope</Label>
@@ -192,7 +180,6 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
             </div>
           )}
 
-          {/* Fixed case display */}
           {!allowCaseSelection && (
             <DocumentScopeAlert
               allowCaseSelection={allowCaseSelection}

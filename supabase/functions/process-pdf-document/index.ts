@@ -7,7 +7,6 @@ import { ProcessPdfRequest } from './types.ts';
 import { extractTextFromPdfBuffer, chunkDocument } from './pdfProcessor.ts';
 import { generateAndStoreEmbeddings, updateDocumentStatus, cleanupFailedDocument } from './databaseService.ts';
 
-// Initialize Supabase client
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const openaiApiKey = Deno.env.get('OPENAI_API_KEY')!;
@@ -15,7 +14,6 @@ const openaiApiKey = Deno.env.get('OPENAI_API_KEY')!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { 
       status: 200,
@@ -26,7 +24,7 @@ serve(async (req) => {
   let documentId: string | null = null;
   
   try {
-    console.log('Enhanced PDF processing function called');
+    console.log('PDF processing function called');
     
     const requestBody = await req.json();
     console.log('Request body:', requestBody);
@@ -34,9 +32,8 @@ serve(async (req) => {
     const { documentId: reqDocumentId, clientId, caseId, title, fileUrl, fileName }: ProcessPdfRequest = requestBody;
     documentId = reqDocumentId;
     
-    console.log(`Starting enhanced PDF processing for document ${documentId}, file: ${fileName}`);
+    console.log(`Starting PDF processing for document ${documentId}, file: ${fileName}`);
 
-    // Update status to processing
     await updateDocumentStatus(documentId, 'processing', supabase);
 
     // Step 1: Download PDF from storage
@@ -51,21 +48,30 @@ serve(async (req) => {
     
     console.log(`PDF downloaded successfully, size: ${pdfData.length} bytes`);
 
-    // Step 2: Extract text using enhanced extraction
-    console.log('Starting enhanced text extraction...');
+    // Step 2: Extract text using comprehensive extraction
+    console.log('Starting text extraction...');
     const extractedText = await extractTextFromPdfBuffer(pdfData);
     
     if (!extractedText || extractedText.trim() === '') {
       throw new Error('No readable text content could be extracted from the PDF');
     }
     
-    console.log(`Enhanced text extraction completed: ${extractedText.length} characters of readable content`);
-    console.log(`Text preview: "${extractedText.substring(0, 200)}..."`);
+    console.log(`Text extraction completed: ${extractedText.length} characters`);
+    console.log(`Text preview: "${extractedText.substring(0, 300)}..."`);
 
-    // Step 3: Chunk the extracted text with enhanced validation
-    console.log('Starting enhanced chunking...');
+    // Step 3: Validate extracted text quality
+    const words = extractedText.split(/\s+/);
+    const uniqueWords = new Set(words.map(w => w.toLowerCase()));
+    const diversityRatio = uniqueWords.size / words.length;
+    
+    if (diversityRatio < 0.1) {
+      throw new Error('Extracted text appears to be repetitive or corrupted');
+    }
+
+    // Step 4: Chunk the extracted text
+    console.log('Starting chunking...');
     const chunks = chunkDocument(extractedText);
-    console.log(`Document chunked into ${chunks.length} validated pieces`);
+    console.log(`Document chunked into ${chunks.length} pieces`);
 
     if (chunks.length === 0) {
       throw new Error('Failed to create valid chunks from extracted text');
@@ -73,24 +79,32 @@ serve(async (req) => {
 
     // Log chunk previews for verification
     chunks.forEach((chunk, index) => {
-      console.log(`Chunk ${index + 1} preview (${chunk.length} chars): "${chunk.substring(0, 150)}..."`);
+      console.log(`Chunk ${index + 1} preview (${chunk.length} chars): "${chunk.substring(0, 100)}..."`);
     });
 
-    // Step 4: Generate embeddings and store chunks
-    console.log('Generating embeddings for validated chunks...');
+    // Step 5: Generate embeddings and store chunks
+    console.log('Generating embeddings for chunks...');
     await generateAndStoreEmbeddings(chunks, documentId, clientId, {
       pdfUrl: fileUrl,
       isPdfDocument: true,
       caseId: caseId || null,
       fileName: fileName,
-      extractionMethod: 'enhanced',
-      textPreview: extractedText.substring(0, 500)
+      extractionMethod: 'comprehensive',
+      textPreview: extractedText.substring(0, 500),
+      diversityRatio: diversityRatio
     }, supabase, openaiApiKey);
 
-    // Step 5: Mark as completed
-    await updateDocumentStatus(documentId, 'completed', supabase);
+    // Step 6: Store content preview in document_metadata for display
+    const contentPreview = extractedText.substring(0, 1000);
+    await supabase
+      .from('document_metadata')
+      .update({ 
+        processing_status: 'completed',
+        processed_at: new Date().toISOString()
+      })
+      .eq('id', documentId);
 
-    console.log(`Enhanced PDF processing completed successfully for document: ${documentId}`);
+    console.log(`PDF processing completed successfully for document: ${documentId}`);
 
     return new Response(JSON.stringify({ 
       success: true, 
@@ -98,15 +112,15 @@ serve(async (req) => {
       chunksCreated: chunks.length,
       textLength: extractedText.length,
       textPreview: extractedText.substring(0, 200),
-      message: 'PDF processed successfully with enhanced extraction'
+      diversityRatio: diversityRatio,
+      message: 'PDF processed successfully with comprehensive extraction'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error: any) {
-    console.error('Enhanced PDF processing error:', error);
+    console.error('PDF processing error:', error);
     
-    // Clean up failed document and update status
     if (documentId) {
       try {
         await cleanupFailedDocument(documentId, supabase);
@@ -119,7 +133,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({ 
       success: false, 
       error: error.message || 'Failed to process PDF document',
-      details: 'Enhanced PDF processing failed - please ensure the PDF contains readable text content'
+      details: 'PDF processing failed - please ensure the PDF contains readable text content'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

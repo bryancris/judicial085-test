@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { DocumentWithContent } from "@/types/knowledge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Case } from "@/types/case";
+import { supabase } from '@/integrations/supabase/client';
 
 interface ClientDocumentsSectionProps {
   clientId: string;
@@ -41,9 +42,35 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
 }) => {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<DocumentWithContent | null>(null);
+  const [documentContent, setDocumentContent] = useState<string>('');
+  const [loadingContent, setLoadingContent] = useState(false);
 
-  const handleDocumentOpen = (document: DocumentWithContent) => {
+  const handleDocumentOpen = async (document: DocumentWithContent) => {
     setSelectedDocument(document);
+    setLoadingContent(true);
+    
+    try {
+      // First try to get content from document chunks
+      const { data: chunks, error } = await supabase
+        .from('document_chunks')
+        .select('content')
+        .eq('document_id', document.id)
+        .order('chunk_index');
+      
+      if (!error && chunks && chunks.length > 0) {
+        const fullContent = chunks.map(chunk => chunk.content).join('\n\n');
+        setDocumentContent(fullContent);
+      } else {
+        // Fallback to existing content
+        const existingContent = document.contents.map(item => item.content).join('\n\n');
+        setDocumentContent(existingContent || 'No content available');
+      }
+    } catch (error) {
+      console.error('Error loading document content:', error);
+      setDocumentContent('Error loading content');
+    } finally {
+      setLoadingContent(false);
+    }
   };
 
   const handleDocumentUpload = async (title: string, content: string, file?: File, metadata?: any) => {
@@ -89,7 +116,6 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
     </>
   );
 
-  // Format date to be more readable
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "Unknown date";
     
@@ -101,18 +127,21 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
     }
   };
 
-  // Sort documents by created date (newest first)
   const sortedDocuments = [...documents].sort((a, b) => {
     const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
     const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
     return dateB - dateA;
   });
 
-  // Show document preview modal
+  const getDocumentPreview = (document: DocumentWithContent): string => {
+    if (document.contents.length > 0 && document.contents[0].content) {
+      return document.contents[0].content;
+    }
+    return "Processing... Content will be available shortly.";
+  };
+
   const renderDocumentPreview = () => {
     if (!selectedDocument) return null;
-    
-    const documentContent = selectedDocument.contents.map(item => item.content).join("\n\n");
     
     return (
       <Dialog open={!!selectedDocument} onOpenChange={() => setSelectedDocument(null)}>
@@ -134,9 +163,16 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
           </div>
           
           <ScrollArea className="flex-grow max-h-[calc(80vh-120px)]">
-            <div className="p-4 whitespace-pre-wrap font-mono text-sm">
-              {documentContent || "No content available"}
-            </div>
+            {loadingContent ? (
+              <div className="p-4 text-center">
+                <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                <p>Loading document content...</p>
+              </div>
+            ) : (
+              <div className="p-4 whitespace-pre-wrap font-mono text-sm">
+                {documentContent}
+              </div>
+            )}
           </ScrollArea>
         </DialogContent>
       </Dialog>
@@ -208,9 +244,7 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
                     </div>
                     
                     <p className="text-sm text-muted-foreground line-clamp-3">
-                      {document.contents.length > 0
-                        ? document.contents[0].content
-                        : "No preview available"}
+                      {getDocumentPreview(document)}
                     </p>
                   </CardContent>
                   <CardFooter className="flex justify-between pt-2">
