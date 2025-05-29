@@ -1,5 +1,4 @@
 
-
 // Extract text from PDF buffer using a Deno-compatible approach
 export async function extractTextFromPdfBuffer(pdfData: Uint8Array): Promise<string> {
   try {
@@ -27,7 +26,7 @@ export async function extractTextFromPdfBuffer(pdfData: Uint8Array): Promise<str
         const data = await pdfParse(pdfData);
         
         if (data.text && data.text.trim()) {
-          fullText = data.text.trim();
+          fullText = sanitizeText(data.text.trim());
           console.log(`Successfully extracted ${fullText.length} characters from ${data.numpages} pages`);
           return fullText;
         }
@@ -76,6 +75,9 @@ export async function extractTextFromPdfBuffer(pdfData: Uint8Array): Promise<str
       throw new Error('PDF contains no extractable text content');
     }
     
+    // Sanitize the extracted text
+    fullText = sanitizeText(fullText);
+    
     console.log(`Successfully extracted ${fullText.length} characters using fallback method`);
     return fullText;
     
@@ -94,6 +96,22 @@ export async function extractTextFromPdfBuffer(pdfData: Uint8Array): Promise<str
   }
 }
 
+// Sanitize text to remove problematic Unicode characters
+function sanitizeText(text: string): string {
+  return text
+    // Replace null bytes and other control characters
+    .replace(/\0/g, '')
+    .replace(/[\x00-\x1F\x7F-\x9F]/g, ' ')
+    // Replace problematic Unicode characters that might cause issues
+    .replace(/[\uFEFF\uFFFE\uFFFF]/g, '')
+    // Normalize line endings
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    // Remove excessive whitespace
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 // Estimate token count (rough approximation: 1 token ≈ 4 characters)
 function estimateTokenCount(text: string): number {
   return Math.ceil(text.length / 4);
@@ -107,6 +125,9 @@ export function chunkDocument(content: string): string[] {
   const MIN_CHUNK_CHARS = 100;  // Minimum viable chunk size
   
   console.log(`Starting chunking for ${content.length} characters`);
+  
+  // Sanitize content first
+  content = sanitizeText(content);
   
   const chunks: string[] = [];
   
@@ -123,8 +144,9 @@ export function chunkDocument(content: string): string[] {
     if (trimmedParagraph.length > MAX_CHUNK_CHARS) {
       // Save current chunk if it has content
       if (currentChunk.trim()) {
-        chunks.push(currentChunk.trim());
-        console.log(`Created chunk ${chunks.length} with ${currentChunk.length} chars (~${estimateTokenCount(currentChunk)} tokens)`);
+        const sanitizedChunk = sanitizeText(currentChunk.trim());
+        chunks.push(sanitizedChunk);
+        console.log(`Created chunk ${chunks.length} with ${sanitizedChunk.length} chars (~${estimateTokenCount(sanitizedChunk)} tokens)`);
       }
       
       // Split the large paragraph into smaller chunks
@@ -139,8 +161,9 @@ export function chunkDocument(content: string): string[] {
     
     if (potentialChunk.length > MAX_CHUNK_CHARS && currentChunk.length > MIN_CHUNK_CHARS) {
       // Save current chunk and start new one with overlap
-      chunks.push(currentChunk.trim());
-      console.log(`Created chunk ${chunks.length} with ${currentChunk.length} chars (~${estimateTokenCount(currentChunk)} tokens)`);
+      const sanitizedChunk = sanitizeText(currentChunk.trim());
+      chunks.push(sanitizedChunk);
+      console.log(`Created chunk ${chunks.length} with ${sanitizedChunk.length} chars (~${estimateTokenCount(sanitizedChunk)} tokens)`);
       
       // Start new chunk with overlap from the end of the previous chunk
       const overlapText = getOverlapText(currentChunk, OVERLAP_CHARS);
@@ -152,8 +175,9 @@ export function chunkDocument(content: string): string[] {
   
   // Add the final chunk if it has content
   if (currentChunk.trim() && currentChunk.length >= MIN_CHUNK_CHARS) {
-    chunks.push(currentChunk.trim());
-    console.log(`Created final chunk ${chunks.length} with ${currentChunk.length} chars (~${estimateTokenCount(currentChunk)} tokens)`);
+    const sanitizedChunk = sanitizeText(currentChunk.trim());
+    chunks.push(sanitizedChunk);
+    console.log(`Created final chunk ${chunks.length} with ${sanitizedChunk.length} chars (~${estimateTokenCount(sanitizedChunk)} tokens)`);
   }
   
   // Fallback: if we couldn't create good chunks, use character-based splitting
@@ -162,15 +186,17 @@ export function chunkDocument(content: string): string[] {
     return characterBasedChunking(content, MAX_CHUNK_CHARS, OVERLAP_CHARS);
   }
   
-  // Validate all chunks are within token limits
-  const validatedChunks = chunks.filter(chunk => {
-    const tokenCount = estimateTokenCount(chunk);
-    if (tokenCount > 800) {
-      console.warn(`Chunk too large (${tokenCount} tokens), skipping`);
-      return false;
-    }
-    return true;
-  });
+  // Validate all chunks are within token limits and properly sanitized
+  const validatedChunks = chunks
+    .map(chunk => sanitizeText(chunk))
+    .filter(chunk => {
+      const tokenCount = estimateTokenCount(chunk);
+      if (tokenCount > 800) {
+        console.warn(`Chunk too large (${tokenCount} tokens), skipping`);
+        return false;
+      }
+      return chunk.length > 0;
+    });
   
   console.log(`Successfully created ${validatedChunks.length} chunks`);
   return validatedChunks;
@@ -204,7 +230,7 @@ function splitLargeParagraph(paragraph: string, maxChars: number, overlapChars: 
       }
     }
     
-    const chunk = paragraph.slice(start, end).trim();
+    const chunk = sanitizeText(paragraph.slice(start, end).trim());
     if (chunk) {
       chunks.push(chunk);
       console.log(`Created sub-chunk with ${chunk.length} chars (~${estimateTokenCount(chunk)} tokens)`);
@@ -245,7 +271,7 @@ function characterBasedChunking(content: string, maxChars: number, overlapChars:
       }
     }
     
-    const chunk = content.slice(start, end).trim();
+    const chunk = sanitizeText(content.slice(start, end).trim());
     if (chunk) {
       chunks.push(chunk);
       console.log(`Created fallback chunk with ${chunk.length} chars (~${estimateTokenCount(chunk)} tokens)`);
@@ -256,4 +282,3 @@ function characterBasedChunking(content: string, maxChars: number, overlapChars:
   
   return chunks;
 }
-
