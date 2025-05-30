@@ -1,37 +1,59 @@
 
-// Text processing utilities
+// Text processing utilities with enhanced legal document support
+
 export function cleanPdfTextEnhanced(text: string): string {
   if (!text) return '';
   
-  return text
-    // Handle escape sequences
-    .replace(/\\n/g, '\n')
-    .replace(/\\r/g, '\r')
-    .replace(/\\t/g, '\t')
-    .replace(/\\\(/g, '(')
-    .replace(/\\\)/g, ')')
-    .replace(/\\\\/g, '\\')
-    .replace(/\\(\d{3})/g, (match, octal) => {
+  try {
+    let cleaned = text;
+    
+    // Handle PDF escape sequences
+    cleaned = cleaned
+      .replace(/\\n/g, '\n')
+      .replace(/\\r/g, '\r')
+      .replace(/\\t/g, '\t')
+      .replace(/\\\(/g, '(')
+      .replace(/\\\)/g, ')')
+      .replace(/\\\\/g, '\\')
+      .replace(/\\(\d{3})/g, (match, octal) => {
+        try {
+          const charCode = parseInt(octal, 8);
+          return charCode >= 32 && charCode <= 126 ? String.fromCharCode(charCode) : ' ';
+        } catch {
+          return ' ';
+        }
+      });
+    
+    // Handle hex codes more carefully
+    cleaned = cleaned.replace(/<([0-9A-Fa-f]+)>/g, (match, hex) => {
       try {
-        return String.fromCharCode(parseInt(octal, 8));
-      } catch {
-        return '';
-      }
-    })
-    // Handle hex codes
-    .replace(/<([0-9A-Fa-f]+)>/g, (match, hex) => {
-      try {
+        if (hex.length % 2 !== 0) return ' ';
         const bytes = hex.match(/.{2}/g) || [];
-        return bytes.map(byte => String.fromCharCode(parseInt(byte, 16))).join('');
+        return bytes.map(byte => {
+          const charCode = parseInt(byte, 16);
+          return charCode >= 32 && charCode <= 126 ? String.fromCharCode(charCode) : ' ';
+        }).join('');
       } catch {
-        return '';
+        return ' ';
       }
-    })
-    // Clean up whitespace and control characters
-    .replace(/[\x00-\x1F\x7F]/g, ' ')  // Remove control characters
-    .replace(/[^\x20-\x7E\s]/g, ' ')   // Keep only printable ASCII + whitespace
-    .replace(/\s+/g, ' ')              // Normalize whitespace
-    .trim();
+    });
+    
+    // Clean up control characters and normalize whitespace
+    cleaned = cleaned
+      .replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, ' ') // Remove control characters
+      .replace(/[^\x20-\x7E\s\t\n\r]/g, ' ') // Keep only safe characters
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
+    
+    return cleaned;
+  } catch (error) {
+    console.warn('Error cleaning PDF text:', error);
+    // Ultra-safe fallback
+    return text
+      .replace(/[^\x20-\x7E\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
 }
 
 export function isValidTextContent(text: string): boolean {
@@ -50,7 +72,9 @@ export function isValidTextContent(text: string): boolean {
     /^[A-Z\s]{20,}$/,  // Too many capitals
     /^\d+$/,           // Only numbers
     /^[^\w\s]+$/,      // Only special characters
-    /^.{1,2}$/         // Too short
+    /^.{1,2}$/,        // Too short
+    /^[A-Za-z0-9+/]{20,}={0,2}$/, // Base64-like
+    /^[0-9A-Fa-f]{20,}$/          // Hex-like
   ];
   
   return !garbagePatterns.some(pattern => pattern.test(text));
@@ -61,16 +85,18 @@ export function calculateEnhancedQuality(text: string): number {
   
   // Check for legal content first (high priority)
   const legalTerms = [
+    'ATTORNEYS', 'COUNSELORS', 'LAW', 'FIRM', 'PLLC',
     'REQUEST FOR PRODUCTION', 'DISCOVERY', 'INTERROGATORY',
     'DEFENDANT', 'PLAINTIFF', 'COURT', 'CASE', 'MOTION',
-    'DEPOSITION', 'SUBPOENA', 'ATTORNEY', 'LEGAL'
+    'DEPOSITION', 'SUBPOENA', 'ATTORNEY', 'LEGAL',
+    'VIA CERTIFIED MAIL', 'DEAR', 'SINCERELY', 'RE:'
   ];
   
   const upperText = text.toUpperCase();
   const hasLegalTerms = legalTerms.some(term => upperText.includes(term));
   
   if (hasLegalTerms) {
-    console.log('✅ Enhanced quality: Legal terms detected');
+    console.log('✅ Enhanced quality: Legal document content detected');
     return Math.min(0.9, 0.7 + (text.length / 1000) * 0.2);
   }
   
@@ -86,6 +112,10 @@ export function calculateEnhancedQuality(text: string): number {
   const lengthBonus = Math.min(text.length / 500, 0.3);
   const diversityBonus = new Set(words.map(w => w.toLowerCase())).size / words.length * 0.2;
   
-  const quality = (meaningfulRatio * 0.6) + lengthBonus + diversityBonus;
+  // Check for proper sentences
+  const sentences = text.match(/[.!?]+/g) || [];
+  const sentenceBonus = Math.min(sentences.length / 5, 0.2);
+  
+  const quality = (meaningfulRatio * 0.4) + lengthBonus + diversityBonus + sentenceBonus;
   return Math.max(0, Math.min(1, quality));
 }

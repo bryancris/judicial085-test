@@ -1,5 +1,8 @@
 
-// Enhanced text object extractor with optimized patterns and timeout controls
+// Enhanced text object extraction with proper legal document handling
+
+import { cleanPdfTextEnhanced, isValidTextContent, calculateEnhancedQuality } from '../utils/textUtils.ts';
+import { parseTextCommandsEnhanced } from '../utils/streamUtils.ts';
 
 export async function extractFromTextObjectsEnhanced(pdfData: Uint8Array, structure: any): Promise<{
   text: string;
@@ -8,97 +11,86 @@ export async function extractFromTextObjectsEnhanced(pdfData: Uint8Array, struct
   confidence: number;
   pageCount: number;
 }> {
-  console.log('🔍 Enhanced text object extraction with optimized patterns...');
+  console.log('=== ENHANCED TEXT OBJECT EXTRACTION ===');
   
   try {
     const decoder = new TextDecoder('latin1');
     const pdfString = decoder.decode(pdfData);
     
-    // Optimized extraction patterns with timeout protection
     const extractedTexts: string[] = [];
-    const maxProcessingTime = 8000; // 8 seconds max
-    const startTime = Date.now();
+    let textObjectCount = 0;
     
-    // More efficient patterns that won't cause infinite loops
-    const optimizedPatterns = [
-      // Basic text objects - most common
-      /BT\s+.*?\((.*?)\)\s*Tj.*?ET/gis,
-      /\((.*?)\)\s*Tj/gi,
-      /\((.*?)\)\s*TJ/gi,
-      
-      // Text positioning with content
-      /Td\s*\((.*?)\)\s*Tj/gi,
-      /TD\s*\((.*?)\)\s*Tj/gi,
-      
-      // Font and text combinations
-      /\/F\d+\s+[\d\.]+\s+Tf\s*\((.*?)\)\s*Tj/gi,
-      
-      // Array-based text
-      /TJ\s*\[\s*\((.*?)\)\s*\]/gi,
-      
-      // Simple parenthetical content
-      /\((.*?)\)/gi
-    ];
+    // Enhanced text object pattern with timeout protection
+    const textObjectPattern = /BT\s*([\s\S]*?)\s*ET/gi;
+    const maxIterations = 200; // Prevent infinite loops
+    let iterationCount = 0;
     
-    for (let i = 0; i < optimizedPatterns.length; i++) {
-      // Check timeout
-      if (Date.now() - startTime > maxProcessingTime) {
-        console.log(`⏰ Timeout reached, stopping at pattern ${i + 1}`);
-        break;
+    let match;
+    while ((match = textObjectPattern.exec(pdfString)) !== null && iterationCount < maxIterations) {
+      iterationCount++;
+      textObjectCount++;
+      
+      const textObjectContent = match[1];
+      if (!textObjectContent || textObjectContent.length < 5) continue;
+      
+      // Skip if this looks like binary/encoded data
+      if (isBinaryData(textObjectContent)) {
+        console.log(`Skipping binary data in text object ${textObjectCount}`);
+        continue;
       }
       
-      const pattern = optimizedPatterns[i];
-      console.log(`Pattern ${i + 1}: ${pattern.toString()}`);
+      const extractedText = parseTextCommands(textObjectContent);
       
-      try {
-        // Use matchAll with limited iterations to prevent infinite loops
-        const matches = Array.from(pdfString.matchAll(pattern)).slice(0, 1000); // Limit matches
-        console.log(`Pattern ${i + 1} found ${matches.length} matches`);
-        
-        for (const match of matches) {
-          if (match[1] && match[1].trim().length > 0) {
-            const cleanText = cleanExtractedText(match[1]);
-            if (cleanText.length > 2) {
-              extractedTexts.push(cleanText);
-            }
-          }
-          
-          // Break if we have enough content or timeout approaching
-          if (extractedTexts.length > 500 || Date.now() - startTime > maxProcessingTime - 1000) {
-            break;
-          }
+      if (extractedText && extractedText.length > 10) {
+        // Additional validation for legal content
+        if (isLegalContent(extractedText) || isReadableText(extractedText)) {
+          extractedTexts.push(extractedText);
+          console.log(`✅ Extracted valid text from object ${textObjectCount}: "${extractedText.substring(0, 100)}..."`);
+        } else {
+          console.log(`❌ Rejected non-readable text from object ${textObjectCount}`);
         }
-        
-        // If we found substantial content, we can stop early
-        if (extractedTexts.length > 100) {
-          console.log(`✅ Found sufficient content (${extractedTexts.length} texts), stopping early`);
-          break;
-        }
-        
-      } catch (patternError) {
-        console.warn(`Pattern ${i + 1} error:`, patternError.message);
-        continue;
+      }
+      
+      // Early termination if we have enough good content
+      if (extractedTexts.length > 50 && extractedTexts.join(' ').length > 5000) {
+        console.log('✅ Found sufficient content, stopping early');
+        break;
       }
     }
     
-    const combinedText = extractedTexts.join(' ').trim();
-    const quality = calculateTextQuality(combinedText);
+    console.log(`Processed ${textObjectCount} text objects, extracted ${extractedTexts.length} valid texts`);
     
-    console.log(`✅ Text object extraction completed: ${combinedText.length} chars, quality: ${quality}`);
+    if (extractedTexts.length === 0) {
+      console.warn('No valid text extracted from text objects');
+      return {
+        text: '',
+        method: 'enhanced-text-objects',
+        quality: 0,
+        confidence: 0,
+        pageCount: structure.pageCount || 1
+      };
+    }
+    
+    // Combine and clean the extracted text
+    const combinedText = extractedTexts.join(' ').trim();
+    const cleanedText = cleanPdfTextEnhanced(combinedText);
+    const quality = calculateEnhancedQuality(cleanedText);
+    
+    console.log(`✅ Text object extraction completed: ${cleanedText.length} chars, quality: ${quality}`);
     
     return {
-      text: combinedText,
+      text: cleanedText,
       method: 'enhanced-text-objects',
       quality: quality,
-      confidence: quality > 0.3 ? 0.8 : 0.4,
-      pageCount: structure.pages || 1
+      confidence: 0.8,
+      pageCount: structure.pageCount || Math.max(1, Math.floor(textObjectCount / 10))
     };
     
   } catch (error) {
-    console.error('❌ Text object extraction failed:', error);
+    console.error('Error in text object extraction:', error);
     return {
       text: '',
-      method: 'enhanced-text-objects-failed',
+      method: 'enhanced-text-objects',
       quality: 0,
       confidence: 0,
       pageCount: 1
@@ -106,38 +98,109 @@ export async function extractFromTextObjectsEnhanced(pdfData: Uint8Array, struct
   }
 }
 
-// Optimized text cleaning function
-function cleanExtractedText(text: string): string {
-  if (!text) return '';
+// Enhanced text command parsing with better legal document support
+function parseTextCommands(textObject: string): string {
+  const textParts: string[] = [];
   
-  try {
-    return text
-      .replace(/\\n/g, ' ')
-      .replace(/\\r/g, ' ')
-      .replace(/\\t/g, ' ')
-      .replace(/\\\\/g, '\\')
-      .replace(/\\\(/g, '(')
-      .replace(/\\\)/g, ')')
-      .replace(/\\'/g, "'")
-      .replace(/\\"/g, '"')
-      .replace(/\s+/g, ' ')
-      .trim();
-  } catch (error) {
-    return text.trim();
+  // Enhanced patterns for legal documents
+  const textShowPatterns = [
+    // Standard text show operations
+    /\(([^)]{3,})\)\s*Tj/gi,
+    /\(([^)]{3,})\)\s*TJ/gi,
+    /\(([^)]{3,})\)\s*'/gi,
+    /\(([^)]{3,})\)\s*"/gi,
+    
+    // Array text operations
+    /\[(.*?)\]\s*TJ/gi,
+    
+    // Quote patterns for legal text
+    /"([^"]{5,})"/gi,
+    
+    // Font and positioning with text
+    /\/F\d+\s+[\d\.]+\s+Tf\s*\(([^)]{3,})\)/gi,
+    /T[dm]\s*\(([^)]{3,})\)/gi
+  ];
+  
+  for (const pattern of textShowPatterns) {
+    let match;
+    let patternCount = 0;
+    const maxPatternMatches = 100; // Prevent infinite loops
+    
+    while ((match = pattern.exec(textObject)) !== null && patternCount < maxPatternMatches) {
+      patternCount++;
+      
+      const rawText = match[1];
+      if (!rawText || rawText.length < 3) continue;
+      
+      // Skip binary patterns
+      if (isBinaryData(rawText)) continue;
+      
+      const cleanedText = cleanPdfTextEnhanced(rawText);
+      if (cleanedText && isValidTextContent(cleanedText)) {
+        textParts.push(cleanedText);
+      }
+    }
+    
+    // Reset regex lastIndex to prevent issues
+    pattern.lastIndex = 0;
   }
+  
+  return textParts.join(' ').trim();
 }
 
-// Fast quality calculation
-function calculateTextQuality(text: string): number {
-  if (!text || text.length < 10) return 0;
+// Check if content is binary/encoded data
+function isBinaryData(text: string): boolean {
+  if (!text || text.length < 3) return true;
   
-  const words = text.split(/\s+/);
-  const meaningfulWords = words.filter(word => 
-    word.length > 2 && /^[a-zA-Z]/.test(word)
-  );
+  // Check for high ratio of non-printable characters
+  const nonPrintableCount = (text.match(/[\x00-\x1F\x7F-\xFF]/g) || []).length;
+  const nonPrintableRatio = nonPrintableCount / text.length;
   
-  const ratio = meaningfulWords.length / Math.max(words.length, 1);
-  const lengthScore = Math.min(text.length / 500, 1);
+  if (nonPrintableRatio > 0.5) return true;
   
-  return Math.min(ratio * 0.7 + lengthScore * 0.3, 1);
+  // Check for encoded data patterns
+  const binaryPatterns = [
+    /^[A-Za-z0-9+/]{20,}={0,2}$/, // Base64-like
+    /^[0-9A-Fa-f]{20,}$/,         // Hex-like
+    /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]{5,}/, // Control characters
+    /[^\x20-\x7E\s\t\n\r]{10,}/   // Non-ASCII sequences
+  ];
+  
+  return binaryPatterns.some(pattern => pattern.test(text));
+}
+
+// Check if text contains legal content indicators
+function isLegalContent(text: string): boolean {
+  const legalTerms = [
+    'THE', 'FIRM', 'ATTORNEYS', 'COUNSELORS', 'LAW',
+    'PLAINTIFF', 'DEFENDANT', 'COURT', 'CASE',
+    'MOTION', 'BRIEF', 'DISCOVERY', 'DEPOSITION',
+    'CONTRACT', 'AGREEMENT', 'WHEREAS', 'PARTY',
+    'HEREBY', 'ATTORNEY', 'LEGAL', 'COUNSEL',
+    'RE:', 'Dear', 'Sincerely', 'Respectfully',
+    'VIA', 'CERTIFIED', 'MAIL', 'FAX'
+  ];
+  
+  const upperText = text.toUpperCase();
+  return legalTerms.some(term => upperText.includes(term));
+}
+
+// Check if text is generally readable
+function isReadableText(text: string): boolean {
+  if (!text || text.length < 5) return false;
+  
+  // Check for reasonable character distribution
+  const letters = (text.match(/[a-zA-Z]/g) || []).length;
+  const total = text.length;
+  const letterRatio = letters / total;
+  
+  // Should have at least 40% letters for readable text
+  if (letterRatio < 0.4) return false;
+  
+  // Check for common English words
+  const commonWords = ['the', 'and', 'or', 'of', 'to', 'in', 'for', 'with', 'by', 'from', 'this', 'that'];
+  const lowerText = text.toLowerCase();
+  const hasCommonWords = commonWords.some(word => lowerText.includes(word));
+  
+  return hasCommonWords || isLegalContent(text);
 }
