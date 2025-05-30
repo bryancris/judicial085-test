@@ -24,6 +24,34 @@ export async function extractTextWithWorkingOCR(pdfData: Uint8Array): Promise<{
   }
 }
 
+// Detect PDF metadata content - SAME AS REAL EXTRACTOR
+function isMetadataContent(text: string): boolean {
+  if (!text || text.length < 10) return false;
+  
+  const metadataPatterns = [
+    /^[A-Za-z]{1,3}\^\w/,                    // Patterns like "Fh^f"
+    /rdf:|xml:|dc:/i,                        // RDF/XML namespace prefixes
+    /begin=|end=/,                           // PDF structure markers
+    /Core\s+rdf/i,                           // PDF metadata structures
+    /Producer\s+PDF/i,                       // PDF producer info
+    /W5M0MpCehiHzreSzNTczkc9d/i,            // Specific metadata IDs
+    /xmlns|xmp:|adobe/i,                     // XML/Adobe metadata
+    /PDFlib\+PDI/i,                          // PDF library markers
+    /^[^\w\s]*[A-Za-z]{1,4}\^[^\w\s]*\w/,   // Encoded metadata patterns
+    /alt\s+rdf:li/i,                         // RDF list items
+    /^[\s\w\^\~\<\>]{20,}begin=/i            // Mixed garbage with begin markers
+  ];
+  
+  const hasMetadataPattern = metadataPatterns.some(pattern => pattern.test(text));
+  
+  if (hasMetadataPattern) {
+    console.log('❌ OCR detected PDF metadata content, rejecting');
+    return true;
+  }
+  
+  return false;
+}
+
 // Analyze if document is actually scanned
 function analyzeIfScanned(pdfData: Uint8Array): boolean {
   const decoder = new TextDecoder('latin1');
@@ -60,9 +88,9 @@ async function processScannedDocument(pdfData: Uint8Array): Promise<{
   // Try to find any embedded text even in scanned documents
   const extractedText = [];
   
-  // Look for any text patterns that might be embedded
+  // Look for any text patterns that might be embedded - AVOID metadata
   const textPatterns = [
-    /\((.*?)\)\s*Tj/gi,
+    /\(([^)]{5,})\)\s*Tj/gi,                // Text show operators with meaningful content
     /REQUEST\s+FOR\s+PRODUCTION/gi,
     /DISCOVERY/gi,
     /INTERROGATORY/gi,
@@ -74,18 +102,26 @@ async function processScannedDocument(pdfData: Uint8Array): Promise<{
   for (const pattern of textPatterns) {
     const matches = pdfString.match(pattern);
     if (matches) {
-      extractedText.push(...matches.slice(0, 10));
+      const validMatches = matches.filter(match => {
+        const cleanMatch = match.replace(/[()]/g, '').trim();
+        return !isMetadataContent(cleanMatch) && cleanMatch.length > 3;
+      });
+      extractedText.push(...validMatches.slice(0, 10));
     }
   }
   
   if (extractedText.length > 0) {
     const realText = extractedText.join(' ').replace(/[()]/g, '').trim();
-    console.log(`Found embedded text in scanned document: "${realText.substring(0, 100)}..."`);
     
-    return {
-      text: `SCANNED DOCUMENT WITH EXTRACTED CONTENT:\n\n${realText}\n\nNote: This is a scanned document. Some content may require manual review for complete accuracy.`,
-      confidence: 0.6
-    };
+    // Final check to ensure it's not metadata
+    if (!isMetadataContent(realText)) {
+      console.log(`Found embedded text in scanned document: "${realText.substring(0, 100)}..."`);
+      
+      return {
+        text: `SCANNED DOCUMENT WITH EXTRACTED CONTENT:\n\n${realText}\n\nNote: This is a scanned document. Some content may require manual review for complete accuracy.`,
+        confidence: 0.6
+      };
+    }
   }
   
   // If no embedded text found, return minimal analysis
@@ -105,12 +141,12 @@ async function extractRemainingText(pdfData: Uint8Array): Promise<{
   // Look for any text that might have been missed
   const remainingText = [];
   
-  // Extract any visible text
-  const visibleTextPattern = /\((.*?)\)\s*Tj/gi;
+  // Extract any visible text - AVOID metadata
+  const visibleTextPattern = /\(([^)]{4,})\)\s*Tj/gi;
   let match;
   while ((match = visibleTextPattern.exec(pdfString)) !== null) {
     const text = match[1].trim();
-    if (text.length > 2 && /[a-zA-Z]/.test(text)) {
+    if (text.length > 3 && /[a-zA-Z]/.test(text) && !isMetadataContent(text)) {
       remainingText.push(text);
     }
   }
@@ -158,12 +194,22 @@ The document is available for legal analysis and case management workflows.`;
   };
 }
 
-// Validate OCR results
+// Validate OCR results - IMPROVED with metadata detection
 export function validateOCRResult(text: string, confidence: number): {
   isValid: boolean;
   quality: number;
   needsManualReview: boolean;
 } {
+  // Check for metadata first
+  if (isMetadataContent(text)) {
+    console.log('❌ OCR validation failed: metadata detected');
+    return {
+      isValid: false,
+      quality: 0,
+      needsManualReview: true
+    };
+  }
+  
   const isValid = confidence > 0.2 && text.length > 50;
   const quality = confidence;
   const needsManualReview = confidence < 0.6 || text.length < 200;
