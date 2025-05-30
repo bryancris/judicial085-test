@@ -1,6 +1,5 @@
 
-// Character code extraction method
-import { cleanPdfTextEnhanced, isValidTextContent, calculateEnhancedQuality } from '../utils/textUtils.ts';
+// Character code extractor with timeout protection
 
 export async function extractFromCharacterCodes(pdfData: Uint8Array, structure: any): Promise<{
   text: string;
@@ -9,56 +8,58 @@ export async function extractFromCharacterCodes(pdfData: Uint8Array, structure: 
   confidence: number;
   pageCount: number;
 }> {
-  console.log('🔍 Character code extraction...');
+  console.log('🔍 Character code extraction with timeout protection...');
   
-  const extractedParts: string[] = [];
-  
-  // Convert bytes to character sequences
-  for (let i = 0; i < pdfData.length - 10; i++) {
-    let sequence = '';
-    let validChars = 0;
+  try {
+    const maxProcessingTime = 3000; // 3 seconds max
+    const startTime = Date.now();
     
-    // Read up to 50 characters
-    for (let j = 0; j < 50 && i + j < pdfData.length; j++) {
-      const byte = pdfData[i + j];
+    const decoder = new TextDecoder('latin1');
+    const pdfString = decoder.decode(pdfData);
+    
+    // Look for character codes and hex values efficiently
+    const extractedChars: string[] = [];
+    
+    // Simple approach - look for sequences of printable characters
+    for (let i = 0; i < Math.min(pdfString.length, 50000); i++) {
+      if (Date.now() - startTime > maxProcessingTime) {
+        console.log('⏰ Character code extraction timeout reached');
+        break;
+      }
       
-      // Check for printable ASCII
-      if (byte >= 32 && byte <= 126) {
-        sequence += String.fromCharCode(byte);
-        validChars++;
-      } else if (byte === 10 || byte === 13) {
-        sequence += ' '; // Convert newlines to spaces
-      } else {
-        break; // Stop at non-printable character
+      const char = pdfString[i];
+      const code = char.charCodeAt(0);
+      
+      // Include printable ASCII characters
+      if (code >= 32 && code <= 126) {
+        extractedChars.push(char);
       }
+      
+      // Limit processing
+      if (extractedChars.length > 5000) break;
     }
     
-    // If we found a good sequence, save it
-    if (validChars > 10 && sequence.length > 15) {
-      const cleanText = cleanPdfTextEnhanced(sequence);
-      if (cleanText && isValidTextContent(cleanText)) {
-        extractedParts.push(cleanText);
-        console.log(`  Found character sequence: "${cleanText.substring(0, 50)}..."`);
-        
-        if (extractedParts.length > 50) break; // Limit results
-      }
-    }
+    const combinedText = extractedChars.join('').replace(/\s+/g, ' ').trim();
+    const quality = combinedText.length > 100 ? 0.2 : 0.05;
     
-    // Skip ahead to avoid overlapping sequences
-    i += Math.max(1, sequence.length / 2);
+    console.log(`✅ Character code extraction completed: ${combinedText.length} chars`);
+    
+    return {
+      text: combinedText,
+      method: 'character-codes',
+      quality: quality,
+      confidence: quality > 0.15 ? 0.4 : 0.1,
+      pageCount: structure.pages || 1
+    };
+    
+  } catch (error) {
+    console.error('❌ Character code extraction failed:', error);
+    return {
+      text: '',
+      method: 'character-codes-failed',
+      quality: 0,
+      confidence: 0,
+      pageCount: 1
+    };
   }
-  
-  const combinedText = extractedParts.join(' ').trim();
-  const pageCount = structure?.pages || 1;
-  const quality = calculateEnhancedQuality(combinedText);
-  
-  console.log(`Character code extraction complete: ${combinedText.length} chars, quality: ${quality}`);
-  
-  return {
-    text: combinedText,
-    method: 'character-codes',
-    quality: quality,
-    confidence: quality > 0.15 ? 0.6 : 0.3,
-    pageCount: pageCount
-  };
 }

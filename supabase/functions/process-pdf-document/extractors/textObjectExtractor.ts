@@ -1,6 +1,5 @@
 
-// Enhanced Text Object Extractor
-import { cleanPdfTextEnhanced, isValidTextContent, calculateEnhancedQuality } from '../utils/textUtils.ts';
+// Enhanced text object extractor with optimized patterns and timeout controls
 
 export async function extractFromTextObjectsEnhanced(pdfData: Uint8Array, structure: any): Promise<{
   text: string;
@@ -9,78 +8,136 @@ export async function extractFromTextObjectsEnhanced(pdfData: Uint8Array, struct
   confidence: number;
   pageCount: number;
 }> {
-  const decoder = new TextDecoder('latin1');
-  const pdfString = decoder.decode(pdfData);
+  console.log('🔍 Enhanced text object extraction with optimized patterns...');
   
-  console.log('🔍 Enhanced text object extraction with comprehensive patterns...');
-  
-  const extractedText: string[] = [];
-  
-  // COMPREHENSIVE text extraction patterns
-  const textPatterns = [
-    // Standard text show operators
-    /BT\s+.*?\((.*?)\)\s*Tj.*?ET/gis,
-    /\((.*?)\)\s*Tj/gi,
-    /\((.*?)\)\s*TJ/gi,
-    /\((.*?)\)\s*'/gi,
-    /\((.*?)\)\s*"/gi,
+  try {
+    const decoder = new TextDecoder('latin1');
+    const pdfString = decoder.decode(pdfData);
     
-    // Text arrays and positioning
-    /TJ\s*\[\s*\((.*?)\)\s*\]/gi,
-    /Td\s*\((.*?)\)\s*Tj/gi,
-    /TD\s*\((.*?)\)\s*Tj/gi,
-    /Tm\s+[\d\.\-\s]+\((.*?)\)\s*Tj/gi,
+    // Optimized extraction patterns with timeout protection
+    const extractedTexts: string[] = [];
+    const maxProcessingTime = 8000; // 8 seconds max
+    const startTime = Date.now();
     
-    // Font definitions with text
-    /\/F\d+\s+[\d\.]+\s+Tf\s*\((.*?)\)\s*Tj/gi,
-    /\/F\d+\s+[\d\.]+\s+Tf\s*.*?\((.*?)\)/gi,
-    
-    // Text with positioning and spacing
-    /[\d\.\-\s]+\s+Td\s*\((.*?)\)/gi,
-    /[\d\.\-\s]+\s+TD\s*\((.*?)\)/gi,
-    
-    // Quoted text patterns
-    /"([^"]{3,})"/gi,
-    /'([^']{3,})'/gi,
-    
-    // Raw parenthetical text (broader)
-    /\(([^)]{5,})\)/gi
-  ];
-  
-  console.log(`Trying ${textPatterns.length} different text extraction patterns...`);
-  
-  for (let i = 0; i < textPatterns.length; i++) {
-    const pattern = textPatterns[i];
-    console.log(`Pattern ${i + 1}: ${pattern.toString()}`);
-    
-    let match;
-    let patternMatches = 0;
-    while ((match = pattern.exec(pdfString)) !== null && extractedText.length < 200) {
-      const text = cleanPdfTextEnhanced(match[1]);
+    // More efficient patterns that won't cause infinite loops
+    const optimizedPatterns = [
+      // Basic text objects - most common
+      /BT\s+.*?\((.*?)\)\s*Tj.*?ET/gis,
+      /\((.*?)\)\s*Tj/gi,
+      /\((.*?)\)\s*TJ/gi,
       
-      if (text && text.length > 2 && isValidTextContent(text)) {
-        console.log(`  Found: "${text.substring(0, 50)}..."`);
-        extractedText.push(text);
-        patternMatches++;
+      // Text positioning with content
+      /Td\s*\((.*?)\)\s*Tj/gi,
+      /TD\s*\((.*?)\)\s*Tj/gi,
+      
+      // Font and text combinations
+      /\/F\d+\s+[\d\.]+\s+Tf\s*\((.*?)\)\s*Tj/gi,
+      
+      // Array-based text
+      /TJ\s*\[\s*\((.*?)\)\s*\]/gi,
+      
+      // Simple parenthetical content
+      /\((.*?)\)/gi
+    ];
+    
+    for (let i = 0; i < optimizedPatterns.length; i++) {
+      // Check timeout
+      if (Date.now() - startTime > maxProcessingTime) {
+        console.log(`⏰ Timeout reached, stopping at pattern ${i + 1}`);
+        break;
+      }
+      
+      const pattern = optimizedPatterns[i];
+      console.log(`Pattern ${i + 1}: ${pattern.toString()}`);
+      
+      try {
+        // Use matchAll with limited iterations to prevent infinite loops
+        const matches = Array.from(pdfString.matchAll(pattern)).slice(0, 1000); // Limit matches
+        console.log(`Pattern ${i + 1} found ${matches.length} matches`);
+        
+        for (const match of matches) {
+          if (match[1] && match[1].trim().length > 0) {
+            const cleanText = cleanExtractedText(match[1]);
+            if (cleanText.length > 2) {
+              extractedTexts.push(cleanText);
+            }
+          }
+          
+          // Break if we have enough content or timeout approaching
+          if (extractedTexts.length > 500 || Date.now() - startTime > maxProcessingTime - 1000) {
+            break;
+          }
+        }
+        
+        // If we found substantial content, we can stop early
+        if (extractedTexts.length > 100) {
+          console.log(`✅ Found sufficient content (${extractedTexts.length} texts), stopping early`);
+          break;
+        }
+        
+      } catch (patternError) {
+        console.warn(`Pattern ${i + 1} error:`, patternError.message);
+        continue;
       }
     }
-    console.log(`Pattern ${i + 1} found ${patternMatches} matches`);
     
-    // Reset regex lastIndex
-    pattern.lastIndex = 0;
+    const combinedText = extractedTexts.join(' ').trim();
+    const quality = calculateTextQuality(combinedText);
+    
+    console.log(`✅ Text object extraction completed: ${combinedText.length} chars, quality: ${quality}`);
+    
+    return {
+      text: combinedText,
+      method: 'enhanced-text-objects',
+      quality: quality,
+      confidence: quality > 0.3 ? 0.8 : 0.4,
+      pageCount: structure.pages || 1
+    };
+    
+  } catch (error) {
+    console.error('❌ Text object extraction failed:', error);
+    return {
+      text: '',
+      method: 'enhanced-text-objects-failed',
+      quality: 0,
+      confidence: 0,
+      pageCount: 1
+    };
   }
+}
+
+// Optimized text cleaning function
+function cleanExtractedText(text: string): string {
+  if (!text) return '';
   
-  const combinedText = extractedText.join(' ').trim();
-  const pageCount = structure?.pages || 1;
-  const quality = calculateEnhancedQuality(combinedText);
+  try {
+    return text
+      .replace(/\\n/g, ' ')
+      .replace(/\\r/g, ' ')
+      .replace(/\\t/g, ' ')
+      .replace(/\\\\/g, '\\')
+      .replace(/\\\(/g, '(')
+      .replace(/\\\)/g, ')')
+      .replace(/\\'/g, "'")
+      .replace(/\\"/g, '"')
+      .replace(/\s+/g, ' ')
+      .trim();
+  } catch (error) {
+    return text.trim();
+  }
+}
+
+// Fast quality calculation
+function calculateTextQuality(text: string): number {
+  if (!text || text.length < 10) return 0;
   
-  console.log(`Enhanced text object extraction complete: ${combinedText.length} chars, quality: ${quality}`);
+  const words = text.split(/\s+/);
+  const meaningfulWords = words.filter(word => 
+    word.length > 2 && /^[a-zA-Z]/.test(word)
+  );
   
-  return {
-    text: combinedText,
-    method: 'enhanced-text-objects',
-    quality: quality,
-    confidence: quality > 0.3 ? 0.85 : 0.6,
-    pageCount: pageCount
-  };
+  const ratio = meaningfulWords.length / Math.max(words.length, 1);
+  const lengthScore = Math.min(text.length / 500, 1);
+  
+  return Math.min(ratio * 0.7 + lengthScore * 0.3, 1);
 }

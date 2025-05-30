@@ -1,6 +1,5 @@
 
-// Raw text scanning extractor
-import { cleanPdfTextEnhanced, isValidTextContent, calculateEnhancedQuality } from '../utils/textUtils.ts';
+// Raw text extractor with efficient scanning
 
 export async function extractFromRawText(pdfData: Uint8Array, structure: any): Promise<{
   text: string;
@@ -9,66 +8,46 @@ export async function extractFromRawText(pdfData: Uint8Array, structure: any): P
   confidence: number;
   pageCount: number;
 }> {
-  const decoder = new TextDecoder('latin1');
-  const pdfString = decoder.decode(pdfData);
+  console.log('🔍 Raw text scanning with efficient patterns...');
   
-  console.log('🔍 Raw text scanning for readable content...');
-  
-  const extractedParts: string[] = [];
-  
-  // Find sequences of readable text (more aggressive approach)
-  const readableTextPatterns = [
-    // Words with spaces (legal document patterns)
-    /\b[A-Z][A-Z\s]{10,}\b/g,  // Uppercase sequences like "REQUEST FOR PRODUCTION"
-    /\b[A-Za-z]+(?:\s+[A-Za-z]+){3,}\b/g,  // Multiple words together
-    /[A-Z][a-z]+(?:\s+[A-Za-z]+){2,}/g,  // Sentence-like patterns
+  try {
+    const decoder = new TextDecoder('latin1');
+    const pdfString = decoder.decode(pdfData);
     
-    // Legal document specific patterns
-    /REQUEST\s+FOR\s+PRODUCTION[^.]*\./gi,
-    /DISCOVERY[^.]*\./gi,
-    /INTERROGATORY[^.]*\./gi,
-    /TO:\s*[^.]*\./gi,
-    /FROM:\s*[^.]*\./gi,
-    /RE:\s*[^.]*\./gi,
-    /CASE\s+NO[^.]*\./gi,
+    // Quick scan for readable text
+    const readableTextPattern = /[A-Za-z][A-Za-z\s]{10,}/g;
+    const matches = Array.from(pdfString.matchAll(readableTextPattern)).slice(0, 200);
     
-    // Date patterns
-    /\b\d{1,2}\/\d{1,2}\/\d{4}\b/g,
-    /\b[A-Z][a-z]+\s+\d{1,2},\s+\d{4}\b/g,
+    const extractedTexts: string[] = [];
     
-    // Address patterns
-    /\b\d+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+(?:Street|St|Avenue|Ave|Boulevard|Blvd|Road|Rd)\b/gi
-  ];
-  
-  console.log(`Scanning with ${readableTextPatterns.length} readable text patterns...`);
-  
-  for (let i = 0; i < readableTextPatterns.length; i++) {
-    const pattern = readableTextPatterns[i];
-    const matches = pdfString.match(pattern);
-    
-    if (matches) {
-      console.log(`Pattern ${i + 1} found ${matches.length} matches`);
-      for (const match of matches.slice(0, 20)) {
-        const cleanText = cleanPdfTextEnhanced(match);
-        if (cleanText && cleanText.length > 5 && isValidTextContent(cleanText)) {
-          console.log(`  Found: "${cleanText.substring(0, 50)}..."`);
-          extractedParts.push(cleanText);
-        }
+    for (const match of matches) {
+      const text = match[0].trim();
+      if (text.length > 10 && !text.includes('obj') && !text.includes('endobj')) {
+        extractedTexts.push(text);
       }
     }
+    
+    const combinedText = extractedTexts.join(' ').trim();
+    const quality = combinedText.length > 50 ? 0.3 : 0.1;
+    
+    console.log(`✅ Raw text extraction completed: ${combinedText.length} chars`);
+    
+    return {
+      text: combinedText,
+      method: 'raw-text-scan',
+      quality: quality,
+      confidence: quality > 0.2 ? 0.5 : 0.2,
+      pageCount: structure.pages || 1
+    };
+    
+  } catch (error) {
+    console.error('❌ Raw text extraction failed:', error);
+    return {
+      text: '',
+      method: 'raw-text-failed',
+      quality: 0,
+      confidence: 0,
+      pageCount: 1
+    };
   }
-  
-  const combinedText = extractedParts.join(' ').trim();
-  const pageCount = structure?.pages || 1;
-  const quality = calculateEnhancedQuality(combinedText);
-  
-  console.log(`Raw text scanning complete: ${combinedText.length} chars, quality: ${quality}`);
-  
-  return {
-    text: combinedText,
-    method: 'raw-text-scanning',
-    quality: quality,
-    confidence: quality > 0.2 ? 0.7 : 0.4,
-    pageCount: pageCount
-  };
 }
