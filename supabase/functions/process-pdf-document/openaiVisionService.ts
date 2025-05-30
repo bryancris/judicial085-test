@@ -1,30 +1,42 @@
 
-// Enhanced OpenAI Vision Service with multiple attempts and better prompting
+// Fixed OpenAI Vision Service with comprehensive debugging and error handling
 
 export async function extractTextWithOpenAIVision(pdfData: Uint8Array): Promise<{
   text: string;
   confidence: number;
   pageCount?: number;
 }> {
-  console.log('🔍 Starting enhanced OpenAI Vision OCR extraction...');
+  console.log('🔍 Starting FIXED OpenAI Vision OCR extraction...');
   
   try {
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openaiApiKey) {
+      console.error('❌ OpenAI API key not found in environment variables');
       throw new Error('OpenAI API key not found in environment variables');
     }
     
+    console.log('✅ OpenAI API key found, proceeding with Vision API call...');
+    
     // Convert PDF to base64 for OpenAI Vision
+    console.log('📄 Converting PDF to base64...');
     const base64Pdf = btoa(String.fromCharCode(...pdfData));
     const dataUrl = `data:application/pdf;base64,${base64Pdf}`;
     
-    console.log('📄 Processing PDF with enhanced OpenAI Vision (multiple attempts)...');
+    console.log(`✅ PDF converted to base64 (${base64Pdf.length} characters)`);
+    console.log('🚀 Making OpenAI Vision API call...');
     
-    // Try multiple prompting strategies for better results
-    const strategies = [
-      {
-        name: 'Legal Document Specialist',
-        systemPrompt: `You are an expert legal document OCR system. Extract ALL text from this document with perfect accuracy.
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: `You are an expert OCR system specialized in legal documents. Extract ALL text from this document with perfect accuracy.
 
 CRITICAL INSTRUCTIONS:
 - Extract EVERY word exactly as written
@@ -33,101 +45,71 @@ CRITICAL INSTRUCTIONS:
 - Pay special attention to legal terminology and case details
 - For demand letters: extract sender info, recipient info, legal claims, damages, and all body content
 
-Return ONLY the extracted text exactly as it appears.`,
-        userPrompt: 'Extract all text from this legal document with complete accuracy. Preserve formatting and include all content:'
-      },
-      {
-        name: 'OCR Specialist',
-        systemPrompt: `You are a professional OCR system. Your only job is to extract text from images/documents.
-
-RULES:
-- Extract EVERY character, word, and line exactly as shown
-- Do not summarize, interpret, or skip any content
-- Maintain original spacing and line breaks
-- Include all text including headers, footers, addresses, and signatures
-
-Output only the raw extracted text.`,
-        userPrompt: 'Perform OCR on this document and extract all visible text:'
-      }
-    ];
-
-    // Try each strategy
-    for (const strategy of strategies) {
-      try {
-        console.log(`Trying strategy: ${strategy.name}`);
-        
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openaiApiKey}`,
-            'Content-Type': 'application/json',
+Return ONLY the extracted text exactly as it appears in the document.`
           },
-          body: JSON.stringify({
-            model: 'gpt-4o', // Use more powerful model for better OCR
-            messages: [
+          {
+            role: 'user',
+            content: [
               {
-                role: 'system',
-                content: strategy.systemPrompt
+                type: 'text',
+                text: 'Extract all text from this legal document with complete accuracy. Preserve formatting and include all content:'
               },
               {
-                role: 'user',
-                content: [
-                  {
-                    type: 'text',
-                    text: strategy.userPrompt
-                  },
-                  {
-                    type: 'image_url',
-                    image_url: {
-                      url: dataUrl,
-                      detail: 'high'
-                    }
-                  }
-                ]
+                type: 'image_url',
+                image_url: {
+                  url: dataUrl,
+                  detail: 'high'
+                }
               }
-            ],
-            max_tokens: 4000,
-            temperature: 0.0 // Deterministic for OCR
-          }),
-        });
+            ]
+          }
+        ],
+        max_tokens: 4000,
+        temperature: 0.0
+      }),
+    });
 
-        if (!response.ok) {
-          console.warn(`Strategy ${strategy.name} failed: ${response.status}`);
-          continue;
-        }
+    console.log(`📡 OpenAI API response status: ${response.status}`);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ OpenAI API error: ${response.status} - ${errorText}`);
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+    }
 
-        const data = await response.json();
-        const extractedText = data.choices[0]?.message?.content || '';
-        
-        if (extractedText.length > 100) {
-          console.log(`✅ Strategy ${strategy.name} successful: ${extractedText.length} chars`);
-          
-          const confidence = calculateEnhancedConfidence(extractedText);
-          return {
-            text: extractedText.trim(),
-            confidence: confidence,
-            pageCount: estimatePageCount(extractedText)
-          };
-        }
-        
-        console.warn(`Strategy ${strategy.name} returned insufficient text: ${extractedText.length} chars`);
-        
-      } catch (strategyError) {
-        console.warn(`Strategy ${strategy.name} error:`, strategyError);
-        continue;
-      }
+    const data = await response.json();
+    console.log('✅ OpenAI API response received successfully');
+    
+    if (!data.choices || data.choices.length === 0) {
+      console.error('❌ No choices in OpenAI API response');
+      throw new Error('No choices in OpenAI API response');
     }
     
-    // If all strategies fail, return empty with low confidence
-    console.error('❌ All OpenAI Vision strategies failed');
+    const extractedText = data.choices[0]?.message?.content || '';
+    console.log(`📝 Extracted text length: ${extractedText.length} characters`);
+    
+    if (extractedText.length > 0) {
+      console.log(`📖 Text preview: "${extractedText.substring(0, 300)}..."`);
+    } else {
+      console.warn('⚠️ No text content extracted from document');
+    }
+    
+    const confidence = calculateConfidence(extractedText);
+    const pageCount = estimatePageCount(extractedText);
+    
+    console.log(`✅ Vision extraction complete: ${extractedText.length} chars, confidence: ${confidence}, pages: ${pageCount}`);
+    
     return {
-      text: '',
-      confidence: 0,
-      pageCount: 1
+      text: extractedText.trim(),
+      confidence: confidence,
+      pageCount: pageCount
     };
 
   } catch (error) {
-    console.error('❌ OpenAI Vision OCR failed:', error);
+    console.error('❌ OpenAI Vision OCR failed with error:', error);
+    console.error('Error details:', error.message);
+    
+    // Return empty result instead of throwing
     return {
       text: '',
       confidence: 0,
@@ -136,11 +118,11 @@ Output only the raw extracted text.`,
   }
 }
 
-// Enhanced confidence calculation
-function calculateEnhancedConfidence(text: string): number {
+// Calculate confidence based on text quality
+function calculateConfidence(text: string): number {
   if (!text || text.length < 20) return 0.1;
   
-  let confidence = 0.7; // Higher base for gpt-4o
+  let confidence = 0.7; // Base confidence for gpt-4o
   
   // Check for legal document indicators
   const legalTerms = [
@@ -171,20 +153,6 @@ function calculateEnhancedConfidence(text: string): number {
   // Check for email addresses (contact info)
   if (/@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(text)) {
     confidence += 0.05;
-  }
-  
-  // Penalize if text seems corrupted
-  const corruptionIndicators = [
-    /[^\x20-\x7E\s\n\r\t]/g, // Non-printable characters
-    /\s{10,}/g, // Excessive whitespace
-    /[A-Za-z]{50,}/g // Overly long words
-  ];
-  
-  for (const indicator of corruptionIndicators) {
-    const matches = text.match(indicator);
-    if (matches && matches.length > 3) {
-      confidence -= 0.1;
-    }
   }
   
   return Math.max(0.1, Math.min(0.95, confidence));

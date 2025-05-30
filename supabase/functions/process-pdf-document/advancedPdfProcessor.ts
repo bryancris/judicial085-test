@@ -1,11 +1,10 @@
 
-// Advanced PDF Processor - OpenAI Vision primary with enhanced fallback
+// Advanced PDF Processor - OpenAI Vision PRIMARY with comprehensive debugging
 
 import { extractTextWithLibrary, validateLibraryExtraction } from './pdfLibraryService.ts';
 import { extractTextWithOpenAIVision } from './openaiVisionService.ts';
 import { validateExtraction } from './utils/validationUtils.ts';
 import { chunkDocumentAdvanced } from './utils/chunkingUtils.ts';
-import { createComprehensiveAnalysisFallback } from './utils/fallbackAnalysisUtils.ts';
 
 export async function extractTextFromPdfAdvanced(pdfData: Uint8Array): Promise<{
   text: string;
@@ -16,40 +15,56 @@ export async function extractTextFromPdfAdvanced(pdfData: Uint8Array): Promise<{
   isScanned: boolean;
   processingNotes: string;
 }> {
-  console.log('=== STARTING ENHANCED PDF EXTRACTION WITH OPENAI VISION PRIMARY ===');
+  console.log('=== STARTING FIXED PDF EXTRACTION WITH OPENAI VISION PRIMARY ===');
   console.log(`Processing PDF of ${pdfData.length} bytes (${Math.round(pdfData.length / 1024)}KB)`);
   
   try {
-    // STEP 1: Try OpenAI Vision OCR FIRST for best quality
+    // STEP 1: Try OpenAI Vision OCR FIRST - this is our PRIMARY method
     console.log('=== STEP 1: OPENAI VISION OCR (PRIMARY METHOD) ===');
-    const ocrResult = await extractTextWithOpenAIVision(pdfData);
     
-    console.log(`OpenAI Vision OCR result:`);
-    console.log(`- Text length: ${ocrResult.text.length}`);
-    console.log(`- Confidence: ${ocrResult.confidence}`);
-    console.log(`- Content preview: "${ocrResult.text.substring(0, 300)}..."`);
+    const visionResult = await extractTextWithOpenAIVision(pdfData);
+    console.log(`OpenAI Vision result received:`);
+    console.log(`- Text length: ${visionResult.text.length}`);
+    console.log(`- Confidence: ${visionResult.confidence}`);
+    console.log(`- Page count: ${visionResult.pageCount}`);
     
-    // Enhanced validation for legal content - be more lenient for OpenAI Vision
-    const hasLegalContent = isLegalContent(ocrResult.text);
-    const hasReadableText = ocrResult.text.length > 50 && ocrResult.confidence > 0.3;
-    const hasBasicStructure = ocrResult.text.includes(' ') && ocrResult.text.match(/[a-zA-Z]{3,}/g);
+    if (visionResult.text.length > 0) {
+      console.log(`- Text preview: "${visionResult.text.substring(0, 200)}..."`);
+    } else {
+      console.log('- No text extracted from Vision API');
+    }
     
-    if (hasReadableText || hasLegalContent || hasBasicStructure) {
-      console.log('✅ OpenAI Vision OCR SUCCESSFUL - using primary extraction method');
+    // If Vision API extracted meaningful text, use it
+    if (visionResult.text.length > 50) {
+      console.log('✅ OpenAI Vision OCR SUCCESS - using Vision result');
       return {
-        text: ocrResult.text,
-        method: 'openai-vision-ocr-primary',
-        quality: Math.max(ocrResult.confidence, hasLegalContent ? 0.9 : 0.7),
-        confidence: ocrResult.confidence,
-        pageCount: ocrResult.pageCount || 1,
-        isScanned: true, // Vision API handles both but assume scanned for this case
-        processingNotes: `Primary Vision OCR: ${ocrResult.text.length} chars, confidence: ${ocrResult.confidence}`
+        text: visionResult.text,
+        method: 'openai-vision-primary',
+        quality: Math.max(0.7, visionResult.confidence),
+        confidence: visionResult.confidence,
+        pageCount: visionResult.pageCount || 1,
+        isScanned: true,
+        processingNotes: `Vision API extracted ${visionResult.text.length} characters successfully`
       };
     }
     
-    console.log('❌ OpenAI Vision OCR insufficient quality - trying native parsing fallback');
+    // If Vision extracted some text but not much, check if it's still better than nothing
+    if (visionResult.text.length > 20 && hasReadableContent(visionResult.text)) {
+      console.log('⚠️ Using limited Vision result as best available');
+      return {
+        text: visionResult.text,
+        method: 'openai-vision-limited',
+        quality: 0.5,
+        confidence: visionResult.confidence,
+        pageCount: visionResult.pageCount || 1,
+        isScanned: true,
+        processingNotes: `Vision API extracted limited text: ${visionResult.text.length} characters`
+      };
+    }
     
-    // STEP 2: Try native parsing as fallback only if Vision fails
+    console.log('❌ OpenAI Vision failed - trying native parsing fallback');
+    
+    // STEP 2: Native parsing only as fallback
     console.log('=== STEP 2: NATIVE PARSING FALLBACK ===');
     const libraryResult = await extractTextWithLibrary(pdfData);
     const libraryValidation = validateLibraryExtraction(libraryResult.text, libraryResult.pageCount);
@@ -58,98 +73,83 @@ export async function extractTextFromPdfAdvanced(pdfData: Uint8Array): Promise<{
     console.log(`- Text length: ${libraryResult.text.length}`);
     console.log(`- Quality: ${libraryValidation.quality}`);
     console.log(`- Valid: ${libraryValidation.isValid}`);
-    console.log(`- Content preview: "${libraryResult.text.substring(0, 200)}..."`);
     
-    // Use native result if it's better than Vision result
-    if (libraryValidation.isValid && libraryResult.text.length > ocrResult.text.length) {
-      console.log('✅ Native parsing better than Vision - using native result');
+    if (libraryValidation.isValid && libraryResult.text.length > 100) {
+      console.log('✅ Native parsing successful');
       return {
         text: libraryResult.text,
-        method: 'native-parsing-better-fallback',
+        method: 'native-parsing-fallback',
         quality: libraryValidation.quality,
         confidence: 0.6,
         pageCount: libraryResult.pageCount,
         isScanned: false,
-        processingNotes: `Native parsing better: ${libraryResult.text.length} chars vs Vision ${ocrResult.text.length} chars`
+        processingNotes: `Native parsing extracted ${libraryResult.text.length} characters`
       };
     }
     
-    // If we have any result from Vision, use it even if low quality
-    if (ocrResult.text.length > 20) {
-      console.log('⚠️ Using low-quality Vision result as best available');
-      return {
-        text: ocrResult.text,
-        method: 'openai-vision-low-quality',
-        quality: Math.max(0.4, ocrResult.confidence),
-        confidence: ocrResult.confidence,
-        pageCount: ocrResult.pageCount || 1,
-        isScanned: true,
-        processingNotes: `Low-quality Vision result: ${ocrResult.text.length} chars (fallback used)`
-      };
-    }
-    
-    console.log('❌ All extraction methods failed - using comprehensive fallback');
-    return createComprehensiveAnalysisFallback(pdfData);
+    // STEP 3: Create readable summary if all else fails
+    console.log('=== STEP 3: CREATING READABLE SUMMARY FALLBACK ===');
+    return createReadableSummary(pdfData);
     
   } catch (error) {
-    console.error('❌ Enhanced PDF extraction failed:', error);
-    return createComprehensiveAnalysisFallback(pdfData, error.message);
+    console.error('❌ PDF extraction failed completely:', error);
+    return createReadableSummary(pdfData, error.message);
   }
 }
 
-// Enhanced legal content detection with more patterns
-function isLegalContent(text: string): boolean {
-  if (!text || text.length < 20) return false;
+// Check if text contains readable content vs garbled data
+function hasReadableContent(text: string): boolean {
+  if (!text || text.length < 10) return false;
   
-  const legalTerms = [
-    'REQUEST FOR PRODUCTION',
-    'DISCOVERY',
-    'INTERROGATORY',
-    'DEFENDANT',
-    'PLAINTIFF',
-    'COURT',
-    'CASE NO',
-    'MOTION',
-    'DTPA',
-    'DEMAND LETTER',
-    'ATTORNEY',
-    'LAW FIRM',
-    'PURSUANT TO',
-    'TEXAS DECEPTIVE TRADE PRACTICES',
-    'VIOLATION',
-    'DAMAGES',
-    'DEMAND',
-    'SETTLEMENT',
-    'LEGAL NOTICE',
-    'STATUTORY',
-    'CEASE AND DESIST'
-  ];
+  // Check for basic readable patterns
+  const words = text.split(/\s+/).filter(word => word.length > 2);
+  const readableWords = words.filter(word => /^[a-zA-Z][a-zA-Z0-9]*$/.test(word));
+  const readableRatio = words.length > 0 ? readableWords.length / words.length : 0;
   
-  const upperText = text.toUpperCase();
-  const foundTerms = legalTerms.filter(term => upperText.includes(term));
+  console.log(`Readability check: ${readableWords.length}/${words.length} words (${(readableRatio * 100).toFixed(1)}%)`);
   
-  if (foundTerms.length > 0) {
-    console.log(`✅ Legal content detected: ${foundTerms.join(', ')}`);
-    return true;
-  }
+  return readableRatio > 0.3; // At least 30% readable words
+}
+
+// Create a readable summary when extraction fails
+function createReadableSummary(pdfData: Uint8Array, errorMessage?: string): {
+  text: string;
+  method: string;
+  quality: number;
+  confidence: number;
+  pageCount: number;
+  isScanned: boolean;
+  processingNotes: string;
+} {
+  const sizeKB = Math.round(pdfData.length / 1024);
+  const currentDate = new Date().toISOString().split('T')[0];
   
-  // Also check for common legal document patterns
-  const legalPatterns = [
-    /\b\d{4}-\d{4,6}\b/, // Case numbers
-    /\b[A-Z]{2,}\s+[A-Z]{2,}\s+[A-Z]{2,}\b/, // All caps legal headers
-    /Dear\s+[A-Z]/i, // Formal letter greeting
-    /Re:\s+/i, // Subject line
-    /Sincerely,/i, // Letter closing
-    /Attorney\s+for/i // Attorney representation
-  ];
-  
-  const hasLegalPattern = legalPatterns.some(pattern => pattern.test(text));
-  if (hasLegalPattern) {
-    console.log('✅ Legal document pattern detected');
-    return true;
-  }
-  
-  return false;
+  const summaryText = `DOCUMENT PROCESSING SUMMARY
+Date: ${currentDate}
+File Size: ${sizeKB}KB
+
+DOCUMENT ANALYSIS:
+This appears to be a legal document that could not be automatically extracted as text.
+${errorMessage ? `Processing Error: ${errorMessage}` : ''}
+
+MANUAL REVIEW REQUIRED:
+- Document has been successfully uploaded and stored
+- File is available for manual review and analysis
+- Consider using OCR tools for text extraction if needed
+- Document can be discussed in AI conversations for contextual analysis
+
+STATUS: Document processed and ready for manual review.
+This file is now available in your document library for case management and legal analysis.`;
+
+  return {
+    text: summaryText,
+    method: 'readable-summary-fallback',
+    quality: 0.4,
+    confidence: 0.5,
+    pageCount: 1,
+    isScanned: true,
+    processingNotes: `Created readable summary for ${sizeKB}KB document. Manual review recommended.`
+  };
 }
 
 // Export the chunking function for backward compatibility
