@@ -1,5 +1,4 @@
-
-// Complete OpenAI Vision Service with robust PDF handling and comprehensive debugging
+// Complete OpenAI Vision Service with robust PDF handling and fixed base64 conversion
 
 export async function extractTextWithOpenAIVision(pdfData: Uint8Array): Promise<{
   text: string;
@@ -29,15 +28,27 @@ export async function extractTextWithOpenAIVision(pdfData: Uint8Array): Promise<
       throw new Error(`PDF too large for Vision API: ${Math.round(pdfData.length / 1024 / 1024)}MB (max 20MB)`);
     }
     
-    // Convert PDF to base64 with validation
-    console.log('📄 Converting PDF to base64 for Vision API...');
+    // Convert PDF to base64 with FIXED conversion method for large files
+    console.log('📄 Converting PDF to base64 for Vision API using chunk-based method...');
     let base64Pdf: string;
     try {
-      base64Pdf = btoa(String.fromCharCode(...pdfData));
+      // Use chunk-based conversion to avoid stack overflow with large files
+      base64Pdf = convertToBase64Chunked(pdfData);
       console.log(`✅ PDF converted to base64: ${base64Pdf.length} characters`);
+      
+      // Validate base64 output
+      if (!base64Pdf || base64Pdf.length === 0) {
+        throw new Error('Base64 conversion produced empty result');
+      }
+      
+      // Basic base64 validation
+      if (!/^[A-Za-z0-9+/]*={0,2}$/.test(base64Pdf)) {
+        throw new Error('Base64 conversion produced invalid characters');
+      }
+      
     } catch (conversionError) {
       console.error('❌ Failed to convert PDF to base64:', conversionError);
-      throw new Error('Failed to convert PDF to base64 format');
+      throw new Error(`Failed to convert PDF to base64 format: ${conversionError.message}`);
     }
     
     const dataUrl = `data:application/pdf;base64,${base64Pdf}`;
@@ -157,6 +168,22 @@ Return ONLY the extracted text exactly as it appears in the document. Do not add
     // Re-throw the error to let the calling function handle it
     throw new Error(`Vision extraction failed: ${error.message}`);
   }
+}
+
+// FIXED: Chunk-based base64 conversion to handle large files
+function convertToBase64Chunked(uint8Array: Uint8Array): string {
+  const CHUNK_SIZE = 8192; // Process in 8KB chunks to avoid stack overflow
+  let binaryString = '';
+  
+  // Convert to binary string in chunks
+  for (let i = 0; i < uint8Array.length; i += CHUNK_SIZE) {
+    const chunk = uint8Array.slice(i, i + CHUNK_SIZE);
+    const chunkArray = Array.from(chunk);
+    binaryString += String.fromCharCode(...chunkArray);
+  }
+  
+  // Convert binary string to base64
+  return btoa(binaryString);
 }
 
 // Validate if extracted text appears to be from a legal document
