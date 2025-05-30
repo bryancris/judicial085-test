@@ -120,74 +120,80 @@ export async function generateAndStoreEmbeddings(
   }
 }
 
-// Advanced chunk content cleaning with null-byte removal
+// Enhanced chunk content cleaning with better null-byte removal
 function cleanChunkContentAdvanced(chunk: string): string {
   if (!chunk) return '';
   
   try {
-    // Remove null bytes and other problematic characters that cause database errors
+    // Comprehensive cleaning for better database compatibility
     let cleaned = chunk
-      .replace(/\0/g, '') // Remove null bytes
-      .replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, ' ') // Remove control characters except \t, \n, \r
+      .replace(/\0/g, '') // Remove null bytes completely
+      .replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, ' ') // Remove control characters
+      .replace(/\uFFFD/g, ' ') // Remove replacement characters
+      .replace(/[^\x20-\x7E\s\t\n\r]/g, ' ') // Keep only safe ASCII + whitespace
       .replace(/\s+/g, ' ') // Normalize whitespace
       .trim();
     
-    // Remove repetitive patterns (like repeated email addresses)
-    cleaned = removeRepetitivePatterns(cleaned);
+    // Remove repetitive patterns more effectively
+    cleaned = removeRepetitivePatternsEnhanced(cleaned);
     
-    // Additional cleaning for special characters that might cause issues
-    cleaned = cleaned
-      .replace(/[^\x20-\x7E\s\t\n\r]/g, ' ') // Keep only printable ASCII + whitespace
-      .replace(/\s+/g, ' ')
-      .trim();
-    
-    // Limit chunk size for processing efficiency
-    if (cleaned.length > 2500) {
-      cleaned = cleaned.substring(0, 2500).trim();
+    // Limit and clean chunk size
+    if (cleaned.length > 2000) {
+      cleaned = cleaned.substring(0, 2000).trim();
       // Try to end at a sentence boundary
       const lastSentence = cleaned.lastIndexOf('.');
-      if (lastSentence > 2000) {
+      if (lastSentence > 1500) {
         cleaned = cleaned.substring(0, lastSentence + 1);
       }
-      cleaned += ' [Content truncated for processing]';
+      cleaned += ' [Content truncated for processing efficiency]';
     }
     
     return cleaned;
   } catch (error) {
     console.warn('Error cleaning chunk content:', error);
-    // Fallback: aggressively clean the content
+    // Ultra-safe fallback
     return chunk
       .replace(/\0/g, '')
       .replace(/[^\x20-\x7E\s]/g, ' ')
       .replace(/\s+/g, ' ')
-      .substring(0, 1500)
+      .substring(0, 1000)
       .trim();
   }
 }
 
-// Remove repetitive patterns from content
-function removeRepetitivePatterns(text: string): string {
+// Enhanced pattern removal
+function removeRepetitivePatternsEnhanced(text: string): string {
   if (!text) return text;
   
   try {
-    // Remove repeated email addresses
     const words = text.split(/\s+/);
-    const seenEmails = new Set();
+    const seenPatterns = new Set();
     const filteredWords = [];
     
     for (const word of words) {
+      // Remove repeated email addresses
       if (/@/.test(word)) {
-        if (!seenEmails.has(word)) {
-          seenEmails.add(word);
+        if (!seenPatterns.has(word)) {
+          seenPatterns.add(word);
           filteredWords.push(word);
         }
-        // Skip repeated email addresses
-      } else {
-        filteredWords.push(word);
+        continue;
       }
+      
+      // Remove repeated PDF artifacts
+      if (/^(obj|endobj|stream|endstream|filter|length|xref)$/i.test(word)) {
+        continue;
+      }
+      
+      // Remove repeated numeric patterns
+      if (/^\d+$/.test(word) && word.length > 5) {
+        continue;
+      }
+      
+      filteredWords.push(word);
     }
     
-    // If we removed too many words, keep the original
+    // If we removed too many words, return original
     if (filteredWords.length < words.length * 0.3) {
       return text;
     }
@@ -198,99 +204,119 @@ function removeRepetitivePatterns(text: string): string {
   }
 }
 
-// Calculate advanced quality score for chunks
+// Enhanced quality calculation for better scoring
 function calculateAdvancedChunkQuality(content: string): number {
   try {
-    if (!content || content.length < 5) return 0;
+    if (!content || content.length < 10) return 0;
     
     const words = content.split(/\s+/);
     const totalWords = words.length;
     
     if (totalWords === 0) return 0;
     
-    // Count different types of content
+    // Enhanced content analysis
     const meaningfulWords = words.filter(word => 
       word.length > 2 && 
       /^[a-zA-Z]/.test(word) &&
-      !/^[@#$%^&*()]+/.test(word)
+      !/^(obj|endobj|stream|endstream|filter|length|xref)$/i.test(word)
     );
     
     const emailAddresses = words.filter(word => 
       /@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(word)
     );
     
-    const numbers = words.filter(word => /^\d+$/.test(word));
+    const legalTerms = words.filter(word =>
+      /^(discovery|request\s+for\s+production|interrogator|deposition|motion|brief|complaint|whereas|party|agreement|contract|shall|thereof)\b/i.test(word)
+    );
+    
     const sentences = content.match(/[.!?]+/g) || [];
     const properNouns = words.filter(word => /^[A-Z][a-z]+$/.test(word));
     
-    // Calculate quality metrics
+    // Calculate enhanced metrics
     const meaningfulRatio = meaningfulWords.length / totalWords;
+    const legalTermRatio = legalTerms.length / totalWords;
     const emailRatio = emailAddresses.length / totalWords;
     const properNounRatio = properNouns.length / totalWords;
-    const sentenceDensity = sentences.length / (totalWords / 10); // sentences per 10 words
-    const lengthScore = Math.min(content.length / 500, 1);
+    const sentenceDensity = sentences.length / Math.max(1, totalWords / 10);
+    const lengthScore = Math.min(content.length / 800, 1);
     const vocabularyDiversity = new Set(words.map(w => w.toLowerCase())).size / totalWords;
     
-    // Penalties for poor content
+    // Enhanced penalties
     let penalties = 0;
     
-    // Heavy penalty for excessive email repetition
-    if (emailRatio > 0.5) penalties += 0.6;
-    else if (emailRatio > 0.3) penalties += 0.3;
+    // Heavy penalty for excessive repetition
+    if (emailRatio > 0.4) penalties += 0.5;
+    else if (emailRatio > 0.2) penalties += 0.2;
     
-    // Penalty for too many numbers (might be formatting artifacts)
-    if (numbers.length / totalWords > 0.4) penalties += 0.2;
+    // Penalty for PDF artifacts
+    const artifactWords = words.filter(w => 
+      /^(obj|endobj|stream|endstream|filter|flatedecode|length|xref|\d+)$/i.test(w)
+    );
+    const artifactRatio = artifactWords.length / totalWords;
+    if (artifactRatio > 0.3) penalties += 0.4;
     
-    // Penalty for very low vocabulary diversity (repetitive content)
-    if (vocabularyDiversity < 0.3) penalties += 0.3;
+    // Penalty for low vocabulary diversity
+    if (vocabularyDiversity < 0.2) penalties += 0.3;
+    
+    // Bonus for legal content
+    let bonuses = 0;
+    if (legalTermRatio > 0.02) bonuses += 0.2;
+    if (properNounRatio > 0.1) bonuses += 0.1;
     
     // Calculate final quality score
     const qualityScore = (
       meaningfulRatio * 0.3 +
-      properNounRatio * 0.2 +
-      sentenceDensity * 0.2 +
+      legalTermRatio * 0.2 +
+      properNounRatio * 0.15 +
+      sentenceDensity * 0.15 +
       lengthScore * 0.1 +
-      vocabularyDiversity * 0.2
+      vocabularyDiversity * 0.1 +
+      bonuses
     ) - penalties;
     
     return Math.max(0, Math.min(1, qualityScore));
   } catch (error) {
     console.warn('Error calculating chunk quality:', error);
-    return 0.5; // Default quality score
+    return 0.4; // Safe default
   }
 }
 
-// Detect content type of chunk
+// Enhanced content type detection
 function detectContentType(content: string): string {
   if (!content) return 'unknown';
   
   try {
     const lowerContent = content.toLowerCase();
     
-    // Email content detection
-    if (/^(from|to|subject|date):/m.test(content) || 
-        /@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(content)) {
+    // Enhanced email detection
+    if (/^(from|to|subject|date|sent):/m.test(content) || 
+        (content.includes('@') && /@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(content))) {
       return 'email';
     }
     
-    // Legal document patterns
-    if (/\b(whereas|party|agreement|contract|shall|thereof)\b/i.test(content)) {
+    // Enhanced legal document detection
+    if (/\b(discovery|request\s+for\s+production|interrogator|deposition|motion|brief|complaint|whereas|party|agreement|contract|shall|thereof)\b/i.test(content)) {
       return 'legal_document';
     }
     
-    // Letter format
-    if (/\b(dear|sincerely|regards|yours|truly)\b/i.test(content)) {
-      return 'letter';
+    // Court document detection
+    if (/\b(court|case\s+no|docket|filing|petition|order)\b/i.test(content)) {
+      return 'court_document';
     }
     
-    // Form or structured data
-    if (/^[A-Z][^.]*:/.test(content) || content.includes('___')) {
+    // Correspondence detection
+    if (/\b(dear|sincerely|regards|yours\s+truly|respectfully)\b/i.test(content)) {
+      return 'correspondence';
+    }
+    
+    // Form detection
+    if (/^[A-Z][^.]*:/.test(content) || content.includes('___') || /\[\s*\]/.test(content)) {
       return 'form';
     }
     
     // General text content
-    if (/[.!?]/.test(content) && content.split(/\s+/).length > 10) {
-      return 'text_content';
+    if (/[.!?]/.test(content) && content.split(/\s+/).length > 15) {
+      return 'text_document';
     }
     
     return 'mixed_content';
