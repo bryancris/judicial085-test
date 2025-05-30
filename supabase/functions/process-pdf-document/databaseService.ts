@@ -1,7 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 import { generateEmbedding } from './openaiService.ts';
 
-// Enhanced embedding generation with multi-approach validation
+// Advanced embedding generation with comprehensive validation and null-byte handling
 export async function generateAndStoreEmbeddings(
   textChunks: string[], 
   documentId: string, 
@@ -10,7 +10,7 @@ export async function generateAndStoreEmbeddings(
   supabase: any,
   openaiApiKey: string
 ): Promise<void> {
-  console.log(`Generating embeddings for ${textChunks.length} text chunks with multi-approach validation`);
+  console.log(`Generating embeddings for ${textChunks.length} text chunks with advanced validation`);
   
   let successfulChunks = 0;
   const skipEmbeddings = !openaiApiKey || openaiApiKey.trim() === '';
@@ -25,14 +25,14 @@ export async function generateAndStoreEmbeddings(
     try {
       console.log(`Processing chunk ${i + 1}/${textChunks.length} (${chunk.length} chars)`);
       
-      // Enhanced chunk validation with quality scoring
+      // Advanced chunk validation and cleaning
       if (!chunk || chunk.trim().length < 10) {
         console.warn(`Skipping chunk ${i}: too short or empty`);
         continue;
       }
       
-      // Clean and validate chunk content
-      const cleanedChunk = cleanChunkContent(chunk);
+      // Clean and validate chunk content with null-byte removal
+      const cleanedChunk = cleanChunkContentAdvanced(chunk);
       const chunkQuality = calculateAdvancedChunkQuality(cleanedChunk);
       
       console.log(`Chunk ${i + 1} quality score: ${chunkQuality}`);
@@ -45,7 +45,7 @@ export async function generateAndStoreEmbeddings(
       // Generate embedding (if API key available and chunk quality is sufficient)
       let embedding: number[] = [];
       
-      if (!skipEmbeddings && chunkQuality >= 0.3) {
+      if (!skipEmbeddings && chunkQuality >= 0.25) {
         try {
           embedding = await generateEmbedding(cleanedChunk, openaiApiKey);
           console.log(`Embedding generated for chunk ${i + 1} (${embedding.length} dimensions)`);
@@ -53,11 +53,32 @@ export async function generateAndStoreEmbeddings(
           console.warn(`Failed to generate embedding for chunk ${i}:`, embeddingError);
           // Continue without embedding for this chunk
         }
-      } else if (chunkQuality < 0.3) {
+      } else if (chunkQuality < 0.25) {
         console.log(`Skipping embedding for chunk ${i + 1}: quality below threshold (${chunkQuality})`);
       }
       
-      // Store the chunk with comprehensive metadata
+      // Store the chunk with comprehensive metadata and advanced processing info
+      const chunkMetadata = {
+        ...metadata,
+        chunk_length: cleanedChunk.length,
+        original_chunk_length: chunk.length,
+        total_chunks: textChunks.length,
+        word_count: cleanedChunk.split(/\s+/).length,
+        content_type: metadata.contentType || 'pdf_document',
+        has_embedding: embedding.length > 0,
+        processing_timestamp: new Date().toISOString(),
+        processing_method: metadata.extractionMethod || 'advanced-processing',
+        chunk_quality_score: chunkQuality,
+        processing_version: '4.0-advanced-library-ocr',
+        content_preview: cleanedChunk.substring(0, 100),
+        is_searchable: embedding.length > 0,
+        validation_passed: true,
+        content_type_detected: detectContentType(cleanedChunk),
+        is_scanned_document: metadata.isScannedDocument || false,
+        extraction_confidence: metadata.extractionConfidence || 1.0,
+        advanced_processing: true
+      };
+      
       const { error } = await supabase
         .from('document_chunks')
         .insert({
@@ -67,23 +88,7 @@ export async function generateAndStoreEmbeddings(
           chunk_index: i,
           content: cleanedChunk,
           embedding: embedding.length > 0 ? embedding : null,
-          metadata: {
-            ...metadata,
-            chunk_length: cleanedChunk.length,
-            original_chunk_length: chunk.length,
-            total_chunks: textChunks.length,
-            word_count: cleanedChunk.split(/\s+/).length,
-            content_type: 'pdf_document',
-            has_embedding: embedding.length > 0,
-            processing_timestamp: new Date().toISOString(),
-            processing_method: metadata.extractionMethod || 'multi-approach',
-            chunk_quality_score: chunkQuality,
-            processing_version: '3.0-multi-approach',
-            content_preview: cleanedChunk.substring(0, 100),
-            is_searchable: embedding.length > 0,
-            validation_passed: true,
-            content_type_detected: detectContentType(cleanedChunk)
-          }
+          metadata: chunkMetadata
         });
       
       if (error) {
@@ -111,43 +116,52 @@ export async function generateAndStoreEmbeddings(
   if (skipEmbeddings) {
     console.log('Note: Embeddings were skipped - search functionality will be limited');
   } else {
-    const chunksWithEmbeddings = textChunks.filter((_, i) => i < successfulChunks).length;
-    console.log(`${chunksWithEmbeddings} chunks stored with embeddings for search functionality`);
+    console.log(`Advanced processing completed with embeddings for search functionality`);
   }
 }
 
-// Advanced chunk content cleaning
-function cleanChunkContent(chunk: string): string {
+// Advanced chunk content cleaning with null-byte removal
+function cleanChunkContentAdvanced(chunk: string): string {
   if (!chunk) return '';
   
   try {
-    // Remove excessive whitespace
-    let cleaned = chunk.replace(/\s+/g, ' ').trim();
+    // Remove null bytes and other problematic characters that cause database errors
+    let cleaned = chunk
+      .replace(/\0/g, '') // Remove null bytes
+      .replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, ' ') // Remove control characters except \t, \n, \r
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
     
     // Remove repetitive patterns (like repeated email addresses)
     cleaned = removeRepetitivePatterns(cleaned);
     
-    // Clean up encoding artifacts
+    // Additional cleaning for special characters that might cause issues
     cleaned = cleaned
-      .replace(/[^\x20-\x7E\s]/g, ' ')
+      .replace(/[^\x20-\x7E\s\t\n\r]/g, ' ') // Keep only printable ASCII + whitespace
       .replace(/\s+/g, ' ')
       .trim();
     
     // Limit chunk size for processing efficiency
-    if (cleaned.length > 2000) {
-      cleaned = cleaned.substring(0, 2000).trim();
+    if (cleaned.length > 2500) {
+      cleaned = cleaned.substring(0, 2500).trim();
       // Try to end at a sentence boundary
       const lastSentence = cleaned.lastIndexOf('.');
-      if (lastSentence > 1500) {
+      if (lastSentence > 2000) {
         cleaned = cleaned.substring(0, lastSentence + 1);
       }
-      cleaned += ' [Content truncated]';
+      cleaned += ' [Content truncated for processing]';
     }
     
     return cleaned;
   } catch (error) {
     console.warn('Error cleaning chunk content:', error);
-    return chunk.substring(0, 1000); // Fallback
+    // Fallback: aggressively clean the content
+    return chunk
+      .replace(/\0/g, '')
+      .replace(/[^\x20-\x7E\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .substring(0, 1500)
+      .trim();
   }
 }
 
@@ -285,7 +299,7 @@ function detectContentType(content: string): string {
   }
 }
 
-// Enhanced document status updates with detailed logging
+// Enhanced document status updates with comprehensive logging
 export async function updateDocumentStatus(
   documentId: string, 
   status: 'processing' | 'completed' | 'failed',
@@ -300,9 +314,9 @@ export async function updateDocumentStatus(
     
     if (error) {
       updateData.processing_error = error;
-      updateData.processing_notes = `Multi-approach processing failed: ${error}`;
+      updateData.processing_notes = `Advanced processing failed: ${error}`;
     } else if (status === 'completed') {
-      updateData.processing_notes = 'Successfully processed with multi-approach extraction strategy';
+      updateData.processing_notes = 'Successfully processed with advanced library and OCR extraction strategy';
     }
     
     const { error: updateError } = await supabase
@@ -347,7 +361,7 @@ export async function cleanupFailedDocument(
       .from('document_metadata')
       .update({
         processing_notes: 'Document processing failed and chunks were cleaned up',
-        processing_error: 'Multi-approach extraction failed - document requires manual processing'
+        processing_error: 'Advanced extraction failed - document requires manual processing'
       })
       .eq('id', documentId);
     

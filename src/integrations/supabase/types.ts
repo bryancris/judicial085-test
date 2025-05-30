@@ -524,6 +524,7 @@ export type Database = {
           id: string
           processed_at: string | null
           processing_error: string | null
+          processing_notes: string | null
           processing_status: string | null
           schema: string | null
           title: string | null
@@ -536,6 +537,7 @@ export type Database = {
           id: string
           processed_at?: string | null
           processing_error?: string | null
+          processing_notes?: string | null
           processing_status?: string | null
           schema?: string | null
           title?: string | null
@@ -548,6 +550,7 @@ export type Database = {
           id?: string
           processed_at?: string | null
           processing_error?: string | null
+          processing_notes?: string | null
           processing_status?: string | null
           schema?: string | null
           title?: string | null

@@ -4,7 +4,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 import { corsHeaders } from './corsUtils.ts';
 import { ProcessPdfRequest } from './types.ts';
-import { extractTextFromPdfBuffer, chunkDocument } from './pdfProcessor.ts';
+import { extractTextFromPdfAdvanced, chunkDocumentAdvanced } from './advancedPdfProcessor.ts';
 import { generateAndStoreEmbeddings, updateDocumentStatus, cleanupFailedDocument } from './databaseService.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -24,7 +24,7 @@ serve(async (req) => {
   let documentId: string | null = null;
   
   try {
-    console.log('=== MULTI-APPROACH PDF PROCESSING STARTED ===');
+    console.log('=== ADVANCED PDF PROCESSING WITH LIBRARY & OCR SUPPORT ===');
     
     // Validate environment variables
     if (!supabaseUrl || !supabaseServiceKey) {
@@ -47,7 +47,7 @@ serve(async (req) => {
       throw new Error('Missing required fields: documentId, clientId, fileUrl, or fileName');
     }
     
-    console.log(`Starting multi-approach PDF processing: ${fileName} for client: ${clientId}`);
+    console.log(`Starting advanced PDF processing: ${fileName} for client: ${clientId}`);
 
     await updateDocumentStatus(documentId, 'processing', supabase);
 
@@ -55,12 +55,12 @@ serve(async (req) => {
     console.log(`Downloading PDF from: ${fileUrl}`);
     
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 60000); // 60 second timeout for large files
+    const timeout = setTimeout(() => controller.abort(), 90000); // 90 second timeout for large files
     
     const downloadResponse = await fetch(fileUrl, {
       signal: controller.signal,
       headers: {
-        'User-Agent': 'Legal-AI-PDF-Processor/1.0'
+        'User-Agent': 'Legal-AI-Advanced-PDF-Processor/2.0'
       }
     });
     
@@ -77,52 +77,48 @@ serve(async (req) => {
       throw new Error('Downloaded PDF file is empty');
     }
     
-    if (pdfArrayBuffer.byteLength > 20 * 1024 * 1024) { // 20MB limit
-      throw new Error('PDF file too large (max 20MB). Please compress the file and try again.');
+    if (pdfArrayBuffer.byteLength > 25 * 1024 * 1024) { // 25MB limit
+      throw new Error('PDF file too large (max 25MB). Please compress the file and try again.');
     }
     
     const pdfData = new Uint8Array(pdfArrayBuffer);
     console.log(`PDF downloaded successfully: ${pdfData.length} bytes`);
 
-    // Step 2: Multi-approach text extraction
-    console.log('=== STARTING MULTI-APPROACH TEXT EXTRACTION ===');
-    let extractedText = '';
-    let extractionMethod = 'unknown';
+    // Step 2: Advanced multi-strategy text extraction
+    console.log('=== STARTING ADVANCED PDF TEXT EXTRACTION ===');
+    let extractionResult;
     
     try {
-      extractedText = await extractTextFromPdfBuffer(pdfData);
-      extractionMethod = 'multi-approach';
+      extractionResult = await extractTextFromPdfAdvanced(pdfData);
       
-      console.log(`Multi-approach extraction completed: ${extractedText.length} characters`);
-      console.log(`Content preview: "${extractedText.substring(0, 400)}..."`);
+      console.log(`Advanced extraction completed:`, {
+        method: extractionResult.method,
+        textLength: extractionResult.text.length,
+        quality: extractionResult.quality,
+        confidence: extractionResult.confidence,
+        pageCount: extractionResult.pageCount,
+        isScanned: extractionResult.isScanned
+      });
       
-      // Enhanced extraction quality validation
-      if (extractedText.length < 30) {
-        console.warn('Extracted text very short, creating enhanced fallback');
-        extractedText = createEnhancedFallback(fileName, pdfData.length);
-        extractionMethod = 'enhanced-fallback';
-      }
-      
-      // Check for garbage content (repeated email addresses, etc.)
-      if (isGarbageContent(extractedText)) {
-        console.warn('Detected garbage content, creating structured fallback');
-        extractedText = createStructuredFallback(fileName, extractedText, pdfData.length);
-        extractionMethod = 'structured-fallback';
-      }
+      console.log(`Content preview: "${extractionResult.text.substring(0, 300)}..."`);
       
     } catch (extractionError) {
-      console.error('All extraction methods failed:', extractionError);
-      extractedText = createEnhancedFallback(fileName, pdfData.length);
-      extractionMethod = 'final-fallback';
+      console.error('All advanced extraction methods failed:', extractionError);
+      throw new Error(`Advanced PDF extraction failed: ${extractionError.message}`);
     }
 
-    // Step 3: Intelligent document chunking
-    console.log('=== STARTING INTELLIGENT DOCUMENT CHUNKING ===');
+    // Step 3: Advanced content-aware document chunking
+    console.log('=== STARTING ADVANCED DOCUMENT CHUNKING ===');
     let chunks: string[] = [];
     
     try {
-      chunks = chunkDocument(extractedText);
-      console.log(`Document chunked successfully: ${chunks.length} chunks created`);
+      chunks = chunkDocumentAdvanced(extractionResult.text, {
+        method: extractionResult.method,
+        isScanned: extractionResult.isScanned,
+        quality: extractionResult.quality
+      });
+      
+      console.log(`Advanced chunking completed: ${chunks.length} chunks created`);
       
       // Log chunk samples for debugging
       if (chunks.length > 0) {
@@ -133,31 +129,37 @@ serve(async (req) => {
       }
       
     } catch (chunkingError) {
-      console.error('Chunking failed:', chunkingError);
-      chunks = [extractedText];
+      console.error('Advanced chunking failed:', chunkingError);
+      chunks = [extractionResult.text];
     }
 
     if (chunks.length === 0) {
       console.warn('No chunks created, creating fallback chunk');
-      chunks = [extractedText || createEnhancedFallback(fileName, pdfData.length)];
+      chunks = [extractionResult.text || `Document: ${fileName} - Advanced processing completed but content extraction was minimal.`];
     }
 
-    // Step 4: Generate embeddings and store with enhanced metadata
-    console.log('=== STARTING EMBEDDING GENERATION ===');
+    // Step 4: Generate embeddings and store with comprehensive metadata
+    console.log('=== STARTING ADVANCED EMBEDDING GENERATION ===');
     
     const processingMetadata = {
       pdfUrl: fileUrl,
       isPdfDocument: true,
       caseId: caseId || null,
       fileName: fileName,
-      extractionMethod: extractionMethod,
-      textPreview: extractedText.substring(0, 500),
-      processingNotes: `Processed with multi-approach strategy using ${extractionMethod}`,
+      extractionMethod: extractionResult.method,
+      isScannedDocument: extractionResult.isScanned,
+      extractionQuality: extractionResult.quality,
+      extractionConfidence: extractionResult.confidence,
+      pageCount: extractionResult.pageCount,
+      textPreview: extractionResult.text.substring(0, 500),
+      processingNotes: extractionResult.processingNotes,
       chunkCount: chunks.length,
-      originalTextLength: extractedText.length,
+      originalTextLength: extractionResult.text.length,
       pdfSize: pdfData.length,
-      processingVersion: '3.0-multi-approach',
-      qualityScore: calculateOverallQuality(extractedText)
+      processingVersion: '4.0-advanced-library-ocr',
+      advancedProcessing: true,
+      contentType: detectContentTypeFromText(extractionResult.text),
+      processingTimestamp: new Date().toISOString()
     };
     
     try {
@@ -170,10 +172,10 @@ serve(async (req) => {
         openaiApiKey || ''
       );
       
-      console.log('Embeddings generated and stored successfully');
+      console.log('Advanced embeddings generated and stored successfully');
       
     } catch (embeddingError) {
-      console.error('Embedding generation failed:', embeddingError);
+      console.error('Advanced embedding generation failed:', embeddingError);
       
       // Store without embeddings but with detailed error info
       try {
@@ -184,7 +186,7 @@ serve(async (req) => {
           {
             ...processingMetadata,
             embeddingError: embeddingError.message,
-            processingNotes: `Stored without embeddings: ${embeddingError.message}`
+            processingNotes: `${extractionResult.processingNotes}. Embeddings failed: ${embeddingError.message}`
           },
           supabase, 
           '' // Empty API key to skip embeddings
@@ -201,9 +203,12 @@ serve(async (req) => {
           success: true, 
           documentId,
           chunksCreated: chunks.length,
-          textLength: extractedText.length,
-          textPreview: extractedText.substring(0, 400),
-          extractionMethod: extractionMethod,
+          textLength: extractionResult.text.length,
+          textPreview: extractionResult.text.substring(0, 400),
+          extractionMethod: extractionResult.method,
+          quality: extractionResult.quality,
+          confidence: extractionResult.confidence,
+          isScanned: extractionResult.isScanned,
           warning: 'Document stored successfully but search indexing unavailable'
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -215,27 +220,32 @@ serve(async (req) => {
       }
     }
 
-    // Step 5: Mark as completed with success details
+    // Step 5: Mark as completed with comprehensive success details
     await updateDocumentStatus(documentId, 'completed', supabase);
 
-    console.log(`=== MULTI-APPROACH PDF PROCESSING COMPLETED SUCCESSFULLY ===`);
-    console.log(`Document: ${documentId}, Method: ${extractionMethod}, Chunks: ${chunks.length}, Text length: ${extractedText.length}`);
+    console.log(`=== ADVANCED PDF PROCESSING COMPLETED SUCCESSFULLY ===`);
+    console.log(`Document: ${documentId}, Method: ${extractionResult.method}, Quality: ${extractionResult.quality}, Chunks: ${chunks.length}`);
 
     return new Response(JSON.stringify({ 
       success: true, 
       documentId,
       chunksCreated: chunks.length,
-      textLength: extractedText.length,
-      textPreview: extractedText.substring(0, 400),
-      extractionMethod: extractionMethod,
-      message: 'PDF processed successfully with multi-approach extraction',
-      qualityScore: calculateOverallQuality(extractedText)
+      textLength: extractionResult.text.length,
+      textPreview: extractionResult.text.substring(0, 400),
+      extractionMethod: extractionResult.method,
+      quality: extractionResult.quality,
+      confidence: extractionResult.confidence,
+      pageCount: extractionResult.pageCount,
+      isScanned: extractionResult.isScanned,
+      processingNotes: extractionResult.processingNotes,
+      message: 'PDF processed successfully with advanced library and OCR extraction',
+      processingVersion: '4.0-advanced-library-ocr'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error: any) {
-    console.error('=== MULTI-APPROACH PDF PROCESSING FAILED ===');
+    console.error('=== ADVANCED PDF PROCESSING FAILED ===');
     console.error('Error:', error.message);
     console.error('Stack:', error.stack);
     
@@ -251,11 +261,11 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ 
       success: false, 
-      error: error.message || 'Multi-approach PDF processing failed',
-      details: `Processing failed at: ${error.message}`,
+      error: error.message || 'Advanced PDF processing failed',
+      details: `Advanced processing failed: ${error.message}`,
       documentId: documentId,
       timestamp: new Date().toISOString(),
-      processingVersion: '3.0-multi-approach'
+      processingVersion: '4.0-advanced-library-ocr'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -263,118 +273,37 @@ serve(async (req) => {
   }
 });
 
-// Helper function to detect garbage content
-function isGarbageContent(content: string): boolean {
-  if (!content || content.length < 50) return true;
+// Helper function to detect content type from extracted text
+function detectContentTypeFromText(content: string): string {
+  if (!content) return 'unknown';
   
-  const words = content.split(/\s+/);
-  const emailCount = words.filter(word => /@/.test(word)).length;
-  const totalWords = words.length;
+  const lowerContent = content.toLowerCase();
   
-  // If more than 70% of words contain @ symbols, it's likely garbage
-  if (totalWords > 0 && (emailCount / totalWords) > 0.7) {
-    console.log(`Detected garbage content: ${emailCount}/${totalWords} words contain @ symbols`);
-    return true;
+  // Email content detection
+  if (/^(from|to|subject|date):/m.test(content) || 
+      /@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(content)) {
+    return 'email';
   }
   
-  // Check for excessive repetition
-  const uniqueWords = new Set(words);
-  if (words.length > 20 && (uniqueWords.size / words.length) < 0.3) {
-    console.log(`Detected repetitive content: ${uniqueWords.size}/${words.length} unique words`);
-    return true;
+  // Legal document patterns
+  if (/\b(whereas|party|agreement|contract|shall|thereof)\b/i.test(content)) {
+    return 'legal_document';
   }
   
-  return false;
-}
-
-// Create enhanced fallback content
-function createEnhancedFallback(fileName: string, fileSize: number): string {
-  const currentDate = new Date().toISOString().split('T')[0];
-  const fileSizeKB = Math.round(fileSize / 1024);
-  
-  // Determine document type from filename
-  let documentType = 'Document';
-  if (fileName.toLowerCase().includes('email')) {
-    documentType = 'Email Communication';
-  } else if (fileName.toLowerCase().includes('contract')) {
-    documentType = 'Contract';
-  } else if (fileName.toLowerCase().includes('letter')) {
-    documentType = 'Letter';
-  } else if (fileName.toLowerCase().includes('report')) {
-    documentType = 'Report';
+  // Letter format
+  if (/\b(dear|sincerely|regards|yours|truly)\b/i.test(content)) {
+    return 'correspondence';
   }
   
-  return `${documentType}: ${fileName}
-
-Document Information:
-- File Size: ${fileSizeKB}KB
-- Upload Date: ${currentDate}
-- Processing Status: Content extracted but may require manual review
-- File Type: PDF Document
-
-This ${documentType.toLowerCase()} has been successfully uploaded and stored. The content may contain complex formatting, images, or special characters that require specialized processing. The document is available for download and manual review.
-
-For legal analysis and case preparation, this document can be referenced by its title "${fileName}" and may contain important information relevant to the case.`;
-}
-
-// Create structured fallback from garbage content
-function createStructuredFallback(fileName: string, originalContent: string, fileSize: number): string {
-  const currentDate = new Date().toISOString().split('T')[0];
-  const fileSizeKB = Math.round(fileSize / 1024);
-  
-  // Try to extract email addresses and clean them
-  const emailMatches = originalContent.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || [];
-  const uniqueEmails = [...new Set(emailMatches)].slice(0, 10); // Limit to 10 unique emails
-  
-  // Try to extract any readable sentences
-  const sentences = originalContent.match(/[A-Z][^.!?]*[.!?]/g) || [];
-  const cleanSentences = sentences
-    .filter(s => s.length > 20 && s.length < 200)
-    .slice(0, 5);
-  
-  let structuredContent = `Email Document: ${fileName}
-
-Document Information:
-- File Size: ${fileSizeKB}KB
-- Upload Date: ${currentDate}
-- Document Type: Email Communication (PDF Export)
-- Processing Status: Structured extraction applied
-
-`;
-
-  if (uniqueEmails.length > 0) {
-    structuredContent += `Email Participants:
-${uniqueEmails.map(email => `- ${email}`).join('\n')}
-
-`;
+  // Form or structured data
+  if (/^[A-Z][^.]*:/.test(content) || content.includes('___')) {
+    return 'form';
   }
-
-  if (cleanSentences.length > 0) {
-    structuredContent += `Extracted Content:
-${cleanSentences.join(' ')}
-
-`;
+  
+  // General text content
+  if (/[.!?]/.test(content) && content.split(/\s+/).length > 10) {
+    return 'text_document';
   }
-
-  structuredContent += `Note: This email was exported to PDF format and may contain formatting artifacts. The document is stored and available for manual review to extract complete content and context.`;
-
-  return structuredContent;
-}
-
-// Calculate overall content quality
-function calculateOverallQuality(content: string): number {
-  if (!content) return 0;
   
-  const words = content.split(/\s+/);
-  const sentences = content.match(/[.!?]+/g) || [];
-  const meaningfulWords = words.filter(word => 
-    word.length > 2 && 
-    /^[a-zA-Z]/.test(word)
-  );
-  
-  const lengthScore = Math.min(content.length / 1000, 1);
-  const vocabularyScore = words.length > 0 ? meaningfulWords.length / words.length : 0;
-  const structureScore = Math.min(sentences.length / 10, 1);
-  
-  return Math.round((lengthScore * 0.3 + vocabularyScore * 0.5 + structureScore * 0.2) * 100) / 100;
+  return 'mixed_content';
 }
