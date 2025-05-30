@@ -20,12 +20,12 @@ export async function extractTextFromPdfAdvanced(pdfData: Uint8Array): Promise<{
   console.log(`Processing PDF of ${pdfData.length} bytes (${Math.round(pdfData.length / 1024)}KB)`);
   
   try {
-    // STEP 1: Try library-based PDF text extraction first
-    console.log('=== STEP 1: LIBRARY-BASED PDF EXTRACTION ===');
+    // STEP 1: Try PDF.js library-based PDF text extraction first
+    console.log('=== STEP 1: PDF.js LIBRARY-BASED PDF EXTRACTION ===');
     const libraryResult = await extractTextWithLibrary(pdfData);
     const libraryValidation = validateLibraryExtraction(libraryResult.text, libraryResult.pageCount);
     
-    console.log(`Library extraction result:`);
+    console.log(`PDF.js extraction result:`);
     console.log(`- Text length: ${libraryResult.text.length}`);
     console.log(`- Page count: ${libraryResult.pageCount}`);
     console.log(`- Quality: ${libraryValidation.quality}`);
@@ -33,19 +33,19 @@ export async function extractTextFromPdfAdvanced(pdfData: Uint8Array): Promise<{
     console.log(`- Content preview: "${libraryResult.text.substring(0, 200)}..."`);
     
     if (libraryValidation.isValid && libraryResult.text.length > 100) {
-      console.log('✅ Library extraction SUCCESSFUL - using extracted content');
+      console.log('✅ PDF.js extraction SUCCESSFUL - using extracted content');
       return {
         text: libraryResult.text,
-        method: 'pdf-library',
+        method: 'pdfjs-library',
         quality: libraryValidation.quality,
         confidence: 0.9,
         pageCount: libraryResult.pageCount,
         isScanned: false,
-        processingNotes: `Successfully extracted ${libraryResult.text.length} characters using PDF library`
+        processingNotes: `Successfully extracted ${libraryResult.text.length} characters using PDF.js library`
       };
     }
     
-    console.log('❌ Library extraction failed or low quality - trying OpenAI Vision OCR');
+    console.log('❌ PDF.js extraction failed or low quality - trying OpenAI Vision OCR');
     
     // STEP 2: OpenAI Vision OCR for scanned documents or failed library extraction
     console.log('=== STEP 2: OPENAI VISION OCR ===');
@@ -69,7 +69,7 @@ export async function extractTextFromPdfAdvanced(pdfData: Uint8Array): Promise<{
       };
     }
     
-    console.log('❌ Both library and OpenAI Vision OCR failed - using fallback analysis');
+    console.log('❌ Both PDF.js and OpenAI Vision OCR failed - using fallback analysis');
     return createComprehensiveAnalysisFallback(pdfData);
     
   } catch (error) {

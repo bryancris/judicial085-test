@@ -1,43 +1,63 @@
 
-// Enhanced PDF Library Service - Using actual pdf-parse library with Deno compatibility
-import * as pdfParse from 'npm:pdf-parse@1.1.1';
+// Enhanced PDF Library Service - Using PDF.js for Deno compatibility
+import * as pdfjsLib from 'https://cdn.skypack.dev/pdfjs-dist@3.11.174';
 
 export async function extractTextWithLibrary(pdfData: Uint8Array): Promise<{text: string, pageCount: number}> {
-  console.log('📄 Starting pdf-parse library extraction...');
+  console.log('📄 Starting PDF.js library extraction...');
   
   try {
-    // Use Uint8Array directly - pdf-parse can handle it in Deno
     console.log(`Processing PDF data: ${pdfData.length} bytes`);
     
-    // Use pdf-parse library for proper text extraction
-    // pdf-parse can accept Uint8Array directly in Deno environment
-    const data = await pdfParse(pdfData);
+    // Use PDF.js to load and extract text from PDF
+    const loadingTask = pdfjsLib.getDocument({ data: pdfData });
+    const pdf = await loadingTask.promise;
     
-    const extractedText = data.text || '';
-    const pageCount = data.numpages || 1;
+    console.log(`PDF loaded with ${pdf.numPages} pages`);
     
-    console.log(`pdf-parse extraction results:`);
+    let fullText = '';
+    
+    // Extract text from each page
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+      console.log(`Extracting text from page ${pageNumber}/${pdf.numPages}`);
+      
+      const page = await pdf.getPage(pageNumber);
+      const textContent = await page.getTextContent();
+      
+      // Combine all text items from the page
+      const pageText = textContent.items
+        .map((item: any) => item.str || '')
+        .join(' ')
+        .trim();
+      
+      if (pageText) {
+        fullText += pageText + '\n\n';
+      }
+    }
+    
+    const extractedText = cleanExtractedText(fullText);
+    
+    console.log(`PDF.js extraction results:`);
     console.log(`- Text length: ${extractedText.length} characters`);
-    console.log(`- Page count: ${pageCount}`);
+    console.log(`- Page count: ${pdf.numPages}`);
     console.log(`- Text preview: "${extractedText.substring(0, 200)}..."`);
     
     if (extractedText.length > 50) {
-      console.log('✅ pdf-parse extraction successful');
-      return {
-        text: cleanExtractedText(extractedText),
-        pageCount: pageCount
-      };
-    } else {
-      console.log('❌ pdf-parse extracted very little text');
+      console.log('✅ PDF.js extraction successful');
       return {
         text: extractedText,
-        pageCount: pageCount
+        pageCount: pdf.numPages
+      };
+    } else {
+      console.log('❌ PDF.js extracted very little text');
+      return {
+        text: extractedText,
+        pageCount: pdf.numPages
       };
     }
     
   } catch (error) {
-    console.error('❌ pdf-parse extraction failed:', error);
-    throw new Error(`PDF parsing failed: ${error.message}`);
+    console.error('❌ PDF.js extraction failed:', error);
+    throw new Error(`PDF.js parsing failed: ${error.message}`);
   }
 }
 
