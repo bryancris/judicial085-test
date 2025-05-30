@@ -1,17 +1,13 @@
 
-import { Buffer } from "https://deno.land/std@0.177.0/node/buffer.ts";
-
-// Library-based PDF text extraction using pdf-parse equivalent for Deno
+// Library-based PDF text extraction - Deno Compatible
 export async function extractTextWithLibrary(pdfData: Uint8Array): Promise<{text: string, pageCount: number}> {
   console.log('Starting library-based PDF text extraction...');
   
   try {
-    // For Deno, we'll use a different approach since pdf-parse isn't directly available
-    // We'll implement a more robust PDF text extraction
-    const buffer = Buffer.from(pdfData);
+    // For Deno, we'll implement a robust PDF text extraction using Uint8Array
+    const decoder = new TextDecoder('latin1');
+    const pdfString = decoder.decode(pdfData);
     
-    // Parse PDF structure more reliably
-    const pdfString = buffer.toString('binary');
     const textContent: string[] = [];
     let pageCount = 0;
     

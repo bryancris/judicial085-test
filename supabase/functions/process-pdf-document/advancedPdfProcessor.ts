@@ -1,4 +1,3 @@
-
 import { extractTextWithLibrary, validateLibraryExtraction } from './pdfLibraryService.ts';
 import { extractTextWithOCR, validateOCRExtraction } from './ocrService.ts';
 
@@ -253,7 +252,6 @@ export function chunkDocumentAdvanced(content: string, metadata: any = {}): stri
   }
   
   const MAX_CHUNK_SIZE = 1500;
-  const chunks: string[] = [];
   
   // Detect content type for specialized chunking
   const contentType = detectAdvancedContentType(content);

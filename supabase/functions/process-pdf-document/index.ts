@@ -24,7 +24,7 @@ serve(async (req) => {
   let documentId: string | null = null;
   
   try {
-    console.log('=== ADVANCED PDF PROCESSING WITH LIBRARY & OCR SUPPORT ===');
+    console.log('=== ADVANCED PDF PROCESSING WITH FIXED DENO COMPATIBILITY ===');
     
     // Validate environment variables
     if (!supabaseUrl || !supabaseServiceKey) {
@@ -60,7 +60,7 @@ serve(async (req) => {
     const downloadResponse = await fetch(fileUrl, {
       signal: controller.signal,
       headers: {
-        'User-Agent': 'Legal-AI-Advanced-PDF-Processor/2.0'
+        'User-Agent': 'Legal-AI-Advanced-PDF-Processor/3.0'
       }
     });
     
@@ -84,7 +84,7 @@ serve(async (req) => {
     const pdfData = new Uint8Array(pdfArrayBuffer);
     console.log(`PDF downloaded successfully: ${pdfData.length} bytes`);
 
-    // Step 2: Advanced multi-strategy text extraction
+    // Step 2: Advanced multi-strategy text extraction with Deno compatibility
     console.log('=== STARTING ADVANCED PDF TEXT EXTRACTION ===');
     let extractionResult;
     
@@ -156,7 +156,7 @@ serve(async (req) => {
       chunkCount: chunks.length,
       originalTextLength: extractionResult.text.length,
       pdfSize: pdfData.length,
-      processingVersion: '4.0-advanced-library-ocr',
+      processingVersion: '5.0-deno-compatible-fixed',
       advancedProcessing: true,
       contentType: detectContentTypeFromText(extractionResult.text),
       processingTimestamp: new Date().toISOString()
@@ -238,8 +238,8 @@ serve(async (req) => {
       pageCount: extractionResult.pageCount,
       isScanned: extractionResult.isScanned,
       processingNotes: extractionResult.processingNotes,
-      message: 'PDF processed successfully with advanced library and OCR extraction',
-      processingVersion: '4.0-advanced-library-ocr'
+      message: 'PDF processed successfully with Deno-compatible advanced extraction',
+      processingVersion: '5.0-deno-compatible-fixed'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -262,10 +262,10 @@ serve(async (req) => {
     return new Response(JSON.stringify({ 
       success: false, 
       error: error.message || 'Advanced PDF processing failed',
-      details: `Advanced processing failed: ${error.message}`,
+      details: `Deno-compatible processing failed: ${error.message}`,
       documentId: documentId,
       timestamp: new Date().toISOString(),
-      processingVersion: '4.0-advanced-library-ocr'
+      processingVersion: '5.0-deno-compatible-fixed'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
