@@ -1,17 +1,17 @@
 
-// Enhanced PDF Library Service - Using actual pdf-parse library
+// Enhanced PDF Library Service - Using actual pdf-parse library with Deno compatibility
 import * as pdfParse from 'npm:pdf-parse@1.1.1';
 
 export async function extractTextWithLibrary(pdfData: Uint8Array): Promise<{text: string, pageCount: number}> {
   console.log('📄 Starting pdf-parse library extraction...');
   
   try {
-    // Convert Uint8Array to Buffer for pdf-parse
-    const buffer = Buffer.from(pdfData);
-    console.log(`Processing PDF buffer: ${buffer.length} bytes`);
+    // Use Uint8Array directly - pdf-parse can handle it in Deno
+    console.log(`Processing PDF data: ${pdfData.length} bytes`);
     
     // Use pdf-parse library for proper text extraction
-    const data = await pdfParse(buffer);
+    // pdf-parse can accept Uint8Array directly in Deno environment
+    const data = await pdfParse(pdfData);
     
     const extractedText = data.text || '';
     const pageCount = data.numpages || 1;
