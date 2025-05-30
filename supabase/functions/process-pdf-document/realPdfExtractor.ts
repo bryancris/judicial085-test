@@ -1,4 +1,5 @@
-// WORKING Real PDF Text Extractor - Fixed Implementation with Enhanced Metadata Detection
+
+// WORKING Real PDF Text Extractor - Fixed Implementation with Enhanced Debugging and Legal Content Detection
 export async function extractTextFromPdfReal(pdfData: Uint8Array): Promise<{
   text: string;
   method: string;
@@ -6,18 +7,24 @@ export async function extractTextFromPdfReal(pdfData: Uint8Array): Promise<{
   confidence: number;
   pageCount: number;
 }> {
-  console.log('🔍 Starting REAL PDF text extraction...');
+  console.log('🔍 Starting REAL PDF text extraction with enhanced debugging...');
   
   try {
     // Method 1: Direct text object extraction (most precise)
     console.log('Trying direct PDF text object extraction...');
     const textObjectResult = await extractFromTextObjects(pdfData);
     
-    console.log(`Text object extraction preview: "${textObjectResult.text.substring(0, 200)}..."`);
-    console.log(`Text object extraction quality: ${textObjectResult.quality}, length: ${textObjectResult.text.length}`);
+    console.log(`Text object extraction results:`);
+    console.log(`- Text length: ${textObjectResult.text.length}`);
+    console.log(`- Quality score: ${textObjectResult.quality}`);
+    console.log(`- Content preview: "${textObjectResult.text.substring(0, 300)}..."`);
     
-    if (textObjectResult.quality > 0.3 && textObjectResult.text.length > 50 && !isMetadataContent(textObjectResult.text)) {
-      console.log('✅ Text object extraction successful');
+    // ENHANCED debugging for validation
+    const isMetadata = isMetadataContent(textObjectResult.text);
+    console.log(`- Is metadata content: ${isMetadata}`);
+    
+    if (textObjectResult.quality > 0.2 && textObjectResult.text.length > 30 && !isMetadata) {
+      console.log('✅ Text object extraction successful - using content');
       return textObjectResult;
     }
     
@@ -25,15 +32,20 @@ export async function extractTextFromPdfReal(pdfData: Uint8Array): Promise<{
     console.log('Trying advanced binary extraction...');
     const binaryResult = await extractFromBinaryContent(pdfData);
     
-    console.log(`Binary extraction preview: "${binaryResult.text.substring(0, 200)}..."`);
-    console.log(`Binary extraction quality: ${binaryResult.quality}, length: ${binaryResult.text.length}`);
+    console.log(`Binary extraction results:`);
+    console.log(`- Text length: ${binaryResult.text.length}`);
+    console.log(`- Quality score: ${binaryResult.quality}`);
+    console.log(`- Content preview: "${binaryResult.text.substring(0, 300)}..."`);
     
-    if (binaryResult.quality > 0.3 && binaryResult.text.length > 50 && !isMetadataContent(binaryResult.text)) {
-      console.log('✅ Binary extraction successful');
+    const isBinaryMetadata = isMetadataContent(binaryResult.text);
+    console.log(`- Is metadata content: ${isBinaryMetadata}`);
+    
+    if (binaryResult.quality > 0.2 && binaryResult.text.length > 30 && !isBinaryMetadata) {
+      console.log('✅ Binary extraction successful - using content');
       return binaryResult;
     }
     
-    console.log('❌ All extraction methods produced metadata or low quality results');
+    console.log('❌ All extraction methods failed validation - creating structured summary');
     return createStructuredSummary(pdfData);
     
   } catch (error) {
@@ -42,65 +54,83 @@ export async function extractTextFromPdfReal(pdfData: Uint8Array): Promise<{
   }
 }
 
-// Enhanced metadata detection - CRITICAL FIX
+// FIXED metadata detection - less aggressive for legal documents
 function isMetadataContent(text: string): boolean {
-  if (!text || text.length < 10) return false;
-  
-  // ENHANCED patterns to catch current garbage
-  const metadataPatterns = [
-    /^PDF\s+[A-Z]{2,3}\s+[A-Z]{2,3}/i,          // "PDF XWX JP HU..." pattern
-    /^[A-Z]{2,4}(\s+[A-Z]{2,4}){5,}/,            // Multiple short uppercase abbreviations
-    /^[A-Za-z]{1,3}\^\w/,                        // Patterns like "Fh^f"
-    /rdf:|xml:|dc:/i,                            // RDF/XML namespace prefixes
-    /begin=|end=/,                               // PDF structure markers
-    /Core\s+rdf/i,                               // PDF metadata structures
-    /Producer\s+PDF/i,                           // PDF producer info
-    /W5M0MpCehiHzreSzNTczkc9d/i,                // Specific metadata IDs
-    /xmlns|xmp:|adobe/i,                         // XML/Adobe metadata
-    /PDFlib\+PDI/i,                              // PDF library markers
-    /^[^\w\s]*[A-Za-z]{1,4}\^[^\w\s]*\w/,       // Encoded metadata patterns
-    /alt\s+rdf:li/i,                             // RDF list items
-    /^[\s\w\^\~\<\>]{20,}begin=/i                // Mixed garbage with begin markers
-  ];
-  
-  const hasMetadataPattern = metadataPatterns.some(pattern => pattern.test(text));
-  
-  if (hasMetadataPattern) {
-    console.log('❌ Detected PDF metadata content, rejecting');
-    console.log(`Metadata pattern found in: "${text.substring(0, 100)}..."`);
+  if (!text || text.length < 10) {
+    console.log('❌ Text too short, treating as metadata');
     return true;
   }
   
-  // ENHANCED: Check for compression artifacts and abbreviation spam
+  // CRITICAL: Check for obvious legal document content FIRST
+  const legalTerms = [
+    'REQUEST FOR PRODUCTION',
+    'DISCOVERY',
+    'INTERROGATORY',
+    'DEFENDANT',
+    'PLAINTIFF',
+    'COURT',
+    'CASE NO',
+    'MOTION',
+    'DEPOSITION',
+    'SUBPOENA'
+  ];
+  
+  const hasLegalContent = legalTerms.some(term => 
+    text.toUpperCase().includes(term)
+  );
+  
+  if (hasLegalContent) {
+    console.log('✅ Legal content detected, NOT metadata');
+    return false;
+  }
+  
+  // Enhanced patterns to catch garbage - but be more selective
+  const metadataPatterns = [
+    /^PDF\s+[A-Z]{2,3}\s+[A-Z]{2,3}/i,          // "PDF XWX JP HU..." pattern
+    /^[A-Z]{2,4}(\s+[A-Z]{2,4}){8,}/,            // Many short uppercase abbreviations (increased threshold)
+    /^[A-Za-z]{1,3}\^[A-Za-z]{1,3}\^/,           // Encoded patterns with multiple ^ symbols
+    /rdf:|xml:|dc:|xmlns/i,                       // XML/RDF namespace prefixes
+    /Producer\s+PDF/i,                           // PDF producer info
+    /W5M0MpCehiHzreSzNTczkc9d/i,                // Specific metadata IDs
+    /PDFlib\+PDI/i,                              // PDF library markers
+    /adobe|acrobat/i,                            // Adobe software markers
+    /^[\s\w\^\~\<\>]{30,}begin=/i                // Long garbage with begin markers
+  ];
+  
+  const hasMetadataPattern = metadataPatterns.some(pattern => {
+    const matches = pattern.test(text);
+    if (matches) {
+      console.log(`❌ Metadata pattern detected: ${pattern}`);
+    }
+    return matches;
+  });
+  
+  if (hasMetadataPattern) {
+    return true;
+  }
+  
+  // LESS AGGRESSIVE: Check for compression artifacts
   const words = text.split(/\s+/).filter(word => word.length > 0);
   const shortWords = words.filter(word => word.length <= 3).length;
   const abbreviationRatio = words.length > 0 ? shortWords / words.length : 0;
   
-  if (abbreviationRatio > 0.7) {
-    console.log('❌ High abbreviation ratio detected, likely compression artifacts');
-    console.log(`Abbreviation ratio: ${abbreviationRatio} in "${text.substring(0, 100)}..."`);
+  // INCREASED threshold for legal documents (was 0.7, now 0.85)
+  if (abbreviationRatio > 0.85) {
+    console.log(`❌ Very high abbreviation ratio: ${abbreviationRatio}`);
     return true;
   }
   
   // Check for specific garbage patterns
-  if (text.includes("PDF XWX") || /^[A-Z\s]{20,}$/.test(text.trim())) {
-    console.log('❌ Detected PDF compression artifacts');
+  if (text.includes("PDF XWX") || /^[A-Z\s]{30,}$/.test(text.trim())) {
+    console.log('❌ PDF compression artifacts detected');
     return true;
   }
   
-  // Check for high percentage of non-readable characters
-  const nonReadableChars = text.match(/[^\w\s\.\,\;\:\!\?\-\(\)]/g);
-  const nonReadableRatio = nonReadableChars ? nonReadableChars.length / text.length : 0;
-  
-  if (nonReadableRatio > 0.4) {
-    console.log('❌ High non-readable character ratio, likely metadata');
-    return true;
-  }
-  
+  console.log(`✅ Content appears valid - abbreviation ratio: ${abbreviationRatio}`);
   return false;
 }
 
-// Direct PDF text object extraction - IMPROVED
+// ENHANCED text object extraction with better legal document targeting
 async function extractFromTextObjects(pdfData: Uint8Array): Promise<{
   text: string;
   method: string;
@@ -113,32 +143,26 @@ async function extractFromTextObjects(pdfData: Uint8Array): Promise<{
   
   const extractedText: string[] = [];
   
-  // Look specifically for text showing operators in proper context
+  console.log('🔍 Looking for text patterns in PDF...');
+  
+  // ENHANCED patterns for legal documents
   const textShowPatterns = [
     /BT\s+.*?\((.*?)\)\s*Tj.*?ET/gis,        // Text in BT...ET blocks with Tj
     /\/F\d+\s+\d+\s+Tf\s*\((.*?)\)\s*Tj/gi, // Font definitions with text
     /Td\s*\((.*?)\)\s*Tj/gi,                 // Text positioning with show
-    /TJ\s*\[\s*\((.*?)\)\s*\]/gi             // Text arrays
+    /TJ\s*\[\s*\((.*?)\)\s*\]/gi,            // Text arrays
+    /\)\s*Tj\s*[^(]*\(([^)]{5,})\)/gi        // Plain text between operators
   ];
   
   for (const pattern of textShowPatterns) {
     let match;
-    while ((match = pattern.exec(pdfString)) !== null && extractedText.length < 50) {
+    while ((match = pattern.exec(pdfString)) !== null && extractedText.length < 100) {
       const text = cleanPdfText(match[1]);
       
-      if (text && text.length > 3 && isReadableText(text) && !isMetadataContent(text)) {
+      if (text && text.length > 2 && isReadableText(text)) {
+        console.log(`Found text segment: "${text.substring(0, 50)}..."`);
         extractedText.push(text);
       }
-    }
-  }
-  
-  // Look for plain text content between operators - MORE SELECTIVE
-  const plainTextPattern = /\)\s*Tj\s*[^(]*\(([^)]{8,})\)/gi; // Increased minimum length
-  let match;
-  while ((match = plainTextPattern.exec(pdfString)) !== null && extractedText.length < 50) {
-    const text = cleanPdfText(match[1]);
-    if (text && isReadableText(text) && !isMetadataContent(text)) {
-      extractedText.push(text);
     }
   }
   
@@ -146,18 +170,18 @@ async function extractFromTextObjects(pdfData: Uint8Array): Promise<{
   const pageCount = countPages(pdfString);
   const quality = calculateContentQualityFixed(combinedText);
   
-  console.log(`Text object extraction: ${combinedText.length} chars, quality: ${quality}`);
+  console.log(`Text object extraction complete: ${combinedText.length} chars, quality: ${quality}`);
   
   return {
     text: combinedText,
     method: 'text-object-extraction',
     quality: quality,
-    confidence: quality > 0.4 ? 0.8 : 0.5,
+    confidence: quality > 0.3 ? 0.8 : 0.5,
     pageCount: pageCount
   };
 }
 
-// Advanced binary content extraction - IMPROVED
+// ENHANCED binary content extraction
 async function extractFromBinaryContent(pdfData: Uint8Array): Promise<{
   text: string;
   method: string;
@@ -170,31 +194,36 @@ async function extractFromBinaryContent(pdfData: Uint8Array): Promise<{
   
   const extractedParts: string[] = [];
   
-  // Extract text from BT...ET blocks (text objects) - SKIP metadata streams
+  console.log('🔍 Extracting from binary content...');
+  
+  // Extract text from BT...ET blocks (text objects) - SKIP obvious metadata streams
   const textObjectRegex = /BT\s*([\s\S]*?)\s*ET/gi;
   let match;
   
-  while ((match = textObjectRegex.exec(pdfString)) !== null && extractedParts.length < 20) {
+  while ((match = textObjectRegex.exec(pdfString)) !== null && extractedParts.length < 50) {
     const textContent = match[1];
     
-    // Skip if this looks like a metadata stream
-    if (textContent.includes('xmlns') || textContent.includes('rdf:') || textContent.includes('Producer')) {
+    // Skip obvious metadata streams
+    if (textContent.includes('xmlns') || textContent.includes('rdf:') || 
+        textContent.includes('Producer') || textContent.includes('Creator')) {
       continue;
     }
     
     const cleanText = parseTextCommands(textContent);
     
-    if (cleanText && cleanText.length > 5 && !isMetadataContent(cleanText)) {
+    if (cleanText && cleanText.length > 3) {
+      console.log(`Found binary text: "${cleanText.substring(0, 50)}..."`);
       extractedParts.push(cleanText);
     }
   }
   
-  // Look for meaningful plain text in PDF structure - AVOID metadata areas
-  const plainTextMatches = pdfString.match(/\(([^)]{10,})\)\s*Tj/gi); // Increased minimum length
+  // ENHANCED: Look for meaningful plain text - broader patterns
+  const plainTextMatches = pdfString.match(/\(([^)]{5,})\)\s*Tj/gi);
   if (plainTextMatches) {
-    for (const textMatch of plainTextMatches.slice(0, 30)) {
+    for (const textMatch of plainTextMatches.slice(0, 50)) {
       const text = textMatch.replace(/^\(|\)\s*Tj$/gi, '').trim();
-      if (text.length > 8 && isReadableText(text) && !isMetadataContent(text)) {
+      if (text.length > 3 && isReadableText(text)) {
+        console.log(`Found plain text: "${text.substring(0, 50)}..."`);
         extractedParts.push(text);
       }
     }
@@ -204,13 +233,13 @@ async function extractFromBinaryContent(pdfData: Uint8Array): Promise<{
   const pageCount = countPages(pdfString);
   const quality = calculateContentQualityFixed(combinedText);
   
-  console.log(`Binary extraction: ${combinedText.length} chars, quality: ${quality}`);
+  console.log(`Binary extraction complete: ${combinedText.length} chars, quality: ${quality}`);
   
   return {
     text: combinedText,
     method: 'binary-extraction',
     quality: quality,
-    confidence: quality > 0.4 ? 0.8 : 0.5,
+    confidence: quality > 0.3 ? 0.8 : 0.5,
     pageCount: pageCount
   };
 }
@@ -219,18 +248,19 @@ async function extractFromBinaryContent(pdfData: Uint8Array): Promise<{
 function parseTextCommands(textCommands: string): string {
   const textParts: string[] = [];
   
-  // Skip if this contains metadata markers
-  if (textCommands.includes('xmlns') || textCommands.includes('rdf:') || textCommands.includes('Producer')) {
+  // Skip obvious metadata markers
+  if (textCommands.includes('xmlns') || textCommands.includes('rdf:') || 
+      textCommands.includes('Producer') || textCommands.includes('Creator')) {
     return '';
   }
   
   // Common PDF text operators with better regex
   const patterns = [
-    /\(([^)]{5,})\)\s*Tj/gi,           // Simple text show - minimum 5 chars
-    /\(([^)]{5,})\)\s*TJ/gi,           // Text show with positioning
+    /\(([^)]{3,})\)\s*Tj/gi,           // Simple text show - minimum 3 chars
+    /\(([^)]{3,})\)\s*TJ/gi,           // Text show with positioning
     /\[(.*?)\]\s*TJ/gi,                // Text array
-    /"([^"]{5,})"\s*Tj/gi,             // Quoted text
-    /\/F\d+\s+\d+\s+Tf\s*\(([^)]{5,})\)/gi // Font with text
+    /"([^"]{3,})"\s*Tj/gi,             // Quoted text
+    /\/F\d+\s+\d+\s+Tf\s*\(([^)]{3,})\)/gi // Font with text
   ];
   
   for (const pattern of patterns) {
@@ -239,7 +269,7 @@ function parseTextCommands(textCommands: string): string {
       let text = match[1];
       text = cleanPdfText(text);
       
-      if (text && text.length > 4 && isReadableText(text) && !isMetadataContent(text)) {
+      if (text && text.length > 2 && isReadableText(text)) {
         textParts.push(text);
       }
     }
@@ -271,16 +301,16 @@ function cleanPdfText(text: string): string {
     .trim();
 }
 
-// Check if text is readable (not garbage) - IMPROVED
+// IMPROVED readability check for legal documents
 function isReadableText(text: string): boolean {
-  if (!text || text.length < 3) return false;
+  if (!text || text.length < 2) return false;
   
   // Check for reasonable character distribution
   const alphaCount = (text.match(/[a-zA-Z]/g) || []).length;
   const totalCount = text.length;
   
-  // More lenient for short legal terms
-  const minRatio = text.length < 10 ? 0.4 : 0.5;
+  // More lenient for legal terms and abbreviations
+  const minRatio = text.length < 8 ? 0.3 : 0.4;
   
   return alphaCount / totalCount > minRatio;
 }
@@ -329,102 +359,123 @@ The document is stored and available for legal analysis workflows.`;
   };
 }
 
-// FIXED quality calculation - reject garbage content
+// ENHANCED quality calculation with better legal document recognition
 function calculateContentQualityFixed(text: string): number {
-  if (!text || text.length < 5) return 0;
-  
-  // CRITICAL: Immediately reject if metadata detected
-  if (isMetadataContent(text)) {
-    console.log('❌ Quality assessment: metadata detected, returning 0');
+  if (!text || text.length < 5) {
+    console.log('❌ Quality: Text too short');
     return 0;
   }
   
-  // CRITICAL: Explicit garbage detection
-  if (text.includes("PDF XWX") || /^[A-Z\s]{20,}$/.test(text.trim())) {
-    console.log('❌ Quality assessment: compression artifacts detected, returning 0');
+  // FIRST: Check for legal content patterns
+  const legalTerms = [
+    'REQUEST FOR PRODUCTION',
+    'DISCOVERY', 
+    'INTERROGATORY',
+    'DEFENDANT',
+    'PLAINTIFF',
+    'COURT',
+    'CASE',
+    'MOTION',
+    'DEPOSITION'
+  ];
+  
+  const upperText = text.toUpperCase();
+  const hasLegalTerms = legalTerms.some(term => upperText.includes(term));
+  
+  if (hasLegalTerms) {
+    console.log('✅ Quality: Legal terms detected, boosting score');
+    return Math.min(0.8, 0.6 + (text.length / 1000) * 0.2);
+  }
+  
+  // CRITICAL: Reject obvious garbage AFTER checking for legal content
+  if (text.includes("PDF XWX") || /^[A-Z\s]{30,}$/.test(text.trim())) {
+    console.log('❌ Quality: Compression artifacts detected');
     return 0;
   }
   
   const words = text.split(/\s+/).filter(word => word.length > 2);
-  if (words.length === 0) return 0;
+  if (words.length === 0) {
+    console.log('❌ Quality: No meaningful words');
+    return 0;
+  }
   
-  // CRITICAL: Check for abbreviation spam
+  // LESS AGGRESSIVE abbreviation check for legal documents
   const shortWords = words.filter(word => word.length <= 3).length;
   const abbreviationRatio = shortWords / words.length;
   
-  if (abbreviationRatio > 0.7) {
-    console.log(`❌ Quality assessment: too many abbreviations (${abbreviationRatio}), returning 0`);
+  if (abbreviationRatio > 0.85) { // Increased threshold
+    console.log(`❌ Quality: Too many abbreviations (${abbreviationRatio})`);
     return 0;
   }
   
   const meaningfulWords = words.filter(word => 
     /^[a-zA-Z]/.test(word) && 
-    word.length > 2 &&
+    word.length > 1 &&
     !word.toLowerCase().includes('xmp') &&
-    !word.toLowerCase().includes('adobe') &&
-    !word.toLowerCase().includes('xmlns')
+    !word.toLowerCase().includes('adobe')
   );
   
   const meaningfulRatio = meaningfulWords.length / words.length;
   const lengthBonus = Math.min(text.length / 200, 0.3);
   
-  // Bonus for legal terms
-  const legalTerms = ['request', 'discovery', 'court', 'case', 'defendant', 'plaintiff'];
-  const hasLegalTerms = legalTerms.some(term => 
-    text.toLowerCase().includes(term)
-  );
-  const legalBonus = hasLegalTerms ? 0.2 : 0;
-  
-  const quality = (meaningfulRatio * 0.6) + lengthBonus + legalBonus;
+  const quality = (meaningfulRatio * 0.6) + lengthBonus;
   const finalQuality = Math.max(0, Math.min(1, quality));
   
-  console.log(`Quality calculation: meaningful ratio: ${meaningfulRatio}, final quality: ${finalQuality}`);
+  console.log(`Quality calculation: meaningful ratio: ${meaningfulRatio}, abbreviation ratio: ${abbreviationRatio}, final: ${finalQuality}`);
   
   return finalQuality;
 }
 
-// ENHANCED validation - reject garbage before quality check
+// ENHANCED validation - less aggressive for legal documents
 export function validateExtraction(result: any): boolean {
-  if (!result || !result.text) return false;
-  
-  // CRITICAL: Explicit garbage detection BEFORE any other checks
-  if (result.text.includes("PDF XWX") || /^[A-Z\s]{20,}$/.test(result.text.trim())) {
-    console.log('❌ Validation failed: PDF compression artifacts detected');
+  if (!result || !result.text) {
+    console.log('❌ Validation: No text in result');
     return false;
   }
   
-  // CRITICAL: Check for metadata content first
+  // FIRST: Check for legal content
+  const legalTerms = ['REQUEST', 'DISCOVERY', 'COURT', 'CASE', 'DEFENDANT', 'PLAINTIFF', 'MOTION'];
+  const hasLegalContent = legalTerms.some(term => 
+    result.text.toUpperCase().includes(term)
+  );
+  
+  if (hasLegalContent) {
+    console.log('✅ Validation: Legal content detected, accepting');
+    return true;
+  }
+  
+  // THEN: Check for obvious garbage
+  if (result.text.includes("PDF XWX") || /^[A-Z\s]{30,}$/.test(result.text.trim())) {
+    console.log('❌ Validation: PDF compression artifacts detected');
+    return false;
+  }
+  
+  // Check for metadata content
   if (isMetadataContent(result.text)) {
-    console.log('❌ Validation failed: PDF metadata content detected');
+    console.log('❌ Validation: Metadata content detected');
     return false;
   }
   
-  const text = result.text.toLowerCase();
-  
-  // Check for meaningful content
   const words = result.text.split(/\s+/).filter((word: string) => word.length > 2);
   const meaningfulWords = words.filter((word: string) => /^[a-zA-Z]/.test(word));
   
-  // ENHANCED: Check abbreviation ratio
+  // ENHANCED: Check abbreviation ratio with higher threshold for legal docs
   const shortWords = words.filter((word: string) => word.length <= 3).length;
   const abbreviationRatio = words.length > 0 ? shortWords / words.length : 0;
   
-  if (abbreviationRatio > 0.7) {
-    console.log(`❌ Validation failed: too many abbreviations (${abbreviationRatio})`);
+  if (abbreviationRatio > 0.85) { // Increased from 0.7
+    console.log(`❌ Validation: Too many abbreviations (${abbreviationRatio})`);
     return false;
   }
   
-  // More lenient validation - accept shorter content if it has legal terms
-  const hasLegalTerms = ['request', 'discovery', 'court', 'case', 'defendant', 'plaintiff', 'motion']
-    .some(term => text.includes(term));
-  
-  const minWords = hasLegalTerms ? 3 : 5;
-  const minRatio = hasLegalTerms ? 0.4 : 0.5;
+  // More lenient validation for legal documents
+  const minWords = 3; // Reduced from 5
+  const minRatio = 0.4; // Reduced from 0.5
   
   const isValid = meaningfulWords.length >= minWords && 
                   (meaningfulWords.length / words.length) > minRatio;
   
-  console.log(`Validation: ${meaningfulWords.length} meaningful words, ratio: ${meaningfulWords.length / words.length}, abbreviation ratio: ${abbreviationRatio}, legal terms: ${hasLegalTerms}, valid: ${isValid}`);
+  console.log(`Validation result: ${meaningfulWords.length} meaningful words, ratio: ${meaningfulWords.length / words.length}, abbreviation ratio: ${abbreviationRatio}, valid: ${isValid}`);
   
   return isValid;
 }

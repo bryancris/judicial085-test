@@ -1,9 +1,9 @@
-// Working OCR Service for Scanned Documents - REAL EXTRACTION ONLY
+// Working OCR Service for Scanned Documents - REAL EXTRACTION with ENHANCED VALIDATION
 export async function extractTextWithWorkingOCR(pdfData: Uint8Array): Promise<{
   text: string;
   confidence: number;
 }> {
-  console.log('🔍 Starting working OCR extraction...');
+  console.log('🔍 Starting working OCR extraction with enhanced validation...');
   
   try {
     // First determine if this is actually a scanned document
@@ -23,14 +23,35 @@ export async function extractTextWithWorkingOCR(pdfData: Uint8Array): Promise<{
   }
 }
 
-// ENHANCED metadata detection - same as real extractor
+// ENHANCED metadata detection - same as real extractor but for OCR
 function isMetadataContent(text: string): boolean {
   if (!text || text.length < 10) return false;
   
-  // ENHANCED patterns to catch garbage
+  // FIRST: Check for legal content
+  const legalTerms = [
+    'REQUEST FOR PRODUCTION',
+    'DISCOVERY',
+    'INTERROGATORY',
+    'DEFENDANT',
+    'PLAINTIFF',
+    'COURT',
+    'CASE NO',
+    'MOTION'
+  ];
+  
+  const hasLegalContent = legalTerms.some(term => 
+    text.toUpperCase().includes(term)
+  );
+  
+  if (hasLegalContent) {
+    console.log('✅ OCR: Legal content detected, NOT metadata');
+    return false;
+  }
+  
+  // Enhanced patterns to catch garbage
   const metadataPatterns = [
     /^PDF\s+[A-Z]{2,3}\s+[A-Z]{2,3}/i,          // "PDF XWX JP HU..." pattern
-    /^[A-Z]{2,4}(\s+[A-Z]{2,4}){5,}/,            // Multiple short uppercase abbreviations
+    /^[A-Z]{2,4}(\s+[A-Z]{2,4}){8,}/,            // Multiple short uppercase abbreviations (increased threshold)
     /^[A-Za-z]{1,3}\^\w/,                        // Patterns like "Fh^f"
     /rdf:|xml:|dc:/i,                            // RDF/XML namespace prefixes
     /begin=|end=/,                               // PDF structure markers
@@ -51,18 +72,18 @@ function isMetadataContent(text: string): boolean {
     return true;
   }
   
-  // ENHANCED: Check for compression artifacts and abbreviation spam
+  // LESS AGGRESSIVE: Check for compression artifacts
   const words = text.split(/\s+/).filter(word => word.length > 0);
   const shortWords = words.filter(word => word.length <= 3).length;
   const abbreviationRatio = words.length > 0 ? shortWords / words.length : 0;
   
-  if (abbreviationRatio > 0.7) {
+  if (abbreviationRatio > 0.85) { // Increased threshold
     console.log('❌ OCR detected high abbreviation ratio, likely compression artifacts');
     return true;
   }
   
   // Check for specific garbage patterns
-  if (text.includes("PDF XWX") || /^[A-Z\s]{20,}$/.test(text.trim())) {
+  if (text.includes("PDF XWX") || /^[A-Z\s]{30,}$/.test(text.trim())) {
     console.log('❌ OCR detected PDF compression artifacts');
     return true;
   }
@@ -212,14 +233,29 @@ The document is available for legal analysis and case management workflows.`;
   };
 }
 
-// ENHANCED OCR validation - reject garbage before confidence check
+// ENHANCED OCR validation - less aggressive for legal documents
 export function validateOCRResult(text: string, confidence: number): {
   isValid: boolean;
   quality: number;
   needsManualReview: boolean;
 } {
-  // CRITICAL: Explicit garbage detection FIRST
-  if (text.includes("PDF XWX") || /^[A-Z\s]{20,}$/.test(text.trim())) {
+  // FIRST: Check for legal content
+  const legalTerms = ['REQUEST', 'DISCOVERY', 'COURT', 'CASE', 'DEFENDANT', 'PLAINTIFF'];
+  const hasLegalContent = legalTerms.some(term => 
+    text.toUpperCase().includes(term)
+  );
+  
+  if (hasLegalContent) {
+    console.log('✅ OCR validation: Legal content detected, accepting');
+    return {
+      isValid: true,
+      quality: Math.max(confidence, 0.6),
+      needsManualReview: confidence < 0.7
+    };
+  }
+  
+  // THEN: Check for garbage
+  if (text.includes("PDF XWX") || /^[A-Z\s]{30,}$/.test(text.trim())) {
     console.log('❌ OCR validation failed: compression artifacts detected');
     return {
       isValid: false,
@@ -238,12 +274,12 @@ export function validateOCRResult(text: string, confidence: number): {
     };
   }
   
-  // ENHANCED: Check abbreviation ratio
+  // ENHANCED: Check abbreviation ratio with higher threshold
   const words = text.split(/\s+/).filter(word => word.length > 0);
   const shortWords = words.filter(word => word.length <= 3).length;
   const abbreviationRatio = words.length > 0 ? shortWords / words.length : 0;
   
-  if (abbreviationRatio > 0.7) {
+  if (abbreviationRatio > 0.85) { // Increased threshold
     console.log(`❌ OCR validation failed: too many abbreviations (${abbreviationRatio})`);
     return {
       isValid: false,
@@ -252,7 +288,7 @@ export function validateOCRResult(text: string, confidence: number): {
     };
   }
   
-  const isValid = confidence > 0.2 && text.length > 50;
+  const isValid = confidence > 0.15 && text.length > 30; // More lenient thresholds
   const quality = confidence;
   const needsManualReview = confidence < 0.6 || text.length < 200;
   
