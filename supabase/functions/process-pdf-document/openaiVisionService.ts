@@ -1,5 +1,5 @@
 
-// Enhanced OpenAI Vision Service for PDF OCR with better prompting
+// Enhanced OpenAI Vision Service with multiple attempts and better prompting
 
 export async function extractTextWithOpenAIVision(pdfData: Uint8Array): Promise<{
   text: string;
@@ -18,86 +18,116 @@ export async function extractTextWithOpenAIVision(pdfData: Uint8Array): Promise<
     const base64Pdf = btoa(String.fromCharCode(...pdfData));
     const dataUrl = `data:application/pdf;base64,${base64Pdf}`;
     
-    console.log('📄 Processing PDF with enhanced OpenAI Vision prompts...');
+    console.log('📄 Processing PDF with enhanced OpenAI Vision (multiple attempts)...');
     
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: `You are an expert legal document OCR system. Your task is to extract ALL text from this legal document with perfect accuracy and formatting.
+    // Try multiple prompting strategies for better results
+    const strategies = [
+      {
+        name: 'Legal Document Specialist',
+        systemPrompt: `You are an expert legal document OCR system. Extract ALL text from this document with perfect accuracy.
 
 CRITICAL INSTRUCTIONS:
-- Extract EVERY word, sentence, and paragraph exactly as written
-- Maintain original formatting, line breaks, and structure
-- Include ALL headers, footers, signatures, and metadata
-- Pay special attention to legal terminology, case numbers, dates, and names
-- For legal documents like DTPA demand letters, extract all content including:
-  * Attorney/law firm information
-  * Client and opposing party details
-  * Legal claims and demands
-  * Statutory references
-  * Damage amounts and calculations
-  * All body paragraphs and legal arguments
+- Extract EVERY word exactly as written
+- Preserve all formatting, line breaks, and structure  
+- Include headers, body text, signatures, and contact information
+- Pay special attention to legal terminology and case details
+- For demand letters: extract sender info, recipient info, legal claims, damages, and all body content
 
-DO NOT:
-- Summarize or paraphrase any content
-- Skip any text, even if it seems repetitive
-- Add your own interpretations or comments
-- Omit headers, footers, or metadata
+Return ONLY the extracted text exactly as it appears.`,
+        userPrompt: 'Extract all text from this legal document with complete accuracy. Preserve formatting and include all content:'
+      },
+      {
+        name: 'OCR Specialist',
+        systemPrompt: `You are a professional OCR system. Your only job is to extract text from images/documents.
 
-RETURN ONLY the extracted text exactly as it appears in the document.`
+RULES:
+- Extract EVERY character, word, and line exactly as shown
+- Do not summarize, interpret, or skip any content
+- Maintain original spacing and line breaks
+- Include all text including headers, footers, addresses, and signatures
+
+Output only the raw extracted text.`,
+        userPrompt: 'Perform OCR on this document and extract all visible text:'
+      }
+    ];
+
+    // Try each strategy
+    for (const strategy of strategies) {
+      try {
+        console.log(`Trying strategy: ${strategy.name}`);
+        
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openaiApiKey}`,
+            'Content-Type': 'application/json',
           },
-          {
-            role: 'user',
-            content: [
+          body: JSON.stringify({
+            model: 'gpt-4o', // Use more powerful model for better OCR
+            messages: [
               {
-                type: 'text',
-                text: 'Please extract all text from this legal document with complete accuracy:'
+                role: 'system',
+                content: strategy.systemPrompt
               },
               {
-                type: 'image_url',
-                image_url: {
-                  url: dataUrl,
-                  detail: 'high'
-                }
+                role: 'user',
+                content: [
+                  {
+                    type: 'text',
+                    text: strategy.userPrompt
+                  },
+                  {
+                    type: 'image_url',
+                    image_url: {
+                      url: dataUrl,
+                      detail: 'high'
+                    }
+                  }
+                ]
               }
-            ]
-          }
-        ],
-        max_tokens: 4000,
-        temperature: 0.1
-      }),
-    });
+            ],
+            max_tokens: 4000,
+            temperature: 0.0 // Deterministic for OCR
+          }),
+        });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+        if (!response.ok) {
+          console.warn(`Strategy ${strategy.name} failed: ${response.status}`);
+          continue;
+        }
+
+        const data = await response.json();
+        const extractedText = data.choices[0]?.message?.content || '';
+        
+        if (extractedText.length > 100) {
+          console.log(`✅ Strategy ${strategy.name} successful: ${extractedText.length} chars`);
+          
+          const confidence = calculateEnhancedConfidence(extractedText);
+          return {
+            text: extractedText.trim(),
+            confidence: confidence,
+            pageCount: estimatePageCount(extractedText)
+          };
+        }
+        
+        console.warn(`Strategy ${strategy.name} returned insufficient text: ${extractedText.length} chars`);
+        
+      } catch (strategyError) {
+        console.warn(`Strategy ${strategy.name} error:`, strategyError);
+        continue;
+      }
     }
-
-    const data = await response.json();
-    const extractedText = data.choices[0]?.message?.content || '';
     
-    // Enhanced confidence calculation
-    let confidence = calculateEnhancedConfidence(extractedText);
-    
-    console.log(`✅ Enhanced OpenAI Vision extraction completed: ${extractedText.length} chars (confidence: ${confidence})`);
-    console.log(`📄 Text preview: "${extractedText.substring(0, 300)}..."`);
-
+    // If all strategies fail, return empty with low confidence
+    console.error('❌ All OpenAI Vision strategies failed');
     return {
-      text: extractedText.trim(),
-      confidence: confidence,
-      pageCount: estimatePageCount(extractedText)
+      text: '',
+      confidence: 0,
+      pageCount: 1
     };
 
   } catch (error) {
-    console.error('❌ Enhanced OpenAI Vision OCR failed:', error);
+    console.error('❌ OpenAI Vision OCR failed:', error);
     return {
       text: '',
       confidence: 0,
@@ -106,13 +136,13 @@ RETURN ONLY the extracted text exactly as it appears in the document.`
   }
 }
 
-// Enhanced confidence calculation based on content quality
+// Enhanced confidence calculation
 function calculateEnhancedConfidence(text: string): number {
-  if (!text || text.length < 50) return 0.1;
+  if (!text || text.length < 20) return 0.1;
   
-  let confidence = 0.6; // Base confidence for OpenAI Vision
+  let confidence = 0.7; // Higher base for gpt-4o
   
-  // Check for legal document indicators (high confidence boost)
+  // Check for legal document indicators
   const legalTerms = [
     'DTPA', 'DEMAND LETTER', 'ATTORNEY', 'LAW FIRM', 'PLAINTIFF', 'DEFENDANT',
     'COURT', 'CASE', 'PURSUANT TO', 'VIOLATION', 'DAMAGES', 'SETTLEMENT',
@@ -123,43 +153,54 @@ function calculateEnhancedConfidence(text: string): number {
   const foundLegalTerms = legalTerms.filter(term => upperText.includes(term));
   
   if (foundLegalTerms.length > 0) {
-    confidence += 0.2; // Boost for legal content
-    console.log(`✅ Legal document detected with terms: ${foundLegalTerms.join(', ')}`);
+    confidence += 0.2;
+    console.log(`✅ Legal content boost: found ${foundLegalTerms.length} legal terms`);
   }
   
-  // Check for structured content
-  if (text.includes('\n') && text.length > 200) {
-    confidence += 0.1; // Boost for structured text
+  // Check for proper document structure
+  const hasProperStructure = (
+    text.includes('\n') && 
+    text.length > 200 &&
+    text.match(/[.!?]/g)?.length > 3
+  );
+  
+  if (hasProperStructure) {
+    confidence += 0.1;
   }
   
-  // Check for proper sentences
-  const sentences = text.match(/[.!?]+/g) || [];
-  if (sentences.length > 3) {
-    confidence += 0.1; // Boost for complete sentences
+  // Check for email addresses (contact info)
+  if (/@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(text)) {
+    confidence += 0.05;
   }
   
-  // Penalize if text seems truncated or incomplete
-  if (text.length < 100) {
-    confidence -= 0.3;
-  } else if (text.includes('[unclear]') || text.includes('...')) {
-    confidence -= 0.1;
+  // Penalize if text seems corrupted
+  const corruptionIndicators = [
+    /[^\x20-\x7E\s\n\r\t]/g, // Non-printable characters
+    /\s{10,}/g, // Excessive whitespace
+    /[A-Za-z]{50,}/g // Overly long words
+  ];
+  
+  for (const indicator of corruptionIndicators) {
+    const matches = text.match(indicator);
+    if (matches && matches.length > 3) {
+      confidence -= 0.1;
+    }
   }
   
   return Math.max(0.1, Math.min(0.95, confidence));
 }
 
-// Estimate page count from content length and structure
+// Estimate page count from content
 function estimatePageCount(text: string): number {
   if (!text) return 1;
   
-  // Rough estimation: 500-800 characters per page for legal documents
-  const estimatedPages = Math.max(1, Math.ceil(text.length / 600));
-  
-  // Look for page indicators
+  // Look for page indicators first
   const pageBreaks = text.match(/page\s+\d+/gi) || [];
   if (pageBreaks.length > 0) {
-    return Math.max(estimatedPages, pageBreaks.length);
+    return Math.max(1, pageBreaks.length);
   }
   
-  return estimatedPages;
+  // Estimate based on content length (legal documents ~400-600 chars per page)
+  const estimatedPages = Math.max(1, Math.ceil(text.length / 500));
+  return Math.min(estimatedPages, 10); // Cap at 10 pages for safety
 }
