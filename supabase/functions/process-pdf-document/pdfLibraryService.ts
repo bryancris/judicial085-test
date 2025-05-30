@@ -1,7 +1,8 @@
 
-// Enhanced PDF Library Service - Using native Deno PDF parsing
+// Enhanced PDF Library Service - Improved native Deno PDF parsing with better text extraction
+
 export async function extractTextWithLibrary(pdfData: Uint8Array): Promise<{text: string, pageCount: number}> {
-  console.log('📄 Starting native Deno PDF extraction...');
+  console.log('📄 Starting enhanced native Deno PDF extraction...');
   
   try {
     console.log(`Processing PDF data: ${pdfData.length} bytes`);
@@ -10,158 +11,200 @@ export async function extractTextWithLibrary(pdfData: Uint8Array): Promise<{text
     const decoder = new TextDecoder('latin1');
     const pdfString = decoder.decode(pdfData);
     
-    // Extract text using multiple strategies
-    const extractedText = extractTextFromPdfString(pdfString);
+    // Enhanced text extraction using multiple strategies
+    const extractedText = extractTextFromPdfStringEnhanced(pdfString);
     const pageCount = estimatePageCount(pdfString);
     
-    console.log(`Native extraction results:`);
+    console.log(`Enhanced native extraction results:`);
     console.log(`- Text length: ${extractedText.length} characters`);
     console.log(`- Page count: ${pageCount}`);
-    console.log(`- Text preview: "${extractedText.substring(0, 200)}..."`);
+    console.log(`- Text preview: "${extractedText.substring(0, 300)}..."`);
     
-    if (extractedText.length > 50) {
-      console.log('✅ Native PDF extraction successful');
-      return {
-        text: extractedText,
-        pageCount: pageCount
-      };
-    } else {
-      console.log('❌ Native extraction produced minimal text');
-      return {
-        text: extractedText,
-        pageCount: pageCount
-      };
-    }
+    return {
+      text: extractedText,
+      pageCount: pageCount
+    };
     
   } catch (error) {
-    console.error('❌ Native PDF extraction failed:', error);
-    throw new Error(`Native PDF parsing failed: ${error.message}`);
+    console.error('❌ Enhanced native PDF extraction failed:', error);
+    throw new Error(`Enhanced native PDF parsing failed: ${error.message}`);
   }
 }
 
-// Extract text from PDF string using multiple patterns
-function extractTextFromPdfString(pdfString: string): string {
+// Enhanced text extraction with better patterns and cleaning
+function extractTextFromPdfStringEnhanced(pdfString: string): string {
   const textSegments: string[] = [];
   
   try {
-    // Pattern 1: Direct text extraction from text objects
-    const textPattern = /\(([^)]{3,})\)\s*Tj/gi;
-    let match;
-    while ((match = textPattern.exec(pdfString)) !== null) {
-      const text = match[1];
-      if (isValidTextContent(text)) {
-        textSegments.push(cleanText(text));
-      }
-    }
+    // Strategy 1: Enhanced text object extraction with better patterns
+    const textPatterns = [
+      // Standard text show operators
+      /\(([^)]{5,})\)\s*Tj/gi,
+      // Text with positioning
+      /\[\(([^)]{5,})\)\]\s*TJ/gi,
+      // Direct string literals in content streams
+      /\(([A-Za-z][^)]{10,})\)/g,
+      // Text in brackets with positioning
+      /\[\(([^)]{3,})\)\s*[-\d\s]*\]/g
+    ];
     
-    // Pattern 2: Text within BT/ET blocks (Begin Text/End Text)
-    const btEtPattern = /BT\s*([\s\S]*?)\s*ET/gi;
-    let btMatch;
-    while ((btMatch = btEtPattern.exec(pdfString)) !== null) {
-      const textBlock = btMatch[1];
-      const innerTextPattern = /\(([^)]{3,})\)/g;
-      let innerMatch;
-      while ((innerMatch = innerTextPattern.exec(textBlock)) !== null) {
-        const text = innerMatch[1];
-        if (isValidTextContent(text)) {
-          textSegments.push(cleanText(text));
+    for (const pattern of textPatterns) {
+      let match;
+      while ((match = pattern.exec(pdfString)) !== null) {
+        const text = match[1];
+        if (isValidEnhancedTextContent(text)) {
+          textSegments.push(cleanTextEnhanced(text));
         }
       }
     }
     
-    // Pattern 3: Stream content extraction
-    const streamPattern = /stream\s*([\s\S]*?)\s*endstream/gi;
-    let streamMatch;
-    while ((streamMatch = streamPattern.exec(pdfString)) !== null) {
-      const streamContent = streamMatch[1];
-      // Look for readable text in streams
-      const readableText = extractReadableFromStream(streamContent);
-      if (readableText) {
-        textSegments.push(readableText);
+    // Strategy 2: Extract from text blocks (BT/ET pairs)
+    const btEtPattern = /BT\s*([\s\S]*?)\s*ET/gi;
+    let btMatch;
+    while ((btMatch = btEtPattern.exec(pdfString)) !== null) {
+      const textBlock = btMatch[1];
+      
+      // Look for text within this block
+      const innerTextPattern = /\(([^)]{3,})\)/g;
+      let innerMatch;
+      while ((innerMatch = innerTextPattern.exec(textBlock)) !== null) {
+        const text = innerMatch[1];
+        if (isValidEnhancedTextContent(text)) {
+          textSegments.push(cleanTextEnhanced(text));
+        }
       }
     }
     
-    // Combine and clean all text segments
+    // Strategy 3: Look for decoded text in streams
+    extractFromStreams(pdfString, textSegments);
+    
+    // Strategy 4: Extract any readable ASCII text sequences
+    extractReadableSequences(pdfString, textSegments);
+    
+    // Combine, clean, and structure all text segments
     const combinedText = textSegments.join(' ').trim();
-    return cleanExtractedText(combinedText);
+    return structureExtractedText(combinedText);
     
   } catch (error) {
-    console.warn('Error in text extraction patterns:', error);
+    console.warn('Error in enhanced text extraction patterns:', error);
     return '';
   }
 }
 
-// Extract readable text from stream content
-function extractReadableFromStream(streamContent: string): string {
-  try {
-    // Look for text patterns in decoded streams
-    const textMatches = streamContent.match(/[A-Za-z][A-Za-z0-9\s.,;:!?()-]{10,}/g);
-    if (textMatches) {
-      return textMatches
-        .filter(text => isValidTextContent(text))
-        .map(text => cleanText(text))
-        .join(' ');
-    }
-    return '';
-  } catch {
-    return '';
-  }
-}
-
-// Check if text content is valid (not metadata or garbage)
-function isValidTextContent(text: string): boolean {
-  if (!text || text.length < 3) return false;
+// Enhanced validation for text content
+function isValidEnhancedTextContent(text: string): boolean {
+  if (!text || text.length < 2) return false;
   
-  // Check for legal document terms (high priority)
-  const legalTerms = ['REQUEST', 'DISCOVERY', 'COURT', 'CASE', 'DEFENDANT', 'PLAINTIFF', 'ATTORNEY'];
-  if (legalTerms.some(term => text.toUpperCase().includes(term))) {
+  // Priority check for legal terms (always include)
+  const legalTerms = [
+    'DTPA', 'DEMAND', 'ATTORNEY', 'LAW', 'COURT', 'CASE', 'REQUEST', 'DISCOVERY',
+    'PLAINTIFF', 'DEFENDANT', 'PURSUANT', 'VIOLATION', 'DAMAGES', 'TEXAS'
+  ];
+  
+  const upperText = text.toUpperCase();
+  if (legalTerms.some(term => upperText.includes(term))) {
+    console.log(`✅ Legal term detected: "${text}"`);
+    return true;
+  }
+  
+  // Check for email addresses (law firm contact info)
+  if (/@/.test(text) && text.includes('.')) {
     return true;
   }
   
   // Reject obvious metadata patterns
   const metadataPatterns = [
     /^PDF\s+/i,
-    /^[A-Z]{2,4}(\s+[A-Z]{2,4}){3,}/,
+    /^[A-Z]{2,4}(\s+[A-Z]{2,4}){5,}/,
     /rdf:|xml:|dc:/i,
     /Producer|Creator|ModDate/i,
     /^[^\w\s]*[A-Za-z]{1,4}\^/,
-    /begin=|end=/
+    /begin=|end=/,
+    /^[A-Za-z0-9+/]{20,}={0,2}$/, // Base64-like
+    /^[0-9A-Fa-f]{20,}$/ // Hex-like
   ];
   
   if (metadataPatterns.some(pattern => pattern.test(text))) {
     return false;
   }
   
-  // Check for reasonable character distribution
+  // Check for reasonable text characteristics
   const alphaCount = (text.match(/[a-zA-Z]/g) || []).length;
   const totalCount = text.length;
   const alphaRatio = alphaCount / totalCount;
   
-  return alphaRatio > 0.3; // At least 30% alphabetic characters
+  // Must have reasonable alphabetic content
+  return alphaRatio > 0.4 && text.length >= 3;
 }
 
-// Clean extracted text
-function cleanText(text: string): string {
+// Enhanced text cleaning
+function cleanTextEnhanced(text: string): string {
   return text
+    // Handle PDF escape sequences
     .replace(/\\n/g, ' ')
     .replace(/\\r/g, ' ')
     .replace(/\\t/g, ' ')
+    .replace(/\\\(/g, '(')
+    .replace(/\\\)/g, ')')
+    .replace(/\\\\/g, '\\')
+    // Clean weird characters but preserve legal text
     .replace(/[^\x20-\x7E\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
-// Clean the final extracted text
-function cleanExtractedText(text: string): string {
+// Extract text from stream content
+function extractFromStreams(pdfString: string, textSegments: string[]): void {
+  const streamPattern = /stream\s*([\s\S]*?)\s*endstream/gi;
+  let streamMatch;
+  
+  while ((streamMatch = streamPattern.exec(pdfString)) !== null) {
+    const streamContent = streamMatch[1];
+    
+    // Look for readable text in streams (not compressed)
+    const readablePattern = /[A-Za-z][A-Za-z0-9\s.,;:!?()'-]{15,}/g;
+    const readableMatches = streamContent.match(readablePattern);
+    
+    if (readableMatches) {
+      readableMatches.forEach(match => {
+        if (isValidEnhancedTextContent(match)) {
+          textSegments.push(cleanTextEnhanced(match));
+        }
+      });
+    }
+  }
+}
+
+// Extract readable ASCII sequences that might be content
+function extractReadableSequences(pdfString: string, textSegments: string[]): void {
+  // Look for sequences of readable characters that might be document content
+  const readableSequencePattern = /[A-Za-z][A-Za-z0-9\s.,;:!?()'-]{20,}/g;
+  const sequences = pdfString.match(readableSequencePattern) || [];
+  
+  sequences.forEach(sequence => {
+    if (isValidEnhancedTextContent(sequence)) {
+      // Further filter for likely content vs metadata
+      if (!sequence.includes('obj') && !sequence.includes('endobj') && 
+          !sequence.includes('xref') && !sequence.includes('trailer')) {
+        textSegments.push(cleanTextEnhanced(sequence));
+      }
+    }
+  });
+}
+
+// Structure the extracted text for better readability
+function structureExtractedText(text: string): string {
   if (!text) return '';
   
   return text
     // Normalize whitespace
     .replace(/\s+/g, ' ')
-    // Add proper line breaks after sentences
+    // Try to restore sentence structure
     .replace(/([.!?])\s*([A-Z])/g, '$1\n\n$2')
-    // Clean up any weird characters
+    // Clean up remaining artifacts
     .replace(/[^\x20-\x7E\s\n]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\n\s+/g, '\n')
     .trim();
 }
 
@@ -175,45 +218,58 @@ function estimatePageCount(pdfString: string): number {
   }
 }
 
-// Validate library extraction quality
+// Enhanced validation for library extraction quality
 export function validateLibraryExtraction(text: string, pageCount: number): {isValid: boolean, quality: number, issues: string[]} {
   const issues: string[] = [];
   let quality = 1.0;
   
   // Check text length
-  if (text.length < 100) {
+  if (text.length < 50) {
     issues.push('Extracted text is very short');
-    quality -= 0.3;
+    quality -= 0.4;
+  } else if (text.length < 200) {
+    issues.push('Extracted text is short');
+    quality -= 0.2;
   }
   
   // Check for meaningful content
   const words = text.split(/\s+/);
   const meaningfulWords = words.filter(word => 
     word.length > 2 && 
-    /^[a-zA-Z]/.test(word)
+    /^[a-zA-Z]/.test(word) &&
+    !word.match(/^[A-Z]{2,4}$/) // Skip abbreviations
   );
   
   const meaningfulRatio = words.length > 0 ? meaningfulWords.length / words.length : 0;
   
-  if (meaningfulRatio < 0.4) {
+  if (meaningfulRatio < 0.3) {
     issues.push('Low ratio of meaningful words');
-    quality -= 0.2;
+    quality -= 0.3;
   }
   
-  // Check for legal document indicators
-  const legalTerms = ['discovery', 'request', 'court', 'case', 'legal', 'motion', 'brief', 'demand', 'dtpa', 'attorney'];
+  // Boost quality for legal document indicators
+  const legalTerms = [
+    'dtpa', 'demand', 'attorney', 'law', 'court', 'case', 'legal', 'motion', 
+    'brief', 'request', 'discovery', 'violation', 'damages', 'plaintiff', 'defendant'
+  ];
   const hasLegalTerms = legalTerms.some(term => 
     text.toLowerCase().includes(term)
   );
   
   if (hasLegalTerms) {
-    quality += 0.1; // Bonus for legal content
-    console.log('✅ Legal document content detected');
+    quality += 0.2; // Significant boost for legal content
+    console.log('✅ Enhanced validation: Legal document content detected');
   }
   
-  const isValid = quality > 0.3 && text.length > 50;
+  // Check for email addresses (law firm info)
+  if (/@/.test(text)) {
+    quality += 0.1;
+    console.log('✅ Contact information detected');
+  }
   
-  console.log(`Validation results: isValid=${isValid}, quality=${quality}, issues=${issues.length}`);
+  const isValid = quality > 0.2 && text.length > 30;
+  
+  console.log(`Enhanced validation results: isValid=${isValid}, quality=${quality.toFixed(2)}, issues=${issues.length}`);
   
   return {
     isValid,
