@@ -1,4 +1,3 @@
-
 // Working OCR Service for Scanned Documents - REAL EXTRACTION ONLY
 export async function extractTextWithWorkingOCR(pdfData: Uint8Array): Promise<{
   text: string;
@@ -24,28 +23,47 @@ export async function extractTextWithWorkingOCR(pdfData: Uint8Array): Promise<{
   }
 }
 
-// Detect PDF metadata content - SAME AS REAL EXTRACTOR
+// ENHANCED metadata detection - same as real extractor
 function isMetadataContent(text: string): boolean {
   if (!text || text.length < 10) return false;
   
+  // ENHANCED patterns to catch garbage
   const metadataPatterns = [
-    /^[A-Za-z]{1,3}\^\w/,                    // Patterns like "Fh^f"
-    /rdf:|xml:|dc:/i,                        // RDF/XML namespace prefixes
-    /begin=|end=/,                           // PDF structure markers
-    /Core\s+rdf/i,                           // PDF metadata structures
-    /Producer\s+PDF/i,                       // PDF producer info
-    /W5M0MpCehiHzreSzNTczkc9d/i,            // Specific metadata IDs
-    /xmlns|xmp:|adobe/i,                     // XML/Adobe metadata
-    /PDFlib\+PDI/i,                          // PDF library markers
-    /^[^\w\s]*[A-Za-z]{1,4}\^[^\w\s]*\w/,   // Encoded metadata patterns
-    /alt\s+rdf:li/i,                         // RDF list items
-    /^[\s\w\^\~\<\>]{20,}begin=/i            // Mixed garbage with begin markers
+    /^PDF\s+[A-Z]{2,3}\s+[A-Z]{2,3}/i,          // "PDF XWX JP HU..." pattern
+    /^[A-Z]{2,4}(\s+[A-Z]{2,4}){5,}/,            // Multiple short uppercase abbreviations
+    /^[A-Za-z]{1,3}\^\w/,                        // Patterns like "Fh^f"
+    /rdf:|xml:|dc:/i,                            // RDF/XML namespace prefixes
+    /begin=|end=/,                               // PDF structure markers
+    /Core\s+rdf/i,                               // PDF metadata structures
+    /Producer\s+PDF/i,                           // PDF producer info
+    /W5M0MpCehiHzreSzNTczkc9d/i,                // Specific metadata IDs
+    /xmlns|xmp:|adobe/i,                         // XML/Adobe metadata
+    /PDFlib\+PDI/i,                              // PDF library markers
+    /^[^\w\s]*[A-Za-z]{1,4}\^[^\w\s]*\w/,       // Encoded metadata patterns
+    /alt\s+rdf:li/i,                             // RDF list items
+    /^[\s\w\^\~\<\>]{20,}begin=/i                // Mixed garbage with begin markers
   ];
   
   const hasMetadataPattern = metadataPatterns.some(pattern => pattern.test(text));
   
   if (hasMetadataPattern) {
     console.log('❌ OCR detected PDF metadata content, rejecting');
+    return true;
+  }
+  
+  // ENHANCED: Check for compression artifacts and abbreviation spam
+  const words = text.split(/\s+/).filter(word => word.length > 0);
+  const shortWords = words.filter(word => word.length <= 3).length;
+  const abbreviationRatio = words.length > 0 ? shortWords / words.length : 0;
+  
+  if (abbreviationRatio > 0.7) {
+    console.log('❌ OCR detected high abbreviation ratio, likely compression artifacts');
+    return true;
+  }
+  
+  // Check for specific garbage patterns
+  if (text.includes("PDF XWX") || /^[A-Z\s]{20,}$/.test(text.trim())) {
+    console.log('❌ OCR detected PDF compression artifacts');
     return true;
   }
   
@@ -194,15 +212,39 @@ The document is available for legal analysis and case management workflows.`;
   };
 }
 
-// Validate OCR results - IMPROVED with metadata detection
+// ENHANCED OCR validation - reject garbage before confidence check
 export function validateOCRResult(text: string, confidence: number): {
   isValid: boolean;
   quality: number;
   needsManualReview: boolean;
 } {
+  // CRITICAL: Explicit garbage detection FIRST
+  if (text.includes("PDF XWX") || /^[A-Z\s]{20,}$/.test(text.trim())) {
+    console.log('❌ OCR validation failed: compression artifacts detected');
+    return {
+      isValid: false,
+      quality: 0,
+      needsManualReview: true
+    };
+  }
+  
   // Check for metadata first
   if (isMetadataContent(text)) {
     console.log('❌ OCR validation failed: metadata detected');
+    return {
+      isValid: false,
+      quality: 0,
+      needsManualReview: true
+    };
+  }
+  
+  // ENHANCED: Check abbreviation ratio
+  const words = text.split(/\s+/).filter(word => word.length > 0);
+  const shortWords = words.filter(word => word.length <= 3).length;
+  const abbreviationRatio = words.length > 0 ? shortWords / words.length : 0;
+  
+  if (abbreviationRatio > 0.7) {
+    console.log(`❌ OCR validation failed: too many abbreviations (${abbreviationRatio})`);
     return {
       isValid: false,
       quality: 0,

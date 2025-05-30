@@ -1,5 +1,4 @@
-
-// Advanced PDF Processor with WORKING Real Extraction
+// Advanced PDF Processor with ENHANCED Validation and Garbage Detection
 import { extractTextFromPdfReal, validateExtraction } from './realPdfExtractor.ts';
 import { extractTextWithWorkingOCR, validateOCRResult } from './workingOcrService.ts';
 
@@ -12,19 +11,19 @@ export async function extractTextFromPdfAdvanced(pdfData: Uint8Array): Promise<{
   isScanned: boolean;
   processingNotes: string;
 }> {
-  console.log('=== STARTING FIXED PDF EXTRACTION WITH METADATA DETECTION ===');
+  console.log('=== STARTING ENHANCED PDF EXTRACTION WITH GARBAGE DETECTION ===');
   console.log(`Processing PDF of ${pdfData.length} bytes`);
   
   try {
-    // Strategy 1: Real PDF text extraction using actual parsing
-    console.log('Attempting REAL PDF text extraction with metadata filtering...');
+    // Strategy 1: Real PDF text extraction with enhanced validation
+    console.log('Attempting REAL PDF text extraction with enhanced garbage detection...');
     const pdfResult = await extractTextFromPdfReal(pdfData);
     
     console.log(`Real extraction result: ${pdfResult.text.length} chars, method: ${pdfResult.method}, quality: ${pdfResult.quality}`);
     console.log(`Content preview: "${pdfResult.text.substring(0, 300)}..."`);
-    console.log(`Testing for metadata patterns...`);
+    console.log(`Enhanced validation with garbage detection...`);
     
-    // STRICT validation with metadata detection
+    // ENHANCED validation with explicit garbage detection
     const isValidExtraction = validateExtraction(pdfResult);
     
     if (isValidExtraction && pdfResult.quality > 0.2 && pdfResult.text.length > 30) {
@@ -36,11 +35,11 @@ export async function extractTextFromPdfAdvanced(pdfData: Uint8Array): Promise<{
         confidence: pdfResult.confidence,
         pageCount: pdfResult.pageCount,
         isScanned: false,
-        processingNotes: `Successfully extracted ${pdfResult.text.length} characters using ${pdfResult.method} with metadata filtering`
+        processingNotes: `Successfully extracted ${pdfResult.text.length} characters using ${pdfResult.method} with enhanced validation`
       };
     }
     
-    console.log('❌ Real PDF extraction failed validation (likely metadata) - trying OCR');
+    console.log('❌ Real PDF extraction failed enhanced validation (likely garbage/metadata) - trying OCR');
     
     // Strategy 2: OCR for scanned documents (REAL extraction only)
     console.log('Attempting OCR extraction for scanned content...');
@@ -63,7 +62,7 @@ export async function extractTextFromPdfAdvanced(pdfData: Uint8Array): Promise<{
       };
     }
     
-    console.log('❌ Both real extraction and OCR failed validation - using document analysis');
+    console.log('❌ Both real extraction and OCR failed enhanced validation - using document analysis');
     
     // Final fallback with document analysis (no fake content)
     return createDocumentAnalysisFallback(pdfData);
@@ -148,9 +147,15 @@ STATUS: Document ready for legal analysis and case management workflows.`;
   };
 }
 
-// Enhanced document chunking
+// Enhanced document chunking with garbage detection
 export function chunkDocumentAdvanced(content: string, metadata: any = {}): string[] {
   console.log(`Chunking document content: ${content.length} characters`);
+  
+  // CRITICAL: Pre-filter garbage content before chunking
+  if (content.includes("PDF XWX") || /^[A-Z\s]{20,}$/.test(content.trim())) {
+    console.log('❌ Detected garbage content in chunking, creating minimal chunk');
+    return [`Document processed - requires manual review for complete content extraction. File analysis completed.`];
+  }
   
   if (content.length < 100) {
     console.log('Content too short, returning as single chunk');
@@ -169,6 +174,12 @@ export function chunkDocumentAdvanced(content: string, metadata: any = {}): stri
     const trimmed = section.trim();
     if (!trimmed) continue;
     
+    // Skip garbage sections during chunking
+    if (trimmed.includes("PDF XWX") || /^[A-Z\s]{10,}$/.test(trimmed)) {
+      console.log('Skipping garbage section during chunking');
+      continue;
+    }
+    
     if (currentChunk.length + trimmed.length > MAX_CHUNK_SIZE && currentChunk.length > 200) {
       chunks.push(currentChunk.trim());
       currentChunk = trimmed;
@@ -185,10 +196,10 @@ export function chunkDocumentAdvanced(content: string, metadata: any = {}): stri
   const validChunks = chunks.filter(chunk => chunk.length > 50);
   
   if (validChunks.length === 0) {
-    console.log('No valid chunks created, using original content');
-    return [content];
+    console.log('No valid chunks created after garbage filtering, using document analysis');
+    return [`Document analyzed and stored. Manual review recommended for complete content extraction.`];
   }
   
-  console.log(`✅ Created ${validChunks.length} valid chunks for processing`);
+  console.log(`✅ Created ${validChunks.length} valid chunks after garbage filtering`);
   return validChunks;
 }
