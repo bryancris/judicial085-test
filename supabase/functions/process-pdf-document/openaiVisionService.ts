@@ -1,11 +1,14 @@
-// Complete OpenAI Vision Service with robust PDF handling and fixed base64 conversion
+// Complete OpenAI Vision Service with PDF-to-Image conversion and native fallback
+
+import { convertPdfToImages } from './pdfToImageService.ts';
+import { extractTextWithLibrary } from './pdfLibraryService.ts';
 
 export async function extractTextWithOpenAIVision(pdfData: Uint8Array): Promise<{
   text: string;
   confidence: number;
   pageCount?: number;
 }> {
-  console.log('🔍 Starting ROBUST OpenAI Vision OCR extraction...');
+  console.log('🔍 Starting OpenAI Vision OCR extraction with PDF-to-Image conversion...');
   console.log(`📊 PDF data size: ${pdfData.length} bytes (${Math.round(pdfData.length / 1024)}KB)`);
   
   try {
@@ -28,34 +31,87 @@ export async function extractTextWithOpenAIVision(pdfData: Uint8Array): Promise<
       throw new Error(`PDF too large for Vision API: ${Math.round(pdfData.length / 1024 / 1024)}MB (max 20MB)`);
     }
     
-    // Convert PDF to base64 with FIXED conversion method for large files
-    console.log('📄 Converting PDF to base64 for Vision API using chunk-based method...');
-    let base64Pdf: string;
     try {
-      // Use chunk-based conversion to avoid stack overflow with large files
-      base64Pdf = convertToBase64Chunked(pdfData);
-      console.log(`✅ PDF converted to base64: ${base64Pdf.length} characters`);
+      // STEP 1: Convert PDF to images
+      console.log('🖼️ Converting PDF pages to images for Vision API...');
+      const { images, pageCount } = await convertPdfToImages(pdfData);
       
-      // Validate base64 output
-      if (!base64Pdf || base64Pdf.length === 0) {
-        throw new Error('Base64 conversion produced empty result');
+      if (images.length === 0) {
+        throw new Error('No images generated from PDF');
       }
       
-      // Basic base64 validation
-      if (!/^[A-Za-z0-9+/]*={0,2}$/.test(base64Pdf)) {
-        throw new Error('Base64 conversion produced invalid characters');
+      console.log(`✅ PDF converted to ${images.length} images`);
+      
+      // STEP 2: Process each image with Vision API
+      const extractedTexts: string[] = [];
+      
+      for (let i = 0; i < images.length; i++) {
+        console.log(`📄 Processing page ${i + 1}/${images.length} with Vision API...`);
+        
+        const pageText = await extractTextFromImage(images[i], openaiApiKey);
+        if (pageText && pageText.trim().length > 0) {
+          extractedTexts.push(pageText.trim());
+          console.log(`✅ Page ${i + 1} extracted: ${pageText.length} characters`);
+        }
       }
       
-    } catch (conversionError) {
-      console.error('❌ Failed to convert PDF to base64:', conversionError);
-      throw new Error(`Failed to convert PDF to base64 format: ${conversionError.message}`);
+      // STEP 3: Combine all extracted text
+      const combinedText = extractedTexts.join('\n\n').trim();
+      
+      if (combinedText.length > 0) {
+        console.log(`✅ Vision extraction successful: ${combinedText.length} total characters`);
+        
+        const confidence = calculateEnhancedConfidence(combinedText, true);
+        
+        return {
+          text: combinedText,
+          confidence: confidence,
+          pageCount: pageCount
+        };
+      } else {
+        throw new Error('Vision API extracted no readable text from images');
+      }
+      
+    } catch (visionError) {
+      console.error('❌ Vision processing failed, trying native PDF parsing fallback:', visionError);
+      
+      // FALLBACK: Use native PDF text extraction
+      console.log('🔄 Falling back to native PDF text extraction...');
+      
+      try {
+        const nativeResult = await extractTextWithLibrary(pdfData);
+        
+        if (nativeResult.text && nativeResult.text.length > 50) {
+          console.log(`✅ Native extraction successful: ${nativeResult.text.length} characters`);
+          
+          return {
+            text: nativeResult.text,
+            confidence: 0.7, // Lower confidence for native extraction
+            pageCount: nativeResult.pageCount
+          };
+        } else {
+          throw new Error('Native extraction also failed to extract meaningful text');
+        }
+        
+      } catch (nativeError) {
+        console.error('❌ Native extraction also failed:', nativeError);
+        throw new Error(`Both Vision and native extraction failed: ${visionError.message}`);
+      }
     }
+
+  } catch (error) {
+    console.error('❌ OpenAI Vision OCR failed with error:', error);
+    console.error('Error stack trace:', error.stack);
     
-    const dataUrl = `data:application/pdf;base64,${base64Pdf}`;
-    console.log(`📦 Data URL created with ${dataUrl.length} total characters`);
-    
-    // Enhanced prompt for legal document extraction
-    const systemPrompt = `You are an expert OCR system specialized in extracting text from legal documents, particularly demand letters and DTPA (Texas Deceptive Trade Practices Act) documents.
+    // Re-throw the error to let the calling function handle it
+    throw new Error(`Vision extraction failed: ${error.message}`);
+  }
+}
+
+// Extract text from a single image using OpenAI Vision
+async function extractTextFromImage(imageDataUrl: string, openaiApiKey: string): Promise<string> {
+  // Enhanced prompt for legal document extraction
+  const systemPrompt = `You are an expert OCR system specialized in extracting text from legal documents, particularly demand letters and DTPA (Texas Deceptive Trade Practices Act) documents.
 
 CRITICAL EXTRACTION REQUIREMENTS:
 - Extract EVERY word of text exactly as written in the document
@@ -73,117 +129,64 @@ QUALITY STANDARDS:
 
 Return ONLY the extracted text exactly as it appears in the document. Do not add commentary or explanations.`;
 
-    const requestPayload = {
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content: systemPrompt
-        },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: 'Extract all text from this legal document with complete accuracy. This is a legal document that requires precise text extraction:'
-            },
-            {
-              type: 'image_url',
-              image_url: {
-                url: dataUrl,
-                detail: 'high'
-              }
-            }
-          ]
-        }
-      ],
-      max_tokens: 4000,
-      temperature: 0.0
-    };
-    
-    console.log('🚀 Making OpenAI Vision API call with enhanced legal document prompt...');
-    console.log(`📋 Request payload size: ${JSON.stringify(requestPayload).length} characters`);
-    
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
-        'Content-Type': 'application/json',
+  const requestPayload = {
+    model: 'gpt-4o',
+    messages: [
+      {
+        role: 'system',
+        content: systemPrompt
       },
-      body: JSON.stringify(requestPayload),
-    });
-
-    console.log(`📡 OpenAI API response status: ${response.status} ${response.statusText}`);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ OpenAI API error details: ${errorText}`);
-      throw new Error(`OpenAI Vision API failed: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    console.log('✅ OpenAI API response received successfully');
-    console.log(`📊 Response structure: ${JSON.stringify(Object.keys(data))}`);
-    
-    if (!data.choices || data.choices.length === 0) {
-      console.error('❌ No choices in OpenAI API response:', JSON.stringify(data));
-      throw new Error('No choices in OpenAI API response - extraction failed');
-    }
-    
-    const extractedText = data.choices[0]?.message?.content || '';
-    console.log(`📝 Raw extracted text length: ${extractedText.length} characters`);
-    
-    if (extractedText.length === 0) {
-      console.error('❌ OpenAI Vision extracted 0 characters');
-      console.error('Full API response:', JSON.stringify(data, null, 2));
-      throw new Error('OpenAI Vision extraction returned empty text');
-    }
-    
-    // Validate extraction quality for legal documents
-    const cleanText = extractedText.trim();
-    const isLegalDocument = validateLegalDocumentExtraction(cleanText);
-    
-    console.log(`📖 Extracted text preview (first 300 chars): "${cleanText.substring(0, 300)}..."`);
-    console.log(`✅ Legal document validation: ${isLegalDocument ? 'PASSED' : 'WARNING'}`);
-    
-    const confidence = calculateEnhancedConfidence(cleanText, isLegalDocument);
-    const pageCount = estimatePageCount(cleanText);
-    
-    console.log(`✅ Vision extraction complete:`);
-    console.log(`  - Text length: ${cleanText.length} characters`);
-    console.log(`  - Confidence: ${confidence}`);
-    console.log(`  - Page count: ${pageCount}`);
-    console.log(`  - Legal document: ${isLegalDocument}`);
-    
-    return {
-      text: cleanText,
-      confidence: confidence,
-      pageCount: pageCount
-    };
-
-  } catch (error) {
-    console.error('❌ OpenAI Vision OCR failed with error:', error);
-    console.error('Error stack trace:', error.stack);
-    
-    // Re-throw the error to let the calling function handle it
-    throw new Error(`Vision extraction failed: ${error.message}`);
-  }
-}
-
-// FIXED: Chunk-based base64 conversion to handle large files
-function convertToBase64Chunked(uint8Array: Uint8Array): string {
-  const CHUNK_SIZE = 8192; // Process in 8KB chunks to avoid stack overflow
-  let binaryString = '';
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: 'Extract all text from this legal document with complete accuracy. This is a legal document that requires precise text extraction:'
+          },
+          {
+            type: 'image_url',
+            image_url: {
+              url: imageDataUrl,
+              detail: 'high'
+            }
+          }
+        ]
+      }
+    ],
+    max_tokens: 4000,
+    temperature: 0.0
+  };
   
-  // Convert to binary string in chunks
-  for (let i = 0; i < uint8Array.length; i += CHUNK_SIZE) {
-    const chunk = uint8Array.slice(i, i + CHUNK_SIZE);
-    const chunkArray = Array.from(chunk);
-    binaryString += String.fromCharCode(...chunkArray);
+  console.log('🚀 Making OpenAI Vision API call for image...');
+  
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${openaiApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestPayload),
+  });
+
+  console.log(`📡 OpenAI API response status: ${response.status} ${response.statusText}`);
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`❌ OpenAI API error details: ${errorText}`);
+    throw new Error(`OpenAI Vision API failed: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  
+  if (!data.choices || data.choices.length === 0) {
+    console.error('❌ No choices in OpenAI API response:', JSON.stringify(data));
+    throw new Error('No choices in OpenAI API response - extraction failed');
   }
   
-  // Convert binary string to base64
-  return btoa(binaryString);
+  const extractedText = data.choices[0]?.message?.content || '';
+  console.log(`📝 Extracted text length: ${extractedText.length} characters`);
+  
+  return extractedText;
 }
 
 // Validate if extracted text appears to be from a legal document

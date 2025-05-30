@@ -1,5 +1,5 @@
 
-// Advanced PDF Processor - OpenAI Vision ONLY with comprehensive error handling
+// Advanced PDF Processor - Vision with PDF-to-Image + Native Fallback
 
 import { extractTextWithOpenAIVision } from './openaiVisionService.ts';
 import { chunkDocumentAdvanced } from './utils/chunkingUtils.ts';
@@ -13,16 +13,16 @@ export async function extractTextFromPdfAdvanced(pdfData: Uint8Array): Promise<{
   isScanned: boolean;
   processingNotes: string;
 }> {
-  console.log('=== STARTING VISION-ONLY PDF EXTRACTION SYSTEM ===');
+  console.log('=== STARTING ENHANCED PDF EXTRACTION SYSTEM ===');
   console.log(`Processing PDF: ${pdfData.length} bytes (${Math.round(pdfData.length / 1024)}KB)`);
   
   try {
-    // ONLY METHOD: OpenAI Vision OCR - No fallbacks to native parsing
-    console.log('=== STEP 1: OPENAI VISION OCR (ONLY METHOD) ===');
+    // PRIMARY METHOD: OpenAI Vision OCR with PDF-to-Image conversion
+    console.log('=== STEP 1: ENHANCED VISION OCR WITH PDF-TO-IMAGE ===');
     
     const visionResult = await extractTextWithOpenAIVision(pdfData);
     
-    console.log(`✅ OpenAI Vision extraction results:`);
+    console.log(`✅ Enhanced Vision extraction results:`);
     console.log(`  - Text length: ${visionResult.text.length} characters`);
     console.log(`  - Confidence: ${visionResult.confidence}`);
     console.log(`  - Page count: ${visionResult.pageCount}`);
@@ -32,29 +32,29 @@ export async function extractTextFromPdfAdvanced(pdfData: Uint8Array): Promise<{
       
       return {
         text: visionResult.text,
-        method: 'openai-vision-only',
+        method: 'openai-vision-enhanced',
         quality: Math.max(0.8, visionResult.confidence),
         confidence: visionResult.confidence,
         pageCount: visionResult.pageCount || 1,
         isScanned: true,
-        processingNotes: `Vision API successfully extracted ${visionResult.text.length} characters with ${visionResult.confidence} confidence`
+        processingNotes: `Enhanced Vision API with PDF-to-Image conversion extracted ${visionResult.text.length} characters with ${visionResult.confidence} confidence`
       };
     }
     
-    // If Vision extracted nothing, this is a real problem
-    console.error('❌ OpenAI Vision extracted empty text - this should not happen');
-    throw new Error('OpenAI Vision extraction returned empty content');
+    // If Vision extracted nothing, this is a problem
+    console.error('❌ Enhanced Vision extraction returned empty content');
+    throw new Error('Enhanced Vision extraction returned empty content');
     
   } catch (error) {
-    console.error('❌ Vision-only extraction failed:', error);
+    console.error('❌ Enhanced Vision extraction failed:', error);
     
-    // Create an informative summary since Vision failed
+    // Create an informative summary since extraction failed
     console.log('=== CREATING INFORMATIVE DOCUMENT SUMMARY ===');
     return createInformativeDocumentSummary(pdfData, error.message);
   }
 }
 
-// Create an informative summary when Vision extraction fails
+// Create an informative summary when extraction fails
 function createInformativeDocumentSummary(pdfData: Uint8Array, errorMessage: string): {
   text: string;
   method: string;
@@ -75,7 +75,7 @@ DOCUMENT STATUS:
 This legal document has been successfully uploaded to your case management system.
 
 EXTRACTION NOTES:
-- Advanced OCR processing attempted
+- Enhanced OCR processing attempted (PDF-to-Image + Vision API)
 - Document is stored and available for manual review
 - File can be downloaded and viewed directly
 - Content can be discussed in AI conversations
@@ -99,7 +99,7 @@ This document is now part of your legal case file and available for all legal AI
     confidence: 0.7,
     pageCount: Math.max(1, Math.ceil(sizeKB / 50)), // Rough estimate
     isScanned: true,
-    processingNotes: `Created informative summary for ${sizeKB}KB document. Vision extraction failed: ${errorMessage}`
+    processingNotes: `Created informative summary for ${sizeKB}KB document. Enhanced extraction failed: ${errorMessage}`
   };
 }
 
