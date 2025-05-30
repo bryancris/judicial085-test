@@ -1,5 +1,5 @@
 
-// Advanced PDF Processor - Main orchestrator with proper library-first approach
+// Advanced PDF Processor - Main orchestrator with native Deno approach
 
 import { extractTextWithLibrary, validateLibraryExtraction } from './pdfLibraryService.ts';
 import { extractTextWithOpenAIVision } from './openaiVisionService.ts';
@@ -16,16 +16,16 @@ export async function extractTextFromPdfAdvanced(pdfData: Uint8Array): Promise<{
   isScanned: boolean;
   processingNotes: string;
 }> {
-  console.log('=== STARTING TWO-STEP PDF EXTRACTION ===');
+  console.log('=== STARTING NATIVE DENO PDF EXTRACTION ===');
   console.log(`Processing PDF of ${pdfData.length} bytes (${Math.round(pdfData.length / 1024)}KB)`);
   
   try {
-    // STEP 1: Try PDF.js library-based PDF text extraction first
-    console.log('=== STEP 1: PDF.js LIBRARY-BASED PDF EXTRACTION ===');
+    // STEP 1: Try native Deno PDF text extraction first
+    console.log('=== STEP 1: NATIVE DENO PDF EXTRACTION ===');
     const libraryResult = await extractTextWithLibrary(pdfData);
     const libraryValidation = validateLibraryExtraction(libraryResult.text, libraryResult.pageCount);
     
-    console.log(`PDF.js extraction result:`);
+    console.log(`Native Deno extraction result:`);
     console.log(`- Text length: ${libraryResult.text.length}`);
     console.log(`- Page count: ${libraryResult.pageCount}`);
     console.log(`- Quality: ${libraryValidation.quality}`);
@@ -33,21 +33,21 @@ export async function extractTextFromPdfAdvanced(pdfData: Uint8Array): Promise<{
     console.log(`- Content preview: "${libraryResult.text.substring(0, 200)}..."`);
     
     if (libraryValidation.isValid && libraryResult.text.length > 100) {
-      console.log('✅ PDF.js extraction SUCCESSFUL - using extracted content');
+      console.log('✅ Native Deno extraction SUCCESSFUL - using extracted content');
       return {
         text: libraryResult.text,
-        method: 'pdfjs-library',
+        method: 'native-deno-parsing',
         quality: libraryValidation.quality,
         confidence: 0.9,
         pageCount: libraryResult.pageCount,
         isScanned: false,
-        processingNotes: `Successfully extracted ${libraryResult.text.length} characters using PDF.js library`
+        processingNotes: `Successfully extracted ${libraryResult.text.length} characters using native Deno PDF parsing`
       };
     }
     
-    console.log('❌ PDF.js extraction failed or low quality - trying OpenAI Vision OCR');
+    console.log('❌ Native Deno extraction failed or low quality - trying OpenAI Vision OCR');
     
-    // STEP 2: OpenAI Vision OCR for scanned documents or failed library extraction
+    // STEP 2: OpenAI Vision OCR for scanned documents or failed native extraction
     console.log('=== STEP 2: OPENAI VISION OCR ===');
     const ocrResult = await extractTextWithOpenAIVision(pdfData);
     
@@ -69,7 +69,7 @@ export async function extractTextFromPdfAdvanced(pdfData: Uint8Array): Promise<{
       };
     }
     
-    console.log('❌ Both PDF.js and OpenAI Vision OCR failed - using fallback analysis');
+    console.log('❌ Both native Deno and OpenAI Vision OCR failed - using fallback analysis');
     return createComprehensiveAnalysisFallback(pdfData);
     
   } catch (error) {

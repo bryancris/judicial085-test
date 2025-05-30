@@ -1,67 +1,157 @@
 
-// Enhanced PDF Library Service - Using PDF.js for Deno compatibility
-import * as pdfjsLib from 'https://cdn.skypack.dev/pdfjs-dist@3.11.174';
-
+// Enhanced PDF Library Service - Using native Deno PDF parsing
 export async function extractTextWithLibrary(pdfData: Uint8Array): Promise<{text: string, pageCount: number}> {
-  console.log('📄 Starting PDF.js library extraction...');
+  console.log('📄 Starting native Deno PDF extraction...');
   
   try {
     console.log(`Processing PDF data: ${pdfData.length} bytes`);
     
-    // Use PDF.js to load and extract text from PDF
-    const loadingTask = pdfjsLib.getDocument({ data: pdfData });
-    const pdf = await loadingTask.promise;
+    // Convert to string for pattern matching
+    const decoder = new TextDecoder('latin1');
+    const pdfString = decoder.decode(pdfData);
     
-    console.log(`PDF loaded with ${pdf.numPages} pages`);
+    // Extract text using multiple strategies
+    const extractedText = extractTextFromPdfString(pdfString);
+    const pageCount = estimatePageCount(pdfString);
     
-    let fullText = '';
-    
-    // Extract text from each page
-    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
-      console.log(`Extracting text from page ${pageNumber}/${pdf.numPages}`);
-      
-      const page = await pdf.getPage(pageNumber);
-      const textContent = await page.getTextContent();
-      
-      // Combine all text items from the page
-      const pageText = textContent.items
-        .map((item: any) => item.str || '')
-        .join(' ')
-        .trim();
-      
-      if (pageText) {
-        fullText += pageText + '\n\n';
-      }
-    }
-    
-    const extractedText = cleanExtractedText(fullText);
-    
-    console.log(`PDF.js extraction results:`);
+    console.log(`Native extraction results:`);
     console.log(`- Text length: ${extractedText.length} characters`);
-    console.log(`- Page count: ${pdf.numPages}`);
+    console.log(`- Page count: ${pageCount}`);
     console.log(`- Text preview: "${extractedText.substring(0, 200)}..."`);
     
     if (extractedText.length > 50) {
-      console.log('✅ PDF.js extraction successful');
+      console.log('✅ Native PDF extraction successful');
       return {
         text: extractedText,
-        pageCount: pdf.numPages
+        pageCount: pageCount
       };
     } else {
-      console.log('❌ PDF.js extracted very little text');
+      console.log('❌ Native extraction produced minimal text');
       return {
         text: extractedText,
-        pageCount: pdf.numPages
+        pageCount: pageCount
       };
     }
     
   } catch (error) {
-    console.error('❌ PDF.js extraction failed:', error);
-    throw new Error(`PDF.js parsing failed: ${error.message}`);
+    console.error('❌ Native PDF extraction failed:', error);
+    throw new Error(`Native PDF parsing failed: ${error.message}`);
   }
 }
 
-// Clean the extracted text
+// Extract text from PDF string using multiple patterns
+function extractTextFromPdfString(pdfString: string): string {
+  const textSegments: string[] = [];
+  
+  try {
+    // Pattern 1: Direct text extraction from text objects
+    const textPattern = /\(([^)]{3,})\)\s*Tj/gi;
+    let match;
+    while ((match = textPattern.exec(pdfString)) !== null) {
+      const text = match[1];
+      if (isValidTextContent(text)) {
+        textSegments.push(cleanText(text));
+      }
+    }
+    
+    // Pattern 2: Text within BT/ET blocks (Begin Text/End Text)
+    const btEtPattern = /BT\s*([\s\S]*?)\s*ET/gi;
+    let btMatch;
+    while ((btMatch = btEtPattern.exec(pdfString)) !== null) {
+      const textBlock = btMatch[1];
+      const innerTextPattern = /\(([^)]{3,})\)/g;
+      let innerMatch;
+      while ((innerMatch = innerTextPattern.exec(textBlock)) !== null) {
+        const text = innerMatch[1];
+        if (isValidTextContent(text)) {
+          textSegments.push(cleanText(text));
+        }
+      }
+    }
+    
+    // Pattern 3: Stream content extraction
+    const streamPattern = /stream\s*([\s\S]*?)\s*endstream/gi;
+    let streamMatch;
+    while ((streamMatch = streamPattern.exec(pdfString)) !== null) {
+      const streamContent = streamMatch[1];
+      // Look for readable text in streams
+      const readableText = extractReadableFromStream(streamContent);
+      if (readableText) {
+        textSegments.push(readableText);
+      }
+    }
+    
+    // Combine and clean all text segments
+    const combinedText = textSegments.join(' ').trim();
+    return cleanExtractedText(combinedText);
+    
+  } catch (error) {
+    console.warn('Error in text extraction patterns:', error);
+    return '';
+  }
+}
+
+// Extract readable text from stream content
+function extractReadableFromStream(streamContent: string): string {
+  try {
+    // Look for text patterns in decoded streams
+    const textMatches = streamContent.match(/[A-Za-z][A-Za-z0-9\s.,;:!?()-]{10,}/g);
+    if (textMatches) {
+      return textMatches
+        .filter(text => isValidTextContent(text))
+        .map(text => cleanText(text))
+        .join(' ');
+    }
+    return '';
+  } catch {
+    return '';
+  }
+}
+
+// Check if text content is valid (not metadata or garbage)
+function isValidTextContent(text: string): boolean {
+  if (!text || text.length < 3) return false;
+  
+  // Check for legal document terms (high priority)
+  const legalTerms = ['REQUEST', 'DISCOVERY', 'COURT', 'CASE', 'DEFENDANT', 'PLAINTIFF', 'ATTORNEY'];
+  if (legalTerms.some(term => text.toUpperCase().includes(term))) {
+    return true;
+  }
+  
+  // Reject obvious metadata patterns
+  const metadataPatterns = [
+    /^PDF\s+/i,
+    /^[A-Z]{2,4}(\s+[A-Z]{2,4}){3,}/,
+    /rdf:|xml:|dc:/i,
+    /Producer|Creator|ModDate/i,
+    /^[^\w\s]*[A-Za-z]{1,4}\^/,
+    /begin=|end=/
+  ];
+  
+  if (metadataPatterns.some(pattern => pattern.test(text))) {
+    return false;
+  }
+  
+  // Check for reasonable character distribution
+  const alphaCount = (text.match(/[a-zA-Z]/g) || []).length;
+  const totalCount = text.length;
+  const alphaRatio = alphaCount / totalCount;
+  
+  return alphaRatio > 0.3; // At least 30% alphabetic characters
+}
+
+// Clean extracted text
+function cleanText(text: string): string {
+  return text
+    .replace(/\\n/g, ' ')
+    .replace(/\\r/g, ' ')
+    .replace(/\\t/g, ' ')
+    .replace(/[^\x20-\x7E\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Clean the final extracted text
 function cleanExtractedText(text: string): string {
   if (!text) return '';
   
@@ -73,6 +163,16 @@ function cleanExtractedText(text: string): string {
     // Clean up any weird characters
     .replace(/[^\x20-\x7E\s\n]/g, ' ')
     .trim();
+}
+
+// Estimate page count from PDF structure
+function estimatePageCount(pdfString: string): number {
+  try {
+    const pageMatches = pdfString.match(/\/Type\s*\/Page\b/gi);
+    return pageMatches ? Math.max(1, pageMatches.length) : 1;
+  } catch {
+    return 1;
+  }
 }
 
 // Validate library extraction quality
