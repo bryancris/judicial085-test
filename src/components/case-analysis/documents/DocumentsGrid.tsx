@@ -17,7 +17,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { cn } from "@/lib/utils";
 
 interface DocumentsGridProps {
   documents: DocumentWithContent[];
@@ -42,51 +41,88 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
 
   // Helper function to check if document is a PDF
   const isPdfDocument = (document: DocumentWithContent): boolean => {
-    // Check multiple locations for PDF indicators
+    console.log('Checking if PDF for document:', document.title);
+    console.log('Document structure:', document);
+    
+    // Check document title for .pdf extension
+    const titleIsPdf = document.title?.toLowerCase().endsWith('.pdf');
+    
+    // Check document URL for .pdf
+    const urlIsPdf = document.url?.toLowerCase().includes('.pdf');
+    
+    // Check metadata at document level
+    const docMetadataIsPdf = document.schema === 'pdf' || 
+      (document as any).file_type === 'pdf' ||
+      (document as any).isPdfDocument === true;
+    
+    // Check first content's metadata
     const contentMetadata = document.contents?.[0]?.metadata;
+    const contentIsPdf = contentMetadata?.isPdfDocument === true ||
+      contentMetadata?.fileType === "pdf" ||
+      contentMetadata?.file_type === "pdf" ||
+      contentMetadata?.type === "pdf";
     
-    // Check various PDF indicators
-    const indicators = [
-      contentMetadata?.isPdfDocument,
-      contentMetadata?.fileType === "pdf",
-      contentMetadata?.file_type === "pdf",
-      document.title?.toLowerCase().endsWith('.pdf'),
-      document.url?.toLowerCase().includes('.pdf')
-    ];
+    const isPdf = titleIsPdf || urlIsPdf || docMetadataIsPdf || contentIsPdf;
     
-    return indicators.some(indicator => indicator === true);
+    console.log('PDF detection results:', {
+      titleIsPdf,
+      urlIsPdf,
+      docMetadataIsPdf,
+      contentIsPdf,
+      finalResult: isPdf
+    });
+    
+    return isPdf;
   };
 
   // Helper function to get PDF URL
   const getPdfUrl = (document: DocumentWithContent): string | null => {
-    const contentMetadata = document.contents?.[0]?.metadata;
+    console.log('Getting PDF URL for document:', document.title);
     
     // Check various locations for PDF URL
-    const urls = [
-      contentMetadata?.pdfUrl,
-      contentMetadata?.pdf_url,
-      contentMetadata?.url,
-      document.url
+    const possibleUrls = [
+      document.url,
+      (document as any).pdf_url,
+      (document as any).pdfUrl,
+      document.contents?.[0]?.metadata?.pdfUrl,
+      document.contents?.[0]?.metadata?.pdf_url,
+      document.contents?.[0]?.metadata?.url,
+      document.contents?.[0]?.metadata?.file_path
     ];
     
-    const pdfUrl = urls.find(url => url && typeof url === 'string');
-    console.log('PDF URL found:', pdfUrl, 'for document:', document.title);
+    console.log('Possible PDF URLs:', possibleUrls);
+    
+    const pdfUrl = possibleUrls.find(url => url && typeof url === 'string' && url.trim().length > 0);
+    
+    console.log('Selected PDF URL:', pdfUrl);
     return pdfUrl || null;
   };
 
   // Helper function to get document content for preview
   const getDocumentContent = (document: DocumentWithContent): string => {
+    console.log('Getting content for document:', document.title);
+    console.log('Document contents:', document.contents);
+    
     if (!document.contents || document.contents.length === 0) {
-      return "No content available for this document.";
+      return "No content chunks found for this document.";
     }
     
     // Combine all content chunks
     const allContent = document.contents
-      .map(content => content.content)
-      .filter(content => content && content.trim().length > 0)
+      .map(content => {
+        console.log('Processing content chunk:', content);
+        return content.content;
+      })
+      .filter(content => content && typeof content === 'string' && content.trim().length > 0)
       .join('\n\n');
     
-    return allContent || "Document content could not be loaded.";
+    console.log('Combined content length:', allContent.length);
+    
+    if (allContent.length === 0) {
+      return "Document content could not be extracted or is empty.";
+    }
+    
+    return allContent;
   };
 
   const handleDelete = async (document: DocumentWithContent) => {
@@ -129,7 +165,7 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
   };
 
   const handleViewDocument = (document: DocumentWithContent) => {
-    console.log('Viewing document:', document.title, 'Contents:', document.contents);
+    console.log('Viewing document:', document.title);
     setSelectedDocument(document);
     setPreviewOpen(true);
   };
@@ -149,7 +185,7 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
     } else {
       toast({
         title: "PDF not available",
-        description: "The PDF file could not be found.",
+        description: "The PDF file could not be found or accessed.",
         variant: "destructive",
       });
     }
@@ -191,9 +227,6 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
           const truncatedContent = content.length > 150 
             ? `${content.substring(0, 150)}...` 
             : content;
-
-          // Debug logging
-          console.log('Document:', document.title, 'isPdf:', isPdf, 'pdfUrl:', pdfUrl);
 
           return (
             <Card key={document.id} className="hover:shadow-md transition-shadow relative group">
@@ -248,18 +281,18 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
                     className="flex-1 flex items-center gap-2"
                   >
                     <Eye className="h-4 w-4" />
-                    View
+                    View Content
                   </Button>
                   
-                  {isPdf && pdfUrl && (
+                  {isPdf && (
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleViewPdf(document)}
                       className="flex items-center gap-2"
-                      title="View original PDF"
+                      title="View original PDF file"
                     >
-                      <Download className="h-4 w-4" />
+                      <FileIcon className="h-4 w-4" />
                       View PDF
                     </Button>
                   )}
@@ -286,7 +319,7 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
           
           <div className="overflow-y-auto max-h-[60vh]">
             {selectedDocument && (
-              <div className="whitespace-pre-wrap">
+              <div className="whitespace-pre-wrap bg-gray-50 p-4 rounded-md">
                 {getDocumentContent(selectedDocument)}
               </div>
             )}
@@ -299,7 +332,7 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
                 onClick={() => handleViewPdf(selectedDocument)}
                 className="flex items-center"
               >
-                <Download className="h-4 w-4 mr-2" />
+                <FileIcon className="h-4 w-4 mr-2" />
                 View Original PDF
               </Button>
             </div>
