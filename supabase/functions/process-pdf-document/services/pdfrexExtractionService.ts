@@ -12,18 +12,34 @@ export async function extractTextWithPdfrex(pdfData: Uint8Array): Promise<{
   console.log(`Processing PDF: ${pdfData.length} bytes (${Math.round(pdfData.length / 1024)}KB)`);
   
   try {
-    // Import pdfrex for Deno environment
-    const { extractText, getPageCount } = await import('https://deno.land/x/pdfrex@v0.1.0/mod.ts');
+    // Import pdfrex directly from Deno.land (this works in Deno Edge Functions)
+    const pdfrex = await import('https://deno.land/x/pdfrex@v0.1.0/mod.ts');
     
     console.log('🔍 Extracting text with pdfrex...');
     
-    // Extract text using pdfrex
-    const extractedText = await extractText(pdfData);
-    
-    // Get page count
+    // Extract text using pdfrex - check what methods are actually available
+    let extractedText = '';
     let pageCount = 1;
+    
+    // Try different potential API methods that pdfrex might have
+    if (pdfrex.extractText) {
+      extractedText = await pdfrex.extractText(pdfData);
+    } else if (pdfrex.extract) {
+      const result = await pdfrex.extract(pdfData);
+      extractedText = typeof result === 'string' ? result : result.text || '';
+    } else if (pdfrex.default && pdfrex.default.extractText) {
+      extractedText = await pdfrex.default.extractText(pdfData);
+    } else {
+      throw new Error('pdfrex API methods not found or not compatible');
+    }
+    
+    // Try to get page count if available
     try {
-      pageCount = await getPageCount(pdfData);
+      if (pdfrex.getPageCount) {
+        pageCount = await pdfrex.getPageCount(pdfData);
+      } else if (pdfrex.pageCount) {
+        pageCount = await pdfrex.pageCount(pdfData);
+      }
     } catch (pageError) {
       console.warn('Could not get page count, defaulting to 1:', pageError);
     }
