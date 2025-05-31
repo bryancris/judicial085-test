@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { CaseAnalysisData } from "@/types/caseAnalysis";
@@ -9,6 +9,7 @@ import {
   extractAnalysisSections
 } from "@/utils/analysisParsingUtils";
 import { createConversationSummary } from "@/utils/conversationSummaryUtils";
+import { useDocumentChange } from "@/contexts/DocumentChangeContext";
 
 export interface AnalysisData {
   outcome: {
@@ -27,7 +28,7 @@ export interface AnalysisData {
   lawReferences?: LawReference[];
   caseType?: string;
   remedies?: string;
-  timestamp: string; // Explicitly adding this property to fix the error
+  timestamp: string;
 }
 
 interface LawReference {
@@ -42,6 +43,15 @@ export const useAnalysisData = (clientId?: string) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const { documentChangeKey } = useDocumentChange();
+
+  // Refresh analysis when documents change
+  useEffect(() => {
+    if (documentChangeKey > 0 && clientId) {
+      console.log("Documents changed, refreshing analysis data...");
+      fetchAnalysisData();
+    }
+  }, [documentChangeKey, clientId]);
 
   const fetchAnalysisData = async () => {
     try {

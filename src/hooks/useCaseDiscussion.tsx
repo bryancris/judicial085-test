@@ -3,12 +3,47 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { CaseDiscussionMessage, getCaseDiscussionMessages, generateCaseDiscussionResponse } from "@/utils/caseDiscussionService";
 import { supabase } from "@/integrations/supabase/client";
+import { useDocumentChange } from "@/contexts/DocumentChangeContext";
 
 export const useCaseDiscussion = (clientId: string) => {
   const [messages, setMessages] = useState<CaseDiscussionMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [documentsAvailable, setDocumentsAvailable] = useState(false);
   const { toast } = useToast();
+  const { documentChangeKey } = useDocumentChange();
+
+  // Check for document availability when documents change
+  useEffect(() => {
+    if (documentChangeKey > 0) {
+      console.log("Documents changed, checking availability for case discussion...");
+      checkDocumentAvailability();
+    }
+  }, [documentChangeKey, clientId]);
+
+  const checkDocumentAvailability = async () => {
+    try {
+      const { data: chunks, error } = await supabase
+        .from("document_chunks")
+        .select("id")
+        .eq("client_id", clientId)
+        .limit(1);
+
+      if (!error && chunks && chunks.length > 0) {
+        setDocumentsAvailable(true);
+        if (documentChangeKey > 0) {
+          toast({
+            title: "New Documents Available",
+            description: "Your uploaded documents are now available for AI discussion.",
+          });
+        }
+      } else {
+        setDocumentsAvailable(false);
+      }
+    } catch (error) {
+      console.error("Error checking document availability:", error);
+    }
+  };
 
   // Format timestamp
   const formatTimestamp = (): string => {
@@ -32,6 +67,9 @@ export const useCaseDiscussion = (clientId: string) => {
         } else {
           setMessages(messages);
         }
+
+        // Check document availability on initial load
+        await checkDocumentAvailability();
       } catch (err: any) {
         console.error("Error loading case discussion history:", err);
         toast({
@@ -187,6 +225,7 @@ export const useCaseDiscussion = (clientId: string) => {
     messages,
     isLoading,
     isLoadingHistory,
+    documentsAvailable,
     handleSendMessage,
     formatTimestamp
   };

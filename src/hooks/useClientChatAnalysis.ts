@@ -1,9 +1,10 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { generateLegalAnalysis, saveLegalAnalysis } from "@/utils/openaiService";
 import { ChatMessageProps } from "@/components/clients/chat/ChatMessage";
 import { AnalysisItem } from "./useClientChatHistory";
+import { useDocumentChange } from "@/contexts/DocumentChangeContext";
 
 export const useClientChatAnalysis = (
   clientId: string,
@@ -12,9 +13,22 @@ export const useClientChatAnalysis = (
   const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [documentsUsed, setDocumentsUsed] = useState<any[]>([]);
+  const [lastMessages, setLastMessages] = useState<ChatMessageProps[]>([]);
   const { toast } = useToast();
+  const { documentChangeKey } = useDocumentChange();
+
+  // Re-run analysis when documents change and we have messages
+  useEffect(() => {
+    if (documentChangeKey > 0 && lastMessages.length > 0) {
+      console.log("Documents changed, re-running analysis with new documents...");
+      generateAnalysis(lastMessages);
+    }
+  }, [documentChangeKey]);
 
   const generateAnalysis = async (currentMessages: ChatMessageProps[]) => {
+    // Store messages for potential re-analysis
+    setLastMessages(currentMessages);
+    
     // Only run analysis if we have at least one message from both attorney and client
     const hasAttorneyMessages = currentMessages.some(msg => msg.role === "attorney");
     const hasClientMessages = currentMessages.some(msg => msg.role === "client");
