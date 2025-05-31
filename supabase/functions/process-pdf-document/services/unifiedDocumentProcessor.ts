@@ -49,9 +49,9 @@ export async function processDocument(
   }
 }
 
-// Process PDF documents with PDF.js
+// Process PDF documents with pdf-parse
 async function processPdfDocument(pdfData: Uint8Array, fileName: string): Promise<DocumentExtractionResult> {
-  console.log('📄 Processing PDF document with PDF.js...');
+  console.log('📄 Processing PDF document with pdf-parse...');
   
   const result = await extractTextWithPdfJs(pdfData);
   const validation = validatePdfJsExtraction(result.text, result.pageCount);
@@ -67,7 +67,7 @@ async function processPdfDocument(pdfData: Uint8Array, fileName: string): Promis
     confidence: result.confidence,
     pageCount: result.pageCount,
     fileType: 'pdf',
-    processingNotes: `PDF.js extraction: ${result.pageCount} pages, ${result.text.length} characters, quality ${result.quality.toFixed(2)}`
+    processingNotes: `pdf-parse extraction: ${result.pageCount} pages, ${result.text.length} characters, quality ${result.quality.toFixed(2)}`
   };
 }
 
@@ -178,14 +178,14 @@ DOCUMENT STATUS:
 This ${fileType.toUpperCase()} document has been uploaded to your case management system.
 
 PROCESSING NOTES:
-- Document processing attempted with modern extraction tools
+- Document processing attempted with pdf-parse and mammoth.js
 - File is stored and available for manual review
 - Document can be downloaded and viewed directly
 - Content can be discussed in AI conversations
 
 TECHNICAL DETAILS:
 Processing Error: ${errorMessage}
-Recommended Action: Manual document review
+Recommended Action: Manual document review or try re-uploading
 
 This document is now part of your legal case file and available for legal AI analysis.`;
 

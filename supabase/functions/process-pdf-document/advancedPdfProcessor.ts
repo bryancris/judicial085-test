@@ -1,5 +1,5 @@
 
-// Advanced PDF Processor - Updated to use unified document processing
+// Advanced PDF Processor - Updated to use pdf-parse
 
 import { processDocument, DocumentExtractionResult } from './services/unifiedDocumentProcessor.ts';
 import { chunkDocumentAdvanced } from './utils/chunkingUtils.ts';
@@ -17,14 +17,14 @@ export async function extractTextFromPdfAdvanced(pdfData: Uint8Array, fileName?:
   console.log(`Processing document: ${pdfData.length} bytes (${Math.round(pdfData.length / 1024)}KB)`);
   
   try {
-    // Use the new unified document processor
+    // Use the new unified document processor with pdf-parse
     const result: DocumentExtractionResult = await processDocument(
       pdfData,
       fileName || 'document.pdf',
       'application/pdf'
     );
     
-    console.log(`✅ Unified extraction results:`);
+    console.log(`✅ pdf-parse extraction results:`);
     console.log(`  - Method: ${result.method}`);
     console.log(`  - Text length: ${result.text.length} characters`);
     console.log(`  - Quality: ${result.quality}`);
@@ -40,15 +40,15 @@ export async function extractTextFromPdfAdvanced(pdfData: Uint8Array, fileName?:
         quality: result.quality,
         confidence: result.confidence,
         pageCount: result.pageCount || 1,
-        isScanned: result.method.includes('ocr') || result.fileType === 'pdf',
+        isScanned: result.method.includes('pdf-parse') ? false : true, // pdf-parse extracts native text
         processingNotes: result.processingNotes
       };
     }
     
-    throw new Error('Unified extraction returned empty content');
+    throw new Error('pdf-parse extraction returned empty content');
     
   } catch (error) {
-    console.error('❌ Unified extraction failed:', error);
+    console.error('❌ pdf-parse extraction failed:', error);
     
     // Create an informative summary when extraction fails
     console.log('=== CREATING DOCUMENT SUMMARY ===');
@@ -82,7 +82,7 @@ DOCUMENT STATUS:
 This legal document has been successfully uploaded to your case management system.
 
 EXTRACTION NOTES:
-- Modern document processing attempted (PDF.js/Mammoth.js)
+- Modern document processing attempted (pdf-parse/mammoth.js)
 - Document is stored and available for manual review
 - File can be downloaded and viewed directly
 - Content can be discussed in AI conversations
@@ -95,7 +95,7 @@ NEXT STEPS:
 
 TECHNICAL DETAILS:
 Processing Error: ${errorMessage}
-Recommended Action: Manual document review
+Recommended Action: Manual document review or try re-uploading
 
 This document is now part of your legal case file and available for all legal AI analysis features.`;
 
@@ -106,7 +106,7 @@ This document is now part of your legal case file and available for all legal AI
     confidence: 0.7,
     pageCount: Math.max(1, Math.ceil(sizeKB / 50)), // Rough estimate
     isScanned: true,
-    processingNotes: `Created informative summary for ${sizeKB}KB document. Unified extraction failed: ${errorMessage}`
+    processingNotes: `Created informative summary for ${sizeKB}KB document. pdf-parse extraction failed: ${errorMessage}`
   };
 }
 
