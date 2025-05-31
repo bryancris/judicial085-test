@@ -39,32 +39,33 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
   const [localIsDeleting, setLocalIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  // Helper function to check if document is a PDF
+  // Improved PDF detection function
   const isPdfDocument = (document: DocumentWithContent): boolean => {
     console.log('Checking if PDF for document:', document.title);
     
-    // Check document title for .pdf extension
+    // Check document title for .pdf extension (most reliable)
     const titleIsPdf = document.title?.toLowerCase().endsWith('.pdf');
     
-    // Check document URL for PDF indicators
-    const urlIsPdf = document.url?.includes('drive.google.com') || document.url?.toLowerCase().includes('.pdf');
-    
-    // Check schema
+    // Check document schema
     const schemaIsPdf = document.schema === 'pdf';
     
-    // Check content metadata
+    // Check content metadata for various PDF indicators
     const contentMetadata = document.contents?.[0]?.metadata;
     const contentIsPdf = contentMetadata?.isPdfDocument === true ||
       contentMetadata?.blobType === 'application/pdf' ||
       contentMetadata?.file_type === "pdf";
     
-    const isPdf = titleIsPdf || urlIsPdf || schemaIsPdf || contentIsPdf;
+    // Check document URL for PDF indicators
+    const urlIsPdf = document.url?.includes('drive.google.com') || 
+                    document.url?.toLowerCase().includes('.pdf');
+    
+    const isPdf = titleIsPdf || schemaIsPdf || contentIsPdf || urlIsPdf;
     
     console.log('PDF detection results:', {
       titleIsPdf,
-      urlIsPdf,
       schemaIsPdf,
       contentIsPdf,
+      urlIsPdf,
       finalResult: isPdf
     });
     
@@ -88,16 +89,19 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
     return pdfUrl || null;
   };
 
-  // Helper function to get document content for preview
+  // Improved document content retrieval
   const getDocumentContent = (document: DocumentWithContent): string => {
     console.log('Getting content for document:', document.title);
     
     if (!document.contents || document.contents.length === 0) {
+      console.log('No contents array found');
       return "No content available for this document.";
     }
     
     // Get content from the first content item
     const content = document.contents[0]?.content;
+    
+    console.log('Raw content:', content?.substring(0, 100) + '...');
     
     if (!content || typeof content !== 'string' || content.trim().length === 0) {
       return "Document content could not be extracted or is empty.";
@@ -209,6 +213,8 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
             ? `${content.substring(0, 150)}...` 
             : content;
 
+          console.log(`Rendering document ${document.id}: isPdf=${isPdf}, hasContent=${content.length > 0}, pdfUrl=${pdfUrl}`);
+
           return (
             <Card key={document.id} className="hover:shadow-md transition-shadow relative group">
               <CardContent className="p-4">
@@ -239,6 +245,9 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
                     <div className="text-gray-600 text-sm italic flex items-center">
                       <FileIcon className="h-4 w-4 mr-1 text-red-500" />
                       PDF Document
+                      {pdfUrl && (
+                        <span className="ml-2 text-green-600">• View available</span>
+                      )}
                     </div>
                   ) : (
                     <p className="text-gray-600 text-sm line-clamp-3 whitespace-pre-wrap">

@@ -38,6 +38,45 @@ export const useClientDocuments = (
     return isNaN(parsed) ? null : parsed;
   };
 
+  // Improved PDF detection logic
+  const isPdfDocument = (metadata: any, title?: string): boolean => {
+    // Check title for .pdf extension (most reliable)
+    if (title && typeof title === 'string' && title.toLowerCase().endsWith('.pdf')) {
+      return true;
+    }
+    
+    // Check various metadata indicators
+    const blobType = getMetadataProperty(metadata, 'blobType');
+    const fileType = getMetadataProperty(metadata, 'file_type');
+    const isPdfFlag = getMetadataProperty(metadata, 'isPdfDocument');
+    const source = getMetadataProperty(metadata, 'source');
+    
+    // Check for PDF indicators in metadata
+    if (blobType === 'application/pdf' || 
+        fileType === 'pdf' || 
+        isPdfFlag === true ||
+        (source && source.includes('pdf'))) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  // Generate PDF URL from file_id
+  const generatePdfUrl = (metadata: any): string | null => {
+    const fileId = getMetadataProperty(metadata, 'file_id');
+    if (fileId && typeof fileId === 'string') {
+      return `https://drive.google.com/file/d/${fileId}/view`;
+    }
+    
+    // Check for existing URL
+    const existingUrl = getMetadataProperty(metadata, 'pdfUrl') || 
+                       getMetadataProperty(metadata, 'pdf_url') ||
+                       getMetadataProperty(metadata, 'url');
+    
+    return existingUrl || null;
+  };
+
   // Fetch documents associated with the client through document_chunks table
   const fetchClientDocuments = useCallback(async (pageIndex: number, resetResults: boolean = false) => {
     if (!clientId) return { hasMore: false };
@@ -172,19 +211,14 @@ export const useClientDocuments = (
         const fileTitle = getMetadataProperty(metadata, 'file_title') || 
                          getMetadataProperty(metadata, 'title') || 
                          `Document ${doc.id}`;
-        const fileId = getMetadataProperty(metadata, 'file_id');
-        const blobType = getMetadataProperty(metadata, 'blobType');
-        const source = getMetadataProperty(metadata, 'source');
         
-        // Determine if it's a PDF
-        const isPdf = (typeof fileTitle === 'string' && fileTitle.toLowerCase().endsWith('.pdf')) ||
-                     blobType === 'application/pdf';
+        // Determine if it's a PDF using improved detection
+        const isPdf = isPdfDocument(metadata, typeof fileTitle === 'string' ? fileTitle : undefined);
         
-        // Generate PDF URL if it's a PDF with file_id
-        let pdfUrl = null;
-        if (isPdf && fileId) {
-          pdfUrl = `https://drive.google.com/file/d/${fileId}/view`;
-        }
+        // Generate PDF URL if it's a PDF
+        const pdfUrl = isPdf ? generatePdfUrl(metadata) : null;
+        
+        console.log(`Document ${doc.id}: isPdf=${isPdf}, pdfUrl=${pdfUrl}, content length=${doc.content?.length || 0}`);
         
         return {
           id: doc.id.toString(),
@@ -201,13 +235,15 @@ export const useClientDocuments = (
               ...(typeof metadata === 'object' && metadata !== null ? metadata : {}),
               isPdfDocument: isPdf,
               pdfUrl: pdfUrl,
-              file_id: fileId,
-              blobType: blobType,
-              source: source
+              file_id: getMetadataProperty(metadata, 'file_id'),
+              blobType: getMetadataProperty(metadata, 'blobType'),
+              source: getMetadataProperty(metadata, 'source')
             }
           }]
         };
       });
+
+      console.log(`Transformed ${transformedDocuments.length} documents`);
 
       if (resetResults && isMounted.current) {
         setDocuments(transformedDocuments);
