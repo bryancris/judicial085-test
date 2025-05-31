@@ -20,12 +20,12 @@ export const useClientDocuments = (
   const isMounted = useRef(true);
   const { toast } = useToast();
 
-  // Fetch documents based on scope
+  // Fetch documents from the documents table
   const fetchClientDocuments = useCallback(async (pageIndex: number, resetResults: boolean = false) => {
     if (!clientId) return { hasMore: false };
     
     try {
-      console.log(`Fetching client documents for client ${clientId}, scope ${scope}, page ${pageIndex}`);
+      console.log(`Fetching documents for client ${clientId}, scope ${scope}, page ${pageIndex}`);
       
       if (resetResults && isMounted.current) {
         setLoading(true);
@@ -40,27 +40,34 @@ export const useClientDocuments = (
       const from = pageIndex * pageSize;
       const to = from + pageSize - 1;
       
-      // Build query based on scope
+      // Fetch from documents table with metadata filtering
       let query = supabase
-        .from('document_metadata')
-        .select('*')
-        .eq('client_id', clientId);
+        .from('documents')
+        .select('*');
       
-      // Apply scope filtering
+      // Build metadata filter for client_id
+      let metadataFilter: any = {
+        client_id: clientId
+      };
+      
+      // Apply scope filtering in metadata
       if (scope === "client-level") {
-        query = query.is('case_id', null);
+        // For client-level, we want documents without case_id or with null case_id
+        metadataFilter.case_id = null;
       } else if (scope !== "all") {
         // Specific case ID
-        query = query.eq('case_id', scope);
+        metadataFilter.case_id = scope;
       }
-      // For "all" scope, we don't add any case_id filter
       
-      const { data: metadataData, error: metadataError } = await query
-        .order('created_at', { ascending: false })
+      // Apply metadata filter
+      query = query.contains('metadata', metadataFilter);
+      
+      const { data: documentsData, error: documentsError } = await query
+        .order('id', { ascending: false })
         .range(from, to);
       
-      if (metadataError) {
-        console.error("Error fetching client document metadata:", metadataError);
+      if (documentsError) {
+        console.error("Error fetching documents:", documentsError);
         if (isMounted.current) {
           setHasError(true);
           setLoading(false);
@@ -69,11 +76,11 @@ export const useClientDocuments = (
       }
 
       // Determine if there are more records to fetch
-      const hasMore = metadataData && metadataData.length === pageSize;
+      const hasMore = documentsData && documentsData.length === pageSize;
       setHasMore(hasMore);
       
-      if (!metadataData || metadataData.length === 0) {
-        console.log("No document metadata found for this client and scope");
+      if (!documentsData || documentsData.length === 0) {
+        console.log("No documents found for this client and scope");
         
         if (resetResults && isMounted.current) {
           setDocuments([]);
@@ -84,81 +91,52 @@ export const useClientDocuments = (
         return { hasMore: false };
       }
 
-      // Create document stubs with metadata
-      const documentStubs: DocumentWithContent[] = metadataData.map((metadata) => ({
-        ...metadata,
-        contents: []
-      }));
+      // Transform documents data to DocumentWithContent format
+      const transformedDocuments: DocumentWithContent[] = documentsData.map((doc) => {
+        const metadata = doc.metadata || {};
+        
+        // Extract document info from metadata
+        const title = metadata.title || metadata.file_title || `Document ${doc.id}`;
+        const createdAt = metadata.created_at || new Date().toISOString();
+        const caseId = metadata.case_id || null;
+        const isPdf = metadata.file_type === 'pdf' || metadata.isPdfDocument === true || title.toLowerCase().endsWith('.pdf');
+        const pdfUrl = metadata.pdf_url || metadata.pdfUrl || metadata.file_path || metadata.url;
+        
+        return {
+          id: doc.id.toString(),
+          title: title,
+          url: pdfUrl || null,
+          created_at: createdAt,
+          schema: isPdf ? 'pdf' : 'document',
+          case_id: caseId,
+          client_id: clientId,
+          contents: [{
+            id: 1,
+            content: doc.content || '',
+            metadata: {
+              ...metadata,
+              isPdfDocument: isPdf,
+              pdfUrl: pdfUrl
+            }
+          }]
+        };
+      });
 
-      // Update state with stubs first for quick display
       if (resetResults && isMounted.current) {
-        setDocuments(documentStubs);
+        setDocuments(transformedDocuments);
       } else if (isMounted.current) {
         // Make sure we don't add duplicates
         setDocuments(prev => {
           const existingIds = new Set(prev.map(doc => doc.id));
-          const newDocs = documentStubs.filter(doc => !existingIds.has(doc.id));
+          const newDocs = transformedDocuments.filter(doc => !existingIds.has(doc.id));
           return [...prev, ...newDocs];
         });
-      }
-
-      // Fetch content chunks for documents
-      for (const docStub of documentStubs) {
-        try {
-          // Fetch document chunks for this document
-          let chunkQuery = supabase
-            .from('document_chunks')
-            .select('*')
-            .eq('document_id', docStub.id)
-            .eq('client_id', clientId);
-            
-          // Apply case filtering for chunks too
-          if (scope === "client-level") {
-            chunkQuery = chunkQuery.is('case_id', null);
-          } else if (scope !== "all") {
-            chunkQuery = chunkQuery.eq('case_id', scope);
-          }
-          
-          const { data: chunkData, error: chunkError } = await chunkQuery
-            .order('chunk_index', { ascending: true });
-            
-          if (chunkError) {
-            console.error(`Error fetching chunks for document ${docStub.id}:`, chunkError);
-            continue;
-          }
-          
-          if (chunkData && chunkData.length > 0) {
-            console.log(`Found ${chunkData.length} chunks for document ${docStub.id}`);
-            
-            // Convert chunks to document contents format
-            const contentItems = chunkData.map(chunk => ({
-              id: Number(chunk.chunk_index),
-              content: chunk.content,
-              metadata: chunk.metadata
-            }));
-            
-            // Update this document with its content
-            if (isMounted.current) {
-              setDocuments(prev => {
-                return prev.map(doc => {
-                  if (doc.id === docStub.id) {
-                    return { ...doc, contents: contentItems };
-                  }
-                  return doc;
-                });
-              });
-            }
-          }
-        } catch (err) {
-          console.error(`Error processing chunks for document ${docStub.id}:`, err);
-        }
       }
 
       if (isMounted.current) {
         setLoading(false);
       }
       
-      // Return the hasMore status
       return { hasMore };
     } catch (error) {
       console.error('Error in fetchClientDocuments:', error);
@@ -230,47 +208,30 @@ export const useClientDocuments = (
         }
       }
       
-      // Handle text documents
-      const documentId = crypto.randomUUID();
+      // Handle text documents - store in documents table
       const caseId = scope !== "client-level" && scope !== "all" ? scope : null;
       
-      // Insert document metadata
-      const { error: metadataError } = await supabase
-        .from('document_metadata')
+      const documentMetadata = {
+        client_id: clientId,
+        case_id: caseId,
+        title: title,
+        file_type: 'text',
+        created_at: new Date().toISOString(),
+        ...metadata
+      };
+      
+      // Insert into documents table
+      const { data, error } = await supabase
+        .from('documents')
         .insert({
-          id: documentId,
-          title,
-          client_id: clientId,
-          case_id: caseId,
-          schema: caseId ? 'case_document' : 'client_document',
-          url: metadata.url || null
-        });
+          content: content,
+          metadata: documentMetadata
+        })
+        .select()
+        .single();
       
-      if (metadataError) {
-        throw new Error(`Error creating document metadata: ${metadataError.message}`);
-      }
-      
-      // For text documents, create simple chunks
-      const chunks = chunkDocument(content);
-      
-      // Store chunks directly (without embeddings for now - you may want to add this)
-      for (let i = 0; i < chunks.length; i++) {
-        const chunk = chunks[i];
-        
-        const { error: chunkError } = await supabase
-          .from('document_chunks')
-          .insert({
-            document_id: documentId,
-            client_id: clientId,
-            case_id: caseId,
-            chunk_index: i,
-            content: chunk,
-            metadata: { ...metadata, chunkIndex: i, totalChunks: chunks.length }
-          });
-        
-        if (chunkError) {
-          throw new Error(`Error storing chunk ${i}: ${chunkError.message}`);
-        }
+      if (error) {
+        throw new Error(`Error creating document: ${error.message}`);
       }
       
       toast({
@@ -281,7 +242,7 @@ export const useClientDocuments = (
       // Refresh the document list
       await fetchClientDocuments(0, true);
       
-      return { success: true, documentId };
+      return { success: true, documentId: data.id };
       
     } catch (error: any) {
       console.error("Error processing document:", error);
@@ -317,38 +278,28 @@ export const useClientDocuments = (
       // Update UI state optimistically
       setDocuments(prev => prev.filter(doc => doc.id !== documentId));
       
-      // Call the edge function to delete the document
-      const result = await deleteClientDocument(documentId, clientId);
+      // Delete from documents table
+      const { error } = await supabase
+        .from('documents')
+        .delete()
+        .eq('id', documentId);
       
-      console.log(`Document deletion result:`, result);
-      
-      if (result.success) {
-        toast({
-          title: "Document deleted",
-          description: "Document has been permanently removed.",
-        });
-        
-        return { success: true };
-      } else {
-        // Restore the document in the UI
-        setDocuments(prev => [...prev, ...documents.filter(doc => doc.id === documentId)]);
-        
-        toast({
-          title: "Error deleting document",
-          description: result.error || "An error occurred while deleting the document.",
-          variant: "destructive",
-        });
-        
-        return { 
-          success: false, 
-          error: result.error || "Failed to delete document" 
-        };
+      if (error) {
+        throw new Error(`Error deleting document: ${error.message}`);
       }
+      
+      toast({
+        title: "Document deleted",
+        description: "Document has been permanently removed.",
+      });
+      
+      return { success: true };
+      
     } catch (error: any) {
       console.error("Error in document deletion:", error);
       
       // Restore document in UI on error
-      setDocuments(prev => [...prev, ...documents.filter(doc => doc.id === documentId)]);
+      await fetchClientDocuments(0, true);
       
       toast({
         title: "Error deleting document",
@@ -360,35 +311,7 @@ export const useClientDocuments = (
     } finally {
       setIsProcessing(false);
     }
-  }, [clientId, documents, toast]);
-  
-  // Helper function to chunk document content
-  const chunkDocument = (content: string): string[] => {
-    const MAX_CHUNK_LENGTH = 1000;
-    const paragraphs = content.split(/\n\s*\n/);
-    const chunks: string[] = [];
-    
-    let currentChunk = '';
-    
-    for (const paragraph of paragraphs) {
-      if (currentChunk.length + paragraph.length > MAX_CHUNK_LENGTH && currentChunk.length > 0) {
-        chunks.push(currentChunk);
-        currentChunk = '';
-      }
-      
-      if (currentChunk.length > 0) {
-        currentChunk += '\n\n' + paragraph;
-      } else {
-        currentChunk = paragraph;
-      }
-    }
-    
-    if (currentChunk.length > 0) {
-      chunks.push(currentChunk);
-    }
-    
-    return chunks;
-  };
+  }, [clientId, toast, fetchClientDocuments]);
 
   return {
     documents,

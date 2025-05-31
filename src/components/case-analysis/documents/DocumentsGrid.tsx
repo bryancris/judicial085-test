@@ -4,7 +4,7 @@ import { DocumentWithContent } from "@/types/knowledge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, Trash2, FileIcon, Download, Eye, AlertCircle, Loader2 } from "lucide-react";
+import { FileText, Trash2, FileIcon, Eye, AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
@@ -42,7 +42,6 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
   // Helper function to check if document is a PDF
   const isPdfDocument = (document: DocumentWithContent): boolean => {
     console.log('Checking if PDF for document:', document.title);
-    console.log('Document structure:', document);
     
     // Check document title for .pdf extension
     const titleIsPdf = document.title?.toLowerCase().endsWith('.pdf');
@@ -50,24 +49,20 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
     // Check document URL for .pdf
     const urlIsPdf = document.url?.toLowerCase().includes('.pdf');
     
-    // Check metadata at document level
-    const docMetadataIsPdf = document.schema === 'pdf' || 
-      (document as any).file_type === 'pdf' ||
-      (document as any).isPdfDocument === true;
+    // Check schema
+    const schemaIsPdf = document.schema === 'pdf';
     
-    // Check first content's metadata
+    // Check content metadata
     const contentMetadata = document.contents?.[0]?.metadata;
     const contentIsPdf = contentMetadata?.isPdfDocument === true ||
-      contentMetadata?.fileType === "pdf" ||
-      contentMetadata?.file_type === "pdf" ||
-      contentMetadata?.type === "pdf";
+      contentMetadata?.file_type === "pdf";
     
-    const isPdf = titleIsPdf || urlIsPdf || docMetadataIsPdf || contentIsPdf;
+    const isPdf = titleIsPdf || urlIsPdf || schemaIsPdf || contentIsPdf;
     
     console.log('PDF detection results:', {
       titleIsPdf,
       urlIsPdf,
-      docMetadataIsPdf,
+      schemaIsPdf,
       contentIsPdf,
       finalResult: isPdf
     });
@@ -77,20 +72,14 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
 
   // Helper function to get PDF URL
   const getPdfUrl = (document: DocumentWithContent): string | null => {
-    console.log('Getting PDF URL for document:', document.title);
-    
     // Check various locations for PDF URL
     const possibleUrls = [
       document.url,
-      (document as any).pdf_url,
-      (document as any).pdfUrl,
       document.contents?.[0]?.metadata?.pdfUrl,
       document.contents?.[0]?.metadata?.pdf_url,
-      document.contents?.[0]?.metadata?.url,
-      document.contents?.[0]?.metadata?.file_path
+      document.contents?.[0]?.metadata?.file_path,
+      document.contents?.[0]?.metadata?.url
     ];
-    
-    console.log('Possible PDF URLs:', possibleUrls);
     
     const pdfUrl = possibleUrls.find(url => url && typeof url === 'string' && url.trim().length > 0);
     
@@ -101,28 +90,19 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
   // Helper function to get document content for preview
   const getDocumentContent = (document: DocumentWithContent): string => {
     console.log('Getting content for document:', document.title);
-    console.log('Document contents:', document.contents);
     
     if (!document.contents || document.contents.length === 0) {
-      return "No content chunks found for this document.";
+      return "No content available for this document.";
     }
     
-    // Combine all content chunks
-    const allContent = document.contents
-      .map(content => {
-        console.log('Processing content chunk:', content);
-        return content.content;
-      })
-      .filter(content => content && typeof content === 'string' && content.trim().length > 0)
-      .join('\n\n');
+    // Get content from the first content item
+    const content = document.contents[0]?.content;
     
-    console.log('Combined content length:', allContent.length);
-    
-    if (allContent.length === 0) {
+    if (!content || typeof content !== 'string' || content.trim().length === 0) {
       return "Document content could not be extracted or is empty.";
     }
     
-    return allContent;
+    return content;
   };
 
   const handleDelete = async (document: DocumentWithContent) => {
@@ -284,7 +264,7 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
                     View Content
                   </Button>
                   
-                  {isPdf && (
+                  {isPdf && pdfUrl && (
                     <Button
                       variant="outline"
                       size="sm"
