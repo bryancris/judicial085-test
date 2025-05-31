@@ -1,5 +1,5 @@
 
-// Advanced PDF Processor - Updated to use pdf-parse
+// Advanced PDF Processor - Updated to use pdf-parse exclusively
 
 import { processDocument, DocumentExtractionResult } from './services/unifiedDocumentProcessor.ts';
 import { chunkDocumentAdvanced } from './utils/chunkingUtils.ts';
@@ -13,39 +13,44 @@ export async function extractTextFromPdfAdvanced(pdfData: Uint8Array, fileName?:
   isScanned: boolean;
   processingNotes: string;
 }> {
-  console.log('=== STARTING UNIFIED DOCUMENT EXTRACTION SYSTEM ===');
+  console.log('=== STARTING PDF-PARSE EXTRACTION SYSTEM ===');
   console.log(`Processing document: ${pdfData.length} bytes (${Math.round(pdfData.length / 1024)}KB)`);
   
   try {
-    // Use the new unified document processor with pdf-parse
-    const result: DocumentExtractionResult = await processDocument(
-      pdfData,
-      fileName || 'document.pdf',
-      'application/pdf'
-    );
+    // Use pdf-parse for all PDF processing
+    const pdfParse = await import('https://esm.sh/pdf-parse@1.1.1');
+    
+    console.log('🔍 Using pdf-parse for text extraction...');
+    
+    // Extract text from PDF buffer
+    const pdfBuffer = pdfData.buffer.slice(pdfData.byteOffset, pdfData.byteOffset + pdfData.byteLength);
+    const result = await pdfParse.default(pdfBuffer);
+    
+    const extractedText = result.text?.trim() || '';
+    const pageCount = result.numpages || 1;
     
     console.log(`✅ pdf-parse extraction results:`);
-    console.log(`  - Method: ${result.method}`);
-    console.log(`  - Text length: ${result.text.length} characters`);
-    console.log(`  - Quality: ${result.quality}`);
-    console.log(`  - Confidence: ${result.confidence}`);
-    console.log(`  - File type: ${result.fileType}`);
+    console.log(`  - Text length: ${extractedText.length} characters`);
+    console.log(`  - Page count: ${pageCount}`);
     
-    if (result.text.length > 0) {
-      console.log(`  - Content preview: "${result.text.substring(0, 200)}..."`);
+    if (extractedText.length > 50) {
+      console.log(`  - Content preview: "${extractedText.substring(0, 200)}..."`);
+      
+      // Calculate quality based on content
+      const quality = calculateContentQuality(extractedText, pageCount);
       
       return {
-        text: result.text,
-        method: result.method,
-        quality: result.quality,
-        confidence: result.confidence,
-        pageCount: result.pageCount || 1,
-        isScanned: result.method.includes('pdf-parse') ? false : true, // pdf-parse extracts native text
-        processingNotes: result.processingNotes
+        text: extractedText,
+        method: 'pdf-parse-direct',
+        quality: quality,
+        confidence: Math.min(0.95, quality + 0.1),
+        pageCount: pageCount,
+        isScanned: false, // pdf-parse extracts native text
+        processingNotes: `pdf-parse extraction: ${pageCount} pages, ${extractedText.length} characters, quality ${quality.toFixed(2)}`
       };
     }
     
-    throw new Error('pdf-parse extraction returned empty content');
+    throw new Error('pdf-parse extraction returned insufficient content');
     
   } catch (error) {
     console.error('❌ pdf-parse extraction failed:', error);
@@ -54,6 +59,36 @@ export async function extractTextFromPdfAdvanced(pdfData: Uint8Array, fileName?:
     console.log('=== CREATING DOCUMENT SUMMARY ===');
     return createInformativeDocumentSummary(pdfData, fileName || 'document.pdf', error.message);
   }
+}
+
+// Calculate content quality
+function calculateContentQuality(text: string, pageCount: number): number {
+  if (!text || text.length < 10) return 0.1;
+  
+  let quality = 0.70; // Base quality for pdf-parse
+  
+  // Text structure analysis
+  const words = text.split(/\s+/).filter(word => word.length > 2);
+  const sentences = text.match(/[.!?]+/g) || [];
+  
+  if (words.length > 50) quality += 0.1;
+  if (sentences.length > 3) quality += 0.1;
+  
+  // Legal content boost
+  const legalTerms = ['attorney', 'law', 'court', 'case', 'legal', 'motion', 'dtpa', 'demand'];
+  const hasLegalTerms = legalTerms.some(term => text.toLowerCase().includes(term));
+  
+  if (hasLegalTerms) {
+    quality += 0.15;
+    console.log('✅ Legal document content detected');
+  }
+  
+  // Page count factor
+  if (pageCount > 1) {
+    quality += Math.min(pageCount * 0.02, 0.1);
+  }
+  
+  return Math.max(0.1, Math.min(0.95, quality));
 }
 
 // Create an informative summary when extraction fails
@@ -82,7 +117,7 @@ DOCUMENT STATUS:
 This legal document has been successfully uploaded to your case management system.
 
 EXTRACTION NOTES:
-- Modern document processing attempted (pdf-parse/mammoth.js)
+- pdf-parse processing attempted
 - Document is stored and available for manual review
 - File can be downloaded and viewed directly
 - Content can be discussed in AI conversations

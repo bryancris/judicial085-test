@@ -1,5 +1,5 @@
 
-// PDF-parse-based extraction service (replacing PDF.js)
+// PDF-parse-based extraction service (replacing PDF.js completely)
 
 export async function extractTextWithPdfJs(pdfData: Uint8Array): Promise<{
   text: string;
