@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,7 @@ interface DocumentUploadDialogProps {
   caseName?: string;
   cases?: Case[];
   allowCaseSelection?: boolean;
-  onUploadSuccess?: () => void; // Add callback for successful uploads
+  onUploadSuccess?: () => void;
 }
 
 const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
@@ -106,7 +107,6 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
           resetForm();
           onClose();
           
-          // Trigger refresh callback after successful PDF upload
           if (onUploadSuccess) {
             onUploadSuccess();
           }
@@ -116,7 +116,6 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
       } else {
         const result = await onUpload(finalTitle, documentContent);
         
-        // Trigger refresh callback after successful text upload
         if (result && result.success !== false) {
           if (onUploadSuccess) {
             onUploadSuccess();

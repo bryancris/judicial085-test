@@ -1,8 +1,7 @@
 
 import React from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { BookOpenCheck, AlertCircle } from "lucide-react";
+import { Info, BookOpenCheck, User } from "lucide-react";
 import { Case } from "@/types/case";
 
 interface DocumentScopeAlertProps {
@@ -10,7 +9,7 @@ interface DocumentScopeAlertProps {
   selectedCaseId?: string;
   caseId?: string;
   caseName?: string;
-  cases: Case[];
+  cases?: Case[];
 }
 
 const DocumentScopeAlert: React.FC<DocumentScopeAlertProps> = ({
@@ -21,37 +20,45 @@ const DocumentScopeAlert: React.FC<DocumentScopeAlertProps> = ({
   cases
 }) => {
   const getSelectedCaseName = () => {
-    if (!selectedCaseId) return "Client-Level";
-    const selectedCase = cases.find(c => c.id === selectedCaseId);
-    return selectedCase?.case_title || caseName || "Selected Case";
+    if (!selectedCaseId) return null;
+    const selectedCase = cases?.find(c => c.id === selectedCaseId);
+    return selectedCase?.case_title || caseName;
   };
 
-  if (allowCaseSelection) {
-    return (
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          {selectedCaseId 
-            ? `This document will be associated with: ${getSelectedCaseName()}`
-            : "This document will be stored at the client level (accessible across all cases)"}
-        </AlertDescription>
-      </Alert>
-    );
-  }
+  const selectedCaseName = getSelectedCaseName();
 
-  if (!allowCaseSelection && (caseId || caseName)) {
-    return (
-      <Alert>
-        <BookOpenCheck className="h-4 w-4" />
-        <AlertDescription>
-          This document will be added to case: <strong>{caseName || "Selected Case"}</strong>
-          <Badge className="ml-2" variant="secondary">Case Document</Badge>
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  return null;
+  return (
+    <Alert>
+      <Info className="h-4 w-4" />
+      <AlertDescription>
+        {allowCaseSelection ? (
+          selectedCaseId ? (
+            <div className="flex items-center gap-2">
+              <BookOpenCheck className="h-4 w-4 text-blue-600" />
+              <span>This document will be added to case: <strong>{selectedCaseName}</strong></span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-green-600" />
+              <span>This document will be added to the client's general documents (not case-specific)</span>
+            </div>
+          )
+        ) : (
+          caseId ? (
+            <div className="flex items-center gap-2">
+              <BookOpenCheck className="h-4 w-4 text-blue-600" />
+              <span>This document will be added to case: <strong>{caseName}</strong></span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-green-600" />
+              <span>This document will be added to the client's general documents</span>
+            </div>
+          )
+        )}
+      </AlertDescription>
+    </Alert>
+  );
 };
 
 export default DocumentScopeAlert;

@@ -1,7 +1,7 @@
 
 import React from "react";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 interface DocumentTitleInputProps {
   value: string;
@@ -17,20 +17,15 @@ const DocumentTitleInput: React.FC<DocumentTitleInputProps> = ({
   disabled
 }) => {
   return (
-    <div>
-      <Label htmlFor="docTitle">Document Title (Optional)</Label>
+    <div className="space-y-2">
+      <Label htmlFor="docTitle">Document Title</Label>
       <Input
         id="docTitle"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={uploadMethod === "pdf" ? "Leave empty to use filename" : "Leave empty for default title"}
+        placeholder={uploadMethod === "pdf" ? "Optional - will use filename if blank" : "Enter document title"}
         disabled={disabled}
       />
-      <p className="text-xs text-muted-foreground mt-1">
-        {uploadMethod === "pdf" 
-          ? "If left empty, the filename will be used as the title"
-          : "If left empty, 'Untitled Document' will be used"}
-      </p>
     </div>
   );
 };
