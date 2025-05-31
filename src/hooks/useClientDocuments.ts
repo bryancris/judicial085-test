@@ -26,6 +26,12 @@ export const useClientDocuments = (
     return metadata[key] || null;
   };
 
+  // Helper function to validate if a string is a valid UUID
+  const isValidUUID = (uuid: string): boolean => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
+  };
+
   // Fetch documents associated with the client through document_chunks table
   const fetchClientDocuments = useCallback(async (pageIndex: number, resetResults: boolean = false) => {
     if (!clientId) return { hasMore: false };
@@ -52,11 +58,17 @@ export const useClientDocuments = (
         .select('document_id, case_id, metadata')
         .eq('client_id', clientId);
       
-      // Apply scope filtering
+      // Apply scope filtering with proper UUID validation
       if (scope === "client-level") {
         chunkQuery = chunkQuery.or('case_id.is.null');
       } else if (scope !== "all") {
-        chunkQuery = chunkQuery.eq('case_id', scope);
+        // Only apply case_id filter if scope is a valid UUID
+        if (isValidUUID(scope)) {
+          chunkQuery = chunkQuery.eq('case_id', scope);
+        } else {
+          console.warn(`Invalid scope UUID: ${scope}, falling back to client-level`);
+          chunkQuery = chunkQuery.or('case_id.is.null');
+        }
       }
       
       const { data: chunks, error: chunksError } = await chunkQuery;
