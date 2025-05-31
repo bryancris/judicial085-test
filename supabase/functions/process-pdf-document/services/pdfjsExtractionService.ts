@@ -1,5 +1,5 @@
 
-// PDF-parse-based extraction service (replacing PDF.js completely)
+// Deno-compatible PDF.js extraction service (without workers)
 
 export async function extractTextWithPdfJs(pdfData: Uint8Array): Promise<{
   text: string;
@@ -8,51 +8,86 @@ export async function extractTextWithPdfJs(pdfData: Uint8Array): Promise<{
   confidence: number;
   pageCount: number;
 }> {
-  console.log('📄 Starting pdf-parse text extraction...');
+  console.log('📄 Starting PDF.js text extraction (Deno-compatible)...');
   console.log(`Processing PDF: ${pdfData.length} bytes (${Math.round(pdfData.length / 1024)}KB)`);
   
   try {
-    // Import pdf-parse for PDF text extraction
-    const pdfParse = await import('https://esm.sh/pdf-parse@1.1.1');
+    // Import PDF.js for Deno environment
+    const pdfjsLib = await import('https://esm.sh/pdfjs-dist@4.8.69/build/pdf.mjs');
     
-    console.log('🔍 Extracting text with pdf-parse...');
+    // Configure PDF.js to work without workers in Deno
+    pdfjsLib.GlobalWorkerOptions.workerSrc = null;
     
-    // Extract text from PDF buffer
-    const pdfBuffer = pdfData.buffer.slice(pdfData.byteOffset, pdfData.byteOffset + pdfData.byteLength);
-    const result = await pdfParse.default(pdfBuffer);
+    console.log('🔍 Loading PDF document with PDF.js...');
     
-    const extractedText = result.text?.trim() || '';
-    const pageCount = result.numpages || 1;
+    // Load the PDF document
+    const loadingTask = pdfjsLib.getDocument({
+      data: pdfData,
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      useSystemFonts: true
+    });
     
-    console.log(`✅ pdf-parse extraction completed: ${extractedText.length} characters from ${pageCount} pages`);
+    const pdfDocument = await loadingTask.promise;
+    const pageCount = pdfDocument.numPages;
+    
+    console.log(`✅ PDF loaded successfully: ${pageCount} pages`);
+    
+    // Extract text from all pages
+    const textPages: string[] = [];
+    
+    for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
+      try {
+        const page = await pdfDocument.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        
+        // Combine text items into readable text
+        const pageText = textContent.items
+          .map((item: any) => item.str || '')
+          .join(' ')
+          .trim();
+        
+        if (pageText.length > 0) {
+          textPages.push(pageText);
+          console.log(`Page ${pageNum}: ${pageText.length} characters extracted`);
+        }
+      } catch (pageError) {
+        console.warn(`Warning: Failed to extract text from page ${pageNum}:`, pageError);
+      }
+    }
+    
+    // Combine all pages
+    const extractedText = textPages.join('\n\n').trim();
+    
+    console.log(`✅ PDF.js extraction completed: ${extractedText.length} characters from ${pageCount} pages`);
     
     if (extractedText.length < 20) {
-      throw new Error('pdf-parse extraction produced insufficient content');
+      throw new Error('PDF.js extraction produced insufficient content');
     }
     
     // Calculate quality metrics
-    const quality = calculatePdfParseQuality(extractedText, pageCount);
-    const confidence = Math.min(0.90, quality + 0.1); // Good confidence for pdf-parse
+    const quality = calculatePdfJsQuality(extractedText, pageCount);
+    const confidence = Math.min(0.92, quality + 0.15); // Good confidence for PDF.js
     
     return {
       text: extractedText,
-      method: 'pdf-parse-extraction',
+      method: 'pdfjs-deno-compatible',
       quality: quality,
       confidence: confidence,
       pageCount: pageCount
     };
     
   } catch (error) {
-    console.error('❌ pdf-parse extraction failed:', error);
-    throw new Error(`pdf-parse extraction failed: ${error.message}`);
+    console.error('❌ PDF.js extraction failed:', error);
+    throw new Error(`PDF.js extraction failed: ${error.message}`);
   }
 }
 
-// Calculate extraction quality for pdf-parse results
-function calculatePdfParseQuality(text: string, pageCount: number): number {
+// Calculate extraction quality for PDF.js results
+function calculatePdfJsQuality(text: string, pageCount: number): number {
   if (!text || text.length < 10) return 0.1;
   
-  let quality = 0.75; // Good base quality for pdf-parse
+  let quality = 0.80; // Good base quality for PDF.js
   
   // Check text structure and content
   const words = text.split(/\s+/).filter(word => word.length > 2);
@@ -67,7 +102,7 @@ function calculatePdfParseQuality(text: string, pageCount: number): number {
   // Check for legal document indicators
   const legalTerms = [
     'ATTORNEY', 'LAW', 'COURT', 'CASE', 'LEGAL', 'PLAINTIFF', 'DEFENDANT',
-    'PURSUANT', 'VIOLATION', 'DAMAGES', 'DTPA', 'DEMAND', 'NOTICE'
+    'PURSUANT', 'VIOLATION', 'DAMAGES', 'DTPA', 'DEMAND', 'NOTICE', 'HOA'
   ];
   
   const upperText = text.toUpperCase();
@@ -86,14 +121,14 @@ function calculatePdfParseQuality(text: string, pageCount: number): number {
   return Math.max(0.1, Math.min(0.95, quality));
 }
 
-// Validate pdf-parse extraction results
+// Validate PDF.js extraction results
 export function validatePdfJsExtraction(text: string, pageCount: number): {
   isValid: boolean;
   quality: number;
   issues: string[];
 } {
   const issues: string[] = [];
-  const quality = calculatePdfParseQuality(text, pageCount);
+  const quality = calculatePdfJsQuality(text, pageCount);
   
   if (text.length < 20) {
     issues.push('Extracted text is too short');
@@ -115,7 +150,7 @@ export function validatePdfJsExtraction(text: string, pageCount: number): {
   
   const isValid = quality > 0.3 && text.length > 20 && issues.length < 2;
   
-  console.log(`pdf-parse validation: isValid=${isValid}, quality=${quality.toFixed(2)}, issues=${issues.length}`);
+  console.log(`PDF.js validation: isValid=${isValid}, quality=${quality.toFixed(2)}, issues=${issues.length}`);
   
   return {
     isValid,
