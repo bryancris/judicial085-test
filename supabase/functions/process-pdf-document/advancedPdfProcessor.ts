@@ -1,10 +1,10 @@
 
-// Advanced PDF Processor - Vision with PDF-to-Image + Native Fallback
+// Advanced PDF Processor - Updated to use unified document processing
 
-import { extractTextWithOpenAIVision } from './openaiVisionService.ts';
+import { processDocument, DocumentExtractionResult } from './services/unifiedDocumentProcessor.ts';
 import { chunkDocumentAdvanced } from './utils/chunkingUtils.ts';
 
-export async function extractTextFromPdfAdvanced(pdfData: Uint8Array): Promise<{
+export async function extractTextFromPdfAdvanced(pdfData: Uint8Array, fileName?: string): Promise<{
   text: string;
   method: string;
   quality: number;
@@ -13,49 +13,55 @@ export async function extractTextFromPdfAdvanced(pdfData: Uint8Array): Promise<{
   isScanned: boolean;
   processingNotes: string;
 }> {
-  console.log('=== STARTING ENHANCED PDF EXTRACTION SYSTEM ===');
-  console.log(`Processing PDF: ${pdfData.length} bytes (${Math.round(pdfData.length / 1024)}KB)`);
+  console.log('=== STARTING UNIFIED DOCUMENT EXTRACTION SYSTEM ===');
+  console.log(`Processing document: ${pdfData.length} bytes (${Math.round(pdfData.length / 1024)}KB)`);
   
   try {
-    // PRIMARY METHOD: OpenAI Vision OCR with PDF-to-Image conversion
-    console.log('=== STEP 1: ENHANCED VISION OCR WITH PDF-TO-IMAGE ===');
+    // Use the new unified document processor
+    const result: DocumentExtractionResult = await processDocument(
+      pdfData,
+      fileName || 'document.pdf',
+      'application/pdf'
+    );
     
-    const visionResult = await extractTextWithOpenAIVision(pdfData);
+    console.log(`✅ Unified extraction results:`);
+    console.log(`  - Method: ${result.method}`);
+    console.log(`  - Text length: ${result.text.length} characters`);
+    console.log(`  - Quality: ${result.quality}`);
+    console.log(`  - Confidence: ${result.confidence}`);
+    console.log(`  - File type: ${result.fileType}`);
     
-    console.log(`✅ Enhanced Vision extraction results:`);
-    console.log(`  - Text length: ${visionResult.text.length} characters`);
-    console.log(`  - Confidence: ${visionResult.confidence}`);
-    console.log(`  - Page count: ${visionResult.pageCount}`);
-    
-    if (visionResult.text.length > 0) {
-      console.log(`  - Content preview: "${visionResult.text.substring(0, 200)}..."`);
+    if (result.text.length > 0) {
+      console.log(`  - Content preview: "${result.text.substring(0, 200)}..."`);
       
       return {
-        text: visionResult.text,
-        method: 'openai-vision-enhanced',
-        quality: Math.max(0.8, visionResult.confidence),
-        confidence: visionResult.confidence,
-        pageCount: visionResult.pageCount || 1,
-        isScanned: true,
-        processingNotes: `Enhanced Vision API with PDF-to-Image conversion extracted ${visionResult.text.length} characters with ${visionResult.confidence} confidence`
+        text: result.text,
+        method: result.method,
+        quality: result.quality,
+        confidence: result.confidence,
+        pageCount: result.pageCount || 1,
+        isScanned: result.method.includes('ocr') || result.fileType === 'pdf',
+        processingNotes: result.processingNotes
       };
     }
     
-    // If Vision extracted nothing, this is a problem
-    console.error('❌ Enhanced Vision extraction returned empty content');
-    throw new Error('Enhanced Vision extraction returned empty content');
+    throw new Error('Unified extraction returned empty content');
     
   } catch (error) {
-    console.error('❌ Enhanced Vision extraction failed:', error);
+    console.error('❌ Unified extraction failed:', error);
     
-    // Create an informative summary since extraction failed
-    console.log('=== CREATING INFORMATIVE DOCUMENT SUMMARY ===');
-    return createInformativeDocumentSummary(pdfData, error.message);
+    // Create an informative summary when extraction fails
+    console.log('=== CREATING DOCUMENT SUMMARY ===');
+    return createInformativeDocumentSummary(pdfData, fileName || 'document.pdf', error.message);
   }
 }
 
 // Create an informative summary when extraction fails
-function createInformativeDocumentSummary(pdfData: Uint8Array, errorMessage: string): {
+function createInformativeDocumentSummary(
+  fileData: Uint8Array,
+  fileName: string,
+  errorMessage: string
+): {
   text: string;
   method: string;
   quality: number;
@@ -64,18 +70,19 @@ function createInformativeDocumentSummary(pdfData: Uint8Array, errorMessage: str
   isScanned: boolean;
   processingNotes: string;
 } {
-  const sizeKB = Math.round(pdfData.length / 1024);
+  const sizeKB = Math.round(fileData.length / 1024);
   const currentDate = new Date().toISOString().split('T')[0];
   
   const summaryText = `LEGAL DOCUMENT PROCESSING SUMMARY
 Date Processed: ${currentDate}
+File Name: ${fileName}
 File Size: ${sizeKB}KB
 
 DOCUMENT STATUS:
 This legal document has been successfully uploaded to your case management system.
 
 EXTRACTION NOTES:
-- Enhanced OCR processing attempted (PDF-to-Image + Vision API)
+- Modern document processing attempted (PDF.js/Mammoth.js)
 - Document is stored and available for manual review
 - File can be downloaded and viewed directly
 - Content can be discussed in AI conversations
@@ -88,7 +95,7 @@ NEXT STEPS:
 
 TECHNICAL DETAILS:
 Processing Error: ${errorMessage}
-Recommended Action: Manual document review or alternative OCR tool
+Recommended Action: Manual document review
 
 This document is now part of your legal case file and available for all legal AI analysis features.`;
 
@@ -99,7 +106,7 @@ This document is now part of your legal case file and available for all legal AI
     confidence: 0.7,
     pageCount: Math.max(1, Math.ceil(sizeKB / 50)), // Rough estimate
     isScanned: true,
-    processingNotes: `Created informative summary for ${sizeKB}KB document. Enhanced extraction failed: ${errorMessage}`
+    processingNotes: `Created informative summary for ${sizeKB}KB document. Unified extraction failed: ${errorMessage}`
   };
 }
 

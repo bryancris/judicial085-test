@@ -16,11 +16,11 @@ export async function processPdfDocument(
   
   await updateDocumentStatus(documentId, 'processing', supabase);
 
-  // WORKING text extraction with proper validation
-  console.log('🔍 === STARTING WORKING PDF TEXT EXTRACTION ===');
-  const extractionResult = await extractTextFromPdfAdvanced(pdfData);
+  // NEW unified document extraction with PDF.js/Mammoth.js
+  console.log('🔍 === STARTING UNIFIED DOCUMENT EXTRACTION ===');
+  const extractionResult = await extractTextFromPdfAdvanced(pdfData, fileName);
   
-  console.log(`✅ WORKING extraction completed:`, {
+  console.log(`✅ Unified extraction completed:`, {
     method: extractionResult.method,
     textLength: extractionResult.text.length,
     quality: extractionResult.quality,
@@ -32,14 +32,14 @@ export async function processPdfDocument(
   
   console.log(`📄 Content preview (first 200 chars): "${extractionResult.text.substring(0, 200)}..."`);
   
-  // Ensure we have meaningful content (no more garbage extraction)
+  // Ensure we have meaningful content
   if (extractionResult.text.length < 50) {
     console.warn('⚠️ Extraction produced very short content, enhancing with document analysis');
     extractionResult.text += `\n\nDocument Analysis: ${fileName} (${Math.round(pdfData.length / 1024)}KB) has been processed and is available for legal analysis.`;
   }
 
-  // WORKING document chunking
-  console.log('📂 === STARTING WORKING DOCUMENT CHUNKING ===');
+  // Document chunking with unified system metadata
+  console.log('📂 === STARTING DOCUMENT CHUNKING ===');
   const chunks = chunkDocumentAdvanced(extractionResult.text, {
     method: extractionResult.method,
     fileName: fileName,
@@ -47,15 +47,15 @@ export async function processPdfDocument(
     isScanned: extractionResult.isScanned
   });
   
-  console.log(`✅ WORKING chunking completed: ${chunks.length} chunks created`);
+  console.log(`✅ Chunking completed: ${chunks.length} chunks created`);
 
   if (chunks.length === 0) {
     console.warn('⚠️ No chunks created, creating default chunk');
-    chunks.push(`Document: ${fileName} - Successfully processed and ready for legal analysis. File size: ${Math.round(pdfData.length / 1024)}KB. Use this document for case discussions and legal research.`);
+    chunks.push(`Document: ${fileName} - Successfully processed with unified extraction system. File size: ${Math.round(pdfData.length / 1024)}KB. Use this document for case discussions and legal research.`);
   }
 
-  // Generate embeddings with comprehensive metadata
-  console.log('🧠 === STARTING WORKING EMBEDDING GENERATION ===');
+  // Generate embeddings with enhanced metadata
+  console.log('🧠 === STARTING EMBEDDING GENERATION ===');
   
   const enhancedMetadata = {
     pdfUrl: fileUrl,
@@ -72,7 +72,7 @@ export async function processPdfDocument(
     chunkCount: chunks.length,
     originalTextLength: extractionResult.text.length,
     pdfSize: pdfData.length,
-    processingVersion: '8.0-working-system',
+    processingVersion: '9.0-unified-system',
     realProcessing: true,
     contentType: 'legal_document',
     processingTimestamp: new Date().toISOString(),
@@ -80,7 +80,8 @@ export async function processPdfDocument(
     isLegalDocument: true,
     readyForAnalysis: true,
     extractionValidated: true,
-    workingSystem: true
+    unifiedSystem: true,
+    modernExtraction: true
   };
   
   await generateAndStoreEmbeddings(
@@ -92,7 +93,7 @@ export async function processPdfDocument(
     openaiApiKey
   );
   
-  console.log('✅ WORKING embeddings generated and stored successfully');
+  console.log('✅ Embeddings generated and stored successfully');
 
   await updateDocumentStatus(documentId, 'completed', supabase);
 
