@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -22,6 +21,7 @@ interface DocumentUploadDialogProps {
   caseName?: string;
   cases?: Case[];
   allowCaseSelection?: boolean;
+  onUploadSuccess?: () => void; // Add callback for successful uploads
 }
 
 const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
@@ -33,7 +33,8 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
   caseId,
   caseName,
   cases = [],
-  allowCaseSelection = false
+  allowCaseSelection = false,
+  onUploadSuccess
 }) => {
   const [documentTitle, setDocumentTitle] = useState("");
   const [documentContent, setDocumentContent] = useState("");
@@ -105,13 +106,23 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
           resetForm();
           onClose();
           
-          // Note: Removed the redundant onUpload call that was causing duplicates
-          // The processPdfDocument function handles everything internally
+          // Trigger refresh callback after successful PDF upload
+          if (onUploadSuccess) {
+            onUploadSuccess();
+          }
         } else {
           throw new Error(result.error || "Failed to process PDF");
         }
       } else {
-        await onUpload(finalTitle, documentContent);
+        const result = await onUpload(finalTitle, documentContent);
+        
+        // Trigger refresh callback after successful text upload
+        if (result && result.success !== false) {
+          if (onUploadSuccess) {
+            onUploadSuccess();
+          }
+        }
+        
         resetForm();
       }
     } catch (error: any) {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { ClientWithCases } from "@/types/client";
 import { useClientChat } from "@/hooks/useClientChat";
@@ -51,7 +50,8 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
     loading: clientDocumentsLoading, 
     processDocument: processClientDocument,
     deleteDocument: deleteClientDocument,
-    isProcessing: isClientDocProcessing
+    isProcessing: isClientDocProcessing,
+    refetch: refetchClientDocuments
   } = useClientDocuments(
     client.id, 
     5,  
@@ -64,7 +64,8 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
     loading: caseDocumentsLoading,
     processDocument: processCaseDocument,
     deleteDocument: deleteCaseDocument,
-    isProcessing: isCaseDocProcessing
+    isProcessing: isCaseDocProcessing,
+    refetch: refetchCaseDocuments
   } = useCaseDocuments(
     client.id,
     currentCase?.id
@@ -117,6 +118,16 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
     }
   };
 
+  // Add refresh handler for documents
+  const handleRefreshDocuments = () => {
+    console.log("Refreshing documents for scope:", documentScope);
+    if (documentScope === "case" && currentCase) {
+      refetchCaseDocuments();
+    } else {
+      refetchClientDocuments();
+    }
+  };
+
   // Render documents tab with enhanced UI
   const renderDocumentsTab = () => (
     <div className="p-4">
@@ -160,6 +171,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
         }
         cases={cases || []}
         allowCaseSelection={true}
+        onRefreshDocuments={handleRefreshDocuments}
       />
     </div>
   );

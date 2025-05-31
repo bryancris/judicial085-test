@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import ChatView from "./ChatView";
 import ChatInput from "./ChatInput";
@@ -37,7 +36,7 @@ const ClientIntakeChat: React.FC<ClientIntakeChatProps> = ({ clientId, clientNam
   const { toast } = useToast();
 
   // Use the client documents hook
-  const { processDocument, isProcessing } = useClientDocuments(clientId);
+  const { processDocument, isProcessing, refetch: refetchDocuments } = useClientDocuments(clientId);
 
   // Handle document upload (supports both text and PDF)
   const handleDocumentUpload = async (title: string, content: string, file?: File) => {
@@ -68,6 +67,14 @@ const ClientIntakeChat: React.FC<ClientIntakeChatProps> = ({ clientId, clientNam
       });
       return { success: false };
     }
+  };
+
+  const handleUploadSuccess = () => {
+    console.log("Document upload successful in chat, triggering refresh...");
+    // Refresh documents after successful upload
+    setTimeout(() => {
+      refetchDocuments();
+    }, 1000);
   };
 
   const handleAddDocuments = () => {
@@ -161,6 +168,7 @@ const ClientIntakeChat: React.FC<ClientIntakeChatProps> = ({ clientId, clientNam
         onUpload={handleDocumentUpload}
         isProcessing={isProcessing}
         clientId={clientId}
+        onUploadSuccess={handleUploadSuccess}
       />
     </div>
   );

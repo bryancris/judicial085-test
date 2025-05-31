@@ -25,6 +25,7 @@ interface ClientDocumentsSectionProps {
   caseName?: string;
   cases?: Case[];
   allowCaseSelection?: boolean;
+  onRefreshDocuments?: () => void; // Add callback to refresh documents
 }
 
 const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
@@ -38,7 +39,8 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
   caseId,
   caseName,
   cases = [],
-  allowCaseSelection = false
+  allowCaseSelection = false,
+  onRefreshDocuments
 }) => {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<DocumentWithContent | null>(null);
@@ -89,8 +91,23 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
   const handleDeleteDocument = async (documentId: string) => {
     try {
       await onDeleteDocument(documentId);
+      // Trigger refresh after successful deletion
+      if (onRefreshDocuments) {
+        onRefreshDocuments();
+      }
     } catch (error) {
       console.error("Error deleting document:", error);
+    }
+  };
+
+  const handleUploadSuccess = () => {
+    console.log("Document upload successful, triggering refresh...");
+    // Trigger refresh after successful upload
+    if (onRefreshDocuments) {
+      // Add small delay to ensure backend processing is complete
+      setTimeout(() => {
+        onRefreshDocuments();
+      }, 1000);
     }
   };
 
@@ -297,6 +314,7 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
           caseName={caseName}
           cases={cases}
           allowCaseSelection={allowCaseSelection}
+          onUploadSuccess={handleUploadSuccess}
         />
 
         {renderDocumentPreview()}
