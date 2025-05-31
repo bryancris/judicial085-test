@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { DocumentWithContent } from "@/types/knowledge";
-import { useDocumentFetching } from "./useDocumentFetching";
+import { useClientDocumentFetching } from "./useClientDocumentFetching";
 import { useDocumentProcessing } from "./useDocumentProcessing";
 import { useDocumentDeletion } from "./useDocumentDeletion";
 
@@ -19,7 +19,7 @@ export const useClientDocuments = (
   const isMounted = useRef(true);
 
   // Use the specialized hooks
-  const { fetchClientDocuments } = useDocumentFetching(clientId, scope, pageSize);
+  const { fetchClientDocuments } = useClientDocumentFetching(clientId, scope, pageSize);
 
   // Refresh documents function
   const refreshDocuments = useCallback(async (reset: boolean = true) => {

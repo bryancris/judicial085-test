@@ -5,7 +5,7 @@ import { DocumentWithContent } from "@/types/knowledge";
 import { isValidUUID, parseDocumentId } from "@/utils/documentValidation";
 import { getMetadataProperty, isPdfDocument, generatePdfUrl } from "@/utils/documentMetadata";
 
-export const useDocumentFetching = (
+export const useClientDocumentFetching = (
   clientId: string | undefined,
   scope: "client-level" | string = "client-level",
   pageSize: number = 5
