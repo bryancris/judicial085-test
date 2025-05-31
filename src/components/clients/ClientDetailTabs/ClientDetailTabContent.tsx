@@ -5,7 +5,6 @@ import { useClientDocuments } from "@/hooks/useClientDocuments";
 import { useCaseDocuments } from "@/hooks/useCaseDocuments";
 import { useClientCases } from "@/hooks/useClientCases";
 import { useCase } from "@/contexts/CaseContext";
-import { DocumentChangeProvider } from "@/contexts/DocumentChangeContext";
 import ClientChatView from "@/components/clients/chat/ClientIntakeChat";
 import CaseAnalysisContainer from "@/components/case-analysis/CaseAnalysisContainer";
 import ClientDocumentsSection from "@/components/case-analysis/documents/ClientDocumentsSection";
@@ -213,11 +212,9 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
   };
 
   return (
-    <DocumentChangeProvider>
-      <div className="flex-1 overflow-hidden flex flex-col">
-        {renderTabContent()}
-      </div>
-    </DocumentChangeProvider>
+    <div className="flex-1 overflow-hidden flex flex-col">
+      {renderTabContent()}
+    </div>
   );
 };
 
