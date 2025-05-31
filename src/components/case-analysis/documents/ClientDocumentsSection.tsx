@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { Document } from "@/types/document";
+import { DocumentWithContent } from "@/types/knowledge";
 import { ProcessDocumentContentFunction } from "@/types/caseAnalysis";
 import DocumentUploadDialog from "@/components/clients/DocumentUploadDialog";
 import DocumentsGrid from "./DocumentsGrid";
@@ -11,7 +11,7 @@ import { useDocumentChange } from "@/contexts/DocumentChangeContext";
 
 interface ClientDocumentsSectionProps {
   clientId: string;
-  documents: Document[];
+  documents: DocumentWithContent[];
   isLoading: boolean;
   onProcessDocument: ProcessDocumentContentFunction;
   onDeleteDocument: (documentId: string) => Promise<any>;

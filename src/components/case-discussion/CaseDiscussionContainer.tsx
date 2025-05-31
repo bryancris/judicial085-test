@@ -19,8 +19,7 @@ const CaseDiscussionContainer: React.FC<CaseDiscussionContainerProps> = ({
     isLoading,
     isLoadingHistory,
     documentsAvailable,
-    handleSendMessage,
-    formatTimestamp
+    handleSendMessage
   } = useCaseDiscussion(clientId);
 
   if (isLoadingHistory) {
@@ -76,7 +75,6 @@ const CaseDiscussionContainer: React.FC<CaseDiscussionContainerProps> = ({
         <CaseDiscussionInput
           onSendMessage={handleSendMessage}
           isLoading={isLoading}
-          formatTimestamp={formatTimestamp}
         />
       </div>
     </div>
