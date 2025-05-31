@@ -1,7 +1,7 @@
 
-// Advanced PDF Processor - Updated to use Deno-compatible PDF.js
+// Advanced PDF Processor - Updated to use Deno-native pdfrex
 
-import { extractTextWithPdfJs } from './services/pdfjsExtractionService.ts';
+import { extractTextWithPdfrex } from './services/pdfrexExtractionService.ts';
 import { chunkDocumentAdvanced } from './utils/chunkingUtils.ts';
 
 export async function extractTextFromPdfAdvanced(pdfData: Uint8Array, fileName?: string): Promise<{
@@ -13,15 +13,15 @@ export async function extractTextFromPdfAdvanced(pdfData: Uint8Array, fileName?:
   isScanned: boolean;
   processingNotes: string;
 }> {
-  console.log('=== STARTING DENO-COMPATIBLE PDF.JS EXTRACTION SYSTEM ===');
+  console.log('=== STARTING DENO-NATIVE PDFREX EXTRACTION SYSTEM ===');
   console.log(`Processing document: ${pdfData.length} bytes (${Math.round(pdfData.length / 1024)}KB)`);
   
   try {
-    console.log('🔍 Using Deno-compatible PDF.js for text extraction...');
+    console.log('🔍 Using Deno-native pdfrex for text extraction...');
     
-    const result = await extractTextWithPdfJs(pdfData);
+    const result = await extractTextWithPdfrex(pdfData);
     
-    console.log(`✅ PDF.js extraction results:`);
+    console.log(`✅ pdfrex extraction results:`);
     console.log(`  - Text length: ${result.text.length} characters`);
     console.log(`  - Page count: ${result.pageCount}`);
     
@@ -34,15 +34,15 @@ export async function extractTextFromPdfAdvanced(pdfData: Uint8Array, fileName?:
         quality: result.quality,
         confidence: result.confidence,
         pageCount: result.pageCount,
-        isScanned: false, // PDF.js extracts native text
-        processingNotes: `PDF.js extraction: ${result.pageCount} pages, ${result.text.length} characters, quality ${result.quality.toFixed(2)}`
+        isScanned: false, // pdfrex extracts native text
+        processingNotes: `pdfrex extraction: ${result.pageCount} pages, ${result.text.length} characters, quality ${result.quality.toFixed(2)}`
       };
     }
     
-    throw new Error('PDF.js extraction returned insufficient content');
+    throw new Error('pdfrex extraction returned insufficient content');
     
   } catch (error) {
-    console.error('❌ PDF.js extraction failed:', error);
+    console.error('❌ pdfrex extraction failed:', error);
     
     // Create an informative summary when extraction fails
     console.log('=== CREATING DOCUMENT SUMMARY ===');
@@ -76,7 +76,7 @@ DOCUMENT STATUS:
 This legal document has been successfully uploaded to your case management system.
 
 EXTRACTION NOTES:
-- PDF.js processing attempted with Deno-compatible implementation
+- pdfrex processing attempted with Deno-native implementation
 - Document is stored and available for manual review
 - File can be downloaded and viewed directly
 - Content can be discussed in AI conversations
@@ -100,7 +100,7 @@ This document is now part of your legal case file and available for all legal AI
     confidence: 0.7,
     pageCount: Math.max(1, Math.ceil(sizeKB / 50)), // Rough estimate
     isScanned: true,
-    processingNotes: `Created informative summary for ${sizeKB}KB document. PDF.js extraction failed: ${errorMessage}`
+    processingNotes: `Created informative summary for ${sizeKB}KB document. pdfrex extraction failed: ${errorMessage}`
   };
 }
 

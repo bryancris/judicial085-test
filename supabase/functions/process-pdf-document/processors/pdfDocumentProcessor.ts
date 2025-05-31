@@ -1,19 +1,19 @@
 
-// PDF document processor using Deno-compatible PDF.js
+// PDF document processor using Deno-native pdfrex
 
-import { extractTextWithPdfJs, validatePdfJsExtraction } from '../services/pdfjsExtractionService.ts';
+import { extractTextWithPdfrex, validatePdfrexExtraction } from '../services/pdfrexExtractionService.ts';
 import { DocumentExtractionResult } from '../services/unifiedDocumentProcessor.ts';
 
 export async function processPdfDocument(pdfData: Uint8Array, fileName: string): Promise<DocumentExtractionResult> {
-  console.log('📄 Processing PDF document with Deno-compatible PDF.js...');
+  console.log('📄 Processing PDF document with Deno-native pdfrex...');
   
   try {
-    const result = await extractTextWithPdfJs(pdfData);
+    const result = await extractTextWithPdfrex(pdfData);
     
-    console.log(`✅ PDF.js extraction completed: ${result.text.length} characters from ${result.pageCount} pages`);
+    console.log(`✅ pdfrex extraction completed: ${result.text.length} characters from ${result.pageCount} pages`);
     
     // Validate extraction
-    const validation = validatePdfJsExtraction(result.text, result.pageCount);
+    const validation = validatePdfrexExtraction(result.text, result.pageCount);
     
     if (!validation.isValid) {
       throw new Error(`PDF extraction validation failed: ${validation.issues.join(', ')}`);
@@ -26,7 +26,7 @@ export async function processPdfDocument(pdfData: Uint8Array, fileName: string):
       confidence: result.confidence,
       pageCount: result.pageCount,
       fileType: 'pdf',
-      processingNotes: `PDF.js extraction: ${result.pageCount} pages, ${result.text.length} characters, quality ${result.quality.toFixed(2)}`
+      processingNotes: `pdfrex extraction: ${result.pageCount} pages, ${result.text.length} characters, quality ${result.quality.toFixed(2)}`
     };
     
   } catch (error) {
