@@ -24,6 +24,8 @@ export async function extractTextFromPdfAdvanced(pdfData: Uint8Array, fileName?:
     console.log(`✅ pdf-parse extraction results:`);
     console.log(`  - Text length: ${result.text.length} characters`);
     console.log(`  - Page count: ${result.pageCount}`);
+    console.log(`  - Quality: ${result.quality.toFixed(3)}`);
+    console.log(`  - Confidence: ${result.confidence.toFixed(3)}`);
     
     if (result.text.length > 50) {
       console.log(`  - Content preview: "${result.text.substring(0, 200)}..."`);
