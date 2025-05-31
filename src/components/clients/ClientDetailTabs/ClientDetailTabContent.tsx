@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { ClientWithCases } from "@/types/client";
 import { useClientChat } from "@/hooks/useClientChat";
@@ -51,7 +52,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
     processDocument: processClientDocument,
     deleteDocument: deleteClientDocument,
     isProcessing: isClientDocProcessing,
-    refetch: refetchClientDocuments
+    refreshDocuments: refetchClientDocuments
   } = useClientDocuments(
     client.id, 
     5,  
@@ -65,7 +66,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
     processDocument: processCaseDocument,
     deleteDocument: deleteCaseDocument,
     isProcessing: isCaseDocProcessing,
-    refetch: refetchCaseDocuments
+    refreshDocuments: refetchCaseDocuments
   } = useCaseDocuments(
     client.id,
     currentCase?.id

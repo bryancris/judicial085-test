@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import ChatView from "./ChatView";
 import ChatInput from "./ChatInput";
@@ -36,7 +37,7 @@ const ClientIntakeChat: React.FC<ClientIntakeChatProps> = ({ clientId, clientNam
   const { toast } = useToast();
 
   // Use the client documents hook
-  const { processDocument, isProcessing, refetch: refetchDocuments } = useClientDocuments(clientId);
+  const { processDocument, isProcessing, refreshDocuments: refetchDocuments } = useClientDocuments(clientId);
 
   // Handle document upload (supports both text and PDF)
   const handleDocumentUpload = async (title: string, content: string, file?: File) => {
