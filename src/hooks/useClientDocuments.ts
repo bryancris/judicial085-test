@@ -20,6 +20,12 @@ export const useClientDocuments = (
   const isMounted = useRef(true);
   const { toast } = useToast();
 
+  // Helper function to safely access metadata properties
+  const getMetadataProperty = (metadata: any, key: string): any => {
+    if (!metadata || typeof metadata !== 'object') return null;
+    return metadata[key] || null;
+  };
+
   // Fetch documents from the documents table
   const fetchClientDocuments = useCallback(async (pageIndex: number, resetResults: boolean = false) => {
     if (!clientId) return { hasMore: false };
@@ -95,28 +101,35 @@ export const useClientDocuments = (
       const transformedDocuments: DocumentWithContent[] = documentsData.map((doc) => {
         const metadata = doc.metadata || {};
         
-        // Extract document info from metadata
-        const title = metadata.title || metadata.file_title || `Document ${doc.id}`;
-        const createdAt = metadata.created_at || new Date().toISOString();
-        const caseId = metadata.case_id || null;
-        const isPdf = metadata.file_type === 'pdf' || metadata.isPdfDocument === true || title.toLowerCase().endsWith('.pdf');
-        const pdfUrl = metadata.pdf_url || metadata.pdfUrl || metadata.file_path || metadata.url;
+        // Extract document info from metadata with proper type safety
+        const title = getMetadataProperty(metadata, 'title') || 
+                     getMetadataProperty(metadata, 'file_title') || 
+                     `Document ${doc.id}`;
+        const createdAt = getMetadataProperty(metadata, 'created_at') || new Date().toISOString();
+        const caseId = getMetadataProperty(metadata, 'case_id') || null;
+        const fileType = getMetadataProperty(metadata, 'file_type');
+        const isPdfFlag = getMetadataProperty(metadata, 'isPdfDocument');
+        const isPdf = fileType === 'pdf' || isPdfFlag === true || (typeof title === 'string' && title.toLowerCase().endsWith('.pdf'));
+        const pdfUrl = getMetadataProperty(metadata, 'pdf_url') || 
+                      getMetadataProperty(metadata, 'pdfUrl') || 
+                      getMetadataProperty(metadata, 'file_path') || 
+                      getMetadataProperty(metadata, 'url');
         
         return {
           id: doc.id.toString(),
-          title: title,
-          url: pdfUrl || null,
-          created_at: createdAt,
+          title: typeof title === 'string' ? title : `Document ${doc.id}`,
+          url: typeof pdfUrl === 'string' ? pdfUrl : null,
+          created_at: typeof createdAt === 'string' ? createdAt : new Date().toISOString(),
           schema: isPdf ? 'pdf' : 'document',
-          case_id: caseId,
+          case_id: typeof caseId === 'string' ? caseId : null,
           client_id: clientId,
           contents: [{
             id: 1,
             content: doc.content || '',
             metadata: {
-              ...metadata,
+              ...(typeof metadata === 'object' && metadata !== null ? metadata : {}),
               isPdfDocument: isPdf,
-              pdfUrl: pdfUrl
+              pdfUrl: typeof pdfUrl === 'string' ? pdfUrl : null
             }
           }]
         };
@@ -278,11 +291,17 @@ export const useClientDocuments = (
       // Update UI state optimistically
       setDocuments(prev => prev.filter(doc => doc.id !== documentId));
       
+      // Convert string ID to number for database deletion
+      const numericId = parseInt(documentId, 10);
+      if (isNaN(numericId)) {
+        throw new Error("Invalid document ID format");
+      }
+      
       // Delete from documents table
       const { error } = await supabase
         .from('documents')
         .delete()
-        .eq('id', documentId);
+        .eq('id', numericId);
       
       if (error) {
         throw new Error(`Error deleting document: ${error.message}`);
