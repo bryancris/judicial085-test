@@ -1,11 +1,23 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { DocumentWithContent } from "@/types/knowledge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, Trash2 } from "lucide-react";
+import { FileText, Trash2, FileIcon, Download, Eye, AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 
 interface DocumentsGridProps {
   documents: DocumentWithContent[];
@@ -21,28 +33,68 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
   fullView = false
 }) => {
   const { toast } = useToast();
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<DocumentWithContent | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<DocumentWithContent | null>(null);
+  const [localIsDeleting, setLocalIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const handleDelete = async (documentId: string, title: string) => {
+  const handleDelete = async (document: DocumentWithContent) => {
+    if (!document.id) {
+      setDeleteError("Cannot delete this document: Invalid document ID");
+      return;
+    }
+    
+    setLocalIsDeleting(true);
+    setDeleteError(null);
+    
     try {
-      const result = await onDeleteDocument(documentId);
+      console.log(`DocumentsGrid: Initiating delete for document ${document.id}`);
+      
+      const result = await onDeleteDocument(document.id);
+      
+      console.log(`DocumentsGrid: Delete result for document ${document.id}:`, result);
+      
       if (result.success !== false) {
+        setDeleteDialogOpen(false);
+        setDocumentToDelete(null);
         toast({
           title: "Document deleted",
-          description: `"${title}" has been removed successfully.`,
+          description: "Document was successfully deleted",
         });
       } else {
-        toast({
-          title: "Delete failed",
-          description: result.error || "Failed to delete document.",
-          variant: "destructive",
-        });
+        throw new Error(result.error || "Unknown error occurred during deletion");
       }
     } catch (error: any) {
+      console.error("Error in document deletion:", error);
+      setDeleteError(error.message || "Failed to delete document");
       toast({
         title: "Delete failed",
-        description: error.message || "An error occurred while deleting the document.",
+        description: error.message || "Failed to delete document. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setLocalIsDeleting(false);
+    }
+  };
+
+  const handleViewDocument = (document: DocumentWithContent) => {
+    setSelectedDocument(document);
+    setPreviewOpen(true);
+  };
+
+  const handleDeleteClick = (document: DocumentWithContent) => {
+    setDocumentToDelete(document);
+    setDeleteDialogOpen(true);
+    setDeleteError(null);
+  };
+
+  // Handle PDF download
+  const handleDownload = (document: DocumentWithContent) => {
+    const pdfUrl = document.contents?.[0]?.metadata?.pdfUrl;
+    if (pdfUrl) {
+      window.open(pdfUrl, '_blank');
     }
   };
 
@@ -54,7 +106,8 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
             <CardContent className="p-4">
               <Skeleton className="h-6 w-3/4 mb-2" />
               <Skeleton className="h-4 w-full mb-2" />
-              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-4 w-1/2 mb-4" />
+              <Skeleton className="h-8 w-full" />
             </CardContent>
           </Card>
         ))}
@@ -72,42 +125,195 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {documents.map((document) => (
-        <Card key={document.id} className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex items-center gap-2 flex-1">
-                <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                <h3 className="font-medium text-sm truncate" title={document.title || "Untitled"}>
-                  {document.title || "Untitled Document"}
-                </h3>
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {documents.map((document) => {
+          // Check if this is a PDF document
+          const isPdf = document.contents?.[0]?.metadata?.isPdfDocument || 
+                       document.contents?.[0]?.metadata?.fileType === "pdf";
+          // Get PDF URL if available
+          const pdfUrl = document.contents?.[0]?.metadata?.pdfUrl || "";
+          // Get content preview
+          const content = document.contents?.[0]?.content || "";
+          const truncatedContent = content.length > 150 
+            ? `${content.substring(0, 150)}...` 
+            : content;
+
+          return (
+            <Card key={document.id} className="hover:shadow-md transition-shadow relative group">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2 flex-1">
+                    {isPdf ? (
+                      <FileIcon className="h-5 w-5 text-red-500 flex-shrink-0" />
+                    ) : (
+                      <FileText className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                    )}
+                    <h3 className="font-medium text-sm truncate" title={document.title || "Untitled"}>
+                      {document.title || "Untitled Document"}
+                    </h3>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteClick(document)}
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Delete document"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                <div className="mb-3">
+                  {isPdf ? (
+                    <div className="text-gray-600 text-sm italic flex items-center">
+                      <FileIcon className="h-4 w-4 mr-1 text-red-500" />
+                      PDF Document
+                    </div>
+                  ) : (
+                    <p className="text-gray-600 text-sm line-clamp-3 whitespace-pre-wrap">
+                      {truncatedContent}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
+                  <span>{new Date(document.created_at || "").toLocaleDateString()}</span>
+                  {document.contents && document.contents.length > 0 && (
+                    <span>{document.contents.length} chunk{document.contents.length !== 1 ? 's' : ''}</span>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleViewDocument(document)}
+                    className="flex-1 flex items-center gap-2"
+                  >
+                    <Eye className="h-4 w-4" />
+                    View
+                  </Button>
+                  
+                  {isPdf && pdfUrl && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownload(document)}
+                      className="flex items-center gap-2"
+                      title="Download PDF"
+                    >
+                      <Download className="h-4 w-4" />
+                      PDF
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Document Preview Dialog */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className={cn(
+          "max-w-4xl max-h-[85vh]", 
+          selectedDocument?.contents?.[0]?.metadata?.isPdfDocument ? "p-0 overflow-hidden" : ""
+        )}>
+          <DialogHeader className={selectedDocument?.contents?.[0]?.metadata?.isPdfDocument ? "p-4 bg-white border-b" : ""}>
+            <DialogTitle className="flex items-center">
+              {selectedDocument?.contents?.[0]?.metadata?.isPdfDocument ? (
+                <FileIcon className="h-5 w-5 text-red-500 mr-2" />
+              ) : (
+                <FileText className="h-5 w-5 text-blue-500 mr-2" />
+              )}
+              {selectedDocument?.title || "Untitled Document"}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedDocument?.contents?.[0]?.metadata?.isPdfDocument && selectedDocument?.contents?.[0]?.metadata?.pdfUrl ? (
+            <div className="h-[70vh] overflow-hidden">
+              <iframe 
+                src={`${selectedDocument.contents[0].metadata.pdfUrl}#toolbar=0&navpanes=0`}
+                className="w-full h-full"
+                title={selectedDocument.title || "PDF Document"}
+                sandbox="allow-scripts allow-same-origin"
+              />
+              <div className="p-4 bg-white border-t flex justify-end">
+                <Button 
+                  variant="default" 
+                  onClick={() => window.open(selectedDocument.contents[0].metadata.pdfUrl, '_blank')}
+                  className="flex items-center"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download PDF
+                </Button>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleDelete(document.id, document.title || "Untitled")}
-                className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
             </div>
-            
-            {document.created_at && (
-              <p className="text-xs text-muted-foreground">
-                {new Date(document.created_at).toLocaleDateString()}
-              </p>
-            )}
-            
-            {document.contents && document.contents.length > 0 && (
-              <p className="text-xs text-muted-foreground mt-1">
-                {document.contents.length} chunk{document.contents.length !== 1 ? 's' : ''}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+          ) : (
+            <div className="overflow-y-auto max-h-[60vh] whitespace-pre-wrap">
+              {selectedDocument?.contents?.map((contentItem, i) => (
+                <p key={i} className="mb-4">{contentItem.content}</p>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => {
+        if (!localIsDeleting) {
+          setDeleteDialogOpen(open);
+          if (!open) {
+            setDeleteError(null);
+            setDocumentToDelete(null);
+          }
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Document</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{documentToDelete?.title || "Untitled Document"}"?
+              This action cannot be undone and will permanently remove the document and all its data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          {deleteError && (
+            <div className="bg-destructive/10 text-destructive p-3 rounded-md mb-3 flex items-start">
+              <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
+              <p>{deleteError}</p>
+            </div>
+          )}
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={localIsDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                if (documentToDelete) {
+                  handleDelete(documentToDelete);
+                }
+              }}
+              disabled={localIsDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {localIsDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
