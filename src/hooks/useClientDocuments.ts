@@ -32,6 +32,12 @@ export const useClientDocuments = (
     return uuidRegex.test(uuid);
   };
 
+  // Helper function to validate and parse document ID
+  const parseDocumentId = (documentId: string): number | null => {
+    const parsed = parseInt(documentId, 10);
+    return isNaN(parsed) ? null : parsed;
+  };
+
   // Fetch documents associated with the client through document_chunks table
   const fetchClientDocuments = useCallback(async (pageIndex: number, resetResults: boolean = false) => {
     if (!clientId) return { hasMore: false };
@@ -94,12 +100,27 @@ export const useClientDocuments = (
         return { hasMore: false };
       }
 
-      // Get unique document IDs
-      const documentIds = [...new Set(chunks.map(chunk => chunk.document_id))];
+      // Get unique document IDs and validate them
+      const validDocumentIds = [...new Set(chunks.map(chunk => chunk.document_id))]
+        .map(id => parseDocumentId(id))
+        .filter((id): id is number => id !== null);
+
+      console.log("Valid document IDs:", validDocumentIds);
+      
+      if (validDocumentIds.length === 0) {
+        console.log("No valid document IDs found");
+        if (resetResults && isMounted.current) {
+          setDocuments([]);
+        }
+        if (isMounted.current) {
+          setLoading(false);
+        }
+        return { hasMore: false };
+      }
       
       // Paginate the document IDs
-      const paginatedDocIds = documentIds.slice(from, to + 1);
-      const hasMore = documentIds.length > to + 1;
+      const paginatedDocIds = validDocumentIds.slice(from, to + 1);
+      const hasMore = validDocumentIds.length > to + 1;
       setHasMore(hasMore);
       
       if (paginatedDocIds.length === 0) {
@@ -116,7 +137,7 @@ export const useClientDocuments = (
       const { data: documentsData, error: documentsError } = await supabase
         .from('documents')
         .select('*')
-        .in('id', paginatedDocIds.map(id => parseInt(id, 10)));
+        .in('id', paginatedDocIds);
       
       if (documentsError) {
         console.error("Error fetching documents:", documentsError);
@@ -144,7 +165,7 @@ export const useClientDocuments = (
         const metadata = doc.metadata || {};
         
         // Find the case_id from chunks for this document
-        const associatedChunk = chunks.find(chunk => chunk.document_id === doc.id.toString());
+        const associatedChunk = chunks.find(chunk => parseDocumentId(chunk.document_id) === doc.id);
         const caseId = associatedChunk?.case_id || null;
         
         // Extract document info from metadata with proper type safety
