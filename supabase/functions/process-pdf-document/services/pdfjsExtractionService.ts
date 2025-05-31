@@ -1,5 +1,5 @@
 
-// Deno-compatible PDF.js extraction service (without workers)
+// Deno-compatible PDF.js extraction service (properly configured without workers)
 
 export async function extractTextWithPdfJs(pdfData: Uint8Array): Promise<{
   text: string;
@@ -15,17 +15,20 @@ export async function extractTextWithPdfJs(pdfData: Uint8Array): Promise<{
     // Import PDF.js for Deno environment
     const pdfjsLib = await import('https://esm.sh/pdfjs-dist@4.8.69/build/pdf.mjs');
     
-    // Configure PDF.js to work without workers in Deno
-    pdfjsLib.GlobalWorkerOptions.workerSrc = null;
+    // Properly disable workers by setting to empty string (not null)
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '';
     
     console.log('🔍 Loading PDF document with PDF.js...');
     
-    // Load the PDF document
+    // Load the PDF document with worker explicitly disabled
     const loadingTask = pdfjsLib.getDocument({
       data: pdfData,
       useWorkerFetch: false,
       isEvalSupported: false,
-      useSystemFonts: true
+      useSystemFonts: true,
+      disableAutoFetch: true,
+      disableStream: true,
+      disableRange: true
     });
     
     const pdfDocument = await loadingTask.promise;
@@ -41,9 +44,15 @@ export async function extractTextWithPdfJs(pdfData: Uint8Array): Promise<{
         const page = await pdfDocument.getPage(pageNum);
         const textContent = await page.getTextContent();
         
-        // Combine text items into readable text
+        // Combine text items into readable text with proper spacing
         const pageText = textContent.items
-          .map((item: any) => item.str || '')
+          .map((item: any) => {
+            if (item.str) {
+              return item.str;
+            }
+            return '';
+          })
+          .filter(text => text.trim().length > 0)
           .join(' ')
           .trim();
         
@@ -56,7 +65,7 @@ export async function extractTextWithPdfJs(pdfData: Uint8Array): Promise<{
       }
     }
     
-    // Combine all pages
+    // Combine all pages with proper separation
     const extractedText = textPages.join('\n\n').trim();
     
     console.log(`✅ PDF.js extraction completed: ${extractedText.length} characters from ${pageCount} pages`);
@@ -71,7 +80,7 @@ export async function extractTextWithPdfJs(pdfData: Uint8Array): Promise<{
     
     return {
       text: extractedText,
-      method: 'pdfjs-deno-compatible',
+      method: 'pdfjs-deno-worker-disabled',
       quality: quality,
       confidence: confidence,
       pageCount: pageCount
