@@ -40,6 +40,55 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
   const [localIsDeleting, setLocalIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  // Helper function to check if document is a PDF
+  const isPdfDocument = (document: DocumentWithContent): boolean => {
+    // Check multiple locations for PDF indicators
+    const contentMetadata = document.contents?.[0]?.metadata;
+    
+    // Check various PDF indicators
+    const indicators = [
+      contentMetadata?.isPdfDocument,
+      contentMetadata?.fileType === "pdf",
+      contentMetadata?.file_type === "pdf",
+      document.title?.toLowerCase().endsWith('.pdf'),
+      document.url?.toLowerCase().includes('.pdf')
+    ];
+    
+    return indicators.some(indicator => indicator === true);
+  };
+
+  // Helper function to get PDF URL
+  const getPdfUrl = (document: DocumentWithContent): string | null => {
+    const contentMetadata = document.contents?.[0]?.metadata;
+    
+    // Check various locations for PDF URL
+    const urls = [
+      contentMetadata?.pdfUrl,
+      contentMetadata?.pdf_url,
+      contentMetadata?.url,
+      document.url
+    ];
+    
+    const pdfUrl = urls.find(url => url && typeof url === 'string');
+    console.log('PDF URL found:', pdfUrl, 'for document:', document.title);
+    return pdfUrl || null;
+  };
+
+  // Helper function to get document content for preview
+  const getDocumentContent = (document: DocumentWithContent): string => {
+    if (!document.contents || document.contents.length === 0) {
+      return "No content available for this document.";
+    }
+    
+    // Combine all content chunks
+    const allContent = document.contents
+      .map(content => content.content)
+      .filter(content => content && content.trim().length > 0)
+      .join('\n\n');
+    
+    return allContent || "Document content could not be loaded.";
+  };
+
   const handleDelete = async (document: DocumentWithContent) => {
     if (!document.id) {
       setDeleteError("Cannot delete this document: Invalid document ID");
@@ -80,6 +129,7 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
   };
 
   const handleViewDocument = (document: DocumentWithContent) => {
+    console.log('Viewing document:', document.title, 'Contents:', document.contents);
     setSelectedDocument(document);
     setPreviewOpen(true);
   };
@@ -90,11 +140,18 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
     setDeleteError(null);
   };
 
-  // Handle PDF download
-  const handleDownload = (document: DocumentWithContent) => {
-    const pdfUrl = document.contents?.[0]?.metadata?.pdfUrl;
+  // Handle PDF viewing/download
+  const handleViewPdf = (document: DocumentWithContent) => {
+    const pdfUrl = getPdfUrl(document);
     if (pdfUrl) {
+      console.log('Opening PDF:', pdfUrl);
       window.open(pdfUrl, '_blank');
+    } else {
+      toast({
+        title: "PDF not available",
+        description: "The PDF file could not be found.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -128,16 +185,15 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {documents.map((document) => {
-          // Check if this is a PDF document
-          const isPdf = document.contents?.[0]?.metadata?.isPdfDocument || 
-                       document.contents?.[0]?.metadata?.fileType === "pdf";
-          // Get PDF URL if available
-          const pdfUrl = document.contents?.[0]?.metadata?.pdfUrl || "";
-          // Get content preview
-          const content = document.contents?.[0]?.content || "";
+          const isPdf = isPdfDocument(document);
+          const pdfUrl = getPdfUrl(document);
+          const content = getDocumentContent(document);
           const truncatedContent = content.length > 150 
             ? `${content.substring(0, 150)}...` 
             : content;
+
+          // Debug logging
+          console.log('Document:', document.title, 'isPdf:', isPdf, 'pdfUrl:', pdfUrl);
 
           return (
             <Card key={document.id} className="hover:shadow-md transition-shadow relative group">
@@ -199,12 +255,12 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDownload(document)}
+                      onClick={() => handleViewPdf(document)}
                       className="flex items-center gap-2"
-                      title="Download PDF"
+                      title="View original PDF"
                     >
                       <Download className="h-4 w-4" />
-                      PDF
+                      View PDF
                     </Button>
                   )}
                 </div>
@@ -216,13 +272,10 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
 
       {/* Document Preview Dialog */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className={cn(
-          "max-w-4xl max-h-[85vh]", 
-          selectedDocument?.contents?.[0]?.metadata?.isPdfDocument ? "p-0 overflow-hidden" : ""
-        )}>
-          <DialogHeader className={selectedDocument?.contents?.[0]?.metadata?.isPdfDocument ? "p-4 bg-white border-b" : ""}>
+        <DialogContent className="max-w-4xl max-h-[85vh]">
+          <DialogHeader>
             <DialogTitle className="flex items-center">
-              {selectedDocument?.contents?.[0]?.metadata?.isPdfDocument ? (
+              {selectedDocument && isPdfDocument(selectedDocument) ? (
                 <FileIcon className="h-5 w-5 text-red-500 mr-2" />
               ) : (
                 <FileText className="h-5 w-5 text-blue-500 mr-2" />
@@ -231,30 +284,24 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
             </DialogTitle>
           </DialogHeader>
           
-          {selectedDocument?.contents?.[0]?.metadata?.isPdfDocument && selectedDocument?.contents?.[0]?.metadata?.pdfUrl ? (
-            <div className="h-[70vh] overflow-hidden">
-              <iframe 
-                src={`${selectedDocument.contents[0].metadata.pdfUrl}#toolbar=0&navpanes=0`}
-                className="w-full h-full"
-                title={selectedDocument.title || "PDF Document"}
-                sandbox="allow-scripts allow-same-origin"
-              />
-              <div className="p-4 bg-white border-t flex justify-end">
-                <Button 
-                  variant="default" 
-                  onClick={() => window.open(selectedDocument.contents[0].metadata.pdfUrl, '_blank')}
-                  className="flex items-center"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download PDF
-                </Button>
+          <div className="overflow-y-auto max-h-[60vh]">
+            {selectedDocument && (
+              <div className="whitespace-pre-wrap">
+                {getDocumentContent(selectedDocument)}
               </div>
-            </div>
-          ) : (
-            <div className="overflow-y-auto max-h-[60vh] whitespace-pre-wrap">
-              {selectedDocument?.contents?.map((contentItem, i) => (
-                <p key={i} className="mb-4">{contentItem.content}</p>
-              ))}
+            )}
+          </div>
+          
+          {selectedDocument && isPdfDocument(selectedDocument) && getPdfUrl(selectedDocument) && (
+            <div className="border-t pt-4 flex justify-end">
+              <Button 
+                variant="default" 
+                onClick={() => handleViewPdf(selectedDocument)}
+                className="flex items-center"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                View Original PDF
+              </Button>
             </div>
           )}
         </DialogContent>
