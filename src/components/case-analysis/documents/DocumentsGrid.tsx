@@ -46,8 +46,8 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
     // Check document title for .pdf extension
     const titleIsPdf = document.title?.toLowerCase().endsWith('.pdf');
     
-    // Check document URL for .pdf
-    const urlIsPdf = document.url?.toLowerCase().includes('.pdf');
+    // Check document URL for PDF indicators
+    const urlIsPdf = document.url?.includes('drive.google.com') || document.url?.toLowerCase().includes('.pdf');
     
     // Check schema
     const schemaIsPdf = document.schema === 'pdf';
@@ -55,6 +55,7 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
     // Check content metadata
     const contentMetadata = document.contents?.[0]?.metadata;
     const contentIsPdf = contentMetadata?.isPdfDocument === true ||
+      contentMetadata?.blobType === 'application/pdf' ||
       contentMetadata?.file_type === "pdf";
     
     const isPdf = titleIsPdf || urlIsPdf || schemaIsPdf || contentIsPdf;

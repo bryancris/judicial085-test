@@ -26,7 +26,7 @@ export const useClientDocuments = (
     return metadata[key] || null;
   };
 
-  // Fetch documents from the documents table
+  // Fetch documents associated with the client through document_chunks table
   const fetchClientDocuments = useCallback(async (pageIndex: number, resetResults: boolean = false) => {
     if (!clientId) return { hasMore: false };
     
@@ -46,34 +46,23 @@ export const useClientDocuments = (
       const from = pageIndex * pageSize;
       const to = from + pageSize - 1;
       
-      // Fetch from documents table with metadata filtering
-      let query = supabase
-        .from('documents')
-        .select('*');
+      // First, get document IDs associated with this client from document_chunks
+      let chunkQuery = supabase
+        .from('document_chunks')
+        .select('document_id, case_id, metadata')
+        .eq('client_id', clientId);
       
-      // Build metadata filter for client_id
-      let metadataFilter: any = {
-        client_id: clientId
-      };
-      
-      // Apply scope filtering in metadata
+      // Apply scope filtering
       if (scope === "client-level") {
-        // For client-level, we want documents without case_id or with null case_id
-        metadataFilter.case_id = null;
+        chunkQuery = chunkQuery.or('case_id.is.null');
       } else if (scope !== "all") {
-        // Specific case ID
-        metadataFilter.case_id = scope;
+        chunkQuery = chunkQuery.eq('case_id', scope);
       }
       
-      // Apply metadata filter
-      query = query.contains('metadata', metadataFilter);
+      const { data: chunks, error: chunksError } = await chunkQuery;
       
-      const { data: documentsData, error: documentsError } = await query
-        .order('id', { ascending: false })
-        .range(from, to);
-      
-      if (documentsError) {
-        console.error("Error fetching documents:", documentsError);
+      if (chunksError) {
+        console.error("Error fetching document chunks:", chunksError);
         if (isMounted.current) {
           setHasError(true);
           setLoading(false);
@@ -81,12 +70,8 @@ export const useClientDocuments = (
         return { hasMore: false };
       }
 
-      // Determine if there are more records to fetch
-      const hasMore = documentsData && documentsData.length === pageSize;
-      setHasMore(hasMore);
-      
-      if (!documentsData || documentsData.length === 0) {
-        console.log("No documents found for this client and scope");
+      if (!chunks || chunks.length === 0) {
+        console.log("No document chunks found for this client and scope");
         
         if (resetResults && isMounted.current) {
           setDocuments([]);
@@ -97,29 +82,82 @@ export const useClientDocuments = (
         return { hasMore: false };
       }
 
+      // Get unique document IDs
+      const documentIds = [...new Set(chunks.map(chunk => chunk.document_id))];
+      
+      // Paginate the document IDs
+      const paginatedDocIds = documentIds.slice(from, to + 1);
+      const hasMore = documentIds.length > to + 1;
+      setHasMore(hasMore);
+      
+      if (paginatedDocIds.length === 0) {
+        if (resetResults && isMounted.current) {
+          setDocuments([]);
+        }
+        if (isMounted.current) {
+          setLoading(false);
+        }
+        return { hasMore };
+      }
+
+      // Now fetch the actual documents
+      const { data: documentsData, error: documentsError } = await supabase
+        .from('documents')
+        .select('*')
+        .in('id', paginatedDocIds.map(id => parseInt(id, 10)));
+      
+      if (documentsError) {
+        console.error("Error fetching documents:", documentsError);
+        if (isMounted.current) {
+          setHasError(true);
+          setLoading(false);
+        }
+        return { hasMore };
+      }
+
+      if (!documentsData || documentsData.length === 0) {
+        console.log("No documents found for the document IDs");
+        
+        if (resetResults && isMounted.current) {
+          setDocuments([]);
+        }
+        if (isMounted.current) {
+          setLoading(false);
+        }
+        return { hasMore };
+      }
+
       // Transform documents data to DocumentWithContent format
       const transformedDocuments: DocumentWithContent[] = documentsData.map((doc) => {
         const metadata = doc.metadata || {};
         
+        // Find the case_id from chunks for this document
+        const associatedChunk = chunks.find(chunk => chunk.document_id === doc.id.toString());
+        const caseId = associatedChunk?.case_id || null;
+        
         // Extract document info from metadata with proper type safety
-        const title = getMetadataProperty(metadata, 'title') || 
-                     getMetadataProperty(metadata, 'file_title') || 
-                     `Document ${doc.id}`;
-        const createdAt = getMetadataProperty(metadata, 'created_at') || new Date().toISOString();
-        const caseId = getMetadataProperty(metadata, 'case_id') || null;
-        const fileType = getMetadataProperty(metadata, 'file_type');
-        const isPdfFlag = getMetadataProperty(metadata, 'isPdfDocument');
-        const isPdf = fileType === 'pdf' || isPdfFlag === true || (typeof title === 'string' && title.toLowerCase().endsWith('.pdf'));
-        const pdfUrl = getMetadataProperty(metadata, 'pdf_url') || 
-                      getMetadataProperty(metadata, 'pdfUrl') || 
-                      getMetadataProperty(metadata, 'file_path') || 
-                      getMetadataProperty(metadata, 'url');
+        const fileTitle = getMetadataProperty(metadata, 'file_title') || 
+                         getMetadataProperty(metadata, 'title') || 
+                         `Document ${doc.id}`;
+        const fileId = getMetadataProperty(metadata, 'file_id');
+        const blobType = getMetadataProperty(metadata, 'blobType');
+        const source = getMetadataProperty(metadata, 'source');
+        
+        // Determine if it's a PDF
+        const isPdf = (typeof fileTitle === 'string' && fileTitle.toLowerCase().endsWith('.pdf')) ||
+                     blobType === 'application/pdf';
+        
+        // Generate PDF URL if it's a PDF with file_id
+        let pdfUrl = null;
+        if (isPdf && fileId) {
+          pdfUrl = `https://drive.google.com/file/d/${fileId}/view`;
+        }
         
         return {
           id: doc.id.toString(),
-          title: typeof title === 'string' ? title : `Document ${doc.id}`,
-          url: typeof pdfUrl === 'string' ? pdfUrl : null,
-          created_at: typeof createdAt === 'string' ? createdAt : new Date().toISOString(),
+          title: typeof fileTitle === 'string' ? fileTitle : `Document ${doc.id}`,
+          url: pdfUrl,
+          created_at: new Date().toISOString(),
           schema: isPdf ? 'pdf' : 'document',
           case_id: typeof caseId === 'string' ? caseId : null,
           client_id: clientId,
@@ -129,7 +167,10 @@ export const useClientDocuments = (
             metadata: {
               ...(typeof metadata === 'object' && metadata !== null ? metadata : {}),
               isPdfDocument: isPdf,
-              pdfUrl: typeof pdfUrl === 'string' ? pdfUrl : null
+              pdfUrl: pdfUrl,
+              file_id: fileId,
+              blobType: blobType,
+              source: source
             }
           }]
         };
