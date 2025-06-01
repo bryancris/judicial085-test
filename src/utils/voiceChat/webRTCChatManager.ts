@@ -8,6 +8,7 @@ export class WebRTCChatManager {
   private dc: RTCDataChannel | null = null;
   private audioEl: HTMLAudioElement;
   private recorder: WebRTCAudioRecorder | null = null;
+  private clientId: string = '';
 
   constructor(
     private onMessage: (message: any) => void,
@@ -20,6 +21,7 @@ export class WebRTCChatManager {
   async init(clientId: string) {
     try {
       console.log("Initializing WebRTC chat for client:", clientId);
+      this.clientId = clientId;
 
       // Get ephemeral token from our Supabase Edge Function
       const { data: tokenData, error } = await supabase.functions.invoke("generate-voice-token", {
@@ -66,7 +68,13 @@ export class WebRTCChatManager {
         try {
           const event = JSON.parse(e.data);
           console.log("Received WebRTC event:", event.type);
-          this.onMessage(event);
+          
+          // Handle tool calls
+          if (event.type === 'response.function_call_arguments.done') {
+            this.handleToolCall(event);
+          } else {
+            this.onMessage(event);
+          }
         } catch (error) {
           console.error("Error parsing WebRTC message:", error);
         }
@@ -128,6 +136,85 @@ export class WebRTCChatManager {
       console.error("Error initializing WebRTC chat:", error);
       this.onError(error instanceof Error ? error.message : 'WebRTC initialization failed');
       throw error;
+    }
+  }
+
+  private async handleToolCall(event: any) {
+    try {
+      const functionName = event.name;
+      const args = JSON.parse(event.arguments);
+      
+      console.log("Handling tool call:", functionName, args);
+      
+      if (functionName === 'search_case_documents') {
+        const results = await this.searchCaseDocuments(args.query);
+        
+        // Send tool response back to the AI
+        if (this.dc?.readyState === 'open') {
+          this.dc.send(JSON.stringify({
+            type: 'conversation.item.create',
+            item: {
+              type: 'function_call_output',
+              call_id: event.call_id,
+              output: JSON.stringify(results)
+            }
+          }));
+        }
+      }
+    } catch (error) {
+      console.error("Error handling tool call:", error);
+      
+      // Send error response
+      if (this.dc?.readyState === 'open') {
+        this.dc.send(JSON.stringify({
+          type: 'conversation.item.create',
+          item: {
+            type: 'function_call_output',
+            call_id: event.call_id,
+            output: JSON.stringify({ error: 'Failed to search documents' })
+          }
+        }));
+      }
+    }
+  }
+
+  private async searchCaseDocuments(query: string) {
+    try {
+      console.log("Searching case documents for:", query);
+      
+      // Generate embedding for the search query
+      const { data: embeddingData, error: embeddingError } = await supabase.functions.invoke('generate-embeddings', {
+        body: { text: query }
+      });
+
+      if (embeddingError || !embeddingData?.embedding) {
+        console.error("Error generating embedding:", embeddingError);
+        return { results: [], error: "Failed to generate search embedding" };
+      }
+
+      // Search document chunks using the embedding
+      const { data: searchResults, error: searchError } = await supabase.rpc('search_document_chunks_by_similarity', {
+        query_embedding: embeddingData.embedding,
+        client_id_param: this.clientId,
+        match_threshold: 0.7,
+        match_count: 5
+      });
+
+      if (searchError) {
+        console.error("Error searching documents:", searchError);
+        return { results: [], error: "Failed to search documents" };
+      }
+
+      console.log("Found document chunks:", searchResults?.length || 0);
+
+      return {
+        results: searchResults || [],
+        summary: `Found ${searchResults?.length || 0} relevant document sections for "${query}"`
+      };
+
+    } catch (error) {
+      console.error("Error in searchCaseDocuments:", error);
+      return { results: [], error: "Document search failed" };
     }
   }
 
