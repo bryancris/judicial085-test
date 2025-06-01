@@ -6,8 +6,8 @@ import { Separator } from "@/components/ui/separator";
 import FollowUpQuestionsSection from "./sections/FollowUpQuestionsSection";
 import RelevantLawSection from "./sections/RelevantLawSection";
 import AnalysisSection from "./sections/AnalysisSection";
-import RemediesSection from "./RemediesSection"; // Import the new component
-import ScholarlyReferencesSection from "./ScholarlyReferencesSection"; // Import the scholarly references component
+import RemediesSection from "./RemediesSection";
+import ScholarlyReferencesSection from "./ScholarlyReferencesSection";
 import { ScholarlyArticle } from "@/utils/api/scholarApiService";
 
 interface DetailedLegalAnalysisProps {
@@ -35,13 +35,23 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
   isScholarlyReferencesLoading = false,
   onScholarSearch
 }) => {
+  // Check if we have minimal content to display
+  const hasContent = relevantLaw || preliminaryAnalysis || potentialIssues || followUpQuestions?.length > 0;
+  
+  if (!hasContent && !isLoading) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">No detailed analysis available. Please generate an analysis first.</p>
+      </div>
+    );
+  }
+
   // We'll render the remedies section separately if it exists
   const hasRemedies = remedies && remedies.trim() !== "";
   
   // Add state for collapsible sections
   const [isRelevantLawOpen, setIsRelevantLawOpen] = useState(true);
   const [isFollowUpOpen, setIsFollowUpOpen] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   
   // For this implementation, we'll use a simplified version of the processed content
   const processedContent = relevantLaw;
@@ -83,38 +93,49 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            <RelevantLawSection 
-              content={relevantLaw}
-              isOpen={isRelevantLawOpen}
-              isProcessing={isLoading}
-              onToggle={() => setIsRelevantLawOpen(!isRelevantLawOpen)}
-              processedContent={processedContent}
-              isConsumerCase={isConsumerCase}
-            />
+            {relevantLaw && (
+              <>
+                <RelevantLawSection 
+                  content={relevantLaw}
+                  isOpen={isRelevantLawOpen}
+                  isProcessing={isLoading}
+                  onToggle={() => setIsRelevantLawOpen(!isRelevantLawOpen)}
+                  processedContent={processedContent}
+                  isConsumerCase={isConsumerCase}
+                />
+                <Separator className="my-4" />
+              </>
+            )}
             
-            <Separator className="my-4" />
+            {preliminaryAnalysis && (
+              <>
+                <AnalysisSection 
+                  title="Preliminary Analysis" 
+                  content={preliminaryAnalysis}
+                />
+                <Separator className="my-4" />
+              </>
+            )}
             
-            <AnalysisSection 
-              title="Preliminary Analysis" 
-              content={preliminaryAnalysis}
-            />
+            {potentialIssues && (
+              <>
+                <AnalysisSection 
+                  title="Potential Legal Issues" 
+                  content={potentialIssues}
+                  variant={caseType === "consumer-protection" ? "consumer" : "standard"}
+                />
+                <Separator className="my-4" />
+              </>
+            )}
             
-            <Separator className="my-4" />
-            
-            <AnalysisSection 
-              title="Potential Legal Issues" 
-              content={potentialIssues}
-              variant={caseType === "consumer-protection" ? "consumer" : "standard"}
-            />
-            
-            <Separator className="my-4" />
-            
-            <FollowUpQuestionsSection 
-              questions={followUpQuestions}
-              isOpen={isFollowUpOpen}
-              searchTerm={searchTerm}
-              onToggle={() => setIsFollowUpOpen(!isFollowUpOpen)}
-            />
+            {followUpQuestions && followUpQuestions.length > 0 && (
+              <FollowUpQuestionsSection 
+                questions={followUpQuestions}
+                isOpen={isFollowUpOpen}
+                searchTerm=""
+                onToggle={() => setIsFollowUpOpen(!isFollowUpOpen)}
+              />
+            )}
           </div>
         </CardContent>
       </Card>
