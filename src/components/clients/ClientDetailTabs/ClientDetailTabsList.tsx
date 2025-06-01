@@ -62,7 +62,8 @@ const ClientDetailTabsList = () => {
           className="data-[state=active]:bg-[#F97316] bg-[#F97316]/80 text-white flex items-center gap-1"
         >
           <BookOpen className="h-4 w-4" />
-          <span>Documents</span>
+          <span className="hidden lg:inline">Upload Documents</span>
+          <span className="lg:hidden">Upload Docs</span>
         </TabsTrigger>
         <TabsTrigger
           value="knowledge"
