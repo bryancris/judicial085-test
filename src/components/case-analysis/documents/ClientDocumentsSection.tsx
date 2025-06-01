@@ -239,9 +239,6 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
                     <CardTitle className="text-md font-medium truncate">
                       {document.title || "Untitled Document"}
                     </CardTitle>
-                    <div className="text-xs text-muted-foreground">
-                      {formatDate(document.created_at)}
-                    </div>
                   </CardHeader>
                   <CardContent className="pb-2">
                     <div className="flex items-center gap-2 mb-3">
