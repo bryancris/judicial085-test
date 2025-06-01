@@ -18,7 +18,7 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({ clientId }) =
     processDocument,
     deleteDocument,
     refreshDocuments
-  } = useClientDocuments(clientId, 5, "client-level");
+  } = useClientDocuments(clientId, 5, "all");
 
   return (
     <ClientDocumentsSection
