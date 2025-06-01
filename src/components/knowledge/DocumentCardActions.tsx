@@ -5,17 +5,6 @@ import { DocumentWithContent } from "@/types/knowledge";
 import { Download, Trash2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { reconstructStorageUrl } from "@/utils/pdfUtils";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 
 interface DocumentCardActionsProps {
   document: DocumentWithContent;
@@ -85,13 +74,6 @@ const DocumentCardActions: React.FC<DocumentCardActionsProps> = ({
     }
   };
 
-  // Handle confirmed deletion
-  const handleConfirmDelete = async () => {
-    if (onDelete) {
-      await onDelete(document.id);
-    }
-  };
-
   return (
     <>
       {/* Download button for PDFs */}
@@ -115,48 +97,28 @@ const DocumentCardActions: React.FC<DocumentCardActionsProps> = ({
         </div>
       )}
 
-      {/* Delete button with confirmation dialog */}
+      {/* Delete button */}
       {onDelete && (
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10",
-                isDeleting && "pointer-events-none"
-              )}
-              onClick={(e) => e.stopPropagation()}
-              title="Delete document"
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4" />
-              )}
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Document</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete "{document.title || "Untitled Document"}"? 
-                This action cannot be undone and will permanently remove the document and all its data.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={handleConfirmDelete}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10",
+            isDeleting && "pointer-events-none"
+          )}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDeleteClick();
+          }}
+          title="Delete document"
+          disabled={isDeleting}
+        >
+          {isDeleting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Trash2 className="h-4 w-4" />
+          )}
+        </Button>
       )}
     </>
   );
