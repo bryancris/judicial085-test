@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { ClientWithCases } from "@/types/client";
 import { useClientChat } from "@/hooks/useClientChat";

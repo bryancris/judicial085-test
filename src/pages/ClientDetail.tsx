@@ -15,7 +15,6 @@ import ClientDetailTabContent from "@/components/clients/ClientDetailTabs/Client
 import DeleteClientDialog from "@/components/clients/DeleteClientDialog";
 import { useToast } from "@/components/ui/use-toast";
 import { CaseProvider } from "@/contexts/CaseContext";
-import { DocumentChangeProvider } from "@/contexts/DocumentChangeContext";
 import CasesSection from "@/components/clients/cases/CasesSection";
 
 const ClientDetail = () => {
@@ -92,51 +91,49 @@ const ClientDetail = () => {
 
   return (
     <CaseProvider>
-      <DocumentChangeProvider>
-        <div className="min-h-screen flex flex-col">
-          <NavBar />
-          <main className="flex-grow container mx-auto px-4 py-8">
-            <ClientDetailHeader 
-              client={client} 
-              onDeleteClick={handleDeleteClick}
-              isDeleting={isDeleting}
-            />
-
-            <div className="mb-8">
-              <ClientInformationAccordion 
-                client={client} 
-                onEditClick={handleEditClick}
-                refreshClient={refreshClient}
-              />
-            </div>
-
-            <CasesSection clientId={client.id} />
-
-            <div className="mt-8">
-              <Tabs 
-                defaultValue="client-intake" 
-                className="w-full"
-                value={activeTab}
-                onValueChange={handleTabChange}
-              >
-                <ClientDetailTabsList />
-                <ClientDetailTabContent 
-                  client={client} 
-                  activeTab={activeTab}
-                />
-              </Tabs>
-            </div>
-          </main>
-
-          <DeleteClientDialog
-            client={client}
-            isOpen={deleteDialogOpen}
-            setIsOpen={setDeleteDialogOpen}
-            onConfirm={handleDeleteConfirm}
+      <div className="min-h-screen flex flex-col">
+        <NavBar />
+        <main className="flex-grow container mx-auto px-4 py-8">
+          <ClientDetailHeader 
+            client={client} 
+            onDeleteClick={handleDeleteClick}
             isDeleting={isDeleting}
           />
-        </div>
-      </DocumentChangeProvider>
+
+          <div className="mb-8">
+            <ClientInformationAccordion 
+              client={client} 
+              onEditClick={handleEditClick}
+              refreshClient={refreshClient}
+            />
+          </div>
+
+          <CasesSection clientId={client.id} />
+
+          <div className="mt-8">
+            <Tabs 
+              defaultValue="client-intake" 
+              className="w-full"
+              value={activeTab}
+              onValueChange={handleTabChange}
+            >
+              <ClientDetailTabsList />
+              <ClientDetailTabContent 
+                client={client} 
+                activeTab={activeTab}
+              />
+            </Tabs>
+          </div>
+        </main>
+
+        <DeleteClientDialog
+          client={client}
+          isOpen={deleteDialogOpen}
+          setIsOpen={setDeleteDialogOpen}
+          onConfirm={handleDeleteConfirm}
+          isDeleting={isDeleting}
+        />
+      </div>
     </CaseProvider>
   );
 };

@@ -1,78 +1,59 @@
 
 import React from "react";
-import { useCaseDiscussion } from "@/hooks/useCaseDiscussion";
-import CaseDiscussionView from "./CaseDiscussionView";
+import CaseDiscussionChatView from "./CaseDiscussionChatView";
 import CaseDiscussionInput from "./CaseDiscussionInput";
+import { useCaseDiscussion } from "@/hooks/useCaseDiscussion";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { FileText, CheckCircle } from "lucide-react";
 
 interface CaseDiscussionContainerProps {
   clientId: string;
 }
 
-const CaseDiscussionContainer: React.FC<CaseDiscussionContainerProps> = ({
-  clientId
-}) => {
+const CaseDiscussionContainer: React.FC<CaseDiscussionContainerProps> = ({ clientId }) => {
   const {
     messages,
     isLoading,
     isLoadingHistory,
-    documentsAvailable,
-    handleSendMessage
+    handleSendMessage,
+    formatTimestamp
   } = useCaseDiscussion(clientId);
 
   if (isLoadingHistory) {
     return (
-      <div className="flex flex-col h-[calc(100vh-200px)] p-4">
-        <div className="flex-1 space-y-4">
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-16 w-3/4" />
-          <Skeleton className="h-12 w-1/2" />
-          <Skeleton className="h-20 w-full" />
+      <div className="flex flex-col space-y-4">
+        <div className="flex items-center space-x-2">
+          <Skeleton className="h-10 w-10 rounded-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-[250px]" />
+            <Skeleton className="h-4 w-[200px]" />
+          </div>
         </div>
+        <div className="flex items-center space-x-2 justify-end">
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-[250px]" />
+            <Skeleton className="h-4 w-[200px]" />
+          </div>
+          <Skeleton className="h-10 w-10 rounded-full" />
+        </div>
+        <Skeleton className="h-14 w-full rounded-lg mt-4" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-200px)]">
-      {/* Header with document status */}
-      <div className="p-4 border-b bg-background">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold">Case Discussion</h2>
-            <p className="text-sm text-muted-foreground">
-              AI-powered legal discussion with access to your case documents
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {documentsAvailable ? (
-              <Badge variant="secondary" className="flex items-center gap-1">
-                <CheckCircle className="h-3 w-3" />
-                Documents Available
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="flex items-center gap-1">
-                <FileText className="h-3 w-3" />
-                No Documents
-              </Badge>
-            )}
-          </div>
+    <div className="flex flex-col h-[calc(100vh-300px)] min-h-[600px]">
+      <div className="flex flex-col flex-grow overflow-hidden border rounded-lg">
+        <div className="bg-[#9b87f5] text-white p-3">
+          <h3 className="font-medium">Case Discussion</h3>
+          <div className="text-xs opacity-80">{formatTimestamp()}</div>
         </div>
-      </div>
-
-      {/* Messages area */}
-      <div className="flex-1 overflow-hidden">
-        <CaseDiscussionView 
+        
+        <CaseDiscussionChatView 
           messages={messages} 
-          isLoading={isLoading}
+          isLoading={isLoading} 
         />
-      </div>
-
-      {/* Input area */}
-      <div className="border-t bg-background">
-        <CaseDiscussionInput
+        
+        <CaseDiscussionInput 
           onSendMessage={handleSendMessage}
           isLoading={isLoading}
         />
