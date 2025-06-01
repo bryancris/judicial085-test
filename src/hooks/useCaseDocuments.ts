@@ -198,7 +198,8 @@ export const useCaseDocuments = (clientId: string | undefined, caseId: string | 
           client_id: clientId,
           case_id: caseId,
           schema: 'case_document',
-          url: metadata.pdfUrl || null
+          url: metadata.pdfUrl || null,
+          include_in_analysis: false // Default to false for new documents
         });
       
       if (metadataError) {

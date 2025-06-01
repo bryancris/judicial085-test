@@ -6,6 +6,7 @@ import { DocumentWithContent } from "@/types/knowledge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Trash2, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface DocumentCardProps {
   document: DocumentWithContent;
@@ -97,9 +98,13 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
           </label>
           <Switch
             id={`analysis-${document.id}`}
-            checked={document.include_in_analysis ?? true}
+            checked={document.include_in_analysis ?? false}
             onCheckedChange={handleToggleAnalysis}
             disabled={isProcessing}
+            className={cn(
+              "data-[state=checked]:bg-green-500",
+              "focus-visible:ring-green-600"
+            )}
           />
         </div>
       </CardFooter>

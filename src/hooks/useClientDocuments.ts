@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -244,7 +243,7 @@ export const useClientDocuments = (
           case_id: caseId,
           schema: caseId ? 'case_document' : 'client_document',
           url: metadata.url || null,
-          include_in_analysis: true // Default to true for new documents
+          include_in_analysis: false // Default to false for new documents
         });
       
       if (metadataError) {
