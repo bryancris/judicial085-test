@@ -242,14 +242,6 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
                   </CardHeader>
                   <CardContent className="pb-2">
                     <div className="flex items-center gap-2 mb-3">
-                      {document.schema === 'client_document' ? (
-                        <Badge variant="secondary">Client</Badge>
-                      ) : document.schema === 'case_document' ? (
-                        <Badge variant="secondary">Case</Badge>
-                      ) : (
-                        <Badge variant="outline">Document</Badge>
-                      )}
-                      
                       {document.case_id && (
                         <Badge variant="outline">Case Document</Badge>
                       )}
