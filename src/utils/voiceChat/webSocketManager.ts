@@ -16,10 +16,12 @@ export class WebSocketManager {
       try {
         console.log(`Connecting to voice chat for client: ${this.clientId}`);
         
+        // Use the correct Supabase Edge Function WebSocket URL format
         const wsUrl = `wss://ghpljdgecjmhkwkfctgy.functions.supabase.co/realtime-voice-chat?clientId=${this.clientId}`;
         console.log('Connecting to WebSocket URL:', wsUrl);
         
-        this.ws = new WebSocket(wsUrl);
+        // Create WebSocket with explicit protocols to ensure proper upgrade headers
+        this.ws = new WebSocket(wsUrl, ['realtime']);
         
         this.ws.onopen = () => {
           console.log('Connected to voice chat');
@@ -38,6 +40,17 @@ export class WebSocketManager {
             variant: "destructive",
           });
           reject(error);
+        };
+
+        this.ws.onclose = (event) => {
+          console.log('WebSocket closed:', event.code, event.reason);
+          if (event.code !== 1000) {
+            this.toast({
+              title: "Connection Lost",
+              description: "Voice chat connection was lost unexpectedly.",
+              variant: "destructive",
+            });
+          }
         };
 
       } catch (error) {

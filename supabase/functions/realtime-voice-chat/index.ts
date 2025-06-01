@@ -10,6 +10,7 @@ const corsHeaders = {
 serve(async (req) => {
   console.log("Realtime voice chat function called");
   console.log("Request method:", req.method);
+  console.log("Request URL:", req.url);
   console.log("Request headers:", Object.fromEntries(req.headers.entries()));
   
   // Handle CORS preflight requests
@@ -31,15 +32,30 @@ serve(async (req) => {
       });
     }
 
-    // Check if this is a WebSocket upgrade request
+    // Check for WebSocket upgrade request
     const upgradeHeader = req.headers.get("upgrade");
     const connectionHeader = req.headers.get("connection");
+    const webSocketKeyHeader = req.headers.get("sec-websocket-key");
     
     console.log("Upgrade header:", upgradeHeader);
     console.log("Connection header:", connectionHeader);
+    console.log("WebSocket-Key header:", webSocketKeyHeader ? "present" : "missing");
 
+    // Validate WebSocket upgrade request
     if (!upgradeHeader || upgradeHeader.toLowerCase() !== "websocket") {
-      console.log("Not a WebSocket upgrade request");
+      console.log("Not a WebSocket upgrade request - upgrade header:", upgradeHeader);
+      return new Response("WebSocket upgrade required", { 
+        status: 426,
+        headers: {
+          ...corsHeaders,
+          "Upgrade": "websocket",
+          "Connection": "Upgrade"
+        }
+      });
+    }
+
+    if (!connectionHeader || !connectionHeader.toLowerCase().includes("upgrade")) {
+      console.log("Invalid connection header for WebSocket:", connectionHeader);
       return new Response("WebSocket upgrade required", { 
         status: 426,
         headers: {
