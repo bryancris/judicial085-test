@@ -40,6 +40,8 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
     setError(null);
 
     try {
+      console.log(`Fetching analysis data for client: ${clientId}${caseId ? `, case: ${caseId}` : ''}`);
+      
       // Query for legal analysis - filter by case_id if provided
       let analysisQuery = supabase
         .from("legal_analyses")
@@ -68,21 +70,22 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
       }
 
       const analysis = analysisResults[0];
+      console.log("Fetched analysis record:", analysis);
       console.log("Raw analysis content:", analysis.content);
-      console.log("Raw law references:", analysis.law_references);
+      console.log("Raw law references from DB:", analysis.law_references);
 
       // Parse the analysis content
       const parsedData = parseAnalysisContent(analysis.content);
       
       // Helper function to safely convert Json to array with better logging
       const safeLawReferences = (lawRefs: Json | null): any[] => {
-        console.log("Processing law references:", lawRefs);
+        console.log("Processing law references from database:", lawRefs);
         if (!lawRefs) {
-          console.log("No law references found");
+          console.log("No law references found in database");
           return [];
         }
         if (Array.isArray(lawRefs)) {
-          console.log(`Found ${lawRefs.length} law references`);
+          console.log(`Found ${lawRefs.length} law references in database:`, lawRefs.map((ref: any) => ref.title || ref.id));
           return lawRefs;
         }
         if (typeof lawRefs === 'object') {
@@ -95,7 +98,7 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
       
       // Combine with metadata
       const lawReferences = safeLawReferences(analysis.law_references);
-      console.log("Processed law references:", lawReferences);
+      console.log("Final processed law references:", lawReferences);
       
       const completeAnalysisData: AnalysisData = {
         ...parsedData,
@@ -104,7 +107,7 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
         caseType: analysis.case_type || extractCaseType(analysis.content)
       };
 
-      console.log("Final analysis data with law references:", completeAnalysisData.lawReferences);
+      console.log("Setting analysis data with law references:", completeAnalysisData.lawReferences);
       setAnalysisData(completeAnalysisData);
     } catch (err: any) {
       console.error("Error fetching analysis data:", err);
