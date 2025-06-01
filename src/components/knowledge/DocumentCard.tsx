@@ -43,8 +43,8 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
   const content = document.contents?.[0]?.content || "";
   // Check if this is a PDF document
   const isPdf = document.contents?.[0]?.metadata?.isPdfDocument || document.contents?.[0]?.metadata?.fileType === "pdf";
-  // Get PDF URL if available
-  const pdfUrl = document.contents?.[0]?.metadata?.pdfUrl || "";
+  // Get PDF URL - check document.url first (where Supabase Storage URLs are stored), then fallback to metadata
+  const pdfUrl = document.url || document.contents?.[0]?.metadata?.pdfUrl || "";
   
   // Truncate content for display
   const truncatedContent = content.length > 150 
