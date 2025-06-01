@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useCaseAnalysis } from "@/hooks/useCaseAnalysis";
 import CaseAnalysisErrorState from "./CaseAnalysisErrorState";
@@ -10,11 +11,12 @@ import EmptyAnalysisState from "./EmptyAnalysisState";
 import TabsContainer from "./tabs/TabsContainer";
 import { AnalysisData } from "@/hooks/useAnalysisData";
 import { useCase } from "@/contexts/CaseContext";
+import { useRealTimeAnalysis } from "@/hooks/useRealTimeAnalysis";
 
 interface CaseAnalysisContainerProps {
   clientId: string;
   clientName: string;
-  caseId?: string; // Add optional caseId prop
+  caseId?: string;
 }
 
 const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
@@ -28,9 +30,13 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
   // Use caseId from props or from context
   const caseId = propCaseId || currentCase?.id;
 
-  // Custom hooks for case analysis data - now with case ID support
-  const { analysisData, isLoading, error, generateNewAnalysis } =
-    useCaseAnalysis(clientId, caseId);
+  // Use real-time analysis instead of stored database analysis
+  const { 
+    analysisData, 
+    isLoading, 
+    error, 
+    generateAnalysis 
+  } = useRealTimeAnalysis(clientId, caseId);
     
   // Add scholarly references hook
   const {
@@ -66,7 +72,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
 
   // Handle error state
   if (error) {
-    return <CaseAnalysisErrorState error={error} onRefresh={generateNewAnalysis} />;
+    return <CaseAnalysisErrorState error={error} onRefresh={generateAnalysis} />;
   }
 
   // Handle loading state
@@ -84,7 +90,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
         selectedTab={selectedTab}
         setSelectedTab={setSelectedTab}
         isGenerating={isLoading}
-        onGenerate={generateNewAnalysis}
+        onGenerate={generateAnalysis}
       />
     );
   }
@@ -123,7 +129,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
         selectedTab={selectedTab}
         setSelectedTab={setSelectedTab}
         isGenerating={isLoading}
-        onGenerate={generateNewAnalysis}
+        onGenerate={generateAnalysis}
         caseType={analysisData?.caseType}
       />
 

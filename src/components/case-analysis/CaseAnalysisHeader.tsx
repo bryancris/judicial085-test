@@ -2,9 +2,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, MessageCircle, StickyNote, Upload, Sparkles, RefreshCw, Trash2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { FileText, MessageCircle, StickyNote, Upload, Sparkles, RefreshCw } from "lucide-react";
 
 interface CaseAnalysisHeaderProps {
   title: string;
@@ -25,39 +23,9 @@ const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
   onGenerate,
   caseType
 }) => {
-  const { toast } = useToast();
-
   const handleRegenerateClick = () => {
-    console.log("Regenerating analysis to fix law references...");
+    console.log("Regenerating real-time analysis...");
     onGenerate();
-  };
-
-  const handleForceCleanup = async () => {
-    try {
-      console.log("Force cleaning up old analysis records...");
-      
-      // Delete ALL analysis records for this client
-      const { error } = await supabase
-        .from("legal_analyses")
-        .delete()
-        .eq("client_id", clientId);
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Cleanup Complete",
-        description: "All old analysis records have been deleted. Click 'Generate New Analysis' to create fresh data.",
-      });
-      
-      console.log("Force cleanup completed successfully");
-    } catch (error: any) {
-      console.error("Error during force cleanup:", error);
-      toast({
-        title: "Cleanup Failed",
-        description: error.message || "Failed to clean up old records",
-        variant: "destructive",
-      });
-    }
   };
 
   return (
@@ -74,17 +42,6 @@ const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
         
         {selectedTab === "analysis" && (
           <div className="flex gap-2">
-            <Button
-              onClick={handleForceCleanup}
-              disabled={isGenerating}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
-            >
-              <Trash2 className="h-4 w-4" />
-              Clear Old Data
-            </Button>
-            
             <Button
               onClick={handleRegenerateClick}
               disabled={isGenerating}
@@ -118,7 +75,7 @@ const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
               ) : (
                 <>
                   <Sparkles className="h-4 w-4" />
-                  Generate New Analysis
+                  Generate Real-Time Analysis
                 </>
               )}
             </Button>
