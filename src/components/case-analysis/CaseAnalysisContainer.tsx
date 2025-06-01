@@ -1,6 +1,5 @@
 
 import React, { useState } from "react";
-import { useCaseAnalysis } from "@/hooks/useCaseAnalysis";
 import CaseAnalysisErrorState from "./CaseAnalysisErrorState";
 import CaseAnalysisLoadingSkeleton from "./CaseAnalysisLoadingSkeleton";
 import CaseAnalysisHeader from "./CaseAnalysisHeader";
@@ -11,7 +10,10 @@ import EmptyAnalysisState from "./EmptyAnalysisState";
 import TabsContainer from "./tabs/TabsContainer";
 import { AnalysisData } from "@/hooks/useAnalysisData";
 import { useCase } from "@/contexts/CaseContext";
-import { useRealTimeAnalysis } from "@/hooks/useRealTimeAnalysis";
+import { useClientChatAnalysis } from "@/hooks/useClientChatAnalysis";
+import { useState as useAnalysisState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface CaseAnalysisContainerProps {
   clientId: string;
@@ -25,25 +27,24 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
   caseId: propCaseId,
 }) => {
   const [selectedTab, setSelectedTab] = useState("analysis");
+  const [legalAnalysis, setLegalAnalysis] = useAnalysisState<any[]>([]);
+  const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const { currentCase } = useCase();
+  const { toast } = useToast();
   
   // Use caseId from props or from context
   const caseId = propCaseId || currentCase?.id;
 
-  // Use real-time analysis instead of stored database analysis
-  const { 
-    analysisData, 
-    isLoading, 
-    error, 
-    generateAnalysis 
-  } = useRealTimeAnalysis(clientId, caseId);
+  // Use the same analysis system as Client Intake
+  const { generateAnalysis } = useClientChatAnalysis(clientId, setLegalAnalysis);
     
   // Add scholarly references hook
   const {
     references: scholarlyReferences,
     isLoading: isScholarlyReferencesLoading,
     searchReferences
-  } = useScholarlyReferences(clientId, analysisData?.caseType);
+  } = useScholarlyReferences(clientId, "general");
   
   // Get conversation and notes for the respective tabs
   const {
@@ -70,13 +71,132 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
     }
   };
 
+  // Generate analysis using the same system as Client Intake
+  const generateRealTimeAnalysis = async () => {
+    setIsAnalysisLoading(true);
+    setAnalysisError(null);
+
+    try {
+      // Fetch the client messages for this client
+      const { data: messages, error: messagesError } = await supabase
+        .from("client_messages")
+        .select("content, role, timestamp")
+        .eq("client_id", clientId)
+        .order("created_at", { ascending: true });
+
+      if (messagesError) throw messagesError;
+      
+      // Check if we have a conversation or should use documents
+      const hasConversation = messages && messages.length > 0;
+      
+      if (!hasConversation) {
+        // Check for documents marked for analysis
+        const documentsQuery = supabase
+          .from("document_metadata")
+          .select("id, title, include_in_analysis")
+          .eq("client_id", clientId)
+          .eq("include_in_analysis", true);
+        
+        // If we have a specific case, filter by case_id, otherwise get all client documents
+        if (caseId) {
+          documentsQuery.eq("case_id", caseId);
+        }
+        
+        const { data: documents, error: documentsError } = await documentsQuery;
+        
+        if (documentsError) throw documentsError;
+        
+        if (!documents || documents.length === 0) {
+          throw new Error("No client conversation or documents marked for analysis found. Please either start a conversation with the client or upload documents and mark them for inclusion in analysis.");
+        }
+      }
+      
+      // Format messages for the analysis (empty array if no conversation)
+      const formattedMessages = hasConversation ? messages.map(msg => ({
+        content: msg.content,
+        role: msg.role as "attorney" | "client",
+        timestamp: msg.timestamp
+      })) : [];
+      
+      // Use the same analysis generation as Client Intake
+      await generateAnalysis(formattedMessages);
+      
+      toast({
+        title: "Analysis Generated",
+        description: "Real-time case analysis generated successfully.",
+      });
+    } catch (err: any) {
+      console.error("Error generating real-time analysis:", err);
+      setAnalysisError(err.message || "Failed to generate analysis");
+      toast({
+        title: "Generation Failed",
+        description: err.message || "Failed to generate real-time analysis.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalysisLoading(false);
+    }
+  };
+
+  // Convert the analysis from Client Intake format to Case Analysis format
+  const convertToAnalysisData = (analysisItems: any[]): AnalysisData | null => {
+    if (!analysisItems || analysisItems.length === 0) return null;
+    
+    const latestAnalysis = analysisItems[analysisItems.length - 1];
+    const content = latestAnalysis.content || "";
+    
+    // Parse the analysis content (same logic as useAnalysisData)
+    const sections = content.split(/(\*\*.*?:\*\*)/).filter(Boolean);
+    const data: any = {};
+    let currentSection = null;
+
+    for (const section of sections) {
+      if (section.startsWith("**") && section.endsWith("**")) {
+        currentSection = section.slice(2, -2).replace(/:$/, '').trim();
+        data[currentSection] = "";
+      } else if (currentSection) {
+        data[currentSection] = section.trim();
+        currentSection = null;
+      }
+    }
+
+    const parseFollowUpQuestions = (questions: string): string[] => {
+      const questionList = questions.split(/\n\d+\.\s/).filter(Boolean);
+      return questionList.map(q => q.trim());
+    };
+
+    return {
+      legalAnalysis: {
+        relevantLaw: data["RELEVANT TEXAS LAW"] || "",
+        preliminaryAnalysis: data["PRELIMINARY ANALYSIS"] || "",
+        potentialIssues: data["POTENTIAL LEGAL ISSUES"] || "",
+        followUpQuestions: parseFollowUpQuestions(data["RECOMMENDED FOLLOW-UP QUESTIONS"] || ""),
+      },
+      strengths: [],
+      weaknesses: [],
+      conversationSummary: "",
+      outcome: {
+        defense: 0.5,
+        prosecution: 0.5,
+      },
+      remedies: data["REMEDIES"] || "",
+      timestamp: latestAnalysis.timestamp || new Date().toISOString(),
+      lawReferences: latestAnalysis.documentsUsed || [], // Use the law references from Client Intake system
+      caseType: content.includes("Animal") || content.includes("Cruelty") ? "animal-protection" : 
+                content.includes("Consumer Protection") || content.includes("Deceptive Trade Practices") ? "consumer-protection" : "general"
+    };
+  };
+
+  // Get the current analysis data
+  const analysisData = convertToAnalysisData(legalAnalysis);
+
   // Handle error state
-  if (error) {
-    return <CaseAnalysisErrorState error={error} onRefresh={generateAnalysis} />;
+  if (analysisError) {
+    return <CaseAnalysisErrorState error={analysisError} onRefresh={generateRealTimeAnalysis} />;
   }
 
   // Handle loading state
-  if (isLoading && !analysisData) {
+  if (isAnalysisLoading && !analysisData) {
     return <CaseAnalysisLoadingSkeleton />;
   }
 
@@ -89,26 +209,11 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
         caseId={caseId}
         selectedTab={selectedTab}
         setSelectedTab={setSelectedTab}
-        isGenerating={isLoading}
-        onGenerate={generateAnalysis}
+        isGenerating={isAnalysisLoading}
+        onGenerate={generateRealTimeAnalysis}
       />
     );
   }
-  
-  // Ensure the analysisData has numeric values for defense and prosecution
-  // and a valid timestamp
-  const completeAnalysisData: AnalysisData = {
-    ...analysisData,
-    timestamp: analysisData.timestamp || new Date().toISOString(),
-    outcome: {
-      defense: typeof analysisData.outcome.defense === 'number' 
-        ? analysisData.outcome.defense 
-        : parseFloat(String(analysisData.outcome.defense)),
-      prosecution: typeof analysisData.outcome.prosecution === 'number'
-        ? analysisData.outcome.prosecution
-        : parseFloat(String(analysisData.outcome.prosecution))
-    }
-  };
   
   // Handle the search for scholarly references
   const handleScholarSearch = (query: string) => {
@@ -128,16 +233,16 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
         clientId={clientId}
         selectedTab={selectedTab}
         setSelectedTab={setSelectedTab}
-        isGenerating={isLoading}
-        onGenerate={generateAnalysis}
+        isGenerating={isAnalysisLoading}
+        onGenerate={generateRealTimeAnalysis}
         caseType={analysisData?.caseType}
       />
 
       {/* Main content area with tabs */}
       <TabsContainer 
         selectedTab={selectedTab}
-        analysisData={completeAnalysisData}
-        isLoading={isLoading}
+        analysisData={analysisData}
+        isLoading={isAnalysisLoading}
         clientId={clientId}
         conversation={conversation}
         conversationLoading={conversationLoading}
