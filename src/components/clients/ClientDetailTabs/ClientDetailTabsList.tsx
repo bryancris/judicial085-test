@@ -70,7 +70,8 @@ const ClientDetailTabsList = () => {
           className="data-[state=active]:bg-[#D946EF] bg-[#D946EF]/80 text-white flex items-center gap-1"
         >
           <Building className="h-4 w-4" />
-          <span>Resources</span>
+          <span className="hidden lg:inline">Create Document</span>
+          <span className="lg:hidden">Create Doc</span>
         </TabsTrigger>
         <TabsTrigger
           value="faq"
