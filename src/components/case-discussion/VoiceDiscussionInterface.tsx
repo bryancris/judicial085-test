@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -45,9 +44,9 @@ const VoiceDiscussionInterface: React.FC<VoiceDiscussionInterfaceProps> = ({
     try {
       console.log(`Connecting to voice chat for client: ${clientId}`);
       
-      // Get project reference from current URL
-      const projectRef = window.location.hostname.split('.')[0];
-      const wsUrl = `wss://${projectRef}.functions.supabase.co/functions/v1/realtime-voice-chat?clientId=${clientId}`;
+      // Use the correct Supabase project ID directly
+      const wsUrl = `wss://ghpljdgecjmhkwkfctgy.functions.supabase.co/functions/v1/realtime-voice-chat?clientId=${clientId}`;
+      console.log('Connecting to WebSocket URL:', wsUrl);
       
       wsRef.current = new WebSocket(wsUrl);
       
@@ -132,26 +131,34 @@ const VoiceDiscussionInterface: React.FC<VoiceDiscussionInterfaceProps> = ({
         console.error('WebSocket error:', error);
         toast({
           title: "Connection Error",
-          description: "Failed to connect to voice chat",
+          description: "Failed to connect to voice chat. Please check your internet connection and try again.",
           variant: "destructive",
         });
       };
 
-      wsRef.current.onclose = () => {
-        console.log('Voice chat disconnected');
+      wsRef.current.onclose = (event) => {
+        console.log('Voice chat disconnected. Code:', event.code, 'Reason:', event.reason);
         setIsConnected(false);
         setIsRecording(false);
         setIsSpeaking(false);
         setIsAISpeaking(false);
         onConnectionChange(false);
         stopRecording();
+        
+        if (event.code !== 1000) {
+          toast({
+            title: "Connection Lost",
+            description: "Voice chat connection was lost. You can try reconnecting.",
+            variant: "destructive",
+          });
+        }
       };
 
     } catch (error) {
       console.error('Error connecting to voice chat:', error);
       toast({
         title: "Connection Failed",
-        description: "Could not establish voice chat connection",
+        description: "Could not establish voice chat connection. Please try again.",
         variant: "destructive",
       });
     }
