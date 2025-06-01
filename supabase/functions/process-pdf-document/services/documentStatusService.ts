@@ -7,10 +7,22 @@ export async function updateDocumentStatus(
   error?: string
 ): Promise<void> {
   try {
+    // First, get the current document to preserve existing fields like URL
+    const { data: existingDoc } = await supabase
+      .from('document_metadata')
+      .select('url')
+      .eq('id', documentId)
+      .single();
+    
     const updateData: any = {
       processing_status: status,
       processed_at: new Date().toISOString()
     };
+    
+    // Preserve the existing URL if it exists
+    if (existingDoc?.url) {
+      updateData.url = existingDoc.url;
+    }
     
     if (error) {
       updateData.processing_error = error;
@@ -28,7 +40,7 @@ export async function updateDocumentStatus(
       console.error(`Failed to update document status to ${status}:`, updateError);
       throw updateError;
     } else {
-      console.log(`Document ${documentId} status updated to: ${status}`);
+      console.log(`Document ${documentId} status updated to: ${status}${existingDoc?.url ? ' (URL preserved)' : ''}`);
     }
   } catch (error: any) {
     console.error(`Error updating document status:`, error);
