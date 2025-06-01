@@ -5,6 +5,7 @@ import { WebRTCChatManager } from '@/utils/voiceChat/webRTCChatManager';
 import { AudioPlaybackManager } from '@/utils/voiceChat/audioPlaybackManager';
 import { MessageHandler } from '@/utils/voiceChat/messageHandler';
 import { UseVoiceChatProps } from '@/types/voiceChat';
+import { useVoiceTranscripts } from '@/hooks/useVoiceTranscripts';
 
 export const useVoiceChat = ({
   clientId,
@@ -21,6 +22,9 @@ export const useVoiceChat = ({
   const webRTCManagerRef = useRef<WebRTCChatManager | null>(null);
   const audioPlaybackManagerRef = useRef<AudioPlaybackManager | null>(null);
   const messageHandlerRef = useRef<MessageHandler | null>(null);
+  
+  // Add transcript saving functionality
+  const { saveTranscript } = useVoiceTranscripts(clientId);
 
   // Initialize audio playback manager
   useEffect(() => {
@@ -75,7 +79,9 @@ export const useVoiceChat = ({
           });
           setIsConnected(false);
           onConnectionChange(false);
-        }
+        },
+        // Pass the transcript saving callback
+        saveTranscript
       );
 
       await webRTCManagerRef.current.init(clientId);

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { WebRTCAudioRecorder } from './webRTCAudioRecorder';
 import { encodeAudioForAPI } from '@/utils/voiceChat';
@@ -9,13 +8,18 @@ export class WebRTCChatManager {
   private audioEl: HTMLAudioElement;
   private recorder: WebRTCAudioRecorder | null = null;
   private clientId: string = '';
+  private sessionId: string = '';
+  private saveTranscript: ((sessionId: string, speaker: 'user' | 'ai', content: string) => Promise<void>) | null = null;
 
   constructor(
     private onMessage: (message: any) => void,
-    private onError: (error: string) => void
+    private onError: (error: string) => void,
+    saveTranscriptCallback?: (sessionId: string, speaker: 'user' | 'ai', content: string) => Promise<void>
   ) {
     this.audioEl = document.createElement("audio");
     this.audioEl.autoplay = true;
+    this.saveTranscript = saveTranscriptCallback || null;
+    this.sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
   async init(clientId: string) {
@@ -75,6 +79,9 @@ export class WebRTCChatManager {
           } else {
             this.onMessage(event);
           }
+
+          // Save transcripts when available
+          this.handleTranscriptSaving(event);
         } catch (error) {
           console.error("Error parsing WebRTC message:", error);
         }
@@ -136,6 +143,24 @@ export class WebRTCChatManager {
       console.error("Error initializing WebRTC chat:", error);
       this.onError(error instanceof Error ? error.message : 'WebRTC initialization failed');
       throw error;
+    }
+  }
+
+  private async handleTranscriptSaving(event: any) {
+    if (!this.saveTranscript) return;
+
+    try {
+      // Save user transcripts
+      if (event.type === 'conversation.item.input_audio_transcription.completed' && event.transcript) {
+        await this.saveTranscript(this.sessionId, 'user', event.transcript);
+      }
+
+      // Save AI transcripts
+      if (event.type === 'response.audio_transcript.done' && event.transcript) {
+        await this.saveTranscript(this.sessionId, 'ai', event.transcript);
+      }
+    } catch (error) {
+      console.error("Error saving transcript:", error);
     }
   }
 
@@ -255,5 +280,9 @@ export class WebRTCChatManager {
 
   isConnected(): boolean {
     return this.pc?.connectionState === 'connected' && this.dc?.readyState === 'open';
+  }
+
+  getSessionId(): string {
+    return this.sessionId;
   }
 }

@@ -1,253 +1,48 @@
 
-import React, { useState, useEffect } from "react";
-import { ClientWithCases } from "@/types/client";
-import { useClientChat } from "@/hooks/useClientChat";
-import { useClientDocuments } from "@/hooks/useClientDocuments";
-import { useCaseDocuments } from "@/hooks/useCaseDocuments";
-import { useClientCases } from "@/hooks/useClientCases";
-import { useCase } from "@/contexts/CaseContext";
-import ClientChatView from "@/components/clients/chat/ClientIntakeChat";
+import React from "react";
+import { TabsContent } from "@/components/ui/tabs";
+import ClientIntakeChat from "@/components/clients/chat/ClientIntakeChat";
 import CaseAnalysisContainer from "@/components/case-analysis/CaseAnalysisContainer";
-import ClientDocumentsSection from "@/components/case-analysis/documents/ClientDocumentsSection";
-import ContractReviewChat from "@/components/contract-review/ContractReviewChat";
-import FaqTabContent from "@/components/clients/ClientDetailTabs/FaqTabContent";
 import CaseDiscussionContainer from "@/components/case-discussion/CaseDiscussionContainer";
-import DocumentScopeSelector from "@/components/clients/documents/DocumentScopeSelector";
-import GoogleDocsEditor from "@/components/document-editor/GoogleDocsEditor";
-import { Badge } from "@/components/ui/badge";
-import { BookOpenCheck } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import VoiceTranscriptViewer from "@/components/case-discussion/VoiceTranscriptViewer";
+import { Client } from "@/types/client";
 
 interface ClientDetailTabContentProps {
-  client: ClientWithCases;
+  client: Client;
   activeTab: string;
 }
 
-const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
-  client,
-  activeTab,
+const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({ 
+  client, 
+  activeTab 
 }) => {
-  // Get current case from context
-  const { currentCase, isLoading: caseLoading } = useCase();
-  
-  // Fetch cases for this client using the dedicated hook
-  const { cases, loading: casesLoading } = useClientCases(client.id);
-  
-  // Set document scope - "client" for client-level documents or a specific caseId
-  const [documentScope, setDocumentScope] = useState<string>("client");
-  
-  const { toast } = useToast();
-  
-  // Using hook with client.id
-  const {
-    messages,
-    legalAnalysis,
-    isLoadingHistory,
-    isAnalysisLoading,
-    handleSendMessage,
-    handleFollowUpQuestionClick,
-    formatTimestamp,
-  } = useClientChat(client.id);
-  
-  // Client-level documents (or filtered by case when documentScope is set)
-  const { 
-    documents: clientDocuments, 
-    loading: clientDocumentsLoading, 
-    processDocument: processClientDocument,
-    deleteDocument: deleteClientDocument,
-    isProcessing: isClientDocProcessing,
-    refreshDocuments: refetchClientDocuments
-  } = useClientDocuments(
-    client.id, 
-    5,  
-    documentScope === "client" ? "client-level" : (documentScope !== "all" ? documentScope : undefined)
-  );
-  
-  // Case-specific documents (when currentCase is available)
-  const {
-    documents: caseDocuments,
-    loading: caseDocumentsLoading,
-    processDocument: processCaseDocument,
-    deleteDocument: deleteCaseDocument,
-    isProcessing: isCaseDocProcessing,
-    refreshDocuments: refetchCaseDocuments
-  } = useCaseDocuments(
-    client.id,
-    currentCase?.id
-  );
-  
-  // Reset document scope when tab changes
-  useEffect(() => {
-    if (activeTab === "documents") {
-      // Default to "client" view or current case if available
-      setDocumentScope(currentCase?.id || "client");
-    }
-  }, [activeTab, currentCase]);
-  
-  // Combined documents based on scope
-  const documents = documentScope === "case" && currentCase 
-    ? caseDocuments
-    : clientDocuments;
-    
-  const documentsLoading = documentScope === "case" && currentCase
-    ? caseDocumentsLoading
-    : clientDocumentsLoading;
-    
-  const isDocProcessing = documentScope === "case" && currentCase
-    ? isCaseDocProcessing
-    : isClientDocProcessing;
-    
-  // Smart document processor that handles both client and case documents
-  const processDocument = async (title: string, content: string, metadata: any = {}) => {
-    if (documentScope === "client" || (!currentCase && documentScope !== "case")) {
-      // Process as client-level document
-      return processClientDocument(title, content, metadata);
-    } else if (currentCase && (documentScope === "case" || documentScope === currentCase.id)) {
-      // Process as case-specific document
-      return processCaseDocument(title, content, metadata);
-    } else if (documentScope !== "all" && documentScope !== "client" && documentScope !== "case") {
-      // Process as document for a specific case (by ID)
-      return processClientDocument(title, content, { ...metadata, caseId: documentScope });
-    } else {
-      // Default to client-level document
-      return processClientDocument(title, content, metadata);
-    }
-  };
-  
-  // Smart document deletion
-  const deleteDocument = (docId: string) => {
-    if (documentScope === "case" && currentCase) {
-      return deleteCaseDocument(docId);
-    } else {
-      return deleteClientDocument(docId);
-    }
-  };
-
-  // Add refresh handler for documents
-  const handleRefreshDocuments = () => {
-    console.log("Refreshing documents for scope:", documentScope);
-    if (documentScope === "case" && currentCase) {
-      refetchCaseDocuments();
-    } else {
-      refetchClientDocuments();
-    }
-  };
-
-  // Handle document save from Google Docs editor
-  const handleDocumentSave = async (title: string, content: string) => {
-    try {
-      await processDocument(title, content, { 
-        documentType: 'created_document',
-        caseId: currentCase?.id 
-      });
-      toast({
-        title: "Document saved",
-        description: "Your document has been saved successfully.",
-      });
-    } catch (error) {
-      console.error("Error saving document:", error);
-      toast({
-        title: "Error saving document",
-        description: "There was a problem saving your document. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Render documents tab with enhanced UI
-  const renderDocumentsTab = () => (
-    <div className="p-4">
-      <div className="mb-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        <div>
-          <h2 className="text-lg font-medium mb-1 flex items-center gap-2">
-            <BookOpenCheck className="h-5 w-5" />
-            Document Library
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {currentCase 
-              ? `Managing documents for ${client.first_name}'s cases` 
-              : `Managing documents for ${client.first_name} ${client.last_name}`}
-          </p>
-        </div>
-        
-        <div className="w-full sm:w-auto">
-          <DocumentScopeSelector
-            cases={cases || []}
-            selectedScope={documentScope}
-            onScopeChange={setDocumentScope}
-            currentCase={currentCase}
-            className="w-full sm:w-[220px]"
-          />
-        </div>
-      </div>
-      
-      <ClientDocumentsSection 
-        clientId={client.id}
-        documents={documents}
-        isLoading={documentsLoading}
-        onProcessDocument={processDocument}
-        onDeleteDocument={deleteDocument}
-        isProcessing={isDocProcessing}
-        fullView={true}
-        caseId={documentScope !== "client" && documentScope !== "all" ? documentScope : undefined}
-        caseName={
-          currentCase && (documentScope === "case" || documentScope === currentCase.id) 
-            ? currentCase.case_title 
-            : undefined
-        }
-        cases={cases || []}
-        allowCaseSelection={true}
-        onRefreshDocuments={handleRefreshDocuments}
-      />
-    </div>
-  );
-
-  // Determine which tab content to show
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case "client-intake":
-        return (
-          <ClientChatView
-            clientId={client.id}
-            clientName={`${client.first_name} ${client.last_name}`}
-          />
-        );
-      case "documents":
-        return renderDocumentsTab();
-      case "analysis":
-        return <CaseAnalysisContainer 
-          clientId={client.id} 
-          clientName={`${client.first_name} ${client.last_name}`}
-        />;
-      case "contracts":
-        return <ContractReviewChat 
-          clientId={client.id} 
-          clientName={`${client.first_name} ${client.last_name}`}
-        />;
-      case "discussion":
-        return <CaseDiscussionContainer clientId={client.id} />;
-      case "knowledge":
-        return (
-          <GoogleDocsEditor 
-            clientId={client.id}
-            onSave={handleDocumentSave}
-          />
-        );
-      case "faq":
-        return <FaqTabContent />;
-      default:
-        return (
-          <div className="p-6 text-center">
-            <p className="text-gray-500">Select a tab to view content</p>
-          </div>
-        );
-    }
-  };
-
   return (
-    <div className="flex-1 overflow-hidden flex flex-col">
-      {renderTabContent()}
-    </div>
+    <>
+      <TabsContent value="client-intake" className="mt-6">
+        <ClientIntakeChat 
+          clientId={client.id} 
+          clientName={`${client.first_name} ${client.last_name}`}
+        />
+      </TabsContent>
+
+      <TabsContent value="case-analysis" className="mt-6">
+        <CaseAnalysisContainer 
+          clientId={client.id}
+          clientName={`${client.first_name} ${client.last_name}`}
+        />
+      </TabsContent>
+
+      <TabsContent value="case-discussion" className="mt-6">
+        <CaseDiscussionContainer 
+          clientId={client.id}
+          clientName={`${client.first_name} ${client.last_name}`}
+        />
+      </TabsContent>
+
+      <TabsContent value="voice-transcripts" className="mt-6">
+        <VoiceTranscriptViewer clientId={client.id} />
+      </TabsContent>
+    </>
   );
 };
 

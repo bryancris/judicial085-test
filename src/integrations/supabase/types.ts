@@ -692,6 +692,39 @@ export type Database = {
         }
         Relationships: []
       }
+      voice_transcripts: {
+        Row: {
+          client_id: string
+          content: string
+          created_at: string
+          id: string
+          session_id: string
+          speaker: string
+          timestamp: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          content: string
+          created_at?: string
+          id?: string
+          session_id: string
+          speaker: string
+          timestamp?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          session_id?: string
+          speaker?: string
+          timestamp?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
