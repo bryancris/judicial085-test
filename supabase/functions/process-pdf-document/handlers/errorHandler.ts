@@ -15,6 +15,7 @@ export async function handleProcessingError(
         .eq('id', documentId)
         .single();
       
+      // Clean up failed chunks, but preserve the document metadata
       await cleanupFailedDocument(documentId, supabase);
       
       // Update to failed status while preserving URL
@@ -24,10 +25,12 @@ export async function handleProcessingError(
         processed_at: new Date().toISOString()
       };
       
-      // Preserve URL even when marking as failed
+      // Always preserve URL even when marking as failed
       if (existingDoc?.url) {
         errorUpdateData.url = existingDoc.url;
         console.log(`Preserving URL during error handling: ${existingDoc.url}`);
+      } else {
+        console.warn(`No URL found to preserve for document ${documentId} during error handling`);
       }
       
       const { error: updateError } = await supabase

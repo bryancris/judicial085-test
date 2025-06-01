@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { DocumentWithContent } from "@/types/knowledge";
 import { FileText, FileIcon, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { reconstructStorageUrl } from "@/utils/pdfUtils";
 
 interface DocumentPreviewDialogProps {
   document: DocumentWithContent;
@@ -18,9 +19,36 @@ const DocumentPreviewDialog: React.FC<DocumentPreviewDialogProps> = ({
   onOpenChange
 }) => {
   // Check if this is a PDF document
-  const isPdf = document.contents?.[0]?.metadata?.isPdfDocument || document.contents?.[0]?.metadata?.fileType === "pdf";
-  // Get PDF URL - check document.url first (where Supabase Storage URLs are stored), then fallback to metadata
-  const pdfUrl = document.url || document.contents?.[0]?.metadata?.pdfUrl || "";
+  const isPdf = document.contents?.[0]?.metadata?.isPdfDocument || 
+               document.contents?.[0]?.metadata?.fileType === "pdf" ||
+               document.title?.toLowerCase().endsWith('.pdf');
+  
+  // Get PDF URL with fallback logic (same as DocumentCardActions)
+  const getPdfUrl = (): string | null => {
+    // First try the document.url field
+    if (document.url) {
+      return document.url;
+    }
+    
+    // Try metadata pdfUrl
+    const metadataPdfUrl = document.contents?.[0]?.metadata?.pdfUrl;
+    if (metadataPdfUrl) {
+      return metadataPdfUrl;
+    }
+    
+    // Try to reconstruct URL from storage
+    if (document.client_id && document.contents?.[0]?.metadata?.fileName) {
+      return reconstructStorageUrl(
+        document.client_id, 
+        document.contents[0].metadata.fileName,
+        document.id
+      );
+    }
+    
+    return null;
+  };
+
+  const pdfUrl = getPdfUrl();
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -54,6 +82,15 @@ const DocumentPreviewDialog: React.FC<DocumentPreviewDialogProps> = ({
                 Download PDF
               </Button>
             </div>
+          </div>
+        ) : isPdf && !pdfUrl ? (
+          <div className="p-8 text-center">
+            <FileIcon className="h-16 w-16 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">PDF Preview Unavailable</h3>
+            <p className="text-gray-600 mb-4">
+              The PDF file could not be loaded. The file may have been moved or the link may be broken.
+            </p>
+            <p className="text-sm text-gray-500">Document ID: {document.id}</p>
           </div>
         ) : (
           <div className="overflow-y-auto max-h-[60vh] whitespace-pre-wrap">

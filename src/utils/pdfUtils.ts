@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 // Upload PDF file to Supabase Storage
@@ -52,7 +53,11 @@ export const processPdfDocument = async (
     // Generate a unique ID for the document
     documentId = crypto.randomUUID();
     
-    // Step 1: Create document metadata with 'processing' status
+    // Step 1: Upload PDF to storage FIRST to get the URL
+    const pdfUrl = await uploadPdfToStorage(file, clientId, caseId);
+    console.log(`PDF uploaded to: ${pdfUrl}`);
+    
+    // Step 2: Create document metadata with 'processing' status AND the URL
     const { error: metadataError } = await supabase
       .from('document_metadata')
       .insert({
@@ -61,30 +66,17 @@ export const processPdfDocument = async (
         client_id: clientId,
         case_id: caseId || null,
         schema: caseId ? 'case_document' : 'client_document',
-        processing_status: 'processing'
+        processing_status: 'processing',
+        url: pdfUrl // Include URL from the start
       });
     
     if (metadataError) {
       throw new Error(`Error creating document metadata: ${metadataError.message}`);
     }
     
-    console.log(`Document metadata created with ID: ${documentId}, status: processing`);
+    console.log(`Document metadata created with ID: ${documentId}, status: processing, URL: ${pdfUrl}`);
     
-    // Step 2: Upload PDF to storage
-    const pdfUrl = await uploadPdfToStorage(file, clientId, caseId);
-    console.log(`PDF uploaded to: ${pdfUrl}`);
-    
-    // Step 3: Update document metadata with URL
-    const { error: updateError } = await supabase
-      .from('document_metadata')
-      .update({ url: pdfUrl })
-      .eq('id', documentId);
-    
-    if (updateError) {
-      console.warn(`Warning: Could not update document URL: ${updateError.message}`);
-    }
-    
-    // Step 4: Call server-side processing edge function
+    // Step 3: Call server-side processing edge function
     console.log('Calling server-side PDF processing function...');
     const { data, error: functionError } = await supabase.functions.invoke('process-pdf-document', {
       body: {
@@ -111,16 +103,31 @@ export const processPdfDocument = async (
   } catch (error: any) {
     console.error('Error processing PDF document:', error);
     
-    // Mark as failed if we have a document ID
+    // Mark as failed if we have a document ID, but preserve the URL
     if (documentId) {
       try {
+        // Get existing document to preserve URL
+        const { data: existingDoc } = await supabase
+          .from('document_metadata')
+          .select('url')
+          .eq('id', documentId)
+          .single();
+        
+        const updateData: any = {
+          processing_status: 'failed',
+          processing_error: error.message,
+          processed_at: new Date().toISOString()
+        };
+        
+        // Preserve URL even when marking as failed
+        if (existingDoc?.url) {
+          updateData.url = existingDoc.url;
+          console.log(`Preserving URL during error: ${existingDoc.url}`);
+        }
+        
         await supabase
           .from('document_metadata')
-          .update({ 
-            processing_status: 'failed',
-            processing_error: error.message,
-            processed_at: new Date().toISOString()
-          })
+          .update(updateData)
           .eq('id', documentId);
       } catch (updateError) {
         console.error('Error updating failed status:', updateError);
@@ -131,13 +138,27 @@ export const processPdfDocument = async (
   }
 };
 
-// Legacy client-side functions removed - now using server-side processing
-// The following functions are no longer needed:
-// - extractTextFromPdf
-// - generateEmbeddings  
-// - chunkDocument (moved to server-side)
+// Add utility function to reconstruct storage URL from document metadata
+export const reconstructStorageUrl = (clientId: string, fileName?: string, documentId?: string): string | null => {
+  if (!clientId) return null;
+  
+  // If we have a filename, try to reconstruct based on that
+  if (fileName) {
+    // For files that follow our naming pattern: timestamp_randomstring.ext
+    const basePath = `${clientId}/${fileName}`;
+    const { data } = supabase.storage
+      .from('client_documents')
+      .getPublicUrl(basePath);
+    return data.publicUrl;
+  }
+  
+  // If we have a document ID but no filename, we can't reliably reconstruct
+  // This would require listing all files in the client folder and matching
+  console.warn(`Cannot reconstruct storage URL for document ${documentId} without filename`);
+  return null;
+};
 
-// Keep these utility functions for backward compatibility if needed elsewhere
+// Legacy client-side functions removed - now using server-side processing
 export const generateEmbeddings = async (
   textChunks: string[], 
   documentId: string, 
