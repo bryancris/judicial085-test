@@ -8,77 +8,88 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  console.log("Realtime voice chat function called");
+  console.log("Realtime voice chat function called with method:", req.method);
+  console.log("Request URL:", req.url);
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log("Handling CORS preflight request");
     return new Response(null, { headers: corsHeaders });
   }
 
-  const { headers } = req;
-  const upgradeHeader = headers.get("upgrade") || "";
+  try {
+    const { headers } = req;
+    const upgradeHeader = headers.get("upgrade") || "";
+    console.log("Upgrade header:", upgradeHeader);
 
-  if (upgradeHeader.toLowerCase() !== "websocket") {
-    console.log("Expected WebSocket connection, got:", upgradeHeader);
-    return new Response("Expected WebSocket connection", { status: 400 });
-  }
+    if (upgradeHeader.toLowerCase() !== "websocket") {
+      console.log("Expected WebSocket connection, got:", upgradeHeader);
+      return new Response("Expected WebSocket connection", { 
+        status: 400,
+        headers: corsHeaders 
+      });
+    }
 
-  const url = new URL(req.url);
-  const clientId = url.searchParams.get('clientId');
-  
-  if (!clientId) {
-    console.log("Client ID required");
-    return new Response("Client ID required", { status: 400 });
-  }
+    const url = new URL(req.url);
+    const clientId = url.searchParams.get('clientId');
+    console.log("Client ID:", clientId);
+    
+    if (!clientId) {
+      console.log("Client ID required");
+      return new Response("Client ID required", { 
+        status: 400,
+        headers: corsHeaders 
+      });
+    }
 
-  console.log(`Starting voice chat session for client: ${clientId}`);
+    console.log(`Starting voice chat session for client: ${clientId}`);
 
-  const { socket, response } = Deno.upgradeWebSocket(req);
-  
-  let openAISocket: WebSocket | null = null;
-  let sessionActive = false;
+    const { socket, response } = Deno.upgradeWebSocket(req);
+    
+    let openAISocket: WebSocket | null = null;
+    let sessionActive = false;
 
-  // Initialize OpenAI Realtime API connection
-  const initializeOpenAI = async () => {
-    try {
-      const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-      if (!OPENAI_API_KEY) {
-        throw new Error('OpenAI API key not configured');
-      }
-
-      console.log("Connecting to OpenAI Realtime API...");
-
-      // Connect to OpenAI Realtime API
-      openAISocket = new WebSocket(
-        "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01",
-        {
-          headers: {
-            "Authorization": `Bearer ${OPENAI_API_KEY}`,
-            "OpenAI-Beta": "realtime=v1"
-          }
+    // Initialize OpenAI Realtime API connection
+    const initializeOpenAI = async () => {
+      try {
+        const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+        if (!OPENAI_API_KEY) {
+          throw new Error('OpenAI API key not configured');
         }
-      );
 
-      openAISocket.onopen = () => {
-        console.log("Connected to OpenAI Realtime API");
-        sessionActive = false; // Wait for session.created
-      };
+        console.log("Connecting to OpenAI Realtime API...");
 
-      openAISocket.onmessage = async (event) => {
-        const data = JSON.parse(event.data);
-        console.log("OpenAI message type:", data.type);
+        // Connect to OpenAI Realtime API
+        openAISocket = new WebSocket(
+          "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01",
+          {
+            headers: {
+              "Authorization": `Bearer ${OPENAI_API_KEY}`,
+              "OpenAI-Beta": "realtime=v1"
+            }
+          }
+        );
 
-        // Handle session creation
-        if (data.type === 'session.created') {
-          console.log("Session created, configuring...");
-          sessionActive = true;
-          
-          // Configure session with legal context
-          const sessionConfig = {
-            type: 'session.update',
-            session: {
-              modalities: ["text", "audio"],
-              instructions: `You are an expert legal AI assistant helping attorneys with case discussions. You have access to client information and case documents. 
+        openAISocket.onopen = () => {
+          console.log("Connected to OpenAI Realtime API");
+          sessionActive = false; // Wait for session.created
+        };
+
+        openAISocket.onmessage = async (event) => {
+          const data = JSON.parse(event.data);
+          console.log("OpenAI message type:", data.type);
+
+          // Handle session creation
+          if (data.type === 'session.created') {
+            console.log("Session created, configuring...");
+            sessionActive = true;
+            
+            // Configure session with legal context
+            const sessionConfig = {
+              type: 'session.update',
+              session: {
+                modalities: ["text", "audio"],
+                instructions: `You are an expert legal AI assistant helping attorneys with case discussions. You have access to client information and case documents. 
 
 Key guidelines:
 - Provide thoughtful legal analysis and strategic advice
@@ -89,111 +100,119 @@ Key guidelines:
 - Always acknowledge the specific case context when responding
 
 Current client ID: ${clientId}. You should reference the client's case details in your responses.`,
-              voice: "alloy",
-              input_audio_format: "pcm16",
-              output_audio_format: "pcm16",
-              input_audio_transcription: {
-                model: "whisper-1"
-              },
-              turn_detection: {
-                type: "server_vad",
-                threshold: 0.5,
-                prefix_padding_ms: 300,
-                silence_duration_ms: 1000
-              },
-              tools: [
-                {
-                  type: "function",
-                  name: "search_case_documents",
-                  description: "Search through the client's case documents for relevant information",
-                  parameters: {
-                    type: "object",
-                    properties: {
-                      query: { type: "string", description: "Search query for case documents" }
-                    },
-                    required: ["query"]
-                  }
+                voice: "alloy",
+                input_audio_format: "pcm16",
+                output_audio_format: "pcm16",
+                input_audio_transcription: {
+                  model: "whisper-1"
                 },
-                {
-                  type: "function",
-                  name: "create_attorney_note",
-                  description: "Create a note for the attorney about the case discussion",
-                  parameters: {
-                    type: "object",
-                    properties: {
-                      content: { type: "string", description: "Note content" }
-                    },
-                    required: ["content"]
+                turn_detection: {
+                  type: "server_vad",
+                  threshold: 0.5,
+                  prefix_padding_ms: 300,
+                  silence_duration_ms: 1000
+                },
+                tools: [
+                  {
+                    type: "function",
+                    name: "search_case_documents",
+                    description: "Search through the client's case documents for relevant information",
+                    parameters: {
+                      type: "object",
+                      properties: {
+                        query: { type: "string", description: "Search query for case documents" }
+                      },
+                      required: ["query"]
+                    }
+                  },
+                  {
+                    type: "function",
+                    name: "create_attorney_note",
+                    description: "Create a note for the attorney about the case discussion",
+                    parameters: {
+                      type: "object",
+                      properties: {
+                        content: { type: "string", description: "Note content" }
+                      },
+                      required: ["content"]
+                    }
                   }
-                }
-              ],
-              tool_choice: "auto",
-              temperature: 0.7,
-              max_response_output_tokens: "inf"
-            }
-          };
+                ],
+                tool_choice: "auto",
+                temperature: 0.7,
+                max_response_output_tokens: "inf"
+              }
+            };
 
-          openAISocket?.send(JSON.stringify(sessionConfig));
-        }
+            openAISocket?.send(JSON.stringify(sessionConfig));
+          }
 
-        // Forward all messages to client
-        socket.send(JSON.stringify(data));
-      };
+          // Forward all messages to client
+          socket.send(JSON.stringify(data));
+        };
 
-      openAISocket.onerror = (error) => {
-        console.error("OpenAI WebSocket error:", error);
+        openAISocket.onerror = (error) => {
+          console.error("OpenAI WebSocket error:", error);
+          socket.send(JSON.stringify({
+            type: 'error',
+            error: 'OpenAI connection error'
+          }));
+        };
+
+        openAISocket.onclose = () => {
+          console.log("OpenAI connection closed");
+          sessionActive = false;
+        };
+
+      } catch (error) {
+        console.error("Error initializing OpenAI:", error);
         socket.send(JSON.stringify({
           type: 'error',
-          error: 'OpenAI connection error'
+          error: error.message
         }));
-      };
+      }
+    };
 
-      openAISocket.onclose = () => {
-        console.log("OpenAI connection closed");
-        sessionActive = false;
-      };
+    // Handle client WebSocket events
+    socket.onopen = () => {
+      console.log("Client connected, initializing OpenAI...");
+      initializeOpenAI();
+    };
 
-    } catch (error) {
-      console.error("Error initializing OpenAI:", error);
-      socket.send(JSON.stringify({
-        type: 'error',
-        error: error.message
-      }));
-    }
-  };
+    socket.onmessage = (event) => {
+      if (!sessionActive || !openAISocket) {
+        console.log("Session not ready, queuing message");
+        return;
+      }
 
-  // Handle client WebSocket events
-  socket.onopen = () => {
-    console.log("Client connected, initializing OpenAI...");
-    initializeOpenAI();
-  };
+      try {
+        const data = JSON.parse(event.data);
+        console.log("Client message type:", data.type);
+        
+        // Forward client messages to OpenAI
+        openAISocket.send(JSON.stringify(data));
+      } catch (error) {
+        console.error("Error processing client message:", error);
+      }
+    };
 
-  socket.onmessage = (event) => {
-    if (!sessionActive || !openAISocket) {
-      console.log("Session not ready, queuing message");
-      return;
-    }
+    socket.onclose = () => {
+      console.log("Client disconnected");
+      openAISocket?.close();
+    };
 
-    try {
-      const data = JSON.parse(event.data);
-      console.log("Client message type:", data.type);
-      
-      // Forward client messages to OpenAI
-      openAISocket.send(JSON.stringify(data));
-    } catch (error) {
-      console.error("Error processing client message:", error);
-    }
-  };
+    socket.onerror = (error) => {
+      console.error("Client WebSocket error:", error);
+      openAISocket?.close();
+    };
 
-  socket.onclose = () => {
-    console.log("Client disconnected");
-    openAISocket?.close();
-  };
+    return response;
 
-  socket.onerror = (error) => {
-    console.error("Client WebSocket error:", error);
-    openAISocket?.close();
-  };
-
-  return response;
+  } catch (error) {
+    console.error("Error in realtime-voice-chat function:", error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
 });
