@@ -6,28 +6,28 @@ import { useAnalysisGeneration } from "@/hooks/useAnalysisGeneration";
 
 export type { CaseAnalysisData } from "@/types/caseAnalysis";
 
-export const useCaseAnalysis = (clientId?: string) => {
+export const useCaseAnalysis = (clientId?: string, caseId?: string) => {
   const [clientMessages, setClientMessages] = useState<any[]>([]);
   
-  // Use our new hooks
+  // Use our hooks with case ID support
   const { 
     analysisData, 
     isLoading, 
     error, 
     fetchAnalysisData 
-  } = useAnalysisData(clientId);
+  } = useAnalysisData(clientId, caseId);
   
   const { 
     generateNewAnalysis: generateNew, 
     isGenerating 
-  } = useAnalysisGeneration(clientId, fetchAnalysisData);
+  } = useAnalysisGeneration(clientId, caseId, fetchAnalysisData);
 
   // Load data on initial render
   useEffect(() => {
     if (clientId) {
       fetchAnalysisData();
     }
-  }, [clientId]);
+  }, [clientId, caseId]);
 
   // Combine loading states
   const combinedIsLoading = isLoading || isGenerating;

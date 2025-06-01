@@ -3,10 +3,11 @@ import { ChatMessageProps } from "@/components/clients/chat/ChatMessage";
 import { SimilarCase } from "@/components/case-analysis/SimilarCasesDialog";
 import { invokeFunction } from "./baseApiService";
 
-// Generate legal analysis based on conversation
+// Generate legal analysis based on conversation or documents
 export const generateLegalAnalysis = async (
   clientId: string, 
-  conversation: ChatMessageProps[]
+  conversation: ChatMessageProps[],
+  caseId?: string
 ): Promise<{ 
   analysis: string; 
   lawReferences?: any[]; 
@@ -21,7 +22,7 @@ export const generateLegalAnalysis = async (
       caseType?: string;
     }>(
       "generate-legal-analysis", 
-      { clientId, conversation }
+      { clientId, conversation, caseId }
     );
 
     if (error) {

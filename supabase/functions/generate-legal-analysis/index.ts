@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
@@ -102,9 +101,9 @@ async function searchRelevantLaw(searchTerms) {
   }
 }
 
-// New function to fetch client-specific documents from document_chunks
-async function fetchClientDocuments(clientId) {
-  console.log(`Fetching client-specific documents for client: ${clientId}`);
+// Enhanced function to fetch client-specific documents with case filtering
+async function fetchClientDocuments(clientId, caseId = null) {
+  console.log(`Fetching client-specific documents for client: ${clientId}${caseId ? `, case: ${caseId}` : ''}`);
   try {
     // Get Supabase credentials from environment
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -115,17 +114,22 @@ async function fetchClientDocuments(clientId) {
       return [];
     }
 
-    // Fetch document chunks for this client
-    const response = await fetch(
-      `${supabaseUrl}/rest/v1/document_chunks?select=document_id,content,metadata,chunk_index&client_id=eq.${clientId}&order=document_id.asc,chunk_index.asc`,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseServiceKey}`,
-          'apikey': supabaseServiceKey
-        }
+    // Build query URL with filters
+    let queryUrl = `${supabaseUrl}/rest/v1/document_chunks?select=document_id,content,metadata,chunk_index&client_id=eq.${clientId}&order=document_id.asc,chunk_index.asc`;
+    
+    // Add case filter if provided
+    if (caseId) {
+      queryUrl += `&case_id=eq.${caseId}`;
+    }
+
+    // Fetch document chunks for this client/case
+    const response = await fetch(queryUrl, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseServiceKey}`,
+        'apikey': supabaseServiceKey
       }
-    );
+    });
     
     if (!response.ok) {
       console.warn(`Client documents fetch failed with status: ${response.status}`);
@@ -133,7 +137,7 @@ async function fetchClientDocuments(clientId) {
     }
     
     const chunks = await response.json();
-    console.log(`Found ${chunks?.length || 0} document chunks for client ${clientId}`);
+    console.log(`Found ${chunks?.length || 0} document chunks for client ${clientId}${caseId ? ` and case: ${caseId}` : ''}`);
     
     if (!chunks || chunks.length === 0) {
       return [];
@@ -163,11 +167,11 @@ async function fetchClientDocuments(clientId) {
       // Get a descriptive title from metadata
       const title = doc.metadata?.title || 
                    doc.metadata?.fileName || 
-                   (doc.metadata?.isPdfDocument ? "PDF Document" : "Client Document");
+                   (doc.metadata?.isPdfDocument ? "PDF Document" : "Document");
       
       // Limit content to a reasonable size for context
-      const snippet = doc.content.length > 1000 
-        ? doc.content.substring(0, 1000) + "..." 
+      const snippet = doc.content.length > 2000 
+        ? doc.content.substring(0, 2000) + "..." 
         : doc.content;
       
       return {
@@ -267,7 +271,7 @@ serve(async (req) => {
   }
 
   try {
-    const { clientId, conversation } = await req.json();
+    const { clientId, conversation, caseId } = await req.json();
 
     if (!openAIApiKey) {
       console.error('OpenAI API key is not configured');
@@ -278,12 +282,46 @@ serve(async (req) => {
     }
 
     // Log the request details for debugging
-    console.log(`Generating legal analysis for client: ${clientId}`);
-    console.log(`Conversation length: ${conversation.length}`);
+    console.log(`Generating legal analysis for client: ${clientId}${caseId ? `, case: ${caseId}` : ''}`);
+    console.log(`Conversation length: ${conversation?.length || 0}`);
 
-    // Extract legal topics from the conversation
-    const legalContext = extractLegalTopics(conversation);
+    // Determine if we have a conversation or should use documents
+    const hasConversation = conversation && conversation.length > 0;
+    console.log(`Has conversation: ${hasConversation}`);
+
+    // Fetch client-specific documents (filtered by case if provided)
+    let clientDocuments = [];
+    try {
+      clientDocuments = await fetchClientDocuments(clientId, caseId);
+      console.log(`Retrieved ${clientDocuments.length} documents for analysis`);
+    } catch (documentError) {
+      console.error("Error fetching client documents:", documentError);
+    }
+
+    // If no conversation and no documents, return error
+    if (!hasConversation && clientDocuments.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "No conversation or documents available for analysis. Please either start a client conversation or upload documents marked for analysis." }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Extract legal topics from conversation or documents
+    let legalContext;
+    let analysisSource = "";
+    
+    if (hasConversation) {
+      legalContext = extractLegalTopics(conversation);
+      analysisSource = "client conversation";
+    } else {
+      // Extract legal topics from document content
+      const documentText = clientDocuments.map(doc => doc.content).join(" ");
+      legalContext = extractLegalTopics([{ content: documentText }]);
+      analysisSource = "uploaded documents";
+    }
+    
     console.log("Extracted legal topics:", legalContext);
+    console.log("Analysis source:", analysisSource);
     
     // Create a search query from the extracted topics
     const searchQuery = [
@@ -302,27 +340,16 @@ serve(async (req) => {
         console.log(`Found ${relevantLawReferences.length} relevant law references`);
       } catch (error) {
         console.error("Error searching for relevant law:", error);
-        // Continue without law references if search fails
       }
-    }
-
-    // Fetch client-specific documents
-    let clientDocuments = [];
-    try {
-      clientDocuments = await fetchClientDocuments(clientId);
-      console.log(`Retrieved ${clientDocuments.length} client documents for analysis`);
-    } catch (documentError) {
-      console.error("Error fetching client documents:", documentError);
-      // Continue without client documents if fetch fails
     }
 
     // Detect if this is a consumer protection case
     const isConsumerCase = isConsumerProtectionCase(legalContext);
     console.log(`Case identified as consumer protection case: ${isConsumerCase}`);
     
-    // Create base system prompt
+    // Create system prompt based on analysis source
     let systemPrompt = `
-You are a legal expert assistant for attorneys in Texas. Based on the attorney-client conversation provided, 
+You are a legal expert assistant for attorneys in Texas. Based on the ${analysisSource} provided, 
 generate a concise legal analysis with the following sections:
 
 1. **RELEVANT TEXAS LAW:** Identify and briefly explain Texas laws, statutes, or precedents that apply to this case.
@@ -331,11 +358,11 @@ generate a concise legal analysis with the following sections:
    - Be specific with statute numbers and section references when possible
    ${relevantLawReferences.length > 0 ? `\nConsider these specific Texas law references that may be relevant to this case:\n${relevantLawReferences.map(ref => `- ${ref.title || 'Texas Law'}: ${ref.content ? ref.content.substring(0, 200) + '...' : 'No preview available'}`).join('\n')}` : ''}
 
-2. **PRELIMINARY ANALYSIS:** Analyze the key facts from the conversation and their legal implications under Texas law.
+2. **PRELIMINARY ANALYSIS:** Analyze the key facts from the ${analysisSource} and their legal implications under Texas law.
 
 3. **POTENTIAL LEGAL ISSUES:** Identify potential legal challenges, considerations, or defenses that may arise.
 
-4. **RECOMMENDED FOLLOW-UP QUESTIONS:** Suggest exactly 4 specific questions the attorney should ask next to gather important information for the case.
+4. **RECOMMENDED FOLLOW-UP QUESTIONS:** Suggest exactly 4 specific questions the attorney should ${hasConversation ? 'ask the client next' : 'investigate further'} to gather important information for the case.
 
 Format your response in Markdown with bold section headers. Under the "**RECOMMENDED FOLLOW-UP QUESTIONS**" section, 
 format each question as a numbered list with the exact format:
@@ -357,14 +384,14 @@ After the last follow-up question, don't add any additional content, comments, o
     // Add client documents section to the prompt if available
     if (clientDocuments.length > 0) {
       const clientDocumentsPrompt = `
-IMPORTANT: The client has provided the following documents related to this case that should be prioritized in your analysis:
+${hasConversation ? 'IMPORTANT: The client has also provided the following documents related to this case that should be considered in your analysis:' : 'IMPORTANT: The analysis should be based on the following client documents:'}
 
 ${clientDocuments.map((doc, index) => 
   `DOCUMENT ${index + 1}: ${doc.title} ${doc.uploadedAt ? `(Uploaded: ${new Date(doc.uploadedAt).toLocaleDateString()})` : ''}
 ${doc.content}`
 ).join('\n\n')}
 
-When analyzing this case, SPECIFICALLY reference information from these client documents where relevant. When you use information from a client document, clearly indicate which document you're referencing. These client-provided documents should take precedence over general legal information when there are conflicts.
+When analyzing this case, SPECIFICALLY reference information from these ${hasConversation ? 'client documents' : 'documents'} where relevant. When you use information from a document, clearly indicate which document you're referencing. ${hasConversation ? 'These client-provided documents should supplement the conversation analysis.' : 'Base your entire analysis on these documents.'}
 `;
       systemPrompt += clientDocumentsPrompt;
       console.log("Added client documents to prompt");
@@ -405,18 +432,26 @@ When analyzing these issues, connect specific facts from the conversation to the
       console.log("Added consumer protection specialized prompt enhancement");
     }
 
-    // Format the conversation for the API request
-    const formattedConversation = conversation.map(msg => ({
-      role: "user", 
-      content: `${msg.role.toUpperCase()}: ${msg.content}`
-    }));
+    // Format the content for the API request
+    let userContent = "";
+    if (hasConversation) {
+      const formattedConversation = conversation.map(msg => ({
+        role: "user", 
+        content: `${msg.role.toUpperCase()}: ${msg.content}`
+      }));
+      userContent = "Here is the attorney-client conversation for analysis:\n\n" + formattedConversation.map(msg => msg.content).join("\n\n");
+    } else {
+      userContent = `Here are the client documents for analysis:\n\n${clientDocuments.map((doc, index) => 
+        `DOCUMENT ${index + 1}: ${doc.title}\n${doc.content}`
+      ).join('\n\n')}`;
+    }
 
     const messages = [
       { role: "system", content: systemPrompt },
-      { role: "user", content: "Here is the attorney-client conversation for analysis:\n\n" + formattedConversation.map(msg => msg.content).join("\n\n") }
+      { role: "user", content: userContent }
     ];
 
-    console.log("Sending request to OpenAI with enhanced context");
+    console.log(`Sending request to OpenAI with ${analysisSource} context`);
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -425,10 +460,10 @@ When analyzing these issues, connect specific facts from the conversation to the
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o', // Upgraded from gpt-4o-mini for more accurate legal analysis
+        model: 'gpt-4o',
         messages,
-        temperature: 0.5, // Reduced temperature for more precise legal analysis
-        max_tokens: 2000, // Increased token limit for more comprehensive analysis
+        temperature: 0.5,
+        max_tokens: 2000,
       }),
     });
 
@@ -467,16 +502,11 @@ When analyzing these issues, connect specific facts from the conversation to the
       }
     }
 
-    // Add note about client documents if they were used
-    if (clientDocuments.length > 0 && analysis) {
-      // Add a note at the beginning of the analysis about the documents used
-      const documentsNote = `*Analysis includes review of ${clientDocuments.length} client document${clientDocuments.length > 1 ? 's' : ''}: ${clientDocuments.map(doc => doc.title).join(', ')}*\n\n`;
-      analysis = documentsNote + analysis;
-      console.log("Added note about client documents used in analysis");
-    }
-
+    // Add note about source of analysis
     if (analysis) {
-      console.log("Legal analysis generated successfully with enhanced context and post-processing");
+      const sourceNote = `*Analysis generated from ${analysisSource}${clientDocuments.length > 0 ? ` (${clientDocuments.length} document${clientDocuments.length > 1 ? 's' : ''}: ${clientDocuments.map(doc => doc.title).join(', ')})` : ''}*\n\n`;
+      analysis = sourceNote + analysis;
+      console.log(`Legal analysis generated successfully from ${analysisSource}`);
     }
 
     return new Response(
@@ -488,7 +518,8 @@ When analyzing these issues, connect specific facts from the conversation to the
           title: doc.title,
           isPdfDocument: doc.isPdfDocument
         })),
-        caseType: isConsumerCase ? "consumer-protection" : "general"
+        caseType: isConsumerCase ? "consumer-protection" : "general",
+        analysisSource
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
