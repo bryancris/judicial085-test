@@ -4,17 +4,21 @@ import { useDocumentAuth } from '@/hooks/useDocumentAuth';
 import { useDocumentFetching } from '@/hooks/useDocumentFetching';
 import { useDocumentPagination } from '@/hooks/useDocumentPagination';
 import { useDocumentSearch } from '@/hooks/useDocumentSearch';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 export const useDocuments = () => {
   const pageSize = 6; // Increase page size for better initial load
   const initialFetchDone = useRef(false);
   const [initialFetchAttempted, setInitialFetchAttempted] = useState(false);
+  const { toast } = useToast();
   
   // Use smaller, specialized hooks
   const { session, loading: authLoading } = useDocumentAuth();
   
   const { 
     documents, 
+    setDocuments,
     loading: fetchLoading, 
     setLoading: setFetchLoading,
     hasError, 
@@ -29,6 +33,56 @@ export const useDocuments = () => {
     resetPagination,
     isMounted: paginationMounted
   } = useDocumentPagination();
+  
+  // Delete document function
+  const deleteDocument = async (documentId: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      console.log(`Deleting document: ${documentId}`);
+      
+      // Delete document chunks first (due to foreign key constraints)
+      const { error: chunksError } = await supabase
+        .from('document_chunks')
+        .delete()
+        .eq('document_id', documentId);
+      
+      if (chunksError) {
+        console.error('Error deleting document chunks:', chunksError);
+        throw new Error(`Failed to delete document chunks: ${chunksError.message}`);
+      }
+      
+      // Delete document metadata
+      const { error: metadataError } = await supabase
+        .from('document_metadata')
+        .delete()
+        .eq('id', documentId);
+      
+      if (metadataError) {
+        console.error('Error deleting document metadata:', metadataError);
+        throw new Error(`Failed to delete document metadata: ${metadataError.message}`);
+      }
+      
+      // Delete from documents table (legacy data)
+      const { error: documentsError } = await supabase
+        .from('documents')
+        .delete()
+        .eq('metadata->>file_id', documentId);
+      
+      if (documentsError) {
+        console.warn('Error deleting from documents table (this might be expected):', documentsError);
+        // Don't throw error here as this table might not have the document
+      }
+      
+      // Update local state to remove the deleted document
+      setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+      
+      console.log(`Document ${documentId} deleted successfully`);
+      return { success: true };
+      
+    } catch (error: any) {
+      console.error('Error deleting document:', error);
+      return { success: false, error: error.message };
+    }
+  };
   
   // Perform initial fetch
   useEffect(() => {
@@ -102,6 +156,7 @@ export const useDocuments = () => {
     hasMore,
     isLoadingMore,
     hasError,
-    initialFetchAttempted
+    initialFetchAttempted,
+    deleteDocument
   };
 };

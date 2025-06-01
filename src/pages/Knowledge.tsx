@@ -29,7 +29,8 @@ const Knowledge = () => {
     hasMore,
     isLoadingMore,
     hasError: documentsError,
-    initialFetchAttempted
+    initialFetchAttempted,
+    deleteDocument
   } = useDocuments();
 
   // Simulate loading progress
@@ -148,6 +149,7 @@ const Knowledge = () => {
                 hasMore={hasMore}
                 isLoadingMore={isLoadingMore}
                 hasError={documentsError}
+                onDelete={deleteDocument}
               />
             )}
 

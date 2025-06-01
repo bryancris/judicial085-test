@@ -18,6 +18,7 @@ interface DocumentListProps {
   hasMore: boolean;
   isLoadingMore: boolean;
   hasError: boolean;
+  onDelete?: (documentId: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const DocumentList: React.FC<DocumentListProps> = ({ 
@@ -28,7 +29,8 @@ const DocumentList: React.FC<DocumentListProps> = ({
   loadMore,
   hasMore,
   isLoadingMore,
-  hasError
+  hasError,
+  onDelete
 }) => {
   // Log document data for debugging
   console.log("DocumentList received documents:", documents.length, documents);
@@ -65,7 +67,11 @@ const DocumentList: React.FC<DocumentListProps> = ({
           ))
         ) : documents.length > 0 ? (
           documents.map((doc) => (
-            <DocumentCard key={doc.id} document={doc} />
+            <DocumentCard 
+              key={doc.id} 
+              document={doc} 
+              onDelete={onDelete}
+            />
           ))
         ) : (
           <div className="col-span-full">
