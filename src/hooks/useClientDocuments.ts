@@ -298,25 +298,17 @@ export const useClientDocuments = (
     }
   }, [clientId, scope, fetchClientDocuments, toast]);
   
-  // Toggle document analysis inclusion
+  // Toggle document analysis inclusion with improved state management
   const toggleDocumentAnalysis = useCallback(async (documentId: string, includeInAnalysis: boolean) => {
     if (!clientId) {
       console.error("Cannot toggle document analysis: No client ID provided");
       return { success: false, error: "No client ID provided" };
     }
     
+    console.log(`Toggling document ${documentId} analysis to: ${includeInAnalysis}`);
+    
     try {
-      const { error } = await supabase
-        .from('document_metadata')
-        .update({ include_in_analysis: includeInAnalysis })
-        .eq('id', documentId)
-        .eq('client_id', clientId);
-      
-      if (error) {
-        throw new Error(`Error updating document: ${error.message}`);
-      }
-      
-      // Update local state
+      // Optimistically update local state first
       setDocuments(prev => 
         prev.map(doc => 
           doc.id === documentId 
@@ -324,6 +316,27 @@ export const useClientDocuments = (
             : doc
         )
       );
+
+      // Update database
+      const { error } = await supabase
+        .from('document_metadata')
+        .update({ include_in_analysis: includeInAnalysis })
+        .eq('id', documentId)
+        .eq('client_id', clientId);
+      
+      if (error) {
+        // Revert optimistic update on error
+        setDocuments(prev => 
+          prev.map(doc => 
+            doc.id === documentId 
+              ? { ...doc, include_in_analysis: !includeInAnalysis }
+              : doc
+          )
+        );
+        throw new Error(`Error updating document: ${error.message}`);
+      }
+      
+      console.log(`Successfully updated document ${documentId} include_in_analysis to: ${includeInAnalysis}`);
       
       toast({
         title: includeInAnalysis ? "Document included in analysis" : "Document excluded from analysis",

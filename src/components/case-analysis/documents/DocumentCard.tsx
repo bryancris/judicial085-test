@@ -33,8 +33,12 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
   };
 
   const handleToggleAnalysis = (checked: boolean) => {
+    console.log(`DocumentCard: Toggling document ${document.id} analysis to: ${checked}`);
     onToggleAnalysis(document.id, checked);
   };
+
+  // Ensure we have a boolean value for the switch
+  const isIncludedInAnalysis = Boolean(document.include_in_analysis);
 
   return (
     <Card className="col-span-1 overflow-hidden">
@@ -98,7 +102,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
           </label>
           <Switch
             id={`analysis-${document.id}`}
-            checked={document.include_in_analysis ?? false}
+            checked={isIncludedInAnalysis}
             onCheckedChange={handleToggleAnalysis}
             disabled={isProcessing}
             className={cn(

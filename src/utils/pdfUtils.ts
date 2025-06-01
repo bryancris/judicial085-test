@@ -57,7 +57,7 @@ export const processPdfDocument = async (
     const pdfUrl = await uploadPdfToStorage(file, clientId, caseId);
     console.log(`PDF uploaded to: ${pdfUrl}`);
     
-    // Step 2: Create document metadata with 'processing' status AND the URL
+    // Step 2: Create document metadata with 'processing' status AND the URL, explicitly setting include_in_analysis to false
     const { error: metadataError } = await supabase
       .from('document_metadata')
       .insert({
@@ -67,14 +67,15 @@ export const processPdfDocument = async (
         case_id: caseId || null,
         schema: caseId ? 'case_document' : 'client_document',
         processing_status: 'processing',
-        url: pdfUrl // Include URL from the start
+        url: pdfUrl,
+        include_in_analysis: false // Explicitly set to false for new documents
       });
     
     if (metadataError) {
       throw new Error(`Error creating document metadata: ${metadataError.message}`);
     }
     
-    console.log(`Document metadata created with ID: ${documentId}, status: processing, URL: ${pdfUrl}`);
+    console.log(`Document metadata created with ID: ${documentId}, status: processing, URL: ${pdfUrl}, include_in_analysis: false`);
     
     // Step 3: Call server-side processing edge function
     console.log('Calling server-side PDF processing function...');
@@ -103,13 +104,13 @@ export const processPdfDocument = async (
   } catch (error: any) {
     console.error('Error processing PDF document:', error);
     
-    // Mark as failed if we have a document ID, but preserve the URL
+    // Mark as failed if we have a document ID, but preserve the URL and include_in_analysis setting
     if (documentId) {
       try {
-        // Get existing document to preserve URL
+        // Get existing document to preserve URL and include_in_analysis
         const { data: existingDoc } = await supabase
           .from('document_metadata')
-          .select('url')
+          .select('url, include_in_analysis')
           .eq('id', documentId)
           .single();
         
@@ -119,10 +120,14 @@ export const processPdfDocument = async (
           processed_at: new Date().toISOString()
         };
         
-        // Preserve URL even when marking as failed
+        // Preserve URL and include_in_analysis even when marking as failed
         if (existingDoc?.url) {
           updateData.url = existingDoc.url;
           console.log(`Preserving URL during error: ${existingDoc.url}`);
+        }
+        if (existingDoc?.include_in_analysis !== undefined) {
+          updateData.include_in_analysis = existingDoc.include_in_analysis;
+          console.log(`Preserving include_in_analysis during error: ${existingDoc.include_in_analysis}`);
         }
         
         await supabase

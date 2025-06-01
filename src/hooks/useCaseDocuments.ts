@@ -327,6 +327,69 @@ export const useCaseDocuments = (clientId: string | undefined, caseId: string | 
     }
   }, [clientId, caseId, documents, toast]);
   
+  // Toggle document analysis inclusion with improved state management
+  const toggleDocumentAnalysis = useCallback(async (documentId: string, includeInAnalysis: boolean) => {
+    if (!clientId || !caseId) {
+      console.error("Cannot toggle document analysis: No client ID or case ID provided");
+      return { success: false, error: "No client ID or case ID provided" };
+    }
+    
+    console.log(`Toggling case document ${documentId} analysis to: ${includeInAnalysis}`);
+    
+    try {
+      // Optimistically update local state first
+      setDocuments(prev => 
+        prev.map(doc => 
+          doc.id === documentId 
+            ? { ...doc, include_in_analysis: includeInAnalysis }
+            : doc
+        )
+      );
+
+      // Update database
+      const { error } = await supabase
+        .from('document_metadata')
+        .update({ include_in_analysis: includeInAnalysis })
+        .eq('id', documentId)
+        .eq('client_id', clientId)
+        .eq('case_id', caseId);
+      
+      if (error) {
+        // Revert optimistic update on error
+        setDocuments(prev => 
+          prev.map(doc => 
+            doc.id === documentId 
+              ? { ...doc, include_in_analysis: !includeInAnalysis }
+              : doc
+          )
+        );
+        throw new Error(`Error updating document: ${error.message}`);
+      }
+      
+      console.log(`Successfully updated case document ${documentId} include_in_analysis to: ${includeInAnalysis}`);
+      
+      toast({
+        title: includeInAnalysis ? "Document included in analysis" : "Document excluded from analysis",
+        description: includeInAnalysis 
+          ? "This document will now be considered during AI analysis."
+          : "This document will be excluded from AI analysis.",
+      });
+      
+      return { success: true };
+      
+    } catch (error: any) {
+      console.error("Error toggling case document analysis:", error);
+      
+      toast({
+        title: "Error updating document",
+        description: error.message || "An error occurred while updating the document.",
+        variant: "destructive",
+      });
+      
+      return { success: false, error: error.message };
+    }
+  }, [clientId, caseId, toast]);
+  
   // Helper function to chunk document content
   const chunkDocument = (content: string): string[] => {
     // Simple chunking by paragraphs with a max length
@@ -422,6 +485,7 @@ export const useCaseDocuments = (clientId: string | undefined, caseId: string | 
     isProcessing,
     processDocument,
     deleteDocument,
+    toggleDocumentAnalysis,
     searchDocumentsBySimilarity,
     refreshDocuments: (reset: boolean = true) => fetchCaseDocuments(reset ? 0 : currentPage.current, reset)
   };
