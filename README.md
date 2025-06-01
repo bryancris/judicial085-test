@@ -1,4 +1,8 @@
+
 # Welcome to your Lovable project
+
+## Version
+**Current Version**: Stable Version - Feature complete with voice chat integration and case discussion system
 
 ## Project info
 
