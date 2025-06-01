@@ -83,36 +83,22 @@ serve(async (req) => {
 
         console.log("Connecting to OpenAI Realtime API...");
 
-        openAISocket = new WebSocket(
-          "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01",
-          {
-            headers: {
-              "Authorization": `Bearer ${OPENAI_API_KEY}`,
-              "OpenAI-Beta": "realtime=v1"
-            }
-          }
-        );
+        // Use the correct URL format with authentication
+        const openAIUrl = `wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01`;
+        console.log("OpenAI WebSocket URL:", openAIUrl);
 
+        // Create WebSocket connection to OpenAI
+        openAISocket = new WebSocket(openAIUrl);
+
+        // Add authorization after connection is established
         openAISocket.onopen = () => {
           console.log("Connected to OpenAI Realtime API");
-          sessionActive = false; // Wait for session.created
-        };
-
-        openAISocket.onmessage = async (event) => {
-          const data = JSON.parse(event.data);
-          console.log("OpenAI message type:", data.type);
-
-          // Handle session creation
-          if (data.type === 'session.created') {
-            console.log("Session created, configuring...");
-            sessionActive = true;
-            
-            // Configure session with legal context
-            const sessionConfig = {
-              type: 'session.update',
-              session: {
-                modalities: ["text", "audio"],
-                instructions: `You are an expert legal AI assistant helping attorneys with case discussions. You have access to client information and case documents. 
+          
+          // Send authorization message
+          const authMessage = {
+            type: 'session.create',
+            session: {
+              instructions: `You are an expert legal AI assistant helping attorneys with case discussions. You have access to client information and case documents. 
 
 Key guidelines:
 - Provide thoughtful legal analysis and strategic advice
@@ -123,51 +109,63 @@ Key guidelines:
 - Always acknowledge the specific case context when responding
 
 Current client ID: ${clientId}. You should reference the client's case details in your responses.`,
-                voice: "alloy",
-                input_audio_format: "pcm16",
-                output_audio_format: "pcm16",
-                input_audio_transcription: {
-                  model: "whisper-1"
-                },
-                turn_detection: {
-                  type: "server_vad",
-                  threshold: 0.5,
-                  prefix_padding_ms: 300,
-                  silence_duration_ms: 1000
-                },
-                tools: [
-                  {
-                    type: "function",
-                    name: "search_case_documents",
-                    description: "Search through the client's case documents for relevant information",
-                    parameters: {
-                      type: "object",
-                      properties: {
-                        query: { type: "string", description: "Search query for case documents" }
-                      },
-                      required: ["query"]
-                    }
-                  },
-                  {
-                    type: "function",
-                    name: "create_attorney_note",
-                    description: "Create a note for the attorney about the case discussion",
-                    parameters: {
-                      type: "object",
-                      properties: {
-                        content: { type: "string", description: "Note content" }
-                      },
-                      required: ["content"]
-                    }
+              voice: "alloy",
+              input_audio_format: "pcm16",
+              output_audio_format: "pcm16",
+              input_audio_transcription: {
+                model: "whisper-1"
+              },
+              turn_detection: {
+                type: "server_vad",
+                threshold: 0.5,
+                prefix_padding_ms: 300,
+                silence_duration_ms: 1000
+              },
+              tools: [
+                {
+                  type: "function",
+                  name: "search_case_documents",
+                  description: "Search through the client's case documents for relevant information",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      query: { type: "string", description: "Search query for case documents" }
+                    },
+                    required: ["query"]
                   }
-                ],
-                tool_choice: "auto",
-                temperature: 0.7,
-                max_response_output_tokens: "inf"
-              }
-            };
+                },
+                {
+                  type: "function",
+                  name: "create_attorney_note",
+                  description: "Create a note for the attorney about the case discussion",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      content: { type: "string", description: "Note content" }
+                    },
+                    required: ["content"]
+                  }
+                }
+              ],
+              tool_choice: "auto",
+              temperature: 0.7,
+              max_response_output_tokens: "inf"
+            },
+            authorization: `Bearer ${OPENAI_API_KEY}`
+          };
 
-            openAISocket?.send(JSON.stringify(sessionConfig));
+          openAISocket?.send(JSON.stringify(authMessage));
+          sessionActive = true;
+        };
+
+        openAISocket.onmessage = async (event) => {
+          const data = JSON.parse(event.data);
+          console.log("OpenAI message type:", data.type);
+
+          // Handle session creation
+          if (data.type === 'session.created') {
+            console.log("Session created successfully");
+            sessionActive = true;
           }
 
           // Forward all messages to client
@@ -181,7 +179,7 @@ Current client ID: ${clientId}. You should reference the client's case details i
           if (socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({
               type: 'error',
-              error: 'OpenAI connection error'
+              error: 'OpenAI connection error: ' + error.toString()
             }));
           }
         };
@@ -189,6 +187,12 @@ Current client ID: ${clientId}. You should reference the client's case details i
         openAISocket.onclose = (event) => {
           console.log("OpenAI connection closed:", event.code, event.reason);
           sessionActive = false;
+          if (socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+              type: 'error',
+              error: 'OpenAI connection closed unexpectedly'
+            }));
+          }
         };
 
       } catch (error) {
