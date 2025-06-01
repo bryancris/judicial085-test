@@ -4,7 +4,11 @@ import { Button } from "@/components/ui/button";
 import { HelpCircle } from "lucide-react";
 import TabExplanationDialog from "./TabExplanationDialog";
 
-const FaqTabContent = () => {
+interface FaqTabContentProps {
+  clientId: string;
+}
+
+const FaqTabContent: React.FC<FaqTabContentProps> = ({ clientId }) => {
   const [showExplanationDialog, setShowExplanationDialog] = React.useState(false);
   
   // Automatically open the explanation dialog when the component mounts
