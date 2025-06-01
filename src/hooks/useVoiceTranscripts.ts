@@ -40,7 +40,13 @@ export const useVoiceTranscripts = (clientId: string) => {
         return;
       }
 
-      setTranscripts(data || []);
+      // Type cast the speaker field to ensure proper typing
+      const typedTranscripts = (data || []).map(transcript => ({
+        ...transcript,
+        speaker: transcript.speaker as 'user' | 'ai'
+      }));
+
+      setTranscripts(typedTranscripts);
     } catch (error) {
       console.error('Error fetching voice transcripts:', error);
     } finally {
