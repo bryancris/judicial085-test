@@ -8,9 +8,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Function to search for relevant legal documents with improved error handling
-async function searchRelevantLaw(searchTerms) {
-  console.log(`Searching for legal references with terms: ${searchTerms}`);
+// Enhanced function to search for relevant legal documents with improved search logic
+async function searchRelevantLaw(searchTerms, caseType = "general") {
+  console.log(`Searching for legal references with terms: ${searchTerms}, case type: ${caseType}`);
   try {
     // Get Supabase credentials from environment
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -21,10 +21,47 @@ async function searchRelevantLaw(searchTerms) {
       return [];
     }
 
-    // First try searching document metadata
+    // Define case-type specific law mappings for better relevance
+    const lawMappings = {
+      "consumer-protection": [
+        "Texas Deceptive Trade Practices", "DTPA", "Business Commerce Code 17",
+        "Consumer Protection", "Deceptive Trade Practices", "17.41", "17.46", "17.50"
+      ],
+      "animal-protection": [
+        "Texas Penal Code 42.092", "Animal Cruelty", "Penal Code Chapter 42",
+        "Animal Protection", "Cruelty to Animals", "42.09", "42.092"
+      ],
+      "personal-injury": [
+        "Civil Practice Remedies Code", "CPRC", "Negligence", "Tort", "Personal Injury"
+      ],
+      "contract": [
+        "Contract Law", "Breach of Contract", "Business Commerce Code", "Agreement"
+      ]
+    };
+
+    // Determine relevant search terms based on case content and type
+    let relevantTerms = searchTerms.toLowerCase();
+    let additionalTerms = [];
+
+    // Add case-type specific terms
+    if (caseType === "consumer-protection" || relevantTerms.includes("dtpa") || 
+        relevantTerms.includes("deceptive") || relevantTerms.includes("consumer")) {
+      additionalTerms = lawMappings["consumer-protection"];
+    }
+    
+    if (relevantTerms.includes("animal") || relevantTerms.includes("pet") || 
+        relevantTerms.includes("dog") || relevantTerms.includes("boarding")) {
+      additionalTerms = [...additionalTerms, ...lawMappings["animal-protection"]];
+    }
+
+    // Create a comprehensive search query
+    const allSearchTerms = [searchTerms, ...additionalTerms].join(" ");
+    console.log(`Enhanced search terms: ${allSearchTerms}`);
+
+    // First try searching document metadata with improved terms
     try {
       const metadataResponse = await fetch(
-        `${supabaseUrl}/rest/v1/document_metadata?select=id,title,url&title=ilike.*${encodeURIComponent(searchTerms)}*`,
+        `${supabaseUrl}/rest/v1/document_metadata?select=id,title,url&or=title.ilike.*${encodeURIComponent("Texas Business Commerce Code")}*,title.ilike.*${encodeURIComponent("DTPA")}*,title.ilike.*${encodeURIComponent("Penal Code")}*,title.ilike.*${encodeURIComponent("Animal Cruelty")}*&limit=5`,
         {
           headers: {
             'Content-Type': 'application/json',
@@ -37,64 +74,95 @@ async function searchRelevantLaw(searchTerms) {
       if (metadataResponse.ok) {
         const metadataResults = await metadataResponse.json();
         if (metadataResults && metadataResults.length > 0) {
-          console.log(`Found ${metadataResults.length} direct metadata results`);
+          console.log(`Found ${metadataResults.length} relevant statute metadata results`);
           return metadataResults.map(doc => ({
             id: doc.id,
             title: doc.title || "Texas Law Document",
             url: doc.url || null,
-            content: null // We'll fetch content separately if needed
+            content: null
           }));
         }
       } else {
         console.warn(`Metadata search failed with status: ${metadataResponse.status}`);
-        // Continue to fall back to documents table search
       }
     } catch (metadataError) {
-      console.error("Error in metadata search, falling back to documents table:", metadataError);
-      // Continue to documents table search
+      console.error("Error in metadata search:", metadataError);
     }
     
-    // Fallback to searching in the documents table
-    try {
-      const documentsResponse = await fetch(
-        `${supabaseUrl}/rest/v1/documents?select=id,content,metadata&limit=5`,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseServiceKey}`,
-            'apikey': supabaseServiceKey
+    // Enhanced fallback: Try specific statute searches
+    const statuteSearches = [
+      "Texas Business Commerce Code",
+      "Texas Penal Code", 
+      "DTPA",
+      "Deceptive Trade Practices",
+      "Animal Cruelty"
+    ];
+
+    for (const statute of statuteSearches) {
+      try {
+        const documentsResponse = await fetch(
+          `${supabaseUrl}/rest/v1/documents?select=id,content,metadata&content=ilike.*${encodeURIComponent(statute)}*&limit=3`,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseServiceKey}`,
+              'apikey': supabaseServiceKey
+            }
+          }
+        );
+        
+        if (documentsResponse.ok) {
+          const documents = await documentsResponse.json();
+          if (documents && documents.length > 0) {
+            console.log(`Found ${documents.length} documents for statute: ${statute}`);
+            
+            // Filter out irrelevant documents (like Parks and Wildlife Code)
+            const relevantDocs = documents.filter(doc => {
+              const content = (doc.content || "").toLowerCase();
+              const metadata = doc.metadata || {};
+              const title = (metadata?.title || metadata?.file_title || "").toLowerCase();
+              
+              // Exclude Parks and Wildlife Code and other irrelevant codes
+              const irrelevantTerms = ["parks and wildlife", "water code", "agriculture code"];
+              const hasIrrelevantContent = irrelevantTerms.some(term => 
+                content.includes(term) || title.includes(term)
+              );
+              
+              if (hasIrrelevantContent) {
+                console.log(`Filtering out irrelevant document: ${title}`);
+                return false;
+              }
+              
+              return true;
+            });
+            
+            if (relevantDocs.length > 0) {
+              return relevantDocs.map(doc => {
+                const metadata = doc.metadata || {};
+                const content = doc.content || "";
+                const snippet = content.length > 500 
+                  ? content.substring(0, 500) + "..." 
+                  : content;
+                
+                return {
+                  id: metadata?.file_id || String(doc.id),
+                  title: metadata?.title || metadata?.file_title || `Texas ${statute}`,
+                  url: metadata?.file_path || null,
+                  content: snippet
+                };
+              });
+            }
           }
         }
-      );
-      
-      if (!documentsResponse.ok) {
-        console.warn(`Documents search failed with status: ${documentsResponse.status}`);
-        return [];
+      } catch (error) {
+        console.error(`Error searching for statute ${statute}:`, error);
       }
-      
-      const documents = await documentsResponse.json();
-      console.log(`Found ${documents?.length || 0} documents in fallback search`);
-      
-      // Format and return the results
-      return (documents || []).map(doc => {
-        const metadata = doc.metadata || {};
-        const content = doc.content || "";
-        // Extract a snippet if the content is long
-        const snippet = content.length > 500 
-          ? content.substring(0, 500) + "..." 
-          : content;
-        
-        return {
-          id: metadata?.file_id || String(doc.id),
-          title: metadata?.title || metadata?.file_title || "Texas Law Document",
-          url: metadata?.file_path || null,
-          content: snippet
-        };
-      });
-    } catch (documentsError) {
-      console.error("Error in documents search:", documentsError);
-      return [];
     }
+    
+    // If no relevant laws found, return empty array instead of irrelevant documents
+    console.log("No relevant Texas statutes found in database");
+    return [];
+    
   } catch (error) {
     console.error("Exception in searchRelevantLaw:", error);
     return [];
@@ -193,7 +261,7 @@ async function fetchClientDocuments(clientId, caseId = null) {
 function extractLegalTopics(conversation) {
   const combinedText = conversation.map(msg => msg.content).join(" ");
   
-  // Enhanced list of potential legal topics with specific focus on consumer protection
+  // Enhanced list of potential legal topics with specific focus on consumer protection and animal law
   const legalTopics = [
     // General legal topics
     "personal injury", "premises liability", "negligence", "tort", 
@@ -210,7 +278,11 @@ function extractLegalTopics(conversation) {
     "false advertising", "warranty", "misleading", "door-to-door", 
     "home solicitation", "cooling off period", "right to cancel",
     "debt collection", "usury", "predatory lending", "loan", "finance charge",
-    "consumer fraud", "bait and switch", "unfair practices", "misrepresentation"
+    "consumer fraud", "bait and switch", "unfair practices", "misrepresentation",
+    
+    // Animal protection topics
+    "animal cruelty", "animal abuse", "pet", "dog", "cat", "boarding",
+    "veterinary malpractice", "animal neglect", "animal care", "pet boarding"
   ];
   
   // Find which topics are mentioned in the conversation
@@ -224,6 +296,12 @@ function extractLegalTopics(conversation) {
     s.replace(/^(section|§)\s*/i, '')
   );
   
+  // Extract animal cruelty statute references like "42.092"
+  const animalStatutePattern = /\b(section|§)\s*(42\.09\d*)\b|penal\s*code\s*(42\.09\d*)/gi;
+  const animalStatutes = (combinedText.match(animalStatutePattern) || []).map(s => 
+    s.replace(/^(section|§)\s*/i, '').replace(/penal\s*code\s*/i, '')
+  );
+  
   // Extract general statute references like "Section 101.021"
   const statutePattern = /\b(section|§)\s*\d+(\.\d+)*\b/gi;
   const potentialStatutes = combinedText.match(statutePattern) || [];
@@ -234,13 +312,13 @@ function extractLegalTopics(conversation) {
   
   return {
     topics: mentionedTopics,
-    statutes: [...new Set([...dtpaStatutes, ...potentialStatutes.map(s => s.replace(/^(section|§)\s*/i, ''))])],
+    statutes: [...new Set([...dtpaStatutes, ...animalStatutes, ...potentialStatutes.map(s => s.replace(/^(section|§)\s*/i, ''))])],
     cases: potentialCases
   };
 }
 
-// Function to detect consumer protection cases for specialized prompt enhancement
-function isConsumerProtectionCase(legalContext) {
+// Enhanced function to detect case type for specialized prompt enhancement
+function detectCaseType(legalContext) {
   const consumerTopics = [
     "deceptive trade practices", "dtpa", "consumer protection", 
     "false advertising", "warranty", "misleading", "door-to-door", 
@@ -248,20 +326,43 @@ function isConsumerProtectionCase(legalContext) {
     "consumer fraud", "bait and switch", "unfair practices", "misrepresentation"
   ];
   
+  const animalTopics = [
+    "animal cruelty", "animal abuse", "pet", "dog", "cat", "boarding",
+    "veterinary malpractice", "animal neglect", "42.092", "dogtopia"
+  ];
+  
   // Convert topics to lowercase for case-insensitive comparison
   const lowerTopics = legalContext.topics.map(t => t.toLowerCase());
+  const combinedText = legalContext.topics.join(" ").toLowerCase();
   
   // Check if any consumer protection topics are mentioned
   const hasConsumerTopic = consumerTopics.some(topic => 
-    lowerTopics.includes(topic.toLowerCase())
+    lowerTopics.includes(topic.toLowerCase()) || combinedText.includes(topic)
   );
   
-  // Check if any statutes mention 17.4 (common DTPA sections start with 17.4)
+  // Check if any animal protection topics are mentioned
+  const hasAnimalTopic = animalTopics.some(topic => 
+    lowerTopics.includes(topic.toLowerCase()) || combinedText.includes(topic)
+  );
+  
+  // Check if any statutes mention relevant sections
   const hasDTPAStatute = legalContext.statutes.some(statute => 
     statute.startsWith("17.4") || statute.includes("DTPA")
   );
   
-  return hasConsumerTopic || hasDTPAStatute;
+  const hasAnimalStatute = legalContext.statutes.some(statute => 
+    statute.startsWith("42.09")
+  );
+  
+  if (hasConsumerTopic || hasDTPAStatute) {
+    return "consumer-protection";
+  }
+  
+  if (hasAnimalTopic || hasAnimalStatute) {
+    return "animal-protection";
+  }
+  
+  return "general";
 }
 
 serve(async (req) => {
@@ -323,6 +424,10 @@ serve(async (req) => {
     console.log("Extracted legal topics:", legalContext);
     console.log("Analysis source:", analysisSource);
     
+    // Detect case type for better law search
+    const detectedCaseType = detectCaseType(legalContext);
+    console.log(`Detected case type: ${detectedCaseType}`);
+    
     // Create a search query from the extracted topics
     const searchQuery = [
       ...legalContext.topics,
@@ -336,15 +441,15 @@ serve(async (req) => {
     // Search for relevant law if we have extracted topics
     if (searchQuery.trim()) {
       try {
-        relevantLawReferences = await searchRelevantLaw(searchQuery);
+        relevantLawReferences = await searchRelevantLaw(searchQuery, detectedCaseType);
         console.log(`Found ${relevantLawReferences.length} relevant law references`);
       } catch (error) {
         console.error("Error searching for relevant law:", error);
       }
     }
 
-    // Detect if this is a consumer protection case
-    const isConsumerCase = isConsumerProtectionCase(legalContext);
+    // Detect if this is a consumer protection case (keeping original logic for backward compatibility)
+    const isConsumerCase = detectedCaseType === "consumer-protection";
     console.log(`Case identified as consumer protection case: ${isConsumerCase}`);
     
     // Create system prompt based on analysis source
@@ -430,6 +535,33 @@ When analyzing these issues, connect specific facts from the conversation to the
 `;
       systemPrompt += consumerProtectionPrompt;
       console.log("Added consumer protection specialized prompt enhancement");
+    }
+
+    // Add enhanced prompt for animal protection cases
+    if (detectedCaseType === "animal-protection") {
+      const animalProtectionPrompt = `
+IMPORTANT: This appears to involve animal protection/cruelty issues. In your analysis, be sure to address:
+
+1. Texas Penal Code § 42.092 - Cruelty to Animals:
+   - Identify if there's intentional or knowing torture, serious bodily injury, or killing of animals
+   - Determine if there's failure to provide necessary food, water, shelter, or veterinary care
+   - Assess if animals were abandoned in circumstances where death, serious bodily injury, or suffering was likely
+
+2. Civil remedies and consumer protection aspects:
+   - If involving pet boarding, grooming, or veterinary services, consider DTPA violations for deceptive practices
+   - Breach of contract for failure to provide promised care
+   - Negligence claims for failure to meet standard of care
+
+3. Available Remedies:
+   - Criminal penalties under Penal Code § 42.092
+   - Civil damages for veterinary expenses, replacement costs, and emotional distress
+   - Injunctive relief to prevent further harm
+   - Consumer protection remedies if commercial services were involved
+
+Connect the specific facts to the relevant statutory provisions and identify both criminal and civil liability issues.
+`;
+      systemPrompt += animalProtectionPrompt;
+      console.log("Added animal protection specialized prompt enhancement");
     }
 
     // Format the content for the API request
@@ -518,7 +650,7 @@ When analyzing these issues, connect specific facts from the conversation to the
           title: doc.title,
           isPdfDocument: doc.isPdfDocument
         })),
-        caseType: isConsumerCase ? "consumer-protection" : "general",
+        caseType: detectedCaseType,
         analysisSource
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
