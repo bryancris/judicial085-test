@@ -83,22 +83,49 @@ serve(async (req) => {
 
         console.log("Connecting to OpenAI Realtime API...");
 
-        // Use the correct URL format with authentication
+        // Use the correct OpenAI Realtime API WebSocket URL
         const openAIUrl = `wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01`;
         console.log("OpenAI WebSocket URL:", openAIUrl);
 
-        // Create WebSocket connection to OpenAI
+        // Create WebSocket connection to OpenAI - Deno style
         openAISocket = new WebSocket(openAIUrl);
 
-        // Add authorization after connection is established
+        // We need to send the authorization after connection opens since Deno WebSocket
+        // doesn't support headers in constructor
         openAISocket.onopen = () => {
           console.log("Connected to OpenAI Realtime API");
           
-          // Send authorization message
-          const authMessage = {
-            type: 'session.create',
-            session: {
-              instructions: `You are an expert legal AI assistant helping attorneys with case discussions. You have access to client information and case documents. 
+          // OpenAI Realtime API doesn't use explicit auth messages
+          // Instead we need to use the Authorization header approach
+          // But since Deno WebSocket doesn't support headers, we need to close and reconnect with auth
+          openAISocket?.close();
+          
+          // Create authenticated connection using a different approach
+          createAuthenticatedConnection();
+        };
+
+        // Alternative approach: Create WebSocket with proper authentication
+        const createAuthenticatedConnection = () => {
+          console.log("Creating authenticated OpenAI connection...");
+          
+          // For Deno, we need to handle authentication differently
+          // Let's try using fetch to establish the connection with proper headers
+          openAISocket = new WebSocket(openAIUrl, [], {
+            headers: {
+              'Authorization': `Bearer ${OPENAI_API_KEY}`,
+              'OpenAI-Beta': 'realtime=v1'
+            }
+          });
+
+          openAISocket.onopen = () => {
+            console.log("Authenticated connection established with OpenAI");
+            sessionActive = true;
+            
+            // Send session update after connection is established
+            const sessionUpdate = {
+              type: 'session.update',
+              session: {
+                instructions: `You are an expert legal AI assistant helping attorneys with case discussions. You have access to client information and case documents. 
 
 Key guidelines:
 - Provide thoughtful legal analysis and strategic advice
@@ -109,90 +136,90 @@ Key guidelines:
 - Always acknowledge the specific case context when responding
 
 Current client ID: ${clientId}. You should reference the client's case details in your responses.`,
-              voice: "alloy",
-              input_audio_format: "pcm16",
-              output_audio_format: "pcm16",
-              input_audio_transcription: {
-                model: "whisper-1"
-              },
-              turn_detection: {
-                type: "server_vad",
-                threshold: 0.5,
-                prefix_padding_ms: 300,
-                silence_duration_ms: 1000
-              },
-              tools: [
-                {
-                  type: "function",
-                  name: "search_case_documents",
-                  description: "Search through the client's case documents for relevant information",
-                  parameters: {
-                    type: "object",
-                    properties: {
-                      query: { type: "string", description: "Search query for case documents" }
-                    },
-                    required: ["query"]
-                  }
+                voice: "alloy",
+                input_audio_format: "pcm16",
+                output_audio_format: "pcm16",
+                input_audio_transcription: {
+                  model: "whisper-1"
                 },
-                {
-                  type: "function",
-                  name: "create_attorney_note",
-                  description: "Create a note for the attorney about the case discussion",
-                  parameters: {
-                    type: "object",
-                    properties: {
-                      content: { type: "string", description: "Note content" }
-                    },
-                    required: ["content"]
+                turn_detection: {
+                  type: "server_vad",
+                  threshold: 0.5,
+                  prefix_padding_ms: 300,
+                  silence_duration_ms: 1000
+                },
+                tools: [
+                  {
+                    type: "function",
+                    name: "search_case_documents",
+                    description: "Search through the client's case documents for relevant information",
+                    parameters: {
+                      type: "object",
+                      properties: {
+                        query: { type: "string", description: "Search query for case documents" }
+                      },
+                      required: ["query"]
+                    }
+                  },
+                  {
+                    type: "function",
+                    name: "create_attorney_note",
+                    description: "Create a note for the attorney about the case discussion",
+                    parameters: {
+                      type: "object",
+                      properties: {
+                        content: { type: "string", description: "Note content" }
+                      },
+                      required: ["content"]
+                    }
                   }
-                }
-              ],
-              tool_choice: "auto",
-              temperature: 0.7,
-              max_response_output_tokens: "inf"
-            },
-            authorization: `Bearer ${OPENAI_API_KEY}`
+                ],
+                tool_choice: "auto",
+                temperature: 0.7,
+                max_response_output_tokens: "inf"
+              }
+            };
+
+            console.log("Sending session update to OpenAI...");
+            openAISocket?.send(JSON.stringify(sessionUpdate));
           };
 
-          openAISocket?.send(JSON.stringify(authMessage));
-          sessionActive = true;
-        };
+          openAISocket.onmessage = async (event) => {
+            const data = JSON.parse(event.data);
+            console.log("OpenAI message type:", data.type);
 
-        openAISocket.onmessage = async (event) => {
-          const data = JSON.parse(event.data);
-          console.log("OpenAI message type:", data.type);
+            // Handle session creation
+            if (data.type === 'session.created') {
+              console.log("Session created successfully");
+              sessionActive = true;
+            }
 
-          // Handle session creation
-          if (data.type === 'session.created') {
-            console.log("Session created successfully");
-            sessionActive = true;
-          }
+            // Forward all messages to client
+            if (socket.readyState === WebSocket.OPEN) {
+              socket.send(JSON.stringify(data));
+            }
+          };
 
-          // Forward all messages to client
-          if (socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify(data));
-          }
-        };
+          openAISocket.onerror = (error) => {
+            console.error("OpenAI WebSocket error:", error);
+            if (socket.readyState === WebSocket.OPEN) {
+              socket.send(JSON.stringify({
+                type: 'error',
+                error: 'OpenAI connection error: ' + error.toString()
+              }));
+            }
+          };
 
-        openAISocket.onerror = (error) => {
-          console.error("OpenAI WebSocket error:", error);
-          if (socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({
-              type: 'error',
-              error: 'OpenAI connection error: ' + error.toString()
-            }));
-          }
-        };
-
-        openAISocket.onclose = (event) => {
-          console.log("OpenAI connection closed:", event.code, event.reason);
-          sessionActive = false;
-          if (socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({
-              type: 'error',
-              error: 'OpenAI connection closed unexpectedly'
-            }));
-          }
+          openAISocket.onclose = (event) => {
+            console.log("OpenAI connection closed:", event.code, event.reason);
+            sessionActive = false;
+            if (socket.readyState === WebSocket.OPEN) {
+              socket.send(JSON.stringify({
+                type: 'error',
+                error: 'OpenAI connection closed unexpectedly'
+              }));
+            }
+          };
         };
 
       } catch (error) {
