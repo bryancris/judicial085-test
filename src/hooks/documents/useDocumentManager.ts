@@ -21,7 +21,26 @@ export const useDocumentManager = (
     console.log(`[DEBUG] Current documents state before toggle:`, documents.find(d => d.id === documentId)?.include_in_analysis);
     
     try {
-      // Update database FIRST - simplified query using only document ID
+      // First, let's check if the document exists
+      const { data: existingDoc, error: checkError } = await supabase
+        .from('document_metadata')
+        .select('id, include_in_analysis, client_id')
+        .eq('id', documentId)
+        .single();
+      
+      if (checkError) {
+        console.error(`[ERROR] Error checking document existence:`, checkError);
+        throw new Error(`Error checking document: ${checkError.message}`);
+      }
+      
+      if (!existingDoc) {
+        console.error(`[ERROR] Document not found with ID: ${documentId}`);
+        throw new Error(`Document not found: ${documentId}`);
+      }
+      
+      console.log(`[DEBUG] Found existing document:`, existingDoc);
+      
+      // Update database
       const { data, error } = await supabase
         .from('document_metadata')
         .update({ include_in_analysis: includeInAnalysis })
@@ -34,26 +53,13 @@ export const useDocumentManager = (
       }
       
       if (!data || data.length === 0) {
-        console.error(`[ERROR] No document found with ID: ${documentId}`);
-        throw new Error(`Document not found: ${documentId}`);
+        console.error(`[ERROR] No rows updated for document ID: ${documentId}`);
+        throw new Error(`Failed to update document: ${documentId}`);
       }
       
       console.log(`[DEBUG] Database update successful:`, data);
       
-      // Verify the update by fetching the document again
-      const { data: verifyData, error: verifyError } = await supabase
-        .from('document_metadata')
-        .select('include_in_analysis')
-        .eq('id', documentId)
-        .single();
-      
-      if (verifyError) {
-        console.error(`[ERROR] Verification query failed:`, verifyError);
-      } else {
-        console.log(`[DEBUG] Verification query result:`, verifyData);
-      }
-      
-      // Now update local state to match database
+      // Update local state to match database
       setDocuments(prev => 
         prev.map(doc => 
           doc.id === documentId 

@@ -84,6 +84,25 @@ export const useCaseDocumentManager = (
     console.log(`[DEBUG] Current documents state before toggle:`, documents.find(d => d.id === documentId)?.include_in_analysis);
     
     try {
+      // First, let's check if the document exists and belongs to this case
+      const { data: existingDoc, error: checkError } = await supabase
+        .from('document_metadata')
+        .select('id, include_in_analysis, client_id, case_id')
+        .eq('id', documentId)
+        .single();
+      
+      if (checkError) {
+        console.error(`[ERROR] Error checking document existence:`, checkError);
+        throw new Error(`Error checking document: ${checkError.message}`);
+      }
+      
+      if (!existingDoc) {
+        console.error(`[ERROR] Document not found with ID: ${documentId}`);
+        throw new Error(`Document not found: ${documentId}`);
+      }
+      
+      console.log(`[DEBUG] Found existing document:`, existingDoc);
+      
       // Update database using only document ID (simplified query)
       const { data, error } = await supabase
         .from('document_metadata')
@@ -97,8 +116,8 @@ export const useCaseDocumentManager = (
       }
       
       if (!data || data.length === 0) {
-        console.error(`[ERROR] No document found with ID: ${documentId}`);
-        throw new Error(`Document not found: ${documentId}`);
+        console.error(`[ERROR] No rows updated for document ID: ${documentId}`);
+        throw new Error(`Failed to update document: ${documentId}`);
       }
       
       console.log(`[DEBUG] Database update successful:`, data);
