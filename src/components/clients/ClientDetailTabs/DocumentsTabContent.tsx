@@ -17,6 +17,7 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({ clientId }) =
     isProcessing,
     processDocument,
     deleteDocument,
+    toggleDocumentAnalysis,
     refreshDocuments
   } = useClientDocuments(clientId, 5, "all");
 
@@ -27,6 +28,7 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({ clientId }) =
       isLoading={loading}
       onProcessDocument={processDocument}
       onDeleteDocument={deleteDocument}
+      onToggleDocumentAnalysis={toggleDocumentAnalysis}
       isProcessing={isProcessing}
       fullView={true}
       cases={cases}

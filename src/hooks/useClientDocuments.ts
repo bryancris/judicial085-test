@@ -243,7 +243,8 @@ export const useClientDocuments = (
           client_id: clientId,
           case_id: caseId,
           schema: caseId ? 'case_document' : 'client_document',
-          url: metadata.url || null
+          url: metadata.url || null,
+          include_in_analysis: true // Default to true for new documents
         });
       
       if (metadataError) {
@@ -297,6 +298,55 @@ export const useClientDocuments = (
       setIsProcessing(false);
     }
   }, [clientId, scope, fetchClientDocuments, toast]);
+  
+  // Toggle document analysis inclusion
+  const toggleDocumentAnalysis = useCallback(async (documentId: string, includeInAnalysis: boolean) => {
+    if (!clientId) {
+      console.error("Cannot toggle document analysis: No client ID provided");
+      return { success: false, error: "No client ID provided" };
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('document_metadata')
+        .update({ include_in_analysis: includeInAnalysis })
+        .eq('id', documentId)
+        .eq('client_id', clientId);
+      
+      if (error) {
+        throw new Error(`Error updating document: ${error.message}`);
+      }
+      
+      // Update local state
+      setDocuments(prev => 
+        prev.map(doc => 
+          doc.id === documentId 
+            ? { ...doc, include_in_analysis: includeInAnalysis }
+            : doc
+        )
+      );
+      
+      toast({
+        title: includeInAnalysis ? "Document included in analysis" : "Document excluded from analysis",
+        description: includeInAnalysis 
+          ? "This document will now be considered during AI analysis."
+          : "This document will be excluded from AI analysis.",
+      });
+      
+      return { success: true };
+      
+    } catch (error: any) {
+      console.error("Error toggling document analysis:", error);
+      
+      toast({
+        title: "Error updating document",
+        description: error.message || "An error occurred while updating the document.",
+        variant: "destructive",
+      });
+      
+      return { success: false, error: error.message };
+    }
+  }, [clientId, toast]);
   
   // Delete document
   const deleteDocument = useCallback(async (documentId: string) => {
@@ -399,6 +449,7 @@ export const useClientDocuments = (
     isProcessing,
     processDocument,
     deleteDocument,
+    toggleDocumentAnalysis,
     refreshDocuments: (reset: boolean = true) => fetchClientDocuments(reset ? 0 : currentPage.current, reset)
   };
 };

@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { DocumentWithContent } from "@/types/knowledge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Trash2, ExternalLink } from "lucide-react";
@@ -11,6 +12,7 @@ interface DocumentCardProps {
   onDocumentOpen: (document: DocumentWithContent) => void;
   onPdfOpen: (url: string) => void;
   onDeleteDocument: (documentId: string) => void;
+  onToggleAnalysis: (documentId: string, includeInAnalysis: boolean) => void;
   isProcessing: boolean;
 }
 
@@ -19,6 +21,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
   onDocumentOpen,
   onPdfOpen,
   onDeleteDocument,
+  onToggleAnalysis,
   isProcessing
 }) => {
   const getDocumentPreview = (document: DocumentWithContent): string => {
@@ -26,6 +29,10 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
       return document.contents[0].content;
     }
     return "Processing... Content will be available shortly.";
+  };
+
+  const handleToggleAnalysis = (checked: boolean) => {
+    onToggleAnalysis(document.id, checked);
   };
 
   return (
@@ -52,35 +59,49 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
           {getDocumentPreview(document)}
         </p>
       </CardContent>
-      <CardFooter className="flex justify-between pt-2">
-        <div className="flex gap-2">
-          <Button 
-            variant="secondary" 
-            size="sm"
-            onClick={() => onDocumentOpen(document)}
-          >
-            <FileText className="h-4 w-4 mr-1" />
-            View Data
-          </Button>
-          {document.url && (
+      <CardFooter className="flex flex-col gap-3 pt-2">
+        <div className="flex justify-between w-full">
+          <div className="flex gap-2">
             <Button 
-              variant="outline" 
+              variant="secondary" 
               size="sm"
-              onClick={() => onPdfOpen(document.url!)}
+              onClick={() => onDocumentOpen(document)}
             >
-              <ExternalLink className="h-4 w-4 mr-1" />
-              View PDF
+              <FileText className="h-4 w-4 mr-1" />
+              View Data
             </Button>
-          )}
+            {document.url && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => onPdfOpen(document.url!)}
+              >
+                <ExternalLink className="h-4 w-4 mr-1" />
+                View PDF
+              </Button>
+            )}
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onDeleteDocument(document.id)}
+            disabled={isProcessing}
+          >
+            <Trash2 className="h-4 w-4 text-destructive-foreground" />
+          </Button>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onDeleteDocument(document.id)}
-          disabled={isProcessing}
-        >
-          <Trash2 className="h-4 w-4 text-destructive-foreground" />
-        </Button>
+        
+        <div className="flex items-center justify-between w-full text-sm">
+          <label htmlFor={`analysis-${document.id}`} className="text-muted-foreground">
+            Include in Analysis
+          </label>
+          <Switch
+            id={`analysis-${document.id}`}
+            checked={document.include_in_analysis ?? true}
+            onCheckedChange={handleToggleAnalysis}
+            disabled={isProcessing}
+          />
+        </div>
       </CardFooter>
     </Card>
   );

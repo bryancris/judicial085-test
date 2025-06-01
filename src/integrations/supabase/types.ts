@@ -522,6 +522,7 @@ export type Database = {
           client_id: string | null
           created_at: string | null
           id: string
+          include_in_analysis: boolean
           processed_at: string | null
           processing_error: string | null
           processing_notes: string | null
@@ -535,6 +536,7 @@ export type Database = {
           client_id?: string | null
           created_at?: string | null
           id: string
+          include_in_analysis?: boolean
           processed_at?: string | null
           processing_error?: string | null
           processing_notes?: string | null
@@ -548,6 +550,7 @@ export type Database = {
           client_id?: string | null
           created_at?: string | null
           id?: string
+          include_in_analysis?: boolean
           processed_at?: string | null
           processing_error?: string | null
           processing_notes?: string | null

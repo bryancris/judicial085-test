@@ -13,6 +13,7 @@ interface DocumentGridProps {
   onDocumentOpen: (document: DocumentWithContent) => void;
   onPdfOpen: (url: string) => void;
   onDeleteDocument: (documentId: string) => void;
+  onToggleAnalysis: (documentId: string, includeInAnalysis: boolean) => void;
   onUploadClick: () => void;
   isProcessing: boolean;
 }
@@ -24,6 +25,7 @@ const DocumentGrid: React.FC<DocumentGridProps> = ({
   onDocumentOpen,
   onPdfOpen,
   onDeleteDocument,
+  onToggleAnalysis,
   onUploadClick,
   isProcessing
 }) => {
@@ -69,6 +71,7 @@ const DocumentGrid: React.FC<DocumentGridProps> = ({
           onDocumentOpen={onDocumentOpen}
           onPdfOpen={onPdfOpen}
           onDeleteDocument={onDeleteDocument}
+          onToggleAnalysis={onToggleAnalysis}
           isProcessing={isProcessing}
         />
       ))}

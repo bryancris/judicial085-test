@@ -8,6 +8,7 @@ export interface DocumentMetadata {
   schema: string | null;
   case_id?: string | null;
   client_id?: string | null;
+  include_in_analysis?: boolean;
 }
 
 export interface DocumentContent {
@@ -26,6 +27,7 @@ export interface DocumentMetadataDetail {
   created_at?: string;
   case_id?: string;
   client_id?: string;
+  include_in_analysis?: boolean;
   [key: string]: any; // Allow for other properties that might exist
 }
 

@@ -16,6 +16,7 @@ interface ClientDocumentsSectionProps {
   isLoading: boolean;
   onProcessDocument: (title: string, content: string, metadata?: any) => Promise<any>;
   onDeleteDocument: (documentId: string) => Promise<any>;
+  onToggleDocumentAnalysis: (documentId: string, includeInAnalysis: boolean) => Promise<any>;
   isProcessing: boolean;
   fullView?: boolean;
   caseId?: string;
@@ -31,6 +32,7 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
   isLoading,
   onProcessDocument,
   onDeleteDocument,
+  onToggleDocumentAnalysis,
   isProcessing,
   fullView = false,
   caseId,
@@ -101,6 +103,14 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
     }
   };
 
+  const handleToggleAnalysis = async (documentId: string, includeInAnalysis: boolean) => {
+    try {
+      await onToggleDocumentAnalysis(documentId, includeInAnalysis);
+    } catch (error) {
+      console.error("Error toggling document analysis:", error);
+    }
+  };
+
   const handleUploadSuccess = () => {
     console.log("Document upload successful, triggering refresh...");
     // Trigger refresh after successful upload
@@ -134,6 +144,7 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
           onDocumentOpen={handleDocumentOpen}
           onPdfOpen={handlePdfOpen}
           onDeleteDocument={handleDeleteDocument}
+          onToggleAnalysis={handleToggleAnalysis}
           onUploadClick={() => setUploadDialogOpen(true)}
           isProcessing={isProcessing}
         />
