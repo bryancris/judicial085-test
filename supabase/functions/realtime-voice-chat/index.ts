@@ -63,9 +63,9 @@ serve(async (req) => {
           throw new Error('OpenAI API key not configured');
         }
 
-        console.log("Creating OpenAI session...");
+        console.log("Creating OpenAI ephemeral session...");
 
-        // First, create an ephemeral session token
+        // Create an ephemeral session token with proper configuration
         const sessionResponse = await fetch("https://api.openai.com/v1/realtime/sessions", {
           method: "POST",
           headers: {
@@ -75,6 +75,45 @@ serve(async (req) => {
           body: JSON.stringify({
             model: "gpt-4o-realtime-preview-2024-10-01",
             voice: "alloy",
+            instructions: `You are an expert legal AI assistant helping attorneys with case discussions. You have access to client information and case documents. 
+
+Key guidelines:
+- Provide thoughtful legal analysis and strategic advice
+- Reference relevant laws, precedents, and legal principles
+- Ask clarifying questions to better understand the case
+- Maintain attorney-client privilege and confidentiality
+- Be direct and professional in your responses
+- Always acknowledge the specific case context when responding
+
+Current client ID: ${clientId}. You should reference the client's case details in your responses.`,
+            input_audio_format: "pcm16",
+            output_audio_format: "pcm16",
+            input_audio_transcription: {
+              model: "whisper-1"
+            },
+            turn_detection: {
+              type: "server_vad",
+              threshold: 0.5,
+              prefix_padding_ms: 300,
+              silence_duration_ms: 1000
+            },
+            tools: [
+              {
+                type: "function",
+                name: "search_case_documents",
+                description: "Search through the client's case documents for relevant information",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    query: { type: "string", description: "Search query for case documents" }
+                  },
+                  required: ["query"]
+                }
+              }
+            ],
+            tool_choice: "auto",
+            temperature: 0.7,
+            max_response_output_tokens: "inf"
           }),
         });
 
@@ -88,27 +127,28 @@ serve(async (req) => {
         console.log("OpenAI session created successfully");
 
         if (!sessionData.client_secret?.value) {
-          throw new Error("No client secret received from OpenAI");
+          throw new Error("No ephemeral token received from OpenAI");
         }
 
         const ephemeralToken = sessionData.client_secret.value;
         console.log("Ephemeral token received, connecting to WebSocket...");
 
-        // Now connect using the ephemeral token - using correct Deno WebSocket syntax
+        // Connect to OpenAI WebSocket using the ephemeral token
         const wsUrl = `wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01`;
         console.log("Connecting to OpenAI WebSocket:", wsUrl);
 
-        // Create WebSocket with proper Deno syntax (no headers parameter)
+        // Create WebSocket connection
         openAISocket = new WebSocket(wsUrl);
 
         openAISocket.onopen = () => {
           console.log("Connected to OpenAI Realtime API");
           sessionActive = true;
           
-          // Send authentication message after connection opens
+          // Send authentication with the ephemeral token
           const authMessage = {
             type: 'session.update',
             session: {
+              modalities: ["text", "audio"],
               instructions: `You are an expert legal AI assistant helping attorneys with case discussions. You have access to client information and case documents. 
 
 Key guidelines:
@@ -161,6 +201,14 @@ Current client ID: ${clientId}. You should reference the client's case details i
             const data = JSON.parse(event.data);
             console.log("OpenAI message type:", data.type);
 
+            // Handle authentication errors specifically
+            if (data.type === 'error') {
+              console.error("OpenAI error:", data.error);
+              if (data.error?.type === 'invalid_request_error') {
+                console.error("Authentication failed - invalid ephemeral token or request");
+              }
+            }
+
             // Handle session updates
             if (data.type === 'session.updated') {
               console.log("Session configuration updated successfully");
@@ -192,7 +240,7 @@ Current client ID: ${clientId}. You should reference the client's case details i
           if (socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({
               type: 'error',
-              error: 'OpenAI connection closed unexpectedly'
+              error: `OpenAI connection closed: ${event.code} ${event.reason}`
             }));
           }
         };
