@@ -13,8 +13,10 @@ import ContractReviewChat from "@/components/contract-review/ContractReviewChat"
 import FaqTabContent from "@/components/clients/ClientDetailTabs/FaqTabContent";
 import CaseDiscussionContainer from "@/components/case-discussion/CaseDiscussionContainer";
 import DocumentScopeSelector from "@/components/clients/documents/DocumentScopeSelector";
+import GoogleDocsEditor from "@/components/document-editor/GoogleDocsEditor";
 import { Badge } from "@/components/ui/badge";
 import { BookOpenCheck } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ClientDetailTabContentProps {
   client: ClientWithCases;
@@ -33,6 +35,8 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
   
   // Set document scope - "client" for client-level documents or a specific caseId
   const [documentScope, setDocumentScope] = useState<string>("client");
+  
+  const { toast } = useToast();
   
   // Using hook with client.id
   const {
@@ -129,6 +133,27 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
     }
   };
 
+  // Handle document save from Google Docs editor
+  const handleDocumentSave = async (title: string, content: string) => {
+    try {
+      await processDocument(title, content, { 
+        documentType: 'created_document',
+        caseId: currentCase?.id 
+      });
+      toast({
+        title: "Document saved",
+        description: "Your document has been saved successfully.",
+      });
+    } catch (error) {
+      console.error("Error saving document:", error);
+      toast({
+        title: "Error saving document",
+        description: "There was a problem saving your document. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Render documents tab with enhanced UI
   const renderDocumentsTab = () => (
     <div className="p-4">
@@ -201,6 +226,13 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
         />;
       case "discussion":
         return <CaseDiscussionContainer clientId={client.id} />;
+      case "knowledge":
+        return (
+          <GoogleDocsEditor 
+            clientId={client.id}
+            onSave={handleDocumentSave}
+          />
+        );
       case "faq":
         return <FaqTabContent />;
       default:
