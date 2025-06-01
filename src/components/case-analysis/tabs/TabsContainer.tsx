@@ -49,6 +49,12 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
     return { success: false, error: "Delete not available in this view" };
   };
 
+  // Add a dummy toggle function since this component doesn't need toggle functionality
+  const handleToggleDocumentAnalysis = async (documentId: string, includeInAnalysis: boolean) => {
+    console.log("Toggle analysis not implemented in tabs container:", documentId, includeInAnalysis);
+    return { success: false, error: "Toggle analysis not available in this view" };
+  };
+
   // Render appropriate tab content based on selectedTab
   switch (selectedTab) {
     case "analysis":
@@ -77,6 +83,7 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
           isLoading={documentsLoading}
           onProcessDocument={processDocument}
           onDeleteDocument={handleDeleteDocument}
+          onToggleDocumentAnalysis={handleToggleDocumentAnalysis}
           isProcessing={isProcessingDocument}
           fullView
         />
