@@ -59,7 +59,7 @@ serve(async (req) => {
 
         console.log("Connecting to OpenAI Realtime API...");
 
-        // Connect to OpenAI Realtime API
+        // Connect to OpenAI Realtime API with correct endpoint
         openAISocket = new WebSocket(
           "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01",
           {
@@ -148,15 +148,19 @@ Current client ID: ${clientId}. You should reference the client's case details i
           }
 
           // Forward all messages to client
-          socket.send(JSON.stringify(data));
+          if (socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify(data));
+          }
         };
 
         openAISocket.onerror = (error) => {
           console.error("OpenAI WebSocket error:", error);
-          socket.send(JSON.stringify({
-            type: 'error',
-            error: 'OpenAI connection error'
-          }));
+          if (socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+              type: 'error',
+              error: 'OpenAI connection error'
+            }));
+          }
         };
 
         openAISocket.onclose = () => {
@@ -166,10 +170,12 @@ Current client ID: ${clientId}. You should reference the client's case details i
 
       } catch (error) {
         console.error("Error initializing OpenAI:", error);
-        socket.send(JSON.stringify({
-          type: 'error',
-          error: error.message
-        }));
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({
+            type: 'error',
+            error: error.message
+          }));
+        }
       }
     };
 
@@ -180,7 +186,7 @@ Current client ID: ${clientId}. You should reference the client's case details i
     };
 
     socket.onmessage = (event) => {
-      if (!sessionActive || !openAISocket) {
+      if (!sessionActive || !openAISocket || openAISocket.readyState !== WebSocket.OPEN) {
         console.log("Session not ready, queuing message");
         return;
       }

@@ -75,7 +75,8 @@ export const useVoiceChat = ({
     try {
       console.log(`Connecting to voice chat for client: ${clientId}`);
       
-      const wsUrl = `wss://ghpljdgecjmhkwkfctgy.functions.supabase.co/functions/v1/realtime-voice-chat?clientId=${clientId}`;
+      // Use the correct WebSocket URL format for Supabase Edge Functions
+      const wsUrl = `wss://ghpljdgecjmhkwkfctgy.functions.supabase.co/realtime-voice-chat?clientId=${clientId}`;
       console.log('Connecting to WebSocket URL:', wsUrl);
       
       wsRef.current = new WebSocket(wsUrl);
