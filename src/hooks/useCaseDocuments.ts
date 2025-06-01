@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -339,18 +338,21 @@ export const useCaseDocuments = (clientId: string | undefined, caseId: string | 
     console.log(`[DEBUG] Current documents state before toggle:`, documents.find(d => d.id === documentId)?.include_in_analysis);
     
     try {
-      // Update database FIRST before optimistic update
+      // Update database FIRST - simplified query using only document ID
       const { data, error } = await supabase
         .from('document_metadata')
         .update({ include_in_analysis: includeInAnalysis })
         .eq('id', documentId)
-        .eq('client_id', clientId)
-        .eq('case_id', caseId)
         .select('include_in_analysis');
       
       if (error) {
         console.error(`[ERROR] Database update failed:`, error);
         throw new Error(`Error updating document: ${error.message}`);
+      }
+      
+      if (!data || data.length === 0) {
+        console.error(`[ERROR] No document found with ID: ${documentId}`);
+        throw new Error(`Document not found: ${documentId}`);
       }
       
       console.log(`[DEBUG] Database update successful:`, data);
@@ -360,8 +362,6 @@ export const useCaseDocuments = (clientId: string | undefined, caseId: string | 
         .from('document_metadata')
         .select('include_in_analysis')
         .eq('id', documentId)
-        .eq('client_id', clientId)
-        .eq('case_id', caseId)
         .single();
       
       if (verifyError) {
