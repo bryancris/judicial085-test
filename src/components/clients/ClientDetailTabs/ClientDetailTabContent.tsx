@@ -10,6 +10,7 @@ import DocumentsTabContent from "./DocumentsTabContent";
 import KnowledgeTabContent from "./KnowledgeTabContent";
 import FaqTabContent from "./FaqTabContent";
 import { Client } from "@/types/client";
+import { useCase } from "@/contexts/CaseContext";
 
 interface ClientDetailTabContentProps {
   client: Client;
@@ -20,6 +21,8 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
   client, 
   activeTab 
 }) => {
+  const { currentCase } = useCase();
+  
   return (
     <>
       <TabsContent value="client-intake" className="mt-6">
@@ -33,6 +36,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
         <CaseAnalysisContainer 
           clientId={client.id}
           clientName={`${client.first_name} ${client.last_name}`}
+          caseId={currentCase?.id}
         />
       </TabsContent>
 

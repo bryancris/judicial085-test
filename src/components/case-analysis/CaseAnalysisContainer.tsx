@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useCaseAnalysis } from "@/hooks/useCaseAnalysis";
 import CaseAnalysisErrorState from "./CaseAnalysisErrorState";
@@ -9,22 +8,29 @@ import { useCaseAnalysisChat } from "@/hooks/useCaseAnalysisChat";
 import { useClientDocuments } from "@/hooks/useClientDocuments";
 import EmptyAnalysisState from "./EmptyAnalysisState";
 import TabsContainer from "./tabs/TabsContainer";
-import { AnalysisData } from "@/hooks/useAnalysisData"; // Import directly from useAnalysisData
+import { AnalysisData } from "@/hooks/useAnalysisData";
+import { useCase } from "@/contexts/CaseContext";
 
 interface CaseAnalysisContainerProps {
   clientId: string;
   clientName: string;
+  caseId?: string; // Add optional caseId prop
 }
 
 const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
   clientId,
   clientName,
+  caseId: propCaseId,
 }) => {
   const [selectedTab, setSelectedTab] = useState("analysis");
+  const { currentCase } = useCase();
+  
+  // Use caseId from props or from context
+  const caseId = propCaseId || currentCase?.id;
 
-  // Custom hooks for case analysis data
+  // Custom hooks for case analysis data - now with case ID support
   const { analysisData, isLoading, error, generateNewAnalysis } =
-    useCaseAnalysis(clientId);
+    useCaseAnalysis(clientId, caseId);
     
   // Add scholarly references hook
   const {
@@ -74,6 +80,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
       <EmptyAnalysisState 
         clientName={clientName}
         clientId={clientId}
+        caseId={caseId}
         selectedTab={selectedTab}
         setSelectedTab={setSelectedTab}
         isGenerating={isLoading}
@@ -104,10 +111,14 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
     }
   };
 
+  const title = caseId && currentCase 
+    ? `${clientName} - ${currentCase.case_title} Analysis`
+    : `${clientName} - Case Analysis`;
+
   return (
     <div className="container mx-auto py-8">
       <CaseAnalysisHeader
-        title={`${clientName} - Case Analysis`}
+        title={title}
         clientId={clientId}
         selectedTab={selectedTab}
         setSelectedTab={setSelectedTab}
