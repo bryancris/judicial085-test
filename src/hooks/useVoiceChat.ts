@@ -1,13 +1,12 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { AudioRecorder, AudioQueue, encodeAudioForAPI } from '@/utils/voiceChat';
-
-interface UseVoiceChatProps {
-  clientId: string;
-  onTranscriptUpdate: (transcript: string, isUser: boolean) => void;
-  onConnectionChange: (connected: boolean) => void;
-}
+import { encodeAudioForAPI } from '@/utils/voiceChat';
+import { WebSocketManager } from '@/utils/voiceChat/webSocketManager';
+import { AudioRecordingManager } from '@/utils/voiceChat/audioRecordingManager';
+import { AudioPlaybackManager } from '@/utils/voiceChat/audioPlaybackManager';
+import { MessageHandler } from '@/utils/voiceChat/messageHandler';
+import { UseVoiceChatProps } from '@/types/voiceChat';
 
 export const useVoiceChat = ({
   clientId,
@@ -20,38 +19,54 @@ export const useVoiceChat = ({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isAISpeaking, setIsAISpeaking] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(true);
-  const [currentTranscript, setCurrentTranscript] = useState('');
   
-  const wsRef = useRef<WebSocket | null>(null);
-  const recorderRef = useRef<AudioRecorder | null>(null);
-  const audioQueueRef = useRef<AudioQueue | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
+  const webSocketManagerRef = useRef<WebSocketManager | null>(null);
+  const audioRecordingManagerRef = useRef<AudioRecordingManager | null>(null);
+  const audioPlaybackManagerRef = useRef<AudioPlaybackManager | null>(null);
+  const messageHandlerRef = useRef<MessageHandler | null>(null);
 
-  // Initialize audio context and queue
+  // Initialize audio playback manager
   useEffect(() => {
-    audioContextRef.current = new AudioContext({ sampleRate: 24000 });
-    audioQueueRef.current = new AudioQueue(audioContextRef.current);
+    audioPlaybackManagerRef.current = new AudioPlaybackManager();
+    audioPlaybackManagerRef.current.initialize();
     
     return () => {
-      audioContextRef.current?.close();
+      audioPlaybackManagerRef.current?.cleanup();
     };
   }, []);
 
+  // Initialize message handler
+  useEffect(() => {
+    messageHandlerRef.current = new MessageHandler(
+      onTranscriptUpdate,
+      setIsSpeaking,
+      setIsAISpeaking,
+      audioPlaybackManagerRef.current,
+      audioEnabled,
+      toast
+    );
+  }, [onTranscriptUpdate, audioEnabled, toast]);
+
+  // Update message handler when audioEnabled changes
+  useEffect(() => {
+    messageHandlerRef.current?.updateAudioEnabled(audioEnabled);
+  }, [audioEnabled]);
+
   const startRecording = async () => {
     try {
-      recorderRef.current = new AudioRecorder((audioData) => {
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
+      audioRecordingManagerRef.current = new AudioRecordingManager();
+      
+      await audioRecordingManagerRef.current.startRecording((audioData) => {
+        if (webSocketManagerRef.current) {
           const encodedAudio = encodeAudioForAPI(audioData);
-          wsRef.current.send(JSON.stringify({
+          webSocketManagerRef.current.send({
             type: 'input_audio_buffer.append',
             audio: encodedAudio
-          }));
+          });
         }
       });
 
-      await recorderRef.current.start();
       setIsRecording(true);
-      console.log('Recording started');
     } catch (error) {
       console.error('Error starting recording:', error);
       toast({
@@ -63,111 +78,32 @@ export const useVoiceChat = ({
   };
 
   const stopRecording = () => {
-    if (recorderRef.current) {
-      recorderRef.current.stop();
-      recorderRef.current = null;
+    if (audioRecordingManagerRef.current) {
+      audioRecordingManagerRef.current.stopRecording();
+      audioRecordingManagerRef.current = null;
     }
     setIsRecording(false);
-    console.log('Recording stopped');
   };
 
   const connectToVoiceChat = async () => {
     try {
-      console.log(`Connecting to voice chat for client: ${clientId}`);
+      webSocketManagerRef.current = new WebSocketManager(clientId, toast);
+      const ws = await webSocketManagerRef.current.connect();
       
-      // Use the correct WebSocket URL format for Supabase Edge Functions
-      const wsUrl = `wss://ghpljdgecjmhkwkfctgy.functions.supabase.co/realtime-voice-chat?clientId=${clientId}`;
-      console.log('Connecting to WebSocket URL:', wsUrl);
-      
-      wsRef.current = new WebSocket(wsUrl);
-      
-      wsRef.current.onopen = () => {
-        console.log('Connected to voice chat');
-        setIsConnected(true);
-        onConnectionChange(true);
-        toast({
-          title: "Voice Chat Connected",
-          description: "You can now start speaking with the AI assistant",
-        });
-      };
-
-      wsRef.current.onmessage = async (event) => {
+      ws.onmessage = async (event) => {
         const data = JSON.parse(event.data);
-        console.log('Received message type:', data.type);
+        if (messageHandlerRef.current) {
+          await messageHandlerRef.current.handleMessage(data);
+        }
 
-        switch (data.type) {
-          case 'session.created':
-            console.log('Session created');
-            break;
-            
-          case 'session.updated':
-            console.log('Session updated, starting recording');
-            await startRecording();
-            break;
-
-          case 'input_audio_buffer.speech_started':
-            setIsSpeaking(true);
-            console.log('User started speaking');
-            break;
-
-          case 'input_audio_buffer.speech_stopped':
-            setIsSpeaking(false);
-            console.log('User stopped speaking');
-            break;
-
-          case 'response.audio.delta':
-            if (audioEnabled && audioQueueRef.current) {
-              const binaryString = atob(data.delta);
-              const bytes = new Uint8Array(binaryString.length);
-              for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-              }
-              await audioQueueRef.current.addToQueue(bytes);
-              setIsAISpeaking(true);
-            }
-            break;
-
-          case 'response.audio.done':
-            setIsAISpeaking(false);
-            console.log('AI finished speaking');
-            break;
-
-          case 'response.audio_transcript.delta':
-            setCurrentTranscript(prev => prev + data.delta);
-            break;
-
-          case 'response.audio_transcript.done':
-            if (currentTranscript) {
-              onTranscriptUpdate(currentTranscript, false);
-              setCurrentTranscript('');
-            }
-            break;
-
-          case 'conversation.item.input_audio_transcription.completed':
-            onTranscriptUpdate(data.transcript, true);
-            break;
-
-          case 'error':
-            console.error('Voice chat error:', data.error);
-            toast({
-              title: "Voice Chat Error",
-              description: data.error,
-              variant: "destructive",
-            });
-            break;
+        // Handle session.updated to start recording
+        if (data.type === 'session.updated') {
+          console.log('Session updated, starting recording');
+          await startRecording();
         }
       };
 
-      wsRef.current.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        toast({
-          title: "Connection Error",
-          description: "Failed to connect to voice chat. Please check your internet connection and try again.",
-          variant: "destructive",
-        });
-      };
-
-      wsRef.current.onclose = (event) => {
+      ws.onclose = (event) => {
         console.log('Voice chat disconnected. Code:', event.code, 'Reason:', event.reason);
         setIsConnected(false);
         setIsRecording(false);
@@ -185,6 +121,9 @@ export const useVoiceChat = ({
         }
       };
 
+      setIsConnected(true);
+      onConnectionChange(true);
+
     } catch (error) {
       console.error('Error connecting to voice chat:', error);
       toast({
@@ -196,9 +135,7 @@ export const useVoiceChat = ({
   };
 
   const disconnectFromVoiceChat = () => {
-    if (wsRef.current) {
-      wsRef.current.close();
-    }
+    webSocketManagerRef.current?.disconnect();
     stopRecording();
   };
 
@@ -216,7 +153,7 @@ export const useVoiceChat = ({
     isSpeaking,
     isAISpeaking,
     audioEnabled,
-    currentTranscript,
+    currentTranscript: messageHandlerRef.current?.getCurrentTranscript() || '',
     connectToVoiceChat,
     disconnectFromVoiceChat,
     toggleAudio
