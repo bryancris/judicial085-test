@@ -1,10 +1,11 @@
 
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, Mic } from "lucide-react";
+import { MessageSquare, Mic, FileText } from "lucide-react";
 import CaseDiscussionChatView from "./CaseDiscussionChatView";
 import CaseDiscussionInput from "./CaseDiscussionInput";
 import VoiceDiscussionInterface from "./VoiceDiscussionInterface";
+import VoiceTranscriptViewer from "./VoiceTranscriptViewer";
 import { useCaseDiscussion } from "@/hooks/useCaseDiscussion";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -13,7 +14,7 @@ interface CaseDiscussionContainerProps {
 }
 
 const CaseDiscussionContainer: React.FC<CaseDiscussionContainerProps> = ({ clientId }) => {
-  const [activeMode, setActiveMode] = useState<"text" | "voice">("text");
+  const [activeMode, setActiveMode] = useState<"text" | "voice" | "transcripts">("text");
   const [isVoiceConnected, setIsVoiceConnected] = useState(false);
   
   const {
@@ -86,8 +87,8 @@ const CaseDiscussionContainer: React.FC<CaseDiscussionContainerProps> = ({ clien
           </div>
         </div>
 
-        <Tabs value={activeMode} onValueChange={(value) => setActiveMode(value as "text" | "voice")} className="flex-grow flex flex-col">
-          <TabsList className="grid w-full grid-cols-2 m-2">
+        <Tabs value={activeMode} onValueChange={(value) => setActiveMode(value as "text" | "voice" | "transcripts")} className="flex-grow flex flex-col">
+          <TabsList className="grid w-full grid-cols-3 m-2">
             <TabsTrigger value="text" className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
               Text Chat
@@ -95,6 +96,10 @@ const CaseDiscussionContainer: React.FC<CaseDiscussionContainerProps> = ({ clien
             <TabsTrigger value="voice" className="flex items-center gap-2">
               <Mic className="h-4 w-4" />
               Voice Chat
+            </TabsTrigger>
+            <TabsTrigger value="transcripts" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Transcripts
             </TabsTrigger>
           </TabsList>
           
@@ -127,6 +132,10 @@ const CaseDiscussionContainer: React.FC<CaseDiscussionContainerProps> = ({ clien
                 />
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="transcripts" className="flex-grow flex flex-col m-2 mt-0">
+            <VoiceTranscriptViewer clientId={clientId} />
           </TabsContent>
         </Tabs>
       </div>

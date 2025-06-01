@@ -4,7 +4,6 @@ import { TabsContent } from "@/components/ui/tabs";
 import ClientIntakeChat from "@/components/clients/chat/ClientIntakeChat";
 import CaseAnalysisContainer from "@/components/case-analysis/CaseAnalysisContainer";
 import CaseDiscussionContainer from "@/components/case-discussion/CaseDiscussionContainer";
-import VoiceTranscriptViewer from "@/components/case-discussion/VoiceTranscriptViewer";
 import DiscoveryTabContent from "./DiscoveryTabContent";
 import ContractsTabContent from "./ContractsTabContent";
 import DocumentsTabContent from "./DocumentsTabContent";
@@ -61,10 +60,6 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
 
       <TabsContent value="faq" className="mt-6">
         <FaqTabContent clientId={client.id} />
-      </TabsContent>
-
-      <TabsContent value="voice-transcripts" className="mt-6">
-        <VoiceTranscriptViewer clientId={client.id} />
       </TabsContent>
     </>
   );

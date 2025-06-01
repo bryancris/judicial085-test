@@ -1,7 +1,7 @@
 
 import React from "react";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, BarChart3, Users, FileText, Mic, Upload, Plus, HelpCircle, Scale } from "lucide-react";
+import { MessageSquare, BarChart3, Users, Upload, Plus, HelpCircle, Scale, FileText } from "lucide-react";
 import { tabColors, tabHoverColors } from "./tabStyles";
 
 const ClientDetailTabsList: React.FC = () => {
@@ -44,7 +44,7 @@ const ClientDetailTabsList: React.FC = () => {
       </TabsList>
 
       {/* Bottom row */}
-      <TabsList className="grid w-full grid-cols-5 h-12">
+      <TabsList className="grid w-full grid-cols-4 h-12">
         <TabsTrigger 
           value="discovery" 
           className={`flex items-center gap-2 ${tabColors["discovery"]} ${tabHoverColors["discovery"]} data-[state=active]:${tabColors["discovery"]} data-[state=active]:opacity-100`}
@@ -76,14 +76,6 @@ const ClientDetailTabsList: React.FC = () => {
           <HelpCircle className="h-4 w-4" />
           <span className="hidden sm:inline">FAQ</span>
           <span className="sm:hidden">FAQ</span>
-        </TabsTrigger>
-        <TabsTrigger 
-          value="voice-transcripts" 
-          className={`flex items-center gap-2 ${tabColors["client-intake"]} ${tabHoverColors["client-intake"]} data-[state=active]:${tabColors["client-intake"]} data-[state=active]:opacity-100`}
-        >
-          <Mic className="h-4 w-4" />
-          <span className="hidden sm:inline">Voice Transcripts</span>
-          <span className="sm:hidden">Voice</span>
         </TabsTrigger>
       </TabsList>
     </div>
