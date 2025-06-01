@@ -133,67 +133,29 @@ Current client ID: ${clientId}. You should reference the client's case details i
         const ephemeralToken = sessionData.client_secret.value;
         console.log("Ephemeral token received, connecting to WebSocket...");
 
-        // Connect to OpenAI WebSocket using the ephemeral token
-        const wsUrl = `wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01`;
-        console.log("Connecting to OpenAI WebSocket:", wsUrl);
+        // Connect to OpenAI WebSocket using the ephemeral token as authorization
+        // Use the ephemeral token as a query parameter since Deno WebSocket doesn't support headers
+        const wsUrl = `wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01&authorization=Bearer%20${encodeURIComponent(ephemeralToken)}`;
+        console.log("Connecting to OpenAI WebSocket with ephemeral token...");
 
-        // Create WebSocket connection
+        // Create WebSocket connection with ephemeral token
         openAISocket = new WebSocket(wsUrl);
 
         openAISocket.onopen = () => {
-          console.log("Connected to OpenAI Realtime API");
+          console.log("Connected to OpenAI Realtime API successfully");
           sessionActive = true;
           
-          // Send authentication with the ephemeral token
-          const authMessage = {
-            type: 'session.update',
-            session: {
-              modalities: ["text", "audio"],
-              instructions: `You are an expert legal AI assistant helping attorneys with case discussions. You have access to client information and case documents. 
-
-Key guidelines:
-- Provide thoughtful legal analysis and strategic advice
-- Reference relevant laws, precedents, and legal principles
-- Ask clarifying questions to better understand the case
-- Maintain attorney-client privilege and confidentiality
-- Be direct and professional in your responses
-- Always acknowledge the specific case context when responding
-
-Current client ID: ${clientId}. You should reference the client's case details in your responses.`,
-              voice: "alloy",
-              input_audio_format: "pcm16",
-              output_audio_format: "pcm16",
-              input_audio_transcription: {
-                model: "whisper-1"
-              },
-              turn_detection: {
-                type: "server_vad",
-                threshold: 0.5,
-                prefix_padding_ms: 300,
-                silence_duration_ms: 1000
-              },
-              tools: [
-                {
-                  type: "function",
-                  name: "search_case_documents",
-                  description: "Search through the client's case documents for relevant information",
-                  parameters: {
-                    type: "object",
-                    properties: {
-                      query: { type: "string", description: "Search query for case documents" }
-                    },
-                    required: ["query"]
-                  }
-                }
-              ],
-              tool_choice: "auto",
-              temperature: 0.7,
-              max_response_output_tokens: "inf"
-            }
-          };
-
-          console.log("Sending session update to OpenAI...");
-          openAISocket?.send(JSON.stringify(authMessage));
+          // The session should already be configured from the ephemeral token creation
+          // No need to send additional session.update
+          console.log("OpenAI session active and ready");
+          
+          // Notify client that the session is ready
+          if (socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+              type: 'session.ready',
+              message: 'Voice chat session is active'
+            }));
+          }
         };
 
         openAISocket.onmessage = async (event) => {
@@ -205,13 +167,14 @@ Current client ID: ${clientId}. You should reference the client's case details i
             if (data.type === 'error') {
               console.error("OpenAI error:", data.error);
               if (data.error?.type === 'invalid_request_error') {
-                console.error("Authentication failed - invalid ephemeral token or request");
+                console.error("Authentication failed - check ephemeral token");
+                sessionActive = false;
               }
             }
 
             // Handle session updates
-            if (data.type === 'session.updated') {
-              console.log("Session configuration updated successfully");
+            if (data.type === 'session.created') {
+              console.log("OpenAI session created and configured");
             }
 
             // Forward all messages to client
