@@ -69,26 +69,42 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
 
       const analysis = analysisResults[0];
       console.log("Raw analysis content:", analysis.content);
+      console.log("Raw law references:", analysis.law_references);
 
       // Parse the analysis content
       const parsedData = parseAnalysisContent(analysis.content);
       
-      // Helper function to safely convert Json to array
+      // Helper function to safely convert Json to array with better logging
       const safeLawReferences = (lawRefs: Json | null): any[] => {
-        if (!lawRefs) return [];
-        if (Array.isArray(lawRefs)) return lawRefs;
-        if (typeof lawRefs === 'object') return [lawRefs];
+        console.log("Processing law references:", lawRefs);
+        if (!lawRefs) {
+          console.log("No law references found");
+          return [];
+        }
+        if (Array.isArray(lawRefs)) {
+          console.log(`Found ${lawRefs.length} law references`);
+          return lawRefs;
+        }
+        if (typeof lawRefs === 'object') {
+          console.log("Converting single law reference to array");
+          return [lawRefs];
+        }
+        console.log("Unknown law references format, returning empty array");
         return [];
       };
       
       // Combine with metadata
+      const lawReferences = safeLawReferences(analysis.law_references);
+      console.log("Processed law references:", lawReferences);
+      
       const completeAnalysisData: AnalysisData = {
         ...parsedData,
         timestamp: analysis.timestamp || analysis.created_at,
-        lawReferences: safeLawReferences(analysis.law_references),
+        lawReferences: lawReferences,
         caseType: analysis.case_type || extractCaseType(analysis.content)
       };
 
+      console.log("Final analysis data with law references:", completeAnalysisData.lawReferences);
       setAnalysisData(completeAnalysisData);
     } catch (err: any) {
       console.error("Error fetching analysis data:", err);

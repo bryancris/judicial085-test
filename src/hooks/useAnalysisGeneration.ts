@@ -67,8 +67,28 @@ export const useAnalysisGeneration = (clientId?: string, caseId?: string, onSucc
         timestamp: msg.timestamp
       })) : [];
       
+      // CRITICAL: Delete existing analyses FIRST before generating new one
+      console.log("Deleting existing analyses for proper cleanup...");
+      const deleteQuery = supabase
+        .from("legal_analyses")
+        .delete()
+        .eq("client_id", clientId);
+      
+      // If we have a case ID, also filter by case_id for case-specific analysis
+      if (caseId) {
+        deleteQuery.eq("case_id", caseId);
+      }
+      
+      const { error: deleteError } = await deleteQuery;
+        
+      if (deleteError) {
+        console.error("Error deleting previous analyses:", deleteError);
+        throw new Error("Failed to clean up existing analyses");
+      }
+      
+      console.log("Successfully deleted existing analyses, now generating new analysis...");
+
       // Call the edge function to generate a new analysis
-      // Pass additional parameters to indicate document-based analysis
       const { analysis, lawReferences, error: analysisError } = await generateLegalAnalysis(
         clientId, 
         formattedMessages,
@@ -78,33 +98,15 @@ export const useAnalysisGeneration = (clientId?: string, caseId?: string, onSucc
       if (analysisError) throw new Error(analysisError);
       
       if (analysis) {
-        // First delete any existing analyses for this client
-        const deleteQuery = supabase
-          .from("legal_analyses")
-          .delete()
-          .eq("client_id", clientId);
-        
-        // If we have a case ID, also filter by case_id for case-specific analysis
-        if (caseId) {
-          deleteQuery.eq("case_id", caseId);
-        }
-        
-        const { error: deleteError } = await deleteQuery;
-          
-        if (deleteError) {
-          console.error("Error deleting previous analyses:", deleteError);
-          // Continue with the insert even if delete fails
-        }
-
-        // Save the new analysis to the database
+        // Save the new analysis to the database with proper law references
         const timestamp = new Date().toISOString();
         
-        // Create the analysis data with proper typing
+        // Create the analysis data with proper typing and law references
         const analysisData: TablesInsert<"legal_analyses"> = {
           client_id: clientId,
           content: analysis,
           timestamp,
-          law_references: lawReferences || [],
+          law_references: lawReferences || [], // Ensure law references are properly saved
           user_id: (await supabase.auth.getUser()).data.user?.id || "anonymous"
         };
         
@@ -113,17 +115,22 @@ export const useAnalysisGeneration = (clientId?: string, caseId?: string, onSucc
           analysisData.case_id = caseId;
         }
         
-        const { error: saveError } = await supabase
+        console.log("Saving analysis with law references:", lawReferences);
+        
+        const { error: saveError, data: savedData } = await supabase
           .from("legal_analyses")
-          .insert(analysisData);
+          .insert(analysisData)
+          .select();
           
         if (saveError) throw saveError;
+        
+        console.log("Successfully saved analysis:", savedData);
         
         const analysisType = hasConversation ? "conversation" : "documents";
         
         toast({
           title: "Analysis Generated",
-          description: `A new case analysis has been generated from ${analysisType} and replaced any previous analysis.`,
+          description: `A new case analysis has been generated from ${analysisType} with ${lawReferences?.length || 0} law references.`,
         });
         
         // Call the success callback (which should refresh the data)

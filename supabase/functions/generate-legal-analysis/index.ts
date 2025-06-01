@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { searchRelevantLaw } from "./services/lawSearchService.ts";
@@ -90,6 +91,7 @@ serve(async (req) => {
       try {
         relevantLawReferences = await searchRelevantLaw(searchQuery, detectedCaseType);
         console.log(`Found ${relevantLawReferences.length} relevant law references`);
+        console.log("Law references found:", relevantLawReferences.map(ref => ref.title));
       } catch (error) {
         console.error("Error searching for relevant law:", error);
       }
@@ -185,10 +187,20 @@ serve(async (req) => {
       console.log(`Legal analysis generated successfully from ${analysisSource}`);
     }
 
+    // CRITICAL: Ensure law references are properly formatted for database storage
+    const formattedLawReferences = relevantLawReferences.map(ref => ({
+      id: ref.id || 'unknown',
+      title: ref.title || 'Unknown Law',
+      url: ref.url || null,
+      content: ref.content ? ref.content.substring(0, 500) : null
+    }));
+
+    console.log(`Returning ${formattedLawReferences.length} formatted law references:`, formattedLawReferences.map(ref => ref.title));
+
     return new Response(
       JSON.stringify({ 
         analysis, 
-        lawReferences: relevantLawReferences,
+        lawReferences: formattedLawReferences, // Ensure this is properly formatted
         documentsUsed: clientDocuments.map(doc => ({
           id: doc.id,
           title: doc.title,
