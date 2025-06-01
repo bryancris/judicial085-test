@@ -25,6 +25,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
 }) => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [localIsDeleting, setLocalIsDeleting] = useState(false);
 
   // Handle card click (prevents opening preview when clicking on buttons)
   const handleCardClick = (e: React.MouseEvent) => {
@@ -36,22 +37,32 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
   };
 
   const handleDeleteClick = () => {
+    console.log("DocumentCard handleDeleteClick called for document:", document.id);
     setDeleteDialogOpen(true);
   };
+
+  // Debug logging
+  console.log("DocumentCard render:", {
+    documentId: document.id,
+    hasOnDelete: !!onDelete,
+    deleteDialogOpen,
+    isDeleting,
+    localIsDeleting
+  });
 
   return (
     <>
       <Card 
         className={cn(
           "cursor-pointer h-full flex flex-col hover:shadow-md transition-shadow relative group",
-          isDeleting && "opacity-50"
+          (isDeleting || localIsDeleting) && "opacity-50"
         )}
         onClick={handleCardClick}
       >
         <DocumentCardActions
           document={document}
           onDelete={onDelete}
-          isDeleting={isDeleting}
+          isDeleting={isDeleting || localIsDeleting}
           onDeleteClick={handleDeleteClick}
         />
         
@@ -73,7 +84,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
         isOpen={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onDelete={onDelete}
-        isDeleting={isDeleting}
+        isDeleting={isDeleting || localIsDeleting}
       />
     </>
   );

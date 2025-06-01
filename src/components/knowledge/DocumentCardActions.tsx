@@ -74,6 +74,22 @@ const DocumentCardActions: React.FC<DocumentCardActionsProps> = ({
     }
   };
 
+  // Handle delete button click with debugging
+  const handleDeleteButtonClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    console.log("DocumentCardActions delete button clicked for document:", document.id);
+    console.log("Has onDelete:", !!onDelete);
+    console.log("onDeleteClick function:", onDeleteClick);
+    onDeleteClick();
+  };
+
+  // Debug logging
+  console.log("DocumentCardActions render:", {
+    documentId: document.id,
+    hasOnDelete: !!onDelete,
+    isDeleting
+  });
+
   return (
     <>
       {/* Download button for PDFs */}
@@ -97,7 +113,7 @@ const DocumentCardActions: React.FC<DocumentCardActionsProps> = ({
         </div>
       )}
 
-      {/* Delete button */}
+      {/* Delete button - Always show if onDelete is provided */}
       {onDelete && (
         <Button
           variant="ghost"
@@ -106,10 +122,7 @@ const DocumentCardActions: React.FC<DocumentCardActionsProps> = ({
             "absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10",
             isDeleting && "pointer-events-none"
           )}
-          onClick={(e) => {
-            e.stopPropagation();
-            onDeleteClick();
-          }}
+          onClick={handleDeleteButtonClick}
           title="Delete document"
           disabled={isDeleting}
         >

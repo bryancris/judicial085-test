@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +32,17 @@ const DocumentDeleteDialog: React.FC<DocumentDeleteDialogProps> = ({
   const [localIsDeleting, setLocalIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Debug logging
+  useEffect(() => {
+    console.log("DocumentDeleteDialog state changed:", {
+      documentId: document.id,
+      isOpen,
+      hasOnDelete: !!onDelete,
+      isDeleting,
+      localIsDeleting
+    });
+  }, [isOpen, document.id, onDelete, isDeleting, localIsDeleting]);
 
   // Handle document delete with improved error handling
   const handleDelete = async () => {
@@ -78,16 +89,23 @@ const DocumentDeleteDialog: React.FC<DocumentDeleteDialogProps> = ({
   // Combined deleting state (from props or local)
   const isCurrentlyDeleting = isDeleting || localIsDeleting;
 
+  // Force dialog to be visible for debugging
+  console.log("DocumentDeleteDialog rendering with isOpen:", isOpen);
+
   return (
-    <AlertDialog open={isOpen} onOpenChange={(open) => {
-      // Only allow closing if we're not in the middle of deleting
-      if (!isCurrentlyDeleting) {
-        onOpenChange(open);
-        if (!open) {
-          setDeleteError(null);
+    <AlertDialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        console.log("DocumentDeleteDialog onOpenChange called with:", open);
+        // Only allow closing if we're not in the middle of deleting
+        if (!isCurrentlyDeleting) {
+          onOpenChange(open);
+          if (!open) {
+            setDeleteError(null);
+          }
         }
-      }
-    }}>
+      }}
+    >
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Document</AlertDialogTitle>
