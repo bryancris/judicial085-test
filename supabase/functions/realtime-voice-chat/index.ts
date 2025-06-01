@@ -8,6 +8,8 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log("Realtime voice chat function called");
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -17,6 +19,7 @@ serve(async (req) => {
   const upgradeHeader = headers.get("upgrade") || "";
 
   if (upgradeHeader.toLowerCase() !== "websocket") {
+    console.log("Expected WebSocket connection, got:", upgradeHeader);
     return new Response("Expected WebSocket connection", { status: 400 });
   }
 
@@ -24,6 +27,7 @@ serve(async (req) => {
   const clientId = url.searchParams.get('clientId');
   
   if (!clientId) {
+    console.log("Client ID required");
     return new Response("Client ID required", { status: 400 });
   }
 
@@ -41,6 +45,8 @@ serve(async (req) => {
       if (!OPENAI_API_KEY) {
         throw new Error('OpenAI API key not configured');
       }
+
+      console.log("Connecting to OpenAI Realtime API...");
 
       // Connect to OpenAI Realtime API
       openAISocket = new WebSocket(
