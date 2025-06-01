@@ -3,6 +3,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { generateLegalAnalysis } from "@/utils/api/analysisApiService";
+import { TablesInsert } from "@/integrations/supabase/types";
 
 export const useAnalysisGeneration = (clientId?: string, caseId?: string, onSuccess?: () => void) => {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -97,7 +98,9 @@ export const useAnalysisGeneration = (clientId?: string, caseId?: string, onSucc
 
         // Save the new analysis to the database
         const timestamp = new Date().toISOString();
-        const analysisData = {
+        
+        // Create the analysis data with proper typing
+        const analysisData: TablesInsert<"legal_analyses"> = {
           client_id: clientId,
           content: analysis,
           timestamp,

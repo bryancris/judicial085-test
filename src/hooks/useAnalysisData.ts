@@ -1,6 +1,8 @@
+
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Json } from "@/integrations/supabase/types";
 
 export interface AnalysisData {
   outcome: {
@@ -71,11 +73,19 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
       // Parse the analysis content
       const parsedData = parseAnalysisContent(analysis.content);
       
+      // Helper function to safely convert Json to array
+      const safeLawReferences = (lawRefs: Json | null): any[] => {
+        if (!lawRefs) return [];
+        if (Array.isArray(lawRefs)) return lawRefs;
+        if (typeof lawRefs === 'object') return [lawRefs];
+        return [];
+      };
+      
       // Combine with metadata
       const completeAnalysisData: AnalysisData = {
         ...parsedData,
         timestamp: analysis.timestamp || analysis.created_at,
-        lawReferences: analysis.law_references || [],
+        lawReferences: safeLawReferences(analysis.law_references),
         caseType: analysis.case_type || extractCaseType(analysis.content)
       };
 
