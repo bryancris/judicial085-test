@@ -36,7 +36,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
   // Use caseId from props or from context
   const caseId = propCaseId || currentCase?.id;
 
-  // Use the same analysis system as Client Intake
+  // Use the same analysis system as Client Intake with document-only capability
   const { generateAnalysis } = useClientChatAnalysis(clientId, setLegalAnalysis);
     
   // Add scholarly references hook
@@ -71,7 +71,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
     }
   };
 
-  // Generate analysis using the same system as Client Intake
+  // Generate analysis using the same system as Client Intake but allow document-only analysis
   const generateRealTimeAnalysis = async () => {
     setIsAnalysisLoading(true);
     setAnalysisError(null);
@@ -118,8 +118,8 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
         timestamp: msg.timestamp
       })) : [];
       
-      // Use the same analysis generation as Client Intake
-      await generateAnalysis(formattedMessages);
+      // Use the same analysis generation as Client Intake but allow document-only analysis
+      await generateAnalysis(formattedMessages, true); // true = allow document-only analysis
       
       toast({
         title: "Analysis Generated",
