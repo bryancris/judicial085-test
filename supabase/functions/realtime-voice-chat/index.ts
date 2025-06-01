@@ -33,10 +33,7 @@ serve(async (req) => {
 
     // Check for WebSocket upgrade request
     const upgradeHeader = req.headers.get("upgrade");
-    const connectionHeader = req.headers.get("connection");
-    
     console.log("Upgrade header:", upgradeHeader);
-    console.log("Connection header:", connectionHeader);
 
     // Validate WebSocket upgrade request
     if (!upgradeHeader || upgradeHeader.toLowerCase() !== "websocket") {
@@ -66,14 +63,10 @@ serve(async (req) => {
           throw new Error('OpenAI API key not configured');
         }
 
-        console.log("Connecting to OpenAI Realtime API...");
+        console.log("Creating OpenAI session...");
 
-        // Use the correct OpenAI Realtime API WebSocket URL with authentication in URL
-        const openAIUrl = `wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01`;
-        console.log("OpenAI WebSocket URL:", openAIUrl);
-
-        // Create WebSocket connection to OpenAI using fetch for proper header support
-        const response = await fetch("https://api.openai.com/v1/realtime/sessions", {
+        // First, create an ephemeral session token
+        const sessionResponse = await fetch("https://api.openai.com/v1/realtime/sessions", {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${OPENAI_API_KEY}`,
@@ -85,36 +78,35 @@ serve(async (req) => {
           }),
         });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Failed to create OpenAI session:", response.status, errorText);
-          throw new Error(`OpenAI session creation failed: ${response.status} ${errorText}`);
+        if (!sessionResponse.ok) {
+          const errorText = await sessionResponse.text();
+          console.error("Failed to create OpenAI session:", sessionResponse.status, errorText);
+          throw new Error(`OpenAI session creation failed: ${sessionResponse.status} ${errorText}`);
         }
 
-        const sessionData = await response.json();
-        console.log("OpenAI session created:", sessionData);
+        const sessionData = await sessionResponse.json();
+        console.log("OpenAI session created successfully");
 
         if (!sessionData.client_secret?.value) {
           throw new Error("No client secret received from OpenAI");
         }
 
-        // Now connect using the ephemeral token
-        const wsUrl = `wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01`;
-        console.log("Connecting to OpenAI WebSocket with ephemeral token...");
+        const ephemeralToken = sessionData.client_secret.value;
+        console.log("Ephemeral token received, connecting to WebSocket...");
 
-        openAISocket = new WebSocket(wsUrl, [], {
-          headers: {
-            "Authorization": `Bearer ${sessionData.client_secret.value}`,
-            "OpenAI-Beta": "realtime=v1"
-          }
-        });
+        // Now connect using the ephemeral token - using correct Deno WebSocket syntax
+        const wsUrl = `wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01`;
+        console.log("Connecting to OpenAI WebSocket:", wsUrl);
+
+        // Create WebSocket with proper Deno syntax (no headers parameter)
+        openAISocket = new WebSocket(wsUrl);
 
         openAISocket.onopen = () => {
           console.log("Connected to OpenAI Realtime API");
           sessionActive = true;
           
-          // Send session update to configure the session
-          const sessionUpdate = {
+          // Send authentication message after connection opens
+          const authMessage = {
             type: 'session.update',
             session: {
               instructions: `You are an expert legal AI assistant helping attorneys with case discussions. You have access to client information and case documents. 
@@ -161,21 +153,25 @@ Current client ID: ${clientId}. You should reference the client's case details i
           };
 
           console.log("Sending session update to OpenAI...");
-          openAISocket?.send(JSON.stringify(sessionUpdate));
+          openAISocket?.send(JSON.stringify(authMessage));
         };
 
         openAISocket.onmessage = async (event) => {
-          const data = JSON.parse(event.data);
-          console.log("OpenAI message type:", data.type);
+          try {
+            const data = JSON.parse(event.data);
+            console.log("OpenAI message type:", data.type);
 
-          // Handle session updates
-          if (data.type === 'session.updated') {
-            console.log("Session configuration updated successfully");
-          }
+            // Handle session updates
+            if (data.type === 'session.updated') {
+              console.log("Session configuration updated successfully");
+            }
 
-          // Forward all messages to client
-          if (socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify(data));
+            // Forward all messages to client
+            if (socket.readyState === WebSocket.OPEN) {
+              socket.send(JSON.stringify(data));
+            }
+          } catch (error) {
+            console.error("Error processing OpenAI message:", error);
           }
         };
 
