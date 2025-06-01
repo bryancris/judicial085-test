@@ -33,6 +33,7 @@ const GoogleDocsEditor: React.FC<GoogleDocsEditorProps> = ({ clientId, onSave })
   const [documentContent, setDocumentContent] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [showPlaceholder, setShowPlaceholder] = useState(true);
   const editorRef = useRef<HTMLDivElement>(null);
 
   // Auto-save functionality
@@ -69,7 +70,20 @@ const GoogleDocsEditor: React.FC<GoogleDocsEditorProps> = ({ clientId, onSave })
 
   const handleContentChange = () => {
     if (editorRef.current) {
-      setDocumentContent(editorRef.current.innerHTML);
+      const content = editorRef.current.innerHTML;
+      setDocumentContent(content);
+      setShowPlaceholder(content.trim() === '' || content === '<br>');
+    }
+  };
+
+  const handleFocus = () => {
+    setShowPlaceholder(false);
+  };
+
+  const handleBlur = () => {
+    if (editorRef.current) {
+      const content = editorRef.current.innerHTML;
+      setShowPlaceholder(content.trim() === '' || content === '<br>');
     }
   };
 
@@ -218,20 +232,28 @@ const GoogleDocsEditor: React.FC<GoogleDocsEditorProps> = ({ clientId, onSave })
 
             {/* Document Paper */}
             <Card className="min-h-[800px] bg-white shadow-lg border border-gray-200 p-16">
-              <div
-                ref={editorRef}
-                contentEditable
-                suppressContentEditableWarning
-                onInput={handleContentChange}
-                className="min-h-[600px] outline-none text-base leading-relaxed"
-                style={{
-                  fontFamily: 'Arial, sans-serif',
-                  fontSize: '11pt',
-                  lineHeight: '1.6',
-                }}
-                placeholder="Start typing your document..."
-              >
-                {/* Initial placeholder content */}
+              <div className="relative">
+                {showPlaceholder && (
+                  <div className="absolute top-0 left-0 text-gray-400 pointer-events-none">
+                    Start typing your document...
+                  </div>
+                )}
+                <div
+                  ref={editorRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  onInput={handleContentChange}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                  className="min-h-[600px] outline-none text-base leading-relaxed"
+                  style={{
+                    fontFamily: 'Arial, sans-serif',
+                    fontSize: '11pt',
+                    lineHeight: '1.6',
+                  }}
+                >
+                  {/* Initial placeholder content */}
+                </div>
               </div>
             </Card>
           </div>
