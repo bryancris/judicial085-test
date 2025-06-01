@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { DocumentWithContent } from "@/types/knowledge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, FileText, Trash2, PlusCircle, BookText } from "lucide-react";
+import { Loader2, FileText, Trash2, PlusCircle, BookText, ExternalLink } from "lucide-react";
 import DocumentUploadDialog from "@/components/clients/DocumentUploadDialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -73,6 +73,10 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
     } finally {
       setLoadingContent(false);
     }
+  };
+
+  const handlePdfOpen = (url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleDocumentUpload = async (title: string, content: string, file?: File, metadata?: any) => {
@@ -265,13 +269,26 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
                     </p>
                   </CardContent>
                   <CardFooter className="flex justify-between pt-2">
-                    <Button 
-                      variant="secondary" 
-                      size="sm"
-                      onClick={() => handleDocumentOpen(document)}
-                    >
-                      View
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="secondary" 
+                        size="sm"
+                        onClick={() => handleDocumentOpen(document)}
+                      >
+                        <FileText className="h-4 w-4 mr-1" />
+                        View Data
+                      </Button>
+                      {document.url && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handlePdfOpen(document.url!)}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          View PDF
+                        </Button>
+                      )}
+                    </div>
                     <Button
                       variant="ghost"
                       size="icon"
