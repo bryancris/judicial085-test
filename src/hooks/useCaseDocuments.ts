@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -327,17 +328,49 @@ export const useCaseDocuments = (clientId: string | undefined, caseId: string | 
     }
   }, [clientId, caseId, documents, toast]);
   
-  // Toggle document analysis inclusion with improved state management
+  // Toggle document analysis inclusion with improved debugging and error handling
   const toggleDocumentAnalysis = useCallback(async (documentId: string, includeInAnalysis: boolean) => {
     if (!clientId || !caseId) {
       console.error("Cannot toggle document analysis: No client ID or case ID provided");
       return { success: false, error: "No client ID or case ID provided" };
     }
     
-    console.log(`Toggling case document ${documentId} analysis to: ${includeInAnalysis}`);
+    console.log(`[DEBUG] Toggling case document ${documentId} analysis to: ${includeInAnalysis}`);
+    console.log(`[DEBUG] Current documents state before toggle:`, documents.find(d => d.id === documentId)?.include_in_analysis);
     
     try {
-      // Optimistically update local state first
+      // Update database FIRST before optimistic update
+      const { data, error } = await supabase
+        .from('document_metadata')
+        .update({ include_in_analysis: includeInAnalysis })
+        .eq('id', documentId)
+        .eq('client_id', clientId)
+        .eq('case_id', caseId)
+        .select('include_in_analysis');
+      
+      if (error) {
+        console.error(`[ERROR] Database update failed:`, error);
+        throw new Error(`Error updating document: ${error.message}`);
+      }
+      
+      console.log(`[DEBUG] Database update successful:`, data);
+      
+      // Verify the update by fetching the document again
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('document_metadata')
+        .select('include_in_analysis')
+        .eq('id', documentId)
+        .eq('client_id', clientId)
+        .eq('case_id', caseId)
+        .single();
+      
+      if (verifyError) {
+        console.error(`[ERROR] Verification query failed:`, verifyError);
+      } else {
+        console.log(`[DEBUG] Verification query result:`, verifyData);
+      }
+      
+      // Now update local state to match database
       setDocuments(prev => 
         prev.map(doc => 
           doc.id === documentId 
@@ -345,28 +378,8 @@ export const useCaseDocuments = (clientId: string | undefined, caseId: string | 
             : doc
         )
       );
-
-      // Update database
-      const { error } = await supabase
-        .from('document_metadata')
-        .update({ include_in_analysis: includeInAnalysis })
-        .eq('id', documentId)
-        .eq('client_id', clientId)
-        .eq('case_id', caseId);
       
-      if (error) {
-        // Revert optimistic update on error
-        setDocuments(prev => 
-          prev.map(doc => 
-            doc.id === documentId 
-              ? { ...doc, include_in_analysis: !includeInAnalysis }
-              : doc
-          )
-        );
-        throw new Error(`Error updating document: ${error.message}`);
-      }
-      
-      console.log(`Successfully updated case document ${documentId} include_in_analysis to: ${includeInAnalysis}`);
+      console.log(`[DEBUG] Successfully updated case document ${documentId} include_in_analysis to: ${includeInAnalysis}`);
       
       toast({
         title: includeInAnalysis ? "Document included in analysis" : "Document excluded from analysis",
@@ -378,7 +391,7 @@ export const useCaseDocuments = (clientId: string | undefined, caseId: string | 
       return { success: true };
       
     } catch (error: any) {
-      console.error("Error toggling case document analysis:", error);
+      console.error(`[ERROR] Error toggling case document analysis:`, error);
       
       toast({
         title: "Error updating document",
