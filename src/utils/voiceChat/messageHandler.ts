@@ -27,25 +27,25 @@ export class MessageHandler {
   }
 
   async handleMessage(data: WebSocketMessage): Promise<void> {
-    console.log('Received message type:', data.type);
+    console.log('Received WebRTC message type:', data.type);
 
     switch (data.type) {
       case 'session.created':
-        console.log('Session created');
+        console.log('WebRTC session created');
         break;
         
       case 'session.updated':
-        console.log('Session updated');
+        console.log('WebRTC session updated');
         break;
 
       case 'input_audio_buffer.speech_started':
         this.setIsSpeaking(true);
-        console.log('User started speaking');
+        console.log('User started speaking (WebRTC)');
         break;
 
       case 'input_audio_buffer.speech_stopped':
         this.setIsSpeaking(false);
-        console.log('User stopped speaking');
+        console.log('User stopped speaking (WebRTC)');
         break;
 
       case 'response.audio.delta':
@@ -62,7 +62,7 @@ export class MessageHandler {
 
       case 'response.audio.done':
         this.setIsAISpeaking(false);
-        console.log('AI finished speaking');
+        console.log('AI finished speaking (WebRTC)');
         break;
 
       case 'response.audio_transcript.delta':
@@ -80,13 +80,25 @@ export class MessageHandler {
         this.onTranscriptUpdate(data.transcript, true);
         break;
 
+      case 'response.created':
+        console.log('AI response started (WebRTC)');
+        break;
+
+      case 'response.done':
+        console.log('AI response completed (WebRTC)');
+        break;
+
       case 'error':
-        console.error('Voice chat error:', data.error);
+        console.error('WebRTC voice chat error:', data.error);
         this.toast({
           title: "Voice Chat Error",
-          description: data.error,
+          description: data.error.message || data.error,
           variant: "destructive",
         });
+        break;
+
+      default:
+        console.log('Unhandled WebRTC message type:', data.type);
         break;
     }
   }

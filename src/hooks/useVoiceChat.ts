@@ -1,9 +1,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { encodeAudioForAPI } from '@/utils/voiceChat';
-import { WebSocketManager } from '@/utils/voiceChat/webSocketManager';
-import { AudioRecordingManager } from '@/utils/voiceChat/audioRecordingManager';
+import { WebRTCChatManager } from '@/utils/voiceChat/webRTCChatManager';
 import { AudioPlaybackManager } from '@/utils/voiceChat/audioPlaybackManager';
 import { MessageHandler } from '@/utils/voiceChat/messageHandler';
 import { UseVoiceChatProps } from '@/types/voiceChat';
@@ -20,8 +18,7 @@ export const useVoiceChat = ({
   const [isAISpeaking, setIsAISpeaking] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(true);
   
-  const webSocketManagerRef = useRef<WebSocketManager | null>(null);
-  const audioRecordingManagerRef = useRef<AudioRecordingManager | null>(null);
+  const webRTCManagerRef = useRef<WebRTCChatManager | null>(null);
   const audioPlaybackManagerRef = useRef<AudioPlaybackManager | null>(null);
   const messageHandlerRef = useRef<MessageHandler | null>(null);
 
@@ -52,77 +49,44 @@ export const useVoiceChat = ({
     messageHandlerRef.current?.updateAudioEnabled(audioEnabled);
   }, [audioEnabled]);
 
-  const startRecording = async () => {
-    try {
-      audioRecordingManagerRef.current = new AudioRecordingManager();
-      
-      await audioRecordingManagerRef.current.startRecording((audioData) => {
-        if (webSocketManagerRef.current) {
-          const encodedAudio = encodeAudioForAPI(audioData);
-          webSocketManagerRef.current.send({
-            type: 'input_audio_buffer.append',
-            audio: encodedAudio
-          });
-        }
-      });
-
-      setIsRecording(true);
-    } catch (error) {
-      console.error('Error starting recording:', error);
-      toast({
-        title: "Microphone Error",
-        description: "Could not access microphone",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const stopRecording = () => {
-    if (audioRecordingManagerRef.current) {
-      audioRecordingManagerRef.current.stopRecording();
-      audioRecordingManagerRef.current = null;
-    }
-    setIsRecording(false);
-  };
-
   const connectToVoiceChat = async () => {
     try {
-      webSocketManagerRef.current = new WebSocketManager(clientId, toast);
-      const ws = await webSocketManagerRef.current.connect();
-      
-      ws.onmessage = async (event) => {
-        const data = JSON.parse(event.data);
-        if (messageHandlerRef.current) {
-          await messageHandlerRef.current.handleMessage(data);
-        }
+      console.log("Starting WebRTC voice chat connection...");
 
-        // Handle session.updated to start recording
-        if (data.type === 'session.updated') {
-          console.log('Session updated, starting recording');
-          await startRecording();
-        }
-      };
+      webRTCManagerRef.current = new WebRTCChatManager(
+        async (data) => {
+          if (messageHandlerRef.current) {
+            await messageHandlerRef.current.handleMessage(data);
+          }
 
-      ws.onclose = (event) => {
-        console.log('Voice chat disconnected. Code:', event.code, 'Reason:', event.reason);
-        setIsConnected(false);
-        setIsRecording(false);
-        setIsSpeaking(false);
-        setIsAISpeaking(false);
-        onConnectionChange(false);
-        stopRecording();
-        
-        if (event.code !== 1000) {
+          // Handle recording state based on voice activity
+          if (data.type === 'input_audio_buffer.speech_started') {
+            setIsRecording(true);
+          } else if (data.type === 'input_audio_buffer.speech_stopped') {
+            setIsRecording(false);
+          }
+        },
+        (error) => {
+          console.error('WebRTC error:', error);
           toast({
-            title: "Connection Lost",
-            description: "Voice chat connection was lost. You can try reconnecting.",
+            title: "Connection Error",
+            description: error,
             variant: "destructive",
           });
+          setIsConnected(false);
+          onConnectionChange(false);
         }
-      };
+      );
 
+      await webRTCManagerRef.current.init(clientId);
+      
       setIsConnected(true);
       onConnectionChange(true);
+
+      toast({
+        title: "Connected",
+        description: "Voice chat is now active via WebRTC",
+      });
 
     } catch (error) {
       console.error('Error connecting to voice chat:', error);
@@ -135,8 +99,12 @@ export const useVoiceChat = ({
   };
 
   const disconnectFromVoiceChat = () => {
-    webSocketManagerRef.current?.disconnect();
-    stopRecording();
+    webRTCManagerRef.current?.disconnect();
+    setIsConnected(false);
+    setIsRecording(false);
+    setIsSpeaking(false);
+    setIsAISpeaking(false);
+    onConnectionChange(false);
   };
 
   const toggleAudio = () => {
