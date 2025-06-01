@@ -8,8 +8,9 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  console.log("Realtime voice chat function called with method:", req.method);
-  console.log("Request URL:", req.url);
+  console.log("Realtime voice chat function called");
+  console.log("Request method:", req.method);
+  console.log("Request headers:", Object.fromEntries(req.headers.entries()));
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -18,18 +19,6 @@ serve(async (req) => {
   }
 
   try {
-    const { headers } = req;
-    const upgradeHeader = headers.get("upgrade") || "";
-    console.log("Upgrade header:", upgradeHeader);
-
-    if (upgradeHeader.toLowerCase() !== "websocket") {
-      console.log("Expected WebSocket connection, got:", upgradeHeader);
-      return new Response("Expected WebSocket connection", { 
-        status: 400,
-        headers: corsHeaders 
-      });
-    }
-
     const url = new URL(req.url);
     const clientId = url.searchParams.get('clientId');
     console.log("Client ID:", clientId);
@@ -39,6 +28,25 @@ serve(async (req) => {
       return new Response("Client ID required", { 
         status: 400,
         headers: corsHeaders 
+      });
+    }
+
+    // Check if this is a WebSocket upgrade request
+    const upgradeHeader = req.headers.get("upgrade");
+    const connectionHeader = req.headers.get("connection");
+    
+    console.log("Upgrade header:", upgradeHeader);
+    console.log("Connection header:", connectionHeader);
+
+    if (!upgradeHeader || upgradeHeader.toLowerCase() !== "websocket") {
+      console.log("Not a WebSocket upgrade request");
+      return new Response("WebSocket upgrade required", { 
+        status: 426,
+        headers: {
+          ...corsHeaders,
+          "Upgrade": "websocket",
+          "Connection": "Upgrade"
+        }
       });
     }
 
@@ -59,7 +67,6 @@ serve(async (req) => {
 
         console.log("Connecting to OpenAI Realtime API...");
 
-        // Connect to OpenAI Realtime API with correct endpoint
         openAISocket = new WebSocket(
           "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01",
           {
@@ -163,8 +170,8 @@ Current client ID: ${clientId}. You should reference the client's case details i
           }
         };
 
-        openAISocket.onclose = () => {
-          console.log("OpenAI connection closed");
+        openAISocket.onclose = (event) => {
+          console.log("OpenAI connection closed:", event.code, event.reason);
           sessionActive = false;
         };
 
@@ -202,8 +209,8 @@ Current client ID: ${clientId}. You should reference the client's case details i
       }
     };
 
-    socket.onclose = () => {
-      console.log("Client disconnected");
+    socket.onclose = (event) => {
+      console.log("Client disconnected:", event.code, event.reason);
       openAISocket?.close();
     };
 
