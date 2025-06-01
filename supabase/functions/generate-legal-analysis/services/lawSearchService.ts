@@ -9,18 +9,18 @@ export async function searchRelevantLaw(searchTerms: string, caseType = "general
     
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error('Supabase credentials not configured');
-      return [];
+      return getDefaultLawReferences(caseType);
     }
 
     // Define case-type specific law mappings for better relevance
     const lawMappings = {
       "consumer-protection": [
-        "Texas Deceptive Trade Practices", "DTPA", "Business Commerce Code 17",
-        "Consumer Protection", "Deceptive Trade Practices", "17.41", "17.46", "17.50"
+        "Texas Business Commerce Code", "DTPA", "Deceptive Trade Practices", 
+        "17.41", "17.46", "17.50", "Consumer Protection"
       ],
       "animal-protection": [
-        "Texas Penal Code 42.092", "Animal Cruelty", "Penal Code Chapter 42",
-        "Animal Protection", "Cruelty to Animals", "42.09", "42.092"
+        "Texas Penal Code", "Animal Cruelty", "42.092", "42.09", 
+        "Penal Code Chapter 42", "Cruelty to Animals"
       ],
       "personal-injury": [
         "Civil Practice Remedies Code", "CPRC", "Negligence", "Tort", "Personal Injury"
@@ -30,69 +30,40 @@ export async function searchRelevantLaw(searchTerms: string, caseType = "general
       ]
     };
 
-    // Determine relevant search terms based on case content and type
-    let relevantTerms = searchTerms.toLowerCase();
-    let additionalTerms = [];
-
-    // Add case-type specific terms
-    if (caseType === "consumer-protection" || relevantTerms.includes("dtpa") || 
-        relevantTerms.includes("deceptive") || relevantTerms.includes("consumer")) {
-      additionalTerms = lawMappings["consumer-protection"];
-    }
+    // Get case-specific search terms
+    let enhancedSearchTerms = [];
+    let additionalTerms = lawMappings[caseType] || [];
     
-    if (relevantTerms.includes("animal") || relevantTerms.includes("pet") || 
-        relevantTerms.includes("dog") || relevantTerms.includes("boarding")) {
-      additionalTerms = [...additionalTerms, ...lawMappings["animal-protection"]];
+    // For animal protection cases, prioritize Penal Code
+    if (caseType === "animal-protection") {
+      enhancedSearchTerms = [
+        "Texas Penal Code",
+        "Animal Cruelty", 
+        "42.092",
+        "Cruelty to Animals",
+        "Penal Code Chapter 42"
+      ];
+    } else if (caseType === "consumer-protection") {
+      enhancedSearchTerms = [
+        "Texas Business Commerce Code",
+        "DTPA",
+        "Deceptive Trade Practices",
+        "17.41",
+        "17.46"
+      ];
+    } else {
+      enhancedSearchTerms = additionalTerms;
     }
 
-    // Create a comprehensive search query
-    const allSearchTerms = [searchTerms, ...additionalTerms].join(" ");
-    console.log(`Enhanced search terms: ${allSearchTerms}`);
+    console.log(`Enhanced search terms for ${caseType}: ${enhancedSearchTerms.join(", ")}`);
 
-    // First try searching document metadata with improved terms
-    try {
-      const metadataResponse = await fetch(
-        `${supabaseUrl}/rest/v1/document_metadata?select=id,title,url&or=title.ilike.*${encodeURIComponent("Texas Business Commerce Code")}*,title.ilike.*${encodeURIComponent("DTPA")}*,title.ilike.*${encodeURIComponent("Penal Code")}*,title.ilike.*${encodeURIComponent("Animal Cruelty")}*&limit=5`,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseServiceKey}`,
-            'apikey': supabaseServiceKey
-          }
-        }
-      );
-      
-      if (metadataResponse.ok) {
-        const metadataResults = await metadataResponse.json();
-        if (metadataResults && metadataResults.length > 0) {
-          console.log(`Found ${metadataResults.length} relevant statute metadata results`);
-          return metadataResults.map(doc => ({
-            id: doc.id,
-            title: doc.title || "Texas Law Document",
-            url: doc.url || null,
-            content: null
-          }));
-        }
-      } else {
-        console.warn(`Metadata search failed with status: ${metadataResponse.status}`);
-      }
-    } catch (metadataError) {
-      console.error("Error in metadata search:", metadataError);
-    }
-    
-    // Enhanced fallback: Try specific statute searches
-    const statuteSearches = [
-      "Texas Business Commerce Code",
-      "Texas Penal Code", 
-      "DTPA",
-      "Deceptive Trade Practices",
-      "Animal Cruelty"
-    ];
-
-    for (const statute of statuteSearches) {
+    // Try specific searches for case type
+    for (const searchTerm of enhancedSearchTerms) {
       try {
+        console.log(`Searching for: ${searchTerm}`);
+        
         const documentsResponse = await fetch(
-          `${supabaseUrl}/rest/v1/documents?select=id,content,metadata&content=ilike.*${encodeURIComponent(statute)}*&limit=3`,
+          `${supabaseUrl}/rest/v1/documents?select=id,content,metadata&content=ilike.*${encodeURIComponent(searchTerm)}*&limit=3`,
           {
             headers: {
               'Content-Type': 'application/json',
@@ -105,29 +76,31 @@ export async function searchRelevantLaw(searchTerms: string, caseType = "general
         if (documentsResponse.ok) {
           const documents = await documentsResponse.json();
           if (documents && documents.length > 0) {
-            console.log(`Found ${documents.length} documents for statute: ${statute}`);
+            console.log(`Found ${documents.length} documents for search term: ${searchTerm}`);
             
-            // Filter out irrelevant documents (like Parks and Wildlife Code)
+            // Filter for relevant documents
             const relevantDocs = documents.filter(doc => {
               const content = (doc.content || "").toLowerCase();
               const metadata = doc.metadata || {};
               const title = (metadata?.title || metadata?.file_title || "").toLowerCase();
               
-              // Exclude Parks and Wildlife Code and other irrelevant codes
-              const irrelevantTerms = ["parks and wildlife", "water code", "agriculture code"];
-              const hasIrrelevantContent = irrelevantTerms.some(term => 
-                content.includes(term) || title.includes(term)
-              );
+              // For animal protection, prioritize Penal Code documents
+              if (caseType === "animal-protection") {
+                return title.includes("penal") || content.includes("penal code") || 
+                       content.includes("42.092") || content.includes("animal cruelty");
+              }
               
-              if (hasIrrelevantContent) {
-                console.log(`Filtering out irrelevant document: ${title}`);
-                return false;
+              // For consumer protection, prioritize Business & Commerce Code
+              if (caseType === "consumer-protection") {
+                return title.includes("business") || title.includes("commerce") ||
+                       content.includes("dtpa") || content.includes("17.4");
               }
               
               return true;
             });
             
             if (relevantDocs.length > 0) {
+              console.log(`Returning ${relevantDocs.length} relevant documents for ${caseType}`);
               return relevantDocs.map(doc => {
                 const metadata = doc.metadata || {};
                 const content = doc.content || "";
@@ -137,7 +110,7 @@ export async function searchRelevantLaw(searchTerms: string, caseType = "general
                 
                 return {
                   id: metadata?.file_id || String(doc.id),
-                  title: metadata?.title || metadata?.file_title || `Texas ${statute}`,
+                  title: metadata?.title || metadata?.file_title || `Texas ${searchTerm}`,
                   url: metadata?.file_path || null,
                   content: snippet
                 };
@@ -146,16 +119,62 @@ export async function searchRelevantLaw(searchTerms: string, caseType = "general
           }
         }
       } catch (error) {
-        console.error(`Error searching for statute ${statute}:`, error);
+        console.error(`Error searching for ${searchTerm}:`, error);
       }
     }
     
-    // If no relevant laws found, return empty array instead of irrelevant documents
-    console.log("No relevant Texas statutes found in database");
-    return [];
+    // If no relevant documents found, return default references
+    console.log(`No relevant documents found in database for ${caseType}, using default references`);
+    return getDefaultLawReferences(caseType);
     
   } catch (error) {
     console.error("Exception in searchRelevantLaw:", error);
-    return [];
+    return getDefaultLawReferences(caseType);
   }
+}
+
+// Default law references when database search fails
+function getDefaultLawReferences(caseType: string) {
+  console.log(`Providing default law references for case type: ${caseType}`);
+  
+  const defaultReferences = {
+    "animal-protection": [
+      {
+        id: "penal-42-092",
+        title: "Texas Penal Code § 42.092 - Cruelty to Animals",
+        url: null,
+        content: "A person commits an offense if the person intentionally, knowingly, or recklessly tortures an animal or in a cruel manner kills or causes serious bodily injury to an animal."
+      },
+      {
+        id: "penal-42-09",
+        title: "Texas Penal Code Chapter 42 - Disorderly Conduct and Related Offenses",
+        url: null,
+        content: "This chapter addresses various forms of disorderly conduct including animal cruelty offenses and related criminal conduct."
+      }
+    ],
+    "consumer-protection": [
+      {
+        id: "dtpa-17-41",
+        title: "Texas Business & Commerce Code § 17.41 - Deceptive Trade Practices",
+        url: null,
+        content: "The legislature finds that the practices covered by this subchapter are a matter of statewide concern and that this subchapter affects the public interest."
+      },
+      {
+        id: "dtpa-17-46",
+        title: "Texas Business & Commerce Code § 17.46 - Deceptive Trade Practices Unlawful",
+        url: null,
+        content: "False, misleading, or deceptive acts or practices in the conduct of any trade or commerce are hereby declared unlawful."
+      }
+    ],
+    "general": [
+      {
+        id: "general-contract",
+        title: "Texas Contract Law Principles",
+        url: null,
+        content: "Texas follows general contract law principles including offer, acceptance, consideration, and performance requirements."
+      }
+    ]
+  };
+
+  return defaultReferences[caseType] || defaultReferences["general"];
 }
