@@ -5,6 +5,7 @@ import DetailedLegalAnalysis from "../DetailedLegalAnalysis";
 import CaseStrengthsWeaknesses from "../CaseStrengthsWeaknesses";
 import SearchSimilarCasesSection from "../SearchSimilarCasesSection";
 import LawReferencesSection from "../LawReferencesSection";
+import ScholarlyReferencesSection from "../ScholarlyReferencesSection";
 import { ScholarlyArticle } from "@/utils/api/scholarApiService";
 import { AnalysisData } from "@/hooks/useAnalysisData";
 
@@ -27,7 +28,7 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
 }) => {
   return (
     <div className="space-y-8">
-      {/* Detailed Legal Analysis - NOW AT THE TOP */}
+      {/* Detailed Legal Analysis - AT THE TOP (without scholarly references) */}
       <DetailedLegalAnalysis
         relevantLaw={analysisData.legalAnalysis.relevantLaw}
         preliminaryAnalysis={analysisData.legalAnalysis.preliminaryAnalysis}
@@ -36,9 +37,9 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
         isLoading={isLoading}
         remedies={analysisData.remedies}
         caseType={analysisData.caseType}
-        scholarlyReferences={scholarlyReferences}
-        isScholarlyReferencesLoading={isScholarlyReferencesLoading}
-        onScholarSearch={onScholarSearch}
+        scholarlyReferences={[]}
+        isScholarlyReferencesLoading={false}
+        onScholarSearch={() => {}}
       />
 
       {/* Law References Section */}
@@ -60,6 +61,14 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
 
       {/* Similar Cases with integrated Outcome Prediction */}
       <SearchSimilarCasesSection clientId={clientId} caseType={analysisData.caseType} />
+
+      {/* Scholarly Legal References - NOW AT THE BOTTOM */}
+      <ScholarlyReferencesSection
+        references={scholarlyReferences}
+        isLoading={isScholarlyReferencesLoading}
+        caseType={analysisData.caseType}
+        onSearch={onScholarSearch}
+      />
     </div>
   );
 };
