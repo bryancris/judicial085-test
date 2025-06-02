@@ -2,44 +2,62 @@
 import React from 'react';
 import NavBar from '@/components/NavBar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Gavel, FileSearch, MessageSquare, Database, Shield, Clock } from 'lucide-react';
+import { Gavel, FileSearch, MessageSquare, Database, Shield, Clock, Scale, Mic, FileEdit, BookOpen } from 'lucide-react';
 
 const Features = () => {
   const featuresList = [
     {
+      title: "Contract Review & Analysis",
+      description: "AI-powered contract analysis under Texas law with risk assessment, issue identification, and suggested modifications.",
+      icon: Scale,
+      color: "text-brand-burgundy dark:text-brand-gold"
+    },
+    {
+      title: "Voice-Powered Legal Consultations",
+      description: "Engage in natural voice conversations with AI for case discussions, strategy planning, and legal analysis.",
+      icon: Mic,
+      color: "text-brand-burgundy dark:text-brand-gold"
+    },
+    {
+      title: "Document Creation & Editing",
+      description: "Create and edit legal documents with our Google Docs-style editor, complete with templates and formatting tools.",
+      icon: FileEdit,
+      color: "text-brand-burgundy dark:text-brand-gold"
+    },
+    {
+      title: "AI-Powered Case Analysis",
+      description: "Comprehensive case analysis with outcome predictions, strength assessments, and strategic recommendations.",
+      icon: Gavel,
+      color: "text-brand-burgundy dark:text-brand-gold"
+    },
+    {
+      title: "Scholarly Research Integration",
+      description: "Access Google Scholar and legal databases to find relevant case law, statutes, and scholarly articles.",
+      icon: BookOpen,
+      color: "text-brand-burgundy dark:text-brand-gold"
+    },
+    {
       title: "Legal Discovery Automation",
-      description: "Streamline the discovery process with AI-powered analysis of requests and automated response generation.",
+      description: "Streamline discovery processes with AI analysis of requests and automated response generation.",
       icon: FileSearch,
       color: "text-brand-burgundy dark:text-brand-gold"
     },
     {
       title: "Client Case Management",
-      description: "Efficiently organize client information, case details, and maintain comprehensive case history.",
+      description: "Organize client information, case details, and maintain comprehensive case histories with AI-powered intake.",
       icon: Database,
       color: "text-brand-burgundy dark:text-brand-gold"
     },
     {
-      title: "AI-Powered Legal Analysis",
-      description: "Leverage advanced AI to analyze cases, predict outcomes, and identify relevant legal precedents.",
-      icon: Gavel,
-      color: "text-brand-burgundy dark:text-brand-gold"
-    },
-    {
-      title: "Case Discussion Assistant",
-      description: "Collaborate effectively with AI-assisted discussion tools for complex legal matters.",
-      icon: MessageSquare,
-      color: "text-brand-burgundy dark:text-brand-gold"
-    },
-    {
-      title: "Secure Document Management",
-      description: "Store and manage legal documents with enterprise-grade security and easy accessibility.",
+      title: "Multi-Format Document Processing",
+      description: "Upload and process PDFs, Word documents, and text files with AI-powered content extraction and analysis.",
       icon: Shield,
       color: "text-brand-burgundy dark:text-brand-gold"
     },
     {
-      title: "Time-Saving Workflows",
-      description: "Reduce manual work and increase billable hours with automated legal workflows.",
-      icon: Clock,
+      title: "Intelligent Case Discussion",
+      description: "Collaborate with AI assistants for complex legal strategy discussions and case preparation.",
+      icon: MessageSquare,
       color: "text-brand-burgundy dark:text-brand-gold"
     }
   ];
@@ -50,10 +68,10 @@ const Features = () => {
       <main className="flex-grow container mx-auto px-4 py-8">
         <section className="mb-16">
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold mb-4">Our Features</h1>
+            <h1 className="text-4xl font-bold mb-4">Comprehensive Legal Practice Management</h1>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-              Judicial Junction provides powerful tools to streamline your legal practice
-              and enhance productivity with AI-powered assistance.
+              Judicial Junction combines AI-powered analysis, voice technology, and document management 
+              to transform how legal professionals work with clients and cases.
             </p>
           </div>
 
@@ -82,18 +100,18 @@ const Features = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="flex flex-col items-center text-center">
                 <div className="w-16 h-16 rounded-full bg-brand-burgundy dark:bg-brand-burgundy/80 flex items-center justify-center text-white text-2xl font-bold mb-4">1</div>
-                <h3 className="text-xl font-semibold mb-2">Analyze Requests</h3>
-                <p className="text-gray-600 dark:text-gray-300">Our AI analyzes discovery requests and extracts key information automatically.</p>
+                <h3 className="text-xl font-semibold mb-2">Upload & Organize</h3>
+                <p className="text-gray-600 dark:text-gray-300">Upload documents, create client profiles, and organize case information in our secure platform.</p>
               </div>
               <div className="flex flex-col items-center text-center">
                 <div className="w-16 h-16 rounded-full bg-brand-burgundy dark:bg-brand-burgundy/80 flex items-center justify-center text-white text-2xl font-bold mb-4">2</div>
-                <h3 className="text-xl font-semibold mb-2">Generate Responses</h3>
-                <p className="text-gray-600 dark:text-gray-300">Select from AI-suggested templates or create custom responses with automated assistance.</p>
+                <h3 className="text-xl font-semibold mb-2">AI Analysis & Insights</h3>
+                <p className="text-gray-600 dark:text-gray-300">Our AI analyzes cases, contracts, and legal matters to provide strategic insights and recommendations.</p>
               </div>
               <div className="flex flex-col items-center text-center">
                 <div className="w-16 h-16 rounded-full bg-brand-burgundy dark:bg-brand-burgundy/80 flex items-center justify-center text-white text-2xl font-bold mb-4">3</div>
-                <h3 className="text-xl font-semibold mb-2">Review & Export</h3>
-                <p className="text-gray-600 dark:text-gray-300">Review the final document and export to Microsoft Word format for further editing.</p>
+                <h3 className="text-xl font-semibold mb-2">Collaborate & Create</h3>
+                <p className="text-gray-600 dark:text-gray-300">Use voice chat, document editors, and research tools to collaborate and create legal documents efficiently.</p>
               </div>
             </div>
           </div>
@@ -103,14 +121,14 @@ const Features = () => {
           <div className="text-center">
             <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-50 mb-6">Ready to transform your legal practice?</h2>
             <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-              Join thousands of legal professionals who are saving time and improving outcomes with Judicial Junction.
+              Join legal professionals who are using AI to enhance their practice, save time, and deliver better outcomes for clients.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <a 
                 href="/auth" 
                 className="px-8 py-3 bg-brand-burgundy dark:bg-brand-burgundy/90 text-white font-medium rounded-md hover:bg-brand-burgundy/90 dark:hover:bg-brand-burgundy/80 transition-colors"
               >
-                Get Started Today
+                Start Your Practice
               </a>
               <a 
                 href="#" 
