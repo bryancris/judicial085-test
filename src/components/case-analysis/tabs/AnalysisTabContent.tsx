@@ -28,7 +28,7 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
 }) => {
   return (
     <div className="space-y-8">
-      {/* Detailed Legal Analysis - AT THE TOP (without scholarly references) */}
+      {/* Detailed Legal Analysis - AT THE TOP (without any scholarly references) */}
       <DetailedLegalAnalysis
         relevantLaw={analysisData.legalAnalysis.relevantLaw}
         preliminaryAnalysis={analysisData.legalAnalysis.preliminaryAnalysis}
@@ -62,7 +62,7 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
       {/* Similar Cases with integrated Outcome Prediction */}
       <SearchSimilarCasesSection clientId={clientId} caseType={analysisData.caseType} />
 
-      {/* Scholarly Legal References - NOW AT THE BOTTOM */}
+      {/* Scholarly Legal References - AT THE BOTTOM ONLY */}
       <ScholarlyReferencesSection
         references={scholarlyReferences}
         isLoading={isScholarlyReferencesLoading}
