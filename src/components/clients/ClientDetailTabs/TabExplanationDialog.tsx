@@ -2,7 +2,7 @@
 import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileText, BookOpen, FileSearch, Video, FileChartLine, MessageSquare, FileCheck } from "lucide-react";
+import { MessageSquare, BarChart3, Users, Upload, Plus, HelpCircle, Scale, FileText } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 interface TabExplanationDialogProps {
@@ -17,45 +17,51 @@ const TabExplanationDialog: React.FC<TabExplanationDialogProps> = ({
   const tabExplanations = [
     {
       name: "Client Intake",
-      icon: <FileText className="h-5 w-5" />,
+      icon: <MessageSquare className="h-5 w-5" />,
       color: "bg-[#0EA5E9]",
       description: "Collect and record initial client information, case details, and client concerns. This tab helps establish the foundation of the attorney-client relationship.",
     },
     {
       name: "Case Analysis",
-      icon: <FileChartLine className="h-5 w-5" />,
-      color: "bg-[#ea384c]",
+      icon: <BarChart3 className="h-5 w-5" />,
+      color: "bg-[#F97316]",
       description: "Review case strengths, weaknesses, and potential outcomes. This tab provides analytical insights and legal strategy recommendations.",
     },
     {
-      name: "Discuss Case",
-      icon: <MessageSquare className="h-5 w-5" />,
+      name: "Case Discussion",
+      icon: <Users className="h-5 w-5" />,
       color: "bg-[#9b87f5]",
       description: "Collaborate with colleagues or AI assistants on case strategy, legal theories, and approaches to specific legal issues.",
     },
     {
-      name: "Contract Review",
-      icon: <FileCheck className="h-5 w-5" />,
+      name: "Contracts",
+      icon: <Scale className="h-5 w-5" />,
       color: "bg-[#22C55E]",
-      description: "Review and analyze contracts, agreements, and legal documents. Identify potential issues, risks, and suggested modifications.",
+      description: "Review and analyze contracts, agreements, and legal documents. Identify potential issues, risks, and suggested modifications using AI-powered contract analysis.",
     },
     {
       name: "Discovery",
-      icon: <FileSearch className="h-5 w-5" />,
+      icon: <FileText className="h-5 w-5" />,
       color: "bg-[#8B5CF6]",
       description: "Manage discovery requests and responses, organize evidence, and prepare document production for litigation cases.",
     },
     {
-      name: "Fact Pattern",
-      icon: <BookOpen className="h-5 w-5" />,
+      name: "Upload Documents",
+      icon: <Upload className="h-5 w-5" />,
       color: "bg-[#F97316]",
-      description: "Document and organize the key facts of the case chronologically. Identify critical events and supporting evidence.",
+      description: "Upload and store client documents, evidence, contracts, and other case-related files. Organize documents for easy access and reference.",
     },
     {
-      name: "Deposition",
-      icon: <Video className="h-5 w-5" />,
+      name: "Create Document",
+      icon: <Plus className="h-5 w-5" />,
       color: "bg-[#D946EF]",
-      description: "Prepare for, record, and review depositions. Store transcripts and video recordings for easy reference during case preparation.",
+      description: "Create new legal documents using our document editor. Draft contracts, pleadings, letters, and other legal documents with built-in templates and formatting.",
+    },
+    {
+      name: "FAQ",
+      icon: <HelpCircle className="h-5 w-5" />,
+      color: "bg-[#3B82F6]",
+      description: "Access help and guidance on using the client management interface. View explanations of each tab's functionality and features.",
     },
   ];
 
