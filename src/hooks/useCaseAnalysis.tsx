@@ -18,9 +18,9 @@ export const useCaseAnalysis = (clientId?: string, caseId?: string) => {
   } = useAnalysisData(clientId, caseId);
   
   const { 
-    generateNewAnalysis: generateNew, 
-    isGenerating 
-  } = useAnalysisGeneration(clientId, caseId, fetchAnalysisData);
+    isGeneratingAnalysis, 
+    generateRealTimeAnalysis 
+  } = useAnalysisGeneration(clientId, caseId);
 
   // Load data on initial render
   useEffect(() => {
@@ -29,14 +29,19 @@ export const useCaseAnalysis = (clientId?: string, caseId?: string) => {
     }
   }, [clientId, caseId]);
 
+  // Create a wrapper function that matches the expected interface
+  const generateNewAnalysis = () => {
+    generateRealTimeAnalysis(fetchAnalysisData);
+  };
+
   // Combine loading states
-  const combinedIsLoading = isLoading || isGenerating;
+  const combinedIsLoading = isLoading || isGeneratingAnalysis;
 
   // Provide a unified API that matches the original hook
   return {
     analysisData,
     isLoading: combinedIsLoading,
     error,
-    generateNewAnalysis: generateNew
+    generateNewAnalysis
   };
 };
