@@ -32,7 +32,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
   // Use caseId from props or from context
   const caseId = propCaseId || currentCase?.id;
 
-  // Use the proper database-backed analysis hook instead of local state
+  // Use the database-backed analysis hook
   const {
     analysisData,
     isLoading: isAnalysisLoading,
@@ -40,10 +40,10 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
     fetchAnalysisData
   } = useAnalysisData(clientId, caseId);
 
-  // Create a dummy state setter for the hook (not actually used since we use fetchAnalysisData)
+  // Dummy state setter for the hook compatibility
   const [, setLegalAnalysis] = useState<any[]>([]);
   
-  // Use the same analysis system as Client Intake with document-only capability
+  // Use the analysis generation system
   const { generateAnalysis } = useClientChatAnalysis(clientId, setLegalAnalysis);
     
   // Add scholarly references hook
@@ -61,7 +61,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
     isLoading: notesLoading
   } = useCaseAnalysisChat(clientId);
 
-  // Client documents hook - still needed for the documents tab
+  // Client documents hook
   const {
     documents: clientDocuments,
     loading: documentsLoading,
@@ -78,7 +78,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
     }
   };
 
-  // Generate analysis using the same system as Client Intake but allow document-only analysis
+  // Generate analysis function that refreshes the database-backed data
   const generateRealTimeAnalysis = async () => {
     try {
       // Fetch the client messages for this client
@@ -122,10 +122,10 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
         timestamp: msg.timestamp
       })) : [];
       
-      // Use the same analysis generation as Client Intake but allow document-only analysis
-      await generateAnalysis(formattedMessages, true); // true = allow document-only analysis
+      // Use the analysis generation system with document-only capability
+      await generateAnalysis(formattedMessages, true);
       
-      // After generating new analysis, refresh the data from the database
+      // CRITICAL: After generating new analysis, refresh from database
       await fetchAnalysisData();
       
       toast({

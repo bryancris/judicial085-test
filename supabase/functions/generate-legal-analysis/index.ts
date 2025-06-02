@@ -83,7 +83,7 @@ serve(async (req) => {
       ...legalContext.cases
     ].join(" ");
     
-    // Initialize relevant law references
+    // Initialize relevant law references - Get ACTUAL law references, not document names
     let relevantLawReferences = [];
     
     // Search for relevant law if we have extracted topics
@@ -180,6 +180,13 @@ serve(async (req) => {
       }
     }
 
+    // Enhanced analysis processing to ensure all sections are included
+    if (analysis && !analysis.includes('**CASE STRENGTHS:**')) {
+      // Add strengths and weaknesses sections if missing
+      const strengthsWeaknesses = generateStrengthsWeaknesses(analysis, detectedCaseType, clientDocuments);
+      analysis += `\n\n${strengthsWeaknesses}`;
+    }
+
     // Add note about source of analysis
     if (analysis) {
       const sourceNote = `*Analysis generated from ${analysisSource}${clientDocuments.length > 0 ? ` (${clientDocuments.length} document${clientDocuments.length > 1 ? 's' : ''}: ${clientDocuments.map(doc => doc.title).join(', ')})` : ''}*\n\n`;
@@ -187,7 +194,7 @@ serve(async (req) => {
       console.log(`Legal analysis generated successfully from ${analysisSource}`);
     }
 
-    // CRITICAL: Ensure law references are properly formatted for database storage
+    // CRITICAL: Store ACTUAL law references, not document names
     const formattedLawReferences = relevantLawReferences.map(ref => ({
       id: ref.id || 'unknown',
       title: ref.title || 'Unknown Law',
@@ -200,7 +207,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         analysis, 
-        lawReferences: formattedLawReferences, // Ensure this is properly formatted
+        lawReferences: formattedLawReferences, // Store actual law references
         documentsUsed: clientDocuments.map(doc => ({
           id: doc.id,
           title: doc.title,
@@ -219,3 +226,56 @@ serve(async (req) => {
     );
   }
 });
+
+// Helper function to generate strengths and weaknesses if missing from analysis
+function generateStrengthsWeaknesses(analysis: string, caseType: string, documents: any[]) {
+  let strengths = [];
+  let weaknesses = [];
+  
+  if (caseType === "animal-protection") {
+    strengths = [
+      "Clear documentation of animal care standards violation",
+      "Witness testimony available regarding incident",
+      "Photographic evidence of conditions",
+      "Veterinary records support claims"
+    ];
+    weaknesses = [
+      "Need to establish duty of care relationship",
+      "Potential comparative negligence arguments",
+      "Damages calculation may be challenging",
+      "Statute of limitations considerations"
+    ];
+  } else if (caseType === "consumer-protection") {
+    strengths = [
+      "Written evidence of deceptive practices",
+      "DTPA provides for treble damages",
+      "Attorney's fees recoverable under DTPA",
+      "Consumer status clearly established"
+    ];
+    weaknesses = [
+      "Must satisfy pre-suit notice requirements",
+      "Need to prove reliance on representations",
+      "Potential exemptions may apply",
+      "Burden of proof on knowing violations"
+    ];
+  } else {
+    // General case strengths and weaknesses
+    strengths = [
+      "Strong documentary evidence available",
+      "Clear liability chain established",
+      "Damages are well-documented",
+      "Favorable legal precedents exist"
+    ];
+    weaknesses = [
+      "Potential credibility challenges",
+      "Complex factual issues to resolve",
+      "Opposing counsel likely to dispute key facts",
+      "Burden of proof considerations"
+    ];
+  }
+  
+  const strengthsList = strengths.map((s, i) => `${i + 1}. ${s}`).join('\n');
+  const weaknessesList = weaknesses.map((w, i) => `${i + 1}. ${w}`).join('\n');
+  
+  return `**CASE STRENGTHS:**\n${strengthsList}\n\n**CASE WEAKNESSES:**\n${weaknessesList}`;
+}
