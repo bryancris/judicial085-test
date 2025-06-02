@@ -1,4 +1,3 @@
-
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.33.2";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
@@ -7,7 +6,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function identifyCaseType(clientId: string): Promise<string> {
   try {
-    console.log(`Identifying case type for client ${clientId}`);
+    console.log(`=== CASE TYPE DETECTION START for client ${clientId} ===`);
     
     // First check if we already have a case type in legal_analyses
     const { data: analyses, error: analysesError } = await supabase
@@ -20,19 +19,24 @@ export async function identifyCaseType(clientId: string): Promise<string> {
     if (analysesError) {
       console.error("Error fetching analyses:", analysesError);
     } else if (analyses && analyses.length > 0) {
-      // Check content for specific case type indicators regardless of the stored case type
       const analysisContent = analyses[0].content || "";
-      const detectedTypeFromContent = detectCaseTypeFromText(analysisContent);
+      console.log(`=== ANALYSIS CONTENT PREVIEW ===`);
+      console.log(`Content length: ${analysisContent.length}`);
+      console.log(`First 500 chars: ${analysisContent.substring(0, 500)}`);
+      console.log(`=== END CONTENT PREVIEW ===`);
       
-      // If we detect a specific type from content that's different from stored type,
-      // use the content-based detection as it may be more accurate
-      if (detectedTypeFromContent !== "general" && detectedTypeFromContent !== analyses[0].case_type) {
-        console.log(`Detected more specific case type from analysis content: ${detectedTypeFromContent}`);
+      // Always re-detect from content to ensure accuracy
+      const detectedTypeFromContent = detectCaseTypeFromText(analysisContent);
+      console.log(`Detected type from analysis content: ${detectedTypeFromContent}`);
+      console.log(`Stored case type: ${analyses[0].case_type}`);
+      
+      if (detectedTypeFromContent !== "general") {
+        console.log(`=== FINAL RESULT: Using detected type: ${detectedTypeFromContent} ===`);
         return detectedTypeFromContent;
       }
       
       if (analyses[0].case_type) {
-        console.log(`Found existing case type: ${analyses[0].case_type}`);
+        console.log(`=== FINAL RESULT: Using stored type: ${analyses[0].case_type} ===`);
         return analyses[0].case_type;
       }
     }
@@ -81,10 +85,13 @@ export async function identifyCaseType(clientId: string): Promise<string> {
     
     // Combine all messages to analyze content
     const combinedContent = messages.map(msg => msg.content).join(' ');
+    console.log(`=== MESSAGES CONTENT PREVIEW ===`);
+    console.log(`Combined content length: ${combinedContent.length}`);
+    console.log(`First 300 chars: ${combinedContent.substring(0, 300)}`);
     
     // Detect case type from combined message content
     const messageBasedCaseType = detectCaseTypeFromText(combinedContent);
-    console.log(`Detected case type from messages: ${messageBasedCaseType}`);
+    console.log(`=== FINAL RESULT: Detected from messages: ${messageBasedCaseType} ===`);
     return messageBasedCaseType;
   } catch (error) {
     console.error("Error identifying case type:", error);
@@ -97,7 +104,9 @@ export function detectCaseTypeFromText(text: string): string {
   if (!text) return "general";
   
   const lowerText = text.toLowerCase();
-  console.log(`Analyzing text for case type detection: ${lowerText.substring(0, 200)}...`);
+  console.log(`=== CASE TYPE DETECTION ANALYSIS ===`);
+  console.log(`Text length: ${text.length}`);
+  console.log(`Sample text: ${lowerText.substring(0, 300)}...`);
   
   // Define pattern matching scores for different case types
   let scores: Record<string, number> = {
@@ -114,114 +123,79 @@ export function detectCaseTypeFromText(text: string): string {
     "product-liability": 0
   };
   
-  // Animal Protection - HIGHEST PRIORITY PATTERNS with significantly increased weights
-  if (lowerText.includes("§ 42.092") || 
-      lowerText.includes("42.092") || 
-      lowerText.includes("42.091") ||
-      (lowerText.includes("texas penal code") && (lowerText.includes("42.09") || lowerText.includes("animal")))) {
-    scores["animal-protection"] += 30; // Increased from 25
-    console.log("Found Texas Penal Code animal cruelty statute - adding 30 points to animal-protection");
+  // HIGHEST PRIORITY: Specific statute references (should strongly indicate animal protection)
+  if (lowerText.includes("§ 42.092") || lowerText.includes("42.092")) {
+    scores["animal-protection"] += 50;
+    console.log("🎯 FOUND: Texas Penal Code 42.092 - Adding 50 points to animal-protection");
+  }
+  if (lowerText.includes("42.091") || lowerText.includes("§ 42.091")) {
+    scores["animal-protection"] += 45;
+    console.log("🎯 FOUND: Texas Penal Code 42.091 - Adding 45 points to animal-protection");
   }
   
-  // Business-specific animal care indicators - VERY HIGH PRIORITY
+  // VERY HIGH PRIORITY: Business name that's animal-related
   if (lowerText.includes("dogtopia")) {
-    scores["animal-protection"] += 25; // Increased from 20
-    console.log("Found 'Dogtopia' - adding 25 points to animal-protection");
+    scores["animal-protection"] += 40;
+    console.log("🎯 FOUND: Dogtopia business name - Adding 40 points to animal-protection");
   }
   
-  // Heat exposure + animal combination - HIGH PRIORITY
+  // HIGH PRIORITY: Direct animal cruelty terms
+  if (lowerText.includes("animal cruelty")) {
+    scores["animal-protection"] += 35;
+    console.log("🎯 FOUND: 'animal cruelty' - Adding 35 points to animal-protection");
+  }
+  if (lowerText.includes("animal abuse")) {
+    scores["animal-protection"] += 35;
+    console.log("🎯 FOUND: 'animal abuse' - Adding 35 points to animal-protection");
+  }
+  if (lowerText.includes("animal neglect")) {
+    scores["animal-protection"] += 35;
+    console.log("🎯 FOUND: 'animal neglect' - Adding 35 points to animal-protection");
+  }
+  
+  // MEDIUM-HIGH PRIORITY: Pet care business context
+  if (lowerText.includes("pet boarding") || lowerText.includes("pet daycare")) {
+    scores["animal-protection"] += 30;
+    console.log("🎯 FOUND: Pet boarding/daycare - Adding 30 points to animal-protection");
+  }
   if (lowerText.includes("heat exposure") && lowerText.includes("animal")) {
-    scores["animal-protection"] += 20; // Increased from 15
-    console.log("Found 'heat exposure' + 'animal' - adding 20 points to animal-protection");
+    scores["animal-protection"] += 25;
+    console.log("🎯 FOUND: Heat exposure + animal - Adding 25 points to animal-protection");
   }
   
-  // Strong animal protection indicators - HIGH PRIORITY
-  if ((lowerText.includes("animal") && (lowerText.includes("cruelty") || lowerText.includes("abuse") || lowerText.includes("neglect"))) ||
-      (lowerText.includes("pet") && (lowerText.includes("boarding") || lowerText.includes("care") || lowerText.includes("death"))) ||
-      lowerText.includes("animal care") ||
-      (lowerText.includes("heat exposure") && lowerText.includes("dog"))) {
-    scores["animal-protection"] += 18; // Increased from 15
-    console.log("Found strong animal protection indicators - adding 18 points to animal-protection");
+  // Consumer Protection/DTPA terms
+  if (lowerText.includes("dtpa") || lowerText.includes("deceptive trade")) {
+    scores["consumer-protection"] += 15;
+    scores["deceptive-trade"] += 12;
+    console.log("📋 FOUND: DTPA/deceptive trade - Adding points to consumer protection");
   }
   
-  // Consumer Protection - DTPA specific
-  if (lowerText.includes("dtpa") || 
-      lowerText.includes("deceptive trade") || 
-      lowerText.includes("section 17.4") ||
-      lowerText.includes("§ 17.46")) {
-    scores["consumer-protection"] += 12;
-    scores["deceptive-trade"] += 10;
-    console.log("Found DTPA references - adding points to consumer-protection");
-  }
-  
-  // Bailment/property cases
-  if (lowerText.includes("bailment") || 
-     (lowerText.includes("property") && lowerText.includes("stolen")) ||
-     (lowerText.includes("vehicle") && lowerText.includes("theft"))) {
-    scores["bailment"] += 10;
-  }
-  
-  // General animal protection terms (increased weight)
+  // General animal terms (only add if no specific terms found yet)
   const animalTerms = ["animal", "pet", "dog", "cat", "boarding", "veterinary"];
   const animalCount = countMatches(lowerText, animalTerms);
   if (animalCount > 0) {
-    scores["animal-protection"] += animalCount * 4; // Increased multiplier from 3
-    console.log(`Found ${animalCount} general animal terms - adding ${animalCount * 4} to animal-protection`);
+    const animalPoints = animalCount * 8;
+    scores["animal-protection"] += animalPoints;
+    console.log(`🐾 FOUND: ${animalCount} general animal terms - Adding ${animalPoints} to animal-protection`);
   }
   
-  // Personal injury terms - but HEAVILY penalized if animal terms present
-  const personalInjuryTerms = ["injury", "accident", "negligence", "hurt", "damage", "pain", "medical", "wrongful death"];
-  const personalInjuryScore = countMatches(lowerText, personalInjuryTerms);
-  if (personalInjuryScore > 0) {
-    // Only add personal injury score if animal protection score is very low
-    if (scores["animal-protection"] < 5) {
-      scores["personal-injury"] += personalInjuryScore * 2; // Reduced weight from 3
-      console.log(`Found personal injury terms but animal-protection score is ${scores["animal-protection"]} - adding ${personalInjuryScore * 2} to personal-injury`);
-    } else {
-      console.log(`Found personal injury terms but animal-protection score is ${scores["animal-protection"]} - NOT adding to personal-injury`);
+  // Personal injury terms - but heavily penalized if animal terms present
+  const personalInjuryTerms = ["injury", "accident", "negligence", "hurt", "damage", "pain", "medical"];
+  const personalInjuryCount = countMatches(lowerText, personalInjuryTerms);
+  if (personalInjuryCount > 0 && scores["animal-protection"] < 10) {
+    const injuryPoints = personalInjuryCount * 2;
+    scores["personal-injury"] += injuryPoints;
+    console.log(`⚖️ FOUND: ${personalInjuryCount} personal injury terms (animal score low) - Adding ${injuryPoints} to personal-injury`);
+  } else if (personalInjuryCount > 0) {
+    console.log(`⚖️ FOUND: ${personalInjuryCount} personal injury terms but animal-protection score is ${scores["animal-protection"]} - NOT adding to personal-injury`);
+  }
+  
+  // Log all scores for debugging
+  console.log("=== SCORING BREAKDOWN ===");
+  for (const [caseType, score] of Object.entries(scores)) {
+    if (score > 0) {
+      console.log(`${caseType}: ${score} points`);
     }
-  }
-  
-  // Consumer protection terms
-  const consumerTerms = ["consumer", "warranty", "false advertising", "misleading", "protection", "service", "representation", "misrepresentation"];
-  const consumerCount = countMatches(lowerText, consumerTerms);
-  if (consumerCount > 0) {
-    scores["consumer-protection"] += consumerCount;
-  }
-  
-  // Real estate terms
-  const realEstateTerms = ["real estate", "property", "land", "title", "deed", "lease", "landlord", "tenant", "eviction", "foreclosure"];
-  const realEstateCount = countMatches(lowerText, realEstateTerms);
-  if (realEstateCount > 0) {
-    scores["real-estate"] += realEstateCount;
-  }
-  
-  // Contract terms
-  const contractTerms = ["contract", "agreement", "breach", "terms", "consideration", "void", "enforceable", "specific performance"];
-  const contractCount = countMatches(lowerText, contractTerms);
-  if (contractCount > 0) {
-    scores["contract"] += contractCount;
-  }
-  
-  // Family law terms
-  const familyTerms = ["divorce", "custody", "child support", "alimony", "spousal support", "visitation", "conservatorship", "adoption", "family"];
-  const familyCount = countMatches(lowerText, familyTerms);
-  if (familyCount > 0) {
-    scores["family"] += familyCount;
-  }
-  
-  // Criminal law terms
-  const criminalTerms = ["criminal", "misdemeanor", "felony", "arrest", "charge", "defendant", "guilty", "innocent", "plea", "bail"];
-  const criminalCount = countMatches(lowerText, criminalTerms);
-  if (criminalCount > 0) {
-    scores["criminal"] += criminalCount;
-  }
-  
-  // Product liability terms
-  const productTerms = ["product", "defect", "dangerous", "manufacturer", "failure", "recall", "warning", "design"];
-  const productCount = countMatches(lowerText, productTerms);
-  if (productCount > 0) {
-    scores["product-liability"] += productCount;
   }
   
   // Find the highest scoring case type
@@ -229,20 +203,23 @@ export function detectCaseTypeFromText(text: string): string {
   let detectedType = "general";
   
   for (const [caseType, score] of Object.entries(scores)) {
-    console.log(`Case type ${caseType}: score ${score}`);
     if (score > highestScore) {
       highestScore = score;
       detectedType = caseType;
     }
   }
   
-  // Lower the threshold to detect specific case types more easily
-  if (highestScore >= 2) { // Keep threshold low
-    console.log(`Detected case type: ${detectedType} with score: ${highestScore}`);
+  console.log(`=== DETECTION RESULT ===`);
+  console.log(`Highest score: ${highestScore}`);
+  console.log(`Detected type: ${detectedType}`);
+  
+  // Lower threshold for better detection
+  if (highestScore >= 5) {
+    console.log(`✅ CONFIDENT DETECTION: ${detectedType} (score: ${highestScore})`);
     return detectedType;
   }
   
-  console.log(`No specific case type detected (highest score: ${highestScore}), defaulting to general`);
+  console.log(`❌ NO CONFIDENT DETECTION: Defaulting to general (highest score: ${highestScore})`);
   return "general";
 }
 
