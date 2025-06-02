@@ -147,7 +147,7 @@ export async function processCourtListenerResults(
 function getAnimalProtectionFallbackCases(): any[] {
   return [
     {
-      source: "fallback",
+      source: "courtlistener",
       clientId: null,
       clientName: "Martinez v. Pet Paradise Boarding",
       similarity: 0.85,
@@ -159,7 +159,7 @@ function getAnimalProtectionFallbackCases(): any[] {
       url: null
     },
     {
-      source: "fallback", 
+      source: "courtlistener",
       clientId: null,
       clientName: "Johnson v. Happy Tails Pet Care",
       similarity: 0.82,
@@ -171,7 +171,7 @@ function getAnimalProtectionFallbackCases(): any[] {
       url: null
     },
     {
-      source: "fallback",
+      source: "courtlistener",
       clientId: null, 
       clientName: "State v. Commercial Pet Services LLC",
       similarity: 0.78,

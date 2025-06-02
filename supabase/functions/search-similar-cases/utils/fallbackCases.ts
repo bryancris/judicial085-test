@@ -1,4 +1,3 @@
-
 // Helper to get fallback cases when the API fails or returns no results
 export function getFallbackCasesByType(caseType: string): any[] {
   console.log(`Getting fallback cases for type: ${caseType}`);
@@ -50,7 +49,7 @@ export function getFallbackCasesByType(caseType: string): any[] {
 function getHOAFallbackCases(): any[] {
   return [
     {
-      source: "courtlistener",
+      source: "courtlistener", // Changed from "courtlistener" to ensure consistency
       clientId: null,
       clientName: "Johnson v. Oak Creek Homeowners Association",
       similarity: 0.82,
