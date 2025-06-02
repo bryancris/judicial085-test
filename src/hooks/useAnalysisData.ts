@@ -137,20 +137,20 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
   };
 };
 
-// Enhanced helper function to parse analysis content with improved regex patterns
+// Enhanced helper function to parse analysis content with corrected regex patterns
 const parseAnalysisContent = (content: string) => {
   console.log("Parsing analysis content:", content.substring(0, 500) + "...");
   
-  // More flexible regex patterns to match various section header formats
-  const relevantLawMatch = content.match(/\*\*(?:RELEVANT (?:TEXAS )?LAW|APPLICABLE LAW):\*\*\s*([\s\S]*?)(?=\*\*[A-Z][^:]*:\*\*|$)/i);
+  // Updated regex patterns to match the exact format from the database
+  const relevantLawMatch = content.match(/\*\*RELEVANT TEXAS LAW:\*\*\s*([\s\S]*?)(?=\*\*[A-Z][^:]*:\*\*|$)/i);
   const preliminaryAnalysisMatch = content.match(/\*\*PRELIMINARY ANALYSIS:\*\*\s*([\s\S]*?)(?=\*\*[A-Z][^:]*:\*\*|$)/i);
-  const potentialIssuesMatch = content.match(/\*\*(?:POTENTIAL (?:LEGAL )?ISSUES|LEGAL ISSUES):\*\*\s*([\s\S]*?)(?=\*\*[A-Z][^:]*:\*\*|$)/i);
-  const followUpQuestionsMatch = content.match(/\*\*(?:RECOMMENDED )?FOLLOW-UP QUESTIONS:\*\*\s*([\s\S]*?)(?=\*\*[A-Z][^:]*:\*\*|$)/i);
+  const potentialIssuesMatch = content.match(/\*\*POTENTIAL LEGAL ISSUES:\*\*\s*([\s\S]*?)(?=\*\*[A-Z][^:]*:\*\*|$)/i);
+  const followUpQuestionsMatch = content.match(/\*\*RECOMMENDED FOLLOW-UP QUESTIONS:\*\*\s*([\s\S]*?)(?=\*\*[A-Z][^:]*:\*\*|$)/i);
   const remediesMatch = content.match(/\*\*(?:POTENTIAL )?REMEDIES:\*\*\s*([\s\S]*?)(?=\*\*[A-Z][^:]*:\*\*|$)/i);
   
-  // Extract strengths and weaknesses with improved patterns
-  const strengthsMatch = content.match(/\*\*(?:CASE )?STRENGTHS:\*\*\s*([\s\S]*?)(?=\*\*[A-Z][^:]*:\*\*|$)/i);
-  const weaknessesMatch = content.match(/\*\*(?:CASE )?WEAKNESSES:\*\*\s*([\s\S]*?)(?=\*\*[A-Z][^:]*:\*\*|$)/i);
+  // Extract strengths and weaknesses with corrected patterns
+  const strengthsMatch = content.match(/\*\*CASE STRENGTHS:\*\*\s*([\s\S]*?)(?=\*\*[A-Z][^:]*:\*\*|$)/i);
+  const weaknessesMatch = content.match(/\*\*CASE WEAKNESSES:\*\*\s*([\s\S]*?)(?=\*\*[A-Z][^:]*:\*\*|$)/i);
 
   console.log("Parsing results:");
   console.log("- Relevant Law found:", !!relevantLawMatch);
