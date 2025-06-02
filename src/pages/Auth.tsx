@@ -48,7 +48,7 @@ const Auth = () => {
             title: "Login successful",
             description: "Welcome back!",
           });
-          navigate("/");
+          navigate("/clients");
         } else {
           setError("No session created. Please check your credentials and try again.");
         }
@@ -84,7 +84,7 @@ const Auth = () => {
 
   // Redirect if already logged in - IMPORTANT: This conditional return must come after all hook calls
   if (session) {
-    return <Navigate to="/" />;
+    return <Navigate to="/clients" />;
   }
 
   return (
