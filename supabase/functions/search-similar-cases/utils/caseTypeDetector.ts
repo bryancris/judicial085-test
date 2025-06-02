@@ -118,6 +118,11 @@ export function detectCaseType(content: string): string {
   }
 }
 
+// Add the missing export that was causing the boot failure
+export function detectCaseTypeFromText(content: string): string {
+  return detectCaseType(content);
+}
+
 // Helper to determine final case type with stored case type override
 export function determineFinalCaseType(
   analysisContent: string,
