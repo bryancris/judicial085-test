@@ -181,7 +181,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
       },
       remedies: data["REMEDIES"] || "",
       timestamp: latestAnalysis.timestamp || new Date().toISOString(),
-      lawReferences: latestAnalysis.documentsUsed || [], // Use the law references from Client Intake system
+      lawReferences: latestAnalysis.lawReferences || [], // Use the actual law references from the analysis
       caseType: content.includes("Animal") || content.includes("Cruelty") ? "animal-protection" : 
                 content.includes("Consumer Protection") || content.includes("Deceptive Trade Practices") ? "consumer-protection" : "general"
     };

@@ -60,11 +60,12 @@ export const useClientChatAnalysis = (
       } else if (analysis) {
         const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         
-        // Add analysis to state
+        // Add analysis to state with proper law references
         const newAnalysis = {
           content: analysis,
           timestamp,
-          documentsUsed: docsUsed || []
+          documentsUsed: docsUsed || [],
+          lawReferences: lawReferences || [] // Store the actual law references from the backend
         };
         
         setLegalAnalysis(prev => [...prev, newAnalysis]);
