@@ -7,8 +7,6 @@ import FollowUpQuestionsSection from "./sections/FollowUpQuestionsSection";
 import RelevantLawSection from "./sections/RelevantLawSection";
 import AnalysisSection from "./sections/AnalysisSection";
 import RemediesSection from "./RemediesSection";
-import ScholarlyReferencesSection from "./ScholarlyReferencesSection";
-import { ScholarlyArticle } from "@/utils/api/scholarApiService";
 
 interface DetailedLegalAnalysisProps {
   relevantLaw: string;
@@ -18,9 +16,6 @@ interface DetailedLegalAnalysisProps {
   isLoading?: boolean;
   remedies?: string;
   caseType?: string;
-  scholarlyReferences?: ScholarlyArticle[];
-  isScholarlyReferencesLoading?: boolean;
-  onScholarSearch?: (query: string) => void;
 }
 
 const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
@@ -30,10 +25,7 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
   followUpQuestions,
   isLoading = false,
   remedies,
-  caseType,
-  scholarlyReferences = [],
-  isScholarlyReferencesLoading = false,
-  onScholarSearch
+  caseType
 }) => {
   // Check if we have minimal content to display
   const hasContent = relevantLaw || preliminaryAnalysis || potentialIssues || followUpQuestions?.length > 0;
@@ -67,14 +59,6 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
           caseType={caseType}
         />
       )}
-      
-      {/* Render the scholarly references section */}
-      <ScholarlyReferencesSection 
-        references={scholarlyReferences}
-        isLoading={isScholarlyReferencesLoading}
-        caseType={caseType}
-        onSearch={onScholarSearch}
-      />
       
       <Card className="mb-6 shadow-sm">
         <CardHeader className="pb-2">
