@@ -1,29 +1,58 @@
 
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus } from "lucide-react";
+import GoogleDocsEditor from "@/components/document-editor/GoogleDocsEditor";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface KnowledgeTabContentProps {
   clientId: string;
 }
 
 const KnowledgeTabContent: React.FC<KnowledgeTabContentProps> = ({ clientId }) => {
+  const { toast } = useToast();
+
+  const handleSaveDocument = async (title: string, content: string) => {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        throw new Error("User not authenticated");
+      }
+
+      // Save document metadata
+      const { error } = await supabase
+        .from('document_metadata')
+        .insert({
+          id: crypto.randomUUID(),
+          title: title,
+          client_id: clientId,
+          schema: 'legal_document',
+          created_at: new Date().toISOString()
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Document Saved",
+        description: `"${title}" has been saved successfully.`,
+      });
+    } catch (error: any) {
+      console.error("Error saving document:", error);
+      toast({
+        title: "Save Error",
+        description: error.message || "Failed to save document. Please try again.",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Plus className="h-5 w-5" />
-          Create Document
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="text-center py-8 text-muted-foreground">
-          <Plus className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p>Document creation functionality coming soon.</p>
-          <p className="text-sm">This will handle creating new legal documents.</p>
-        </div>
-      </CardContent>
-    </Card>
+    <GoogleDocsEditor 
+      clientId={clientId}
+      onSave={handleSaveDocument}
+    />
   );
 };
 
