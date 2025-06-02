@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.33.2";
 import { corsHeaders } from "./utils/corsUtils.ts";
-import { handleAdaptiveClientSearch } from "./handlers/adaptiveClientSearchHandler.ts";
+import { handleClientSearch } from "./handlers/clientSearchHandler.ts";
 import { getFallbackCasesByType } from "./utils/fallbackCases.ts";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
@@ -20,17 +20,17 @@ serve(async (req) => {
 
   try {
     const { clientId } = await req.json();
-    console.log(`=== ADAPTIVE SIMILAR CASES SEARCH for client: ${clientId} ===`);
+    console.log(`=== SIMILAR CASES SEARCH for client: ${clientId} ===`);
     
     if (!clientId) {
       throw new Error("Client ID is required");
     }
     
-    // Use the new adaptive search handler that analyzes case content with AI
-    return await handleAdaptiveClientSearch(clientId, courtListenerApiKey);
+    // Use the enhanced client search handler
+    return await handleClientSearch(clientId, courtListenerApiKey);
     
   } catch (error) {
-    console.error('Error in adaptive search-similar-cases function:', error);
+    console.error('Error in search-similar-cases function:', error);
     
     return new Response(
       JSON.stringify({ 

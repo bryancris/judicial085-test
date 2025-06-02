@@ -1,187 +1,133 @@
 
 import { corsHeaders } from "../utils/corsUtils.ts";
-import { supabase } from "../index.ts";
-import { processCourtListenerResults } from "./courtListenerHandler.ts";
-import { generateSearchTerms } from "../utils/searchTermGenerator.ts";
+import { generateSearchTerms, addExplicitLegalTerms } from "../utils/searchTermGenerator.ts";
+import { determineFinalCaseType } from "../utils/caseTypeDetector.ts";
+import { handleCourtListenerSearch } from "./courtListenerHandler.ts";
 import { getFallbackCasesByType } from "../utils/fallbackCases.ts";
-import { identifyCaseType, detectCaseTypeFromText } from "../utils/caseTypeDetector.ts";
+import { supabase } from "../index.ts";
 
-// Process a client search request
 export async function handleClientSearch(
   clientId: string,
-  courtListenerApiKey: string,
-  caseType?: string
+  courtListenerApiKey: string
 ): Promise<Response> {
   try {
-    console.log(`Processing search for client ${clientId}, case type: ${caseType || 'not specified'}`);
+    console.log(`=== CLIENT SEARCH START for ${clientId} ===`);
     
-    // Get case-specific information to build proper search terms
-    const { searchDocument, finalCaseType } = await getSearchDocument(clientId, caseType);
+    // Get case information and legal analysis for this client
+    const { analysisContent, storedCaseType } = await getClientAnalysisContent(clientId);
     
-    if (!searchDocument) {
-      console.log("No suitable search document found, using fallback cases");
+    if (!analysisContent) {
+      console.log("No analysis content found, using fallback cases");
       return new Response(
-        JSON.stringify({ 
-          similarCases: getFallbackCasesByType(finalCaseType || 'general'),
+        JSON.stringify({
+          similarCases: getFallbackCasesByType("general"),
           fallbackUsed: true,
-          analysisFound: false
+          analysisFound: false,
+          searchStrategy: "no-analysis-fallback"
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log("Using legal analysis as search document");
     
-    // Generate search terms based on the client's case information
-    const searchTerms = generateSearchTerms(searchDocument, finalCaseType);
-    console.log("Generated search terms:", searchTerms);
+    // Determine the final case type using improved detection
+    const finalCaseType = determineFinalCaseType(analysisContent, storedCaseType);
+    console.log(`Final case type for search: ${finalCaseType}`);
     
-    // Query the CourtListener API for similar cases
-    const courtListenerResults = await processCourtListenerResults(
-      searchTerms,
-      searchDocument,
-      courtListenerApiKey,
-      finalCaseType
-    );
+    console.log(`Processing search for client ${clientId}, case type: ${finalCaseType}`);
+
+    // Generate search terms based on the content and case type
+    const baseSearchTerms = generateSearchTerms(analysisContent, finalCaseType);
+    const enhancedSearchTerms = addExplicitLegalTerms(baseSearchTerms, analysisContent, finalCaseType);
     
-    console.log(`Found ${courtListenerResults.length} total similar cases`);
-    
-    return new Response(
-      JSON.stringify({ 
-        similarCases: courtListenerResults,
-        fallbackUsed: false,
-        analysisFound: true,
-        caseType: finalCaseType
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.log(`Generated search terms: ${enhancedSearchTerms}`);
+
+    // Search CourtListener with the enhanced terms
+    const courtListenerResults = await handleCourtListenerSearch(enhancedSearchTerms, courtListenerApiKey);
+    const courtListenerData = await courtListenerResults.json();
+
+    console.log(`Found ${courtListenerData.similarCases?.length || 0} total similar cases`);
+
+    if (courtListenerData.similarCases && courtListenerData.similarCases.length > 0) {
+      return new Response(
+        JSON.stringify({
+          similarCases: courtListenerData.similarCases,
+          fallbackUsed: false,
+          analysisFound: true,
+          searchStrategy: "courtlistener-success",
+          caseType: finalCaseType
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } else {
+      // Use fallback cases based on the detected case type
+      console.log(`No external results found, using fallback for case type: ${finalCaseType}`);
+      const fallbackCases = getFallbackCasesByType(finalCaseType);
+      
+      return new Response(
+        JSON.stringify({
+          similarCases: fallbackCases,
+          fallbackUsed: true,
+          analysisFound: true,
+          searchStrategy: "type-specific-fallback",
+          caseType: finalCaseType
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
   } catch (error) {
-    console.error("Error in handleClientSearch:", error);
-    
-    // If we have a case type, use it for fallback cases
-    const fallbackCaseType = caseType || await identifyCaseType(clientId);
-    
+    console.error("Error in client search:", error);
     return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        similarCases: getFallbackCasesByType(fallbackCaseType),
+      JSON.stringify({
+        similarCases: getFallbackCasesByType("general"),
         fallbackUsed: true,
-        analysisFound: false
+        analysisFound: false,
+        searchStrategy: "error-fallback",
+        error: error.message
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 }
 
-// Get the most appropriate search document for this client
-async function getSearchDocument(
-  clientId: string, 
-  providedCaseType?: string
-): Promise<{ searchDocument: string; finalCaseType: string }> {
-  // Variables to store our results
-  let searchDocument = "";
-  let finalCaseType = providedCaseType || "";
-  
-  try {
-    // First try to get the legal analysis as it has the most structured case information
-    const { data: analysisData, error: analysisError } = await supabase
-      .from("legal_analyses")
-      .select("content, case_type")
-      .eq("client_id", clientId)
-      .order("created_at", { ascending: false })
-      .limit(1);
-      
-    if (analysisError) {
-      console.error("Error fetching legal analysis:", analysisError);
-    } else if (analysisData && analysisData.length > 0) {
-      const analysis = analysisData[0];
-      searchDocument = analysis.content || "";
-      
-      // Use this case type if not provided
-      if (!finalCaseType && analysis.case_type) {
-        finalCaseType = analysis.case_type;
-      }
-      
-      console.log("Using legal analysis as search document");
-      
-      // Check if the analysis contains meaningful content
-      if (searchDocument) {
-        // If we have a good analysis, check if we need to refine the case type
-        if (!finalCaseType) {
-          const detectedType = detectCaseTypeFromText(searchDocument);
-          finalCaseType = detectedType;
-          console.log(`Detected case type from analysis: ${finalCaseType}`);
-        }
-        
-        return { searchDocument, finalCaseType };
-      }
-    }
-    
-    // If no analysis, try to get client messages
-    const { data: messagesData, error: messagesError } = await supabase
-      .from("client_messages")
-      .select("content")
-      .eq("client_id", clientId)
-      .order("created_at", { ascending: true });
-      
-    if (messagesError) {
-      console.error("Error fetching client messages:", messagesError);
-    } else if (messagesData && messagesData.length > 0) {
-      // Combine all messages into a single document
-      searchDocument = messagesData.map(msg => msg.content).join("\n\n");
-      console.log("Using client messages as search document");
-      
-      // If still no case type, try to detect from messages
-      if (!finalCaseType) {
-        finalCaseType = detectCaseTypeFromText(searchDocument);
-        console.log(`Detected case type from messages: ${finalCaseType}`);
-      }
-      
-      return { searchDocument, finalCaseType };
-    }
-    
-    // If no messages, try to get case data
-    const { data: caseData, error: caseError } = await supabase
-      .from("cases")
-      .select("description, case_type")
-      .eq("client_id", clientId)
-      .limit(1);
-      
-    if (caseError) {
-      console.error("Error fetching case data:", caseError);
-    } else if (caseData && caseData.length > 0) {
-      searchDocument = caseData[0].description || "";
-      console.log("Using case description as search document");
-      
-      // Use case type if available
-      if (!finalCaseType && caseData[0].case_type) {
-        finalCaseType = caseData[0].case_type;
-      }
-      
-      // If still no case type, try to detect from case description
-      if (!finalCaseType && searchDocument) {
-        finalCaseType = detectCaseTypeFromText(searchDocument);
-        console.log(`Detected case type from case description: ${finalCaseType}`);
-      }
-      
-      return { searchDocument, finalCaseType };
-    }
-    
-    // If we still don't have a case type, default to general
-    if (!finalCaseType) {
-      finalCaseType = "general";
-      console.log("No case type detected, using general");
-    }
-    
-    // If we got here with no search document, there's not enough client data
-    if (!searchDocument) {
-      console.log("No suitable search document found");
-    }
-    
-    return { searchDocument, finalCaseType };
-  } catch (error) {
-    console.error("Error in getSearchDocument:", error);
-    return { 
-      searchDocument: "", 
-      finalCaseType: finalCaseType || "general" 
-    };
+async function getClientAnalysisContent(clientId: string): Promise<{
+  analysisContent: string;
+  storedCaseType: string | null;
+}> {
+  // Get the most recent legal analysis
+  const { data: analyses } = await supabase
+    .from('legal_analyses')
+    .select('content')
+    .eq('client_id', clientId)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  // Get case information
+  const { data: cases } = await supabase
+    .from('cases')
+    .select('case_type, case_description, case_notes')
+    .eq('client_id', clientId)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  let analysisContent = '';
+  let storedCaseType = null;
+
+  if (analyses && analyses.length > 0) {
+    analysisContent = analyses[0].content;
   }
+
+  if (cases && cases.length > 0) {
+    storedCaseType = cases[0].case_type;
+    // Add case information to analysis content if available
+    const caseInfo = [cases[0].case_description, cases[0].case_notes]
+      .filter(Boolean)
+      .join(' ');
+    if (caseInfo) {
+      analysisContent += '\n\n' + caseInfo;
+    }
+  }
+
+  return { analysisContent, storedCaseType };
 }
