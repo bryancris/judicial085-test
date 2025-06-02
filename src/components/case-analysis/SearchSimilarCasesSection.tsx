@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { SimilarCase } from "./SimilarCasesDialog";
 import { searchSimilarCases } from "@/utils/openaiService";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +24,18 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
   // Default outcome prediction values - will be updated based on case analysis
   const [outcomeDefense, setOutcomeDefense] = useState(75); // Default to 75% client win likelihood
   const [outcomeProsecution, setOutcomeProsecution] = useState(25); // Default to 25% case loss risk
+
+  // Clear state when clientId changes to prevent showing cached results from previous client
+  useEffect(() => {
+    console.log(`SearchSimilarCasesSection: Client changed to ${clientId}, clearing previous search state`);
+    setSimilarCases([]);
+    setSearchError(null);
+    setIsDialogOpen(false);
+    setIsSearchingCases(false);
+    // Reset outcome predictions to defaults
+    setOutcomeDefense(75);
+    setOutcomeProsecution(25);
+  }, [clientId]);
 
   const handleSearchSimilarCases = async () => {
     if (isSearchingCases) return;
