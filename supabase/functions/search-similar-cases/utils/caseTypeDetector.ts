@@ -100,7 +100,7 @@ export function detectCaseTypeFromText(text: string): string {
   
   // Define pattern matching scores for different case types
   let scores: Record<string, number> = {
-    "hoa": 0,
+    "animal-protection": 0,
     "consumer-protection": 0,
     "personal-injury": 0,
     "real-estate": 0,
@@ -115,21 +115,29 @@ export function detectCaseTypeFromText(text: string): string {
   
   // Check for highly specific terms first
   
-  // HOA/Property terms
-  if (lowerText.includes("hoa") || 
-      lowerText.includes("homeowner") ||
-      lowerText.includes("property code § 209") ||
-      lowerText.includes("209.006") || 
-      lowerText.includes("209.007") ||
-      lowerText.includes("board meeting")) {
-    scores["hoa"] += 10;
+  // Animal Protection - HIGH PRIORITY PATTERNS
+  if (lowerText.includes("§ 42.092") || 
+      lowerText.includes("42.092") || 
+      lowerText.includes("42.091") ||
+      lowerText.includes("texas penal code") && (lowerText.includes("42.09") || lowerText.includes("animal"))) {
+    scores["animal-protection"] += 15; // Very high score for specific statutes
   }
   
-  // Dog/animal related cases
-  if ((lowerText.includes("dog") || lowerText.includes("pet") || lowerText.includes("animal")) && 
-      (lowerText.includes("injury") || lowerText.includes("bite") || lowerText.includes("attack"))) {
-    scores["negligence"] += 8;
-    scores["personal-injury"] += 5;
+  if ((lowerText.includes("animal") && (lowerText.includes("cruelty") || lowerText.includes("abuse") || lowerText.includes("neglect"))) ||
+      lowerText.includes("dogtopia") ||
+      (lowerText.includes("pet") && (lowerText.includes("boarding") || lowerText.includes("care") || lowerText.includes("death"))) ||
+      lowerText.includes("animal care") ||
+      lowerText.includes("heat exposure") && lowerText.includes("dog")) {
+    scores["animal-protection"] += 12;
+  }
+  
+  // Consumer Protection - DTPA specific
+  if (lowerText.includes("dtpa") || 
+      lowerText.includes("deceptive trade") || 
+      lowerText.includes("section 17.4") ||
+      lowerText.includes("§ 17.46")) {
+    scores["consumer-protection"] += 12;
+    scores["deceptive-trade"] += 10;
   }
   
   // Bailment/property cases
@@ -139,29 +147,22 @@ export function detectCaseTypeFromText(text: string): string {
     scores["bailment"] += 10;
   }
   
-  // DTPA specific references
-  if (lowerText.includes("dtpa") || 
-      lowerText.includes("deceptive trade") || 
-      lowerText.includes("section 17.4")) {
-    scores["deceptive-trade"] += 10;
-    scores["consumer-protection"] += 8;
-  }
+  // Now score based on more general patterns with lower weights
   
-  // Now score based on more general patterns
-  
-  // HOA/Property terms
-  if (countMatches(lowerText, ["association", "covenant", "restriction", "deed", "board", "bylaw", "fine", "common area", "property code"])) {
-    scores["hoa"] += countMatches(lowerText, ["association", "covenant", "restriction", "deed", "board", "bylaw", "fine", "common area", "property code"]);
+  // Animal Protection general terms
+  if (countMatches(lowerText, ["animal", "pet", "dog", "cat", "boarding", "veterinary", "heat", "negligent supervision"])) {
+    scores["animal-protection"] += countMatches(lowerText, ["animal", "pet", "dog", "cat", "boarding", "veterinary", "heat", "negligent supervision"]) * 2;
   }
   
   // Consumer protection terms
-  if (countMatches(lowerText, ["consumer", "warranty", "false advertising", "misleading", "protection", "dtpa", "product", "service", "representation"])) {
-    scores["consumer-protection"] += countMatches(lowerText, ["consumer", "warranty", "false advertising", "misleading", "protection", "dtpa", "product", "service", "representation"]);
+  if (countMatches(lowerText, ["consumer", "warranty", "false advertising", "misleading", "protection", "service", "representation", "misrepresentation"])) {
+    scores["consumer-protection"] += countMatches(lowerText, ["consumer", "warranty", "false advertising", "misleading", "protection", "service", "representation", "misrepresentation"]);
   }
   
-  // Personal injury terms
-  if (countMatches(lowerText, ["injury", "accident", "negligence", "hurt", "damage", "slip and fall", "pain", "medical", "wrongful death"])) {
-    scores["personal-injury"] += countMatches(lowerText, ["injury", "accident", "negligence", "hurt", "damage", "slip and fall", "pain", "medical", "wrongful death"]);
+  // Personal injury terms - but weight lower if animal terms present
+  const personalInjuryScore = countMatches(lowerText, ["injury", "accident", "negligence", "hurt", "damage", "pain", "medical", "wrongful death"]);
+  if (personalInjuryScore > 0 && scores["animal-protection"] < 5) {
+    scores["personal-injury"] += personalInjuryScore;
   }
   
   // Real estate terms
@@ -189,24 +190,12 @@ export function detectCaseTypeFromText(text: string): string {
     scores["product-liability"] += countMatches(lowerText, ["product", "defect", "dangerous", "manufacturer", "failure", "recall", "warning", "design"]);
   }
   
-  // Check for specific phrases that strongly indicate case types
-  if (lowerText.includes("slip and fall") || lowerText.includes("premises liability")) {
-    scores["personal-injury"] += 8;
-  }
-  
-  if (lowerText.includes("car accident") || lowerText.includes("motor vehicle")) {
-    scores["personal-injury"] += 8;
-  }
-  
-  if (lowerText.includes("medical malpractice") || lowerText.includes("hospital")) {
-    scores["personal-injury"] += 8;
-  }
-  
   // Find the highest scoring case type
   let highestScore = 0;
   let detectedType = "general";
   
   for (const [caseType, score] of Object.entries(scores)) {
+    console.log(`Case type ${caseType}: score ${score}`);
     if (score > highestScore) {
       highestScore = score;
       detectedType = caseType;
@@ -215,6 +204,7 @@ export function detectCaseTypeFromText(text: string): string {
   
   // Only return a specific case type if the score is significant
   if (highestScore >= 3) {
+    console.log(`Detected case type: ${detectedType} with score: ${highestScore}`);
     return detectedType;
   }
   
