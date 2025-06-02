@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Json } from "@/integrations/supabase/types";
@@ -121,6 +121,13 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
       setIsLoading(false);
     }
   }, [clientId, caseId, toast]);
+
+  // Auto-fetch on mount and when dependencies change
+  useEffect(() => {
+    if (clientId) {
+      fetchAnalysisData();
+    }
+  }, [fetchAnalysisData, clientId, caseId]);
 
   return {
     analysisData,

@@ -27,6 +27,20 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
 }) => {
   return (
     <div className="space-y-8">
+      {/* Detailed Legal Analysis - NOW AT THE TOP */}
+      <DetailedLegalAnalysis
+        relevantLaw={analysisData.legalAnalysis.relevantLaw}
+        preliminaryAnalysis={analysisData.legalAnalysis.preliminaryAnalysis}
+        potentialIssues={analysisData.legalAnalysis.potentialIssues}
+        followUpQuestions={analysisData.legalAnalysis.followUpQuestions}
+        isLoading={isLoading}
+        remedies={analysisData.remedies}
+        caseType={analysisData.caseType}
+        scholarlyReferences={scholarlyReferences}
+        isScholarlyReferencesLoading={isScholarlyReferencesLoading}
+        onScholarSearch={onScholarSearch}
+      />
+
       {/* Law References Section */}
       {analysisData.lawReferences && analysisData.lawReferences.length > 0 && (
         <LawReferencesSection
@@ -46,20 +60,6 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
 
       {/* Similar Cases with integrated Outcome Prediction */}
       <SearchSimilarCasesSection clientId={clientId} caseType={analysisData.caseType} />
-
-      {/* Detailed Legal Analysis */}
-      <DetailedLegalAnalysis
-        relevantLaw={analysisData.legalAnalysis.relevantLaw}
-        preliminaryAnalysis={analysisData.legalAnalysis.preliminaryAnalysis}
-        potentialIssues={analysisData.legalAnalysis.potentialIssues}
-        followUpQuestions={analysisData.legalAnalysis.followUpQuestions}
-        isLoading={isLoading}
-        remedies={analysisData.remedies}
-        caseType={analysisData.caseType}
-        scholarlyReferences={scholarlyReferences}
-        isScholarlyReferencesLoading={isScholarlyReferencesLoading}
-        onScholarSearch={onScholarSearch}
-      />
     </div>
   );
 };
