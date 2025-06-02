@@ -1,4 +1,3 @@
-
 // Generate search terms for case similarity search
 export function generateSearchTerms(content: string, caseType: string): string {
   try {
@@ -6,6 +5,9 @@ export function generateSearchTerms(content: string, caseType: string): string {
       console.log("No content provided for search term generation");
       return `${caseType} case law Texas`;
     }
+    
+    console.log(`Generating search terms for case type: ${caseType}`);
+    console.log(`Content preview: ${content.substring(0, 200)}...`);
     
     // Extract key phrases from the content
     const keyPhrases = extractKeyPhrases(content, caseType);
@@ -27,6 +29,7 @@ function extractKeyPhrases(content: string, caseType: string): string {
   
   if (caseType === "animal-protection") {
     caseSpecificTerms = extractAnimalProtectionTerms(content);
+    console.log(`Extracted animal protection terms: ${caseSpecificTerms.join(", ")}`);
   } else if (caseType === "consumer-protection" || caseType === "deceptive-trade") {
     caseSpecificTerms = extractConsumerProtectionTerms(content);
   } else if (caseType === "personal-injury") {
@@ -42,55 +45,141 @@ function extractKeyPhrases(content: string, caseType: string): string {
   
   // Extract statute references
   const statuteReferences = extractStatuteReferences(content);
+  console.log(`Extracted statute references: ${statuteReferences.join(", ")}`);
   
   // Extract case citations
   const caseCitations = extractCaseCitations(content);
   
-  // Combine all terms, prioritizing case-specific terms
-  let allTerms = [...caseSpecificTerms, ...statuteReferences, ...caseCitations];
+  // Extract business names and specific entities
+  const businessNames = extractBusinessNames(content);
+  console.log(`Extracted business names: ${businessNames.join(", ")}`);
+  
+  // Combine all terms, prioritizing statute references and business names first
+  let allTerms = [...statuteReferences, ...businessNames, ...caseSpecificTerms, ...caseCitations];
   
   // Remove duplicates and limit to most important terms
   const uniqueTerms = [...new Set(allTerms)];
+  
+  // For animal protection cases, prioritize specific terms over generic ones
+  if (caseType === "animal-protection") {
+    const prioritizedTerms = prioritizeAnimalProtectionTerms(uniqueTerms);
+    console.log(`Prioritized animal protection terms: ${prioritizedTerms.slice(0, 8).join(" ")}`);
+    return prioritizedTerms.slice(0, 8).join(" ");
+  }
   
   // Return top 8 terms for effective search
   return uniqueTerms.slice(0, 8).join(" ");
 }
 
-// Extract animal protection specific terms
+// Extract animal protection specific terms with priority
 function extractAnimalProtectionTerms(content: string): string[] {
   const terms = [];
   const lowerContent = content.toLowerCase();
   
-  // Specific statute references
+  // HIGHEST PRIORITY: Specific statute references
   if (lowerContent.includes("42.092") || lowerContent.includes("§ 42.092")) {
-    terms.push("Texas Penal Code 42.092");
+    terms.push("Texas Penal Code 42.092 animal cruelty");
   }
   if (lowerContent.includes("42.091")) {
-    terms.push("Texas Penal Code 42.091");
+    terms.push("Texas Penal Code 42.091 animal neglect");
   }
   
-  // Animal-specific terms
+  // HIGH PRIORITY: Specific animal cruelty terms
   if (lowerContent.includes("animal cruelty")) terms.push("animal cruelty");
-  if (lowerContent.includes("pet boarding")) terms.push("pet boarding");
-  if (lowerContent.includes("animal care")) terms.push("animal care");
-  if (lowerContent.includes("dogtopia")) terms.push("pet boarding negligence");
-  if (lowerContent.includes("heat exposure")) terms.push("heat exposure animal");
-  if (lowerContent.includes("negligent supervision")) terms.push("negligent supervision");
   if (lowerContent.includes("animal abuse")) terms.push("animal abuse");
   if (lowerContent.includes("animal neglect")) terms.push("animal neglect");
   
+  // MEDIUM PRIORITY: Pet care business terms
+  if (lowerContent.includes("pet boarding")) terms.push("pet boarding negligence");
+  if (lowerContent.includes("dogtopia")) terms.push("pet boarding facility liability");
+  if (lowerContent.includes("animal care")) terms.push("animal care facility");
+  if (lowerContent.includes("heat exposure")) terms.push("heat exposure animal death");
+  if (lowerContent.includes("negligent supervision")) terms.push("negligent animal supervision");
+  
   // If DTPA is also mentioned (consumer protection aspect)
   if (lowerContent.includes("dtpa") || lowerContent.includes("deceptive trade")) {
-    terms.push("DTPA animal services");
-    terms.push("consumer protection pets");
+    terms.push("DTPA animal services consumer protection");
   }
   
-  // Add generic fallbacks if no specific terms found
+  // Add specific circumstances
+  if (lowerContent.includes("death") && lowerContent.includes("pet")) {
+    terms.push("pet death liability");
+  }
+  
+  // Only add generic fallbacks if no specific terms found
   if (terms.length === 0) {
-    terms.push("animal", "pet", "boarding", "care", "negligence");
+    terms.push("animal", "pet", "boarding", "care");
   }
   
   return terms;
+}
+
+// Prioritize animal protection terms to avoid generic matches
+function prioritizeAnimalProtectionTerms(terms: string[]): string[] {
+  const prioritized = [];
+  
+  // First: Statute references
+  const statutes = terms.filter(term => 
+    term.includes("Texas Penal Code") || 
+    term.includes("42.092") || 
+    term.includes("42.091")
+  );
+  prioritized.push(...statutes);
+  
+  // Second: Specific animal cruelty terms
+  const crueltyTerms = terms.filter(term => 
+    term.includes("animal cruelty") || 
+    term.includes("animal abuse") || 
+    term.includes("animal neglect")
+  );
+  prioritized.push(...crueltyTerms);
+  
+  // Third: Business and facility terms
+  const businessTerms = terms.filter(term => 
+    term.includes("pet boarding") || 
+    term.includes("boarding facility") || 
+    term.includes("animal care") ||
+    term.includes("heat exposure")
+  );
+  prioritized.push(...businessTerms);
+  
+  // Fourth: DTPA consumer protection
+  const dtpaTerms = terms.filter(term => 
+    term.includes("DTPA") || 
+    term.includes("consumer protection")
+  );
+  prioritized.push(...dtpaTerms);
+  
+  // Last: Other remaining terms, but filter out overly generic ones
+  const remaining = terms.filter(term => 
+    !prioritized.includes(term) && 
+    !term.includes("negligence damages") && 
+    !term.includes("breach damages") &&
+    !term.includes("duty breach")
+  );
+  prioritized.push(...remaining);
+  
+  return prioritized;
+}
+
+// Extract business names and specific entities
+function extractBusinessNames(content: string): string[] {
+  const businesses = [];
+  const lowerContent = content.toLowerCase();
+  
+  // Look for specific business names mentioned
+  if (lowerContent.includes("dogtopia")) {
+    businesses.push("Dogtopia pet boarding");
+  }
+  
+  // Look for other pet care business patterns
+  const businessPattern = /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:pet|animal|boarding|daycare|kennel)/gi;
+  let match;
+  while ((match = businessPattern.exec(content)) !== null) {
+    businesses.push(`${match[1]} pet care`);
+  }
+  
+  return businesses;
 }
 
 // Extract consumer protection specific terms
@@ -183,15 +272,23 @@ function extractCaseCitations(content: string): string[] {
   return caseCitations;
 }
 
-// Extract statute references
+// Extract statute references with improved patterns
 function extractStatuteReferences(content: string): string[] {
   const statutes = [];
   
-  // Texas Penal Code patterns
+  // Texas Penal Code patterns - improved to catch more variations
   const penalCodePattern = /(?:Texas\s+)?Penal\s+Code\s*[§]?\s*(\d+\.\d+)/gi;
   let match;
   while ((match = penalCodePattern.exec(content)) !== null) {
     statutes.push(`Texas Penal Code ${match[1]}`);
+  }
+  
+  // Specific animal cruelty statute patterns
+  if (content.includes("§ 42.092") || content.includes("42.092")) {
+    statutes.push("Texas Penal Code 42.092 animal cruelty");
+  }
+  if (content.includes("§ 42.091") || content.includes("42.091")) {
+    statutes.push("Texas Penal Code 42.091 animal neglect");
   }
   
   // DTPA patterns
@@ -213,17 +310,17 @@ function extractStatuteReferences(content: string): string[] {
 export function addExplicitLegalTerms(searchTerms: string, content: string, caseType: string): string {
   const normalizedType = (caseType || "").toLowerCase().replace(/[-_\s]/g, "");
   
-  // Add case-specific terms
+  // Add case-specific terms with priority for animal protection
   if (normalizedType.includes("animal") || normalizedType.includes("protection")) {
-    return `${searchTerms} animal cruelty Texas Penal Code 42.092 pet boarding negligence`;
+    return `${searchTerms} "Texas Penal Code 42.092" "animal cruelty" "pet boarding" "animal care facility" DTPA`;
   }
   
   if (normalizedType.includes("consumer") || normalizedType.includes("dtpa") || normalizedType.includes("deceptive")) {
-    return `${searchTerms} DTPA deceptive trade practices consumer protection Texas`;
+    return `${searchTerms} DTPA "deceptive trade practices" "consumer protection" Texas`;
   }
   
   if (normalizedType.includes("personal") || normalizedType.includes("injury")) {
-    return `${searchTerms} negligence damages duty breach personal injury`;
+    return `${searchTerms} negligence damages "duty of care" breach "personal injury"`;
   }
   
   if (normalizedType.includes("contract")) {
@@ -235,7 +332,7 @@ export function addExplicitLegalTerms(searchTerms: string, content: string, case
   }
   
   if (normalizedType.includes("bailment")) {
-    return `${searchTerms} bailment property possession duty care`;
+    return `${searchTerms} bailment property possession "duty of care"`;
   }
   
   // Default added terms

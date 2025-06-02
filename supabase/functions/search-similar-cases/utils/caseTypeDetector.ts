@@ -1,4 +1,3 @@
-
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.33.2";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
@@ -113,22 +112,34 @@ export function detectCaseTypeFromText(text: string): string {
     "product-liability": 0
   };
   
-  // Check for highly specific terms first
-  
-  // Animal Protection - HIGH PRIORITY PATTERNS
+  // Animal Protection - HIGHEST PRIORITY PATTERNS with increased weights
   if (lowerText.includes("§ 42.092") || 
       lowerText.includes("42.092") || 
       lowerText.includes("42.091") ||
-      lowerText.includes("texas penal code") && (lowerText.includes("42.09") || lowerText.includes("animal"))) {
-    scores["animal-protection"] += 15; // Very high score for specific statutes
+      (lowerText.includes("texas penal code") && (lowerText.includes("42.09") || lowerText.includes("animal")))) {
+    scores["animal-protection"] += 25; // Increased from 15
+    console.log("Found Texas Penal Code animal cruelty statute - adding 25 points to animal-protection");
   }
   
+  // Business-specific animal care indicators
+  if (lowerText.includes("dogtopia")) {
+    scores["animal-protection"] += 20; // High weight for specific business
+    console.log("Found 'Dogtopia' - adding 20 points to animal-protection");
+  }
+  
+  // Heat exposure + animal combination
+  if (lowerText.includes("heat exposure") && lowerText.includes("animal")) {
+    scores["animal-protection"] += 15;
+    console.log("Found 'heat exposure' + 'animal' - adding 15 points to animal-protection");
+  }
+  
+  // Strong animal protection indicators
   if ((lowerText.includes("animal") && (lowerText.includes("cruelty") || lowerText.includes("abuse") || lowerText.includes("neglect"))) ||
-      lowerText.includes("dogtopia") ||
       (lowerText.includes("pet") && (lowerText.includes("boarding") || lowerText.includes("care") || lowerText.includes("death"))) ||
       lowerText.includes("animal care") ||
-      lowerText.includes("heat exposure") && lowerText.includes("dog")) {
-    scores["animal-protection"] += 12;
+      (lowerText.includes("heat exposure") && lowerText.includes("dog"))) {
+    scores["animal-protection"] += 15; // Increased from 12
+    console.log("Found strong animal protection indicators - adding 15 points to animal-protection");
   }
   
   // Consumer Protection - DTPA specific
@@ -138,6 +149,7 @@ export function detectCaseTypeFromText(text: string): string {
       lowerText.includes("§ 17.46")) {
     scores["consumer-protection"] += 12;
     scores["deceptive-trade"] += 10;
+    console.log("Found DTPA references - adding points to consumer-protection");
   }
   
   // Bailment/property cases
@@ -145,6 +157,25 @@ export function detectCaseTypeFromText(text: string): string {
      (lowerText.includes("property") && lowerText.includes("stolen")) ||
      (lowerText.includes("vehicle") && lowerText.includes("theft"))) {
     scores["bailment"] += 10;
+  }
+  
+  // Personal injury terms - but weight MUCH lower if animal terms present
+  const personalInjuryScore = countMatches(lowerText, ["injury", "accident", "hurt", "pain", "medical", "wrongful death"]);
+  if (personalInjuryScore > 0 && scores["animal-protection"] < 10) { // Only if animal score is very low
+    scores["personal-injury"] += personalInjuryScore * 2; // Reduced weight
+    console.log(`Found personal injury terms but animal-protection score is ${scores["animal-protection"]} - adding ${personalInjuryScore * 2} to personal-injury`);
+  }
+  
+  // General animal protection terms (lower weight)
+  if (countMatches(lowerText, ["animal", "pet", "dog", "cat", "boarding", "veterinary"])) {
+    const animalCount = countMatches(lowerText, ["animal", "pet", "dog", "cat", "boarding", "veterinary"]);
+    scores["animal-protection"] += animalCount * 3; // Increased multiplier
+    console.log(`Found ${animalCount} general animal terms - adding ${animalCount * 3} to animal-protection`);
+  }
+  
+  // Consumer protection terms
+  if (countMatches(lowerText, ["consumer", "warranty", "false advertising", "misleading", "protection", "service", "representation", "misrepresentation"])) {
+    scores["consumer-protection"] += countMatches(lowerText, ["consumer", "warranty", "false advertising", "misleading", "protection", "service", "representation", "misrepresentation"]);
   }
   
   // Now score based on more general patterns with lower weights
@@ -202,12 +233,13 @@ export function detectCaseTypeFromText(text: string): string {
     }
   }
   
-  // Only return a specific case type if the score is significant
-  if (highestScore >= 3) {
+  // Lower the threshold to detect specific case types more easily
+  if (highestScore >= 2) { // Reduced from 3
     console.log(`Detected case type: ${detectedType} with score: ${highestScore}`);
     return detectedType;
   }
   
+  console.log(`No specific case type detected (highest score: ${highestScore}), defaulting to general`);
   return "general";
 }
 
