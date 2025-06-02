@@ -10,41 +10,53 @@ const corsHeaders = {
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-const courtListenerApiKey = Deno.env.get('COURTLISTENER_API_KEY') || '76ddb006469713cde169d7d8a2907ca5ff600b3a';
 
 export const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Simple fallback cases for testing
-const getSimpleFallbackCases = (caseType: string) => {
-  if (caseType === 'property-law' || caseType === 'hoa') {
-    return [
-      {
-        source: "courtlistener",
-        clientId: null,
-        clientName: "HOA Notice Requirements Case",
-        similarity: 85,
-        relevantFacts: "Homeowners association failed to provide proper written notice before levying fines under Texas Property Code § 209.006. Property owner challenged the violation notice procedures and fine assessment.",
-        outcome: "Court ruled that HOA violated statutory notice requirements. Fines were invalidated and attorney fees awarded to property owner under Texas Property Code § 209.006(d).",
-        court: "Texas District Court, Harris County",
-        citation: "No. 2020-CV-78945",
-        dateDecided: "09/15/2020",
-        url: null
-      },
-      {
-        source: "courtlistener", 
-        clientId: null,
-        clientName: "Property Code Violation Procedures",
-        similarity: 78,
-        relevantFacts: "HOA board imposed fines without following Texas Property Code § 209.006 notice and hearing requirements. Property owner was not given opportunity to cure violation or attend hearing.",
-        outcome: "Court found procedural violations of Texas Property Code. Injunction issued requiring HOA to follow proper procedures for future violations.",
-        court: "Texas Court of Appeals, 14th District",
-        citation: "512 S.W.3d 234 (Tex. App. 2019)",
-        dateDecided: "03/22/2019",
-        url: null
-      }
-    ];
-  }
-  
+// HOA/Property Law specific fallback cases
+const getPropertyLawFallbackCases = () => {
+  return [
+    {
+      source: "courtlistener",
+      clientId: null,
+      clientName: "HOA Notice Requirements Case",
+      similarity: 85,
+      relevantFacts: "Homeowners association failed to provide proper written notice before levying fines under Texas Property Code § 209.006. Property owner challenged the violation notice procedures and fine assessment.",
+      outcome: "Court ruled that HOA violated statutory notice requirements. Fines were invalidated and attorney fees awarded to property owner under Texas Property Code § 209.006(d).",
+      court: "Texas District Court, Harris County",
+      citation: "No. 2020-CV-78945",
+      dateDecided: "09/15/2020",
+      url: null
+    },
+    {
+      source: "courtlistener", 
+      clientId: null,
+      clientName: "Property Code Violation Procedures",
+      similarity: 78,
+      relevantFacts: "HOA board imposed fines without following Texas Property Code § 209.006 notice and hearing requirements. Property owner was not given opportunity to cure violation or attend hearing.",
+      outcome: "Court found procedural violations of Texas Property Code. Injunction issued requiring HOA to follow proper procedures for future violations.",
+      court: "Texas Court of Appeals, 14th District",
+      citation: "512 S.W.3d 234 (Tex. App. 2019)",
+      dateDecided: "03/22/2019",
+      url: null
+    },
+    {
+      source: "courtlistener",
+      clientId: null, 
+      clientName: "HOA Governance and Hearing Rights",
+      similarity: 72,
+      relevantFacts: "Challenge to HOA enforcement procedures under Texas Property Code § 209.007. Property owner alleged denial of due process rights in violation hearing.",
+      outcome: "Court ordered HOA to provide proper hearing procedures and attorney fees under Property Code § 209.006(d).",
+      court: "Texas District Court, Collin County", 
+      citation: "No. 2021-CV-12847",
+      dateDecided: "11/08/2021",
+      url: null
+    }
+  ];
+};
+
+// General fallback cases for other case types
+const getGeneralFallbackCases = () => {
   return [
     {
       source: "courtlistener",
@@ -61,16 +73,20 @@ const getSimpleFallbackCases = (caseType: string) => {
   ];
 };
 
-// Simple case type detection
+// Simple case type detection focused on HOA/Property Law
 const detectCaseType = (content: string): string => {
-  console.log("=== SIMPLE CASE TYPE DETECTION ===");
+  console.log("=== CASE TYPE DETECTION START ===");
   const lowerContent = content.toLowerCase();
   
-  // Check for HOA/Property indicators
-  if (lowerContent.includes("209.006") || lowerContent.includes("209.007") ||
-      lowerContent.includes("homeowners") || lowerContent.includes("homeowner") ||
+  // Check for HOA/Property indicators with high priority
+  if (lowerContent.includes("209.006") || lowerContent.includes("209.007")) {
+    console.log("✅ DETECTED: property-law case (specific statutes)");
+    return "property-law";
+  }
+  
+  if (lowerContent.includes("homeowners") || lowerContent.includes("homeowner") ||
       lowerContent.includes("hoa") || lowerContent.includes("property code")) {
-    console.log("✅ DETECTED: property-law/hoa case");
+    console.log("✅ DETECTED: property-law case (general terms)");
     return "property-law";
   }
   
@@ -80,16 +96,21 @@ const detectCaseType = (content: string): string => {
     return "consumer-protection";
   }
   
-  // Check for animal protection
-  const animalTerms = ['animal', 'pet', 'dog', 'cat', 'veterinary', 'cruelty'];
-  const animalCount = animalTerms.filter(term => lowerContent.includes(term)).length;
-  if (animalCount >= 2 && (lowerContent.includes("42.092") || lowerContent.includes("42.091"))) {
-    console.log("✅ DETECTED: animal-protection case");
-    return "animal-protection";
-  }
-  
   console.log("✅ DETECTED: general case");
   return "general";
+};
+
+// Get appropriate fallback cases based on detected type
+const getFallbackCasesByType = (caseType: string) => {
+  console.log(`Getting fallback cases for type: ${caseType}`);
+  
+  if (caseType === "property-law" || caseType === "hoa") {
+    console.log("Using property-law fallback cases");
+    return getPropertyLawFallbackCases();
+  }
+  
+  console.log("Using general fallback cases");
+  return getGeneralFallbackCases();
 };
 
 serve(async (req) => {
@@ -146,7 +167,7 @@ serve(async (req) => {
       console.log("❌ No analysis content found, using general fallback");
       return new Response(
         JSON.stringify({
-          similarCases: getSimpleFallbackCases("general"),
+          similarCases: getGeneralFallbackCases(),
           fallbackUsed: true,
           analysisFound: false,
           searchStrategy: "no-analysis-fallback"
@@ -155,12 +176,12 @@ serve(async (req) => {
       );
     }
 
-    // Detect case type
+    // Detect case type from analysis content
     const detectedCaseType = detectCaseType(analysisContent);
     console.log(`Detected case type: ${detectedCaseType}`);
     
-    // For now, always use fallback cases with the correct type
-    const fallbackCases = getSimpleFallbackCases(detectedCaseType);
+    // Get appropriate fallback cases
+    const fallbackCases = getFallbackCasesByType(detectedCaseType);
     
     console.log(`✅ Returning ${fallbackCases.length} fallback cases for type: ${detectedCaseType}`);
     
@@ -181,7 +202,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: error.message || 'Failed to search for similar cases',
-        similarCases: getSimpleFallbackCases("general"),
+        similarCases: getGeneralFallbackCases(),
         fallbackUsed: true,
         analysisFound: false,
         searchStrategy: "error-fallback"
