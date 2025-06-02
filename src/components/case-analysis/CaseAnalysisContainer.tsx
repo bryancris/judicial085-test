@@ -26,6 +26,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
   caseId: propCaseId,
 }) => {
   const [selectedTab, setSelectedTab] = useState("analysis");
+  const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
   const { currentCase } = useCase();
   const { toast } = useToast();
   
@@ -80,7 +81,14 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
 
   // Generate analysis function that refreshes the database-backed data
   const generateRealTimeAnalysis = async () => {
+    setIsGeneratingAnalysis(true);
     try {
+      // Show loading toast
+      toast({
+        title: "Generating Analysis",
+        description: "Real-time case analysis is being generated...",
+      });
+
       // Fetch the client messages for this client
       const { data: messages, error: messagesError } = await supabase
         .from("client_messages")
@@ -139,6 +147,8 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
         description: err.message || "Failed to generate real-time analysis.",
         variant: "destructive",
       });
+    } finally {
+      setIsGeneratingAnalysis(false);
     }
   };
 
@@ -161,7 +171,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
         caseId={caseId}
         selectedTab={selectedTab}
         setSelectedTab={setSelectedTab}
-        isGenerating={isAnalysisLoading}
+        isGenerating={isGeneratingAnalysis}
         onGenerate={generateRealTimeAnalysis}
       />
     );
@@ -178,6 +188,9 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
     ? `${clientName} - ${currentCase.case_title} Analysis`
     : `${clientName} - Case Analysis`;
 
+  // Combine loading states for proper button feedback
+  const isCombinedLoading = isAnalysisLoading || isGeneratingAnalysis;
+
   return (
     <div className="container mx-auto py-8">
       <CaseAnalysisHeader
@@ -185,7 +198,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
         clientId={clientId}
         selectedTab={selectedTab}
         setSelectedTab={setSelectedTab}
-        isGenerating={isAnalysisLoading}
+        isGenerating={isCombinedLoading}
         onGenerate={generateRealTimeAnalysis}
         caseType={analysisData?.caseType}
       />
@@ -194,7 +207,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
       <TabsContainer 
         selectedTab={selectedTab}
         analysisData={analysisData}
-        isLoading={isAnalysisLoading}
+        isLoading={isCombinedLoading}
         clientId={clientId}
         conversation={conversation}
         conversationLoading={conversationLoading}

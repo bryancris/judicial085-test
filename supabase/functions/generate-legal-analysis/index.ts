@@ -195,6 +195,7 @@ serve(async (req) => {
     }
 
     // CRITICAL: Store ACTUAL law references, not document names
+    // Only use actual legal statute references from our law search service
     const formattedLawReferences = relevantLawReferences.map(ref => ({
       id: ref.id || 'unknown',
       title: ref.title || 'Unknown Law',
@@ -204,10 +205,13 @@ serve(async (req) => {
 
     console.log(`Returning ${formattedLawReferences.length} formatted law references:`, formattedLawReferences.map(ref => ref.title));
 
+    // Log the analysis content for debugging
+    console.log("Analysis content preview:", analysis.substring(0, 1000));
+
     return new Response(
       JSON.stringify({ 
         analysis, 
-        lawReferences: formattedLawReferences, // Store actual law references
+        lawReferences: formattedLawReferences, // Store actual law references ONLY
         documentsUsed: clientDocuments.map(doc => ({
           id: doc.id,
           title: doc.title,
@@ -235,7 +239,7 @@ function generateStrengthsWeaknesses(analysis: string, caseType: string, documen
   if (caseType === "animal-protection") {
     strengths = [
       "Clear documentation of animal care standards violation",
-      "Witness testimony available regarding incident",
+      "Witness testimony available regarding incident", 
       "Photographic evidence of conditions",
       "Veterinary records support claims"
     ];
@@ -262,7 +266,7 @@ function generateStrengthsWeaknesses(analysis: string, caseType: string, documen
     // General case strengths and weaknesses
     strengths = [
       "Strong documentary evidence available",
-      "Clear liability chain established",
+      "Clear liability chain established", 
       "Damages are well-documented",
       "Favorable legal precedents exist"
     ];

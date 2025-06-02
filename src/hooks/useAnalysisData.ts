@@ -130,20 +130,27 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
   };
 };
 
-// Enhanced helper function to parse analysis content
+// Enhanced helper function to parse analysis content with improved regex patterns
 const parseAnalysisContent = (content: string) => {
-  console.log("Parsing analysis content...");
+  console.log("Parsing analysis content:", content.substring(0, 500) + "...");
   
-  // Extract all sections with enhanced regex patterns
-  const relevantLawMatch = content.match(/\*\*(?:RELEVANT TEXAS LAW|RELEVANT LAW|APPLICABLE LAW):\*\*([\s\S]*?)(?=\*\*|$)/i);
-  const preliminaryAnalysisMatch = content.match(/\*\*PRELIMINARY ANALYSIS:\*\*([\s\S]*?)(?=\*\*|$)/i);
-  const potentialIssuesMatch = content.match(/\*\*(?:POTENTIAL LEGAL ISSUES|LEGAL ISSUES):\*\*([\s\S]*?)(?=\*\*|$)/i);
-  const followUpQuestionsMatch = content.match(/\*\*(?:RECOMMENDED FOLLOW-UP QUESTIONS|FOLLOW-UP QUESTIONS):\*\*([\s\S]*?)(?=\*\*|$)/i);
-  const remediesMatch = content.match(/\*\*(?:REMEDIES|POTENTIAL REMEDIES):\*\*([\s\S]*?)(?=\*\*|$)/i);
+  // More flexible regex patterns to match various section header formats
+  const relevantLawMatch = content.match(/\*\*(?:RELEVANT (?:TEXAS )?LAW|APPLICABLE LAW):\*\*\s*([\s\S]*?)(?=\*\*[A-Z][^:]*:\*\*|$)/i);
+  const preliminaryAnalysisMatch = content.match(/\*\*PRELIMINARY ANALYSIS:\*\*\s*([\s\S]*?)(?=\*\*[A-Z][^:]*:\*\*|$)/i);
+  const potentialIssuesMatch = content.match(/\*\*(?:POTENTIAL (?:LEGAL )?ISSUES|LEGAL ISSUES):\*\*\s*([\s\S]*?)(?=\*\*[A-Z][^:]*:\*\*|$)/i);
+  const followUpQuestionsMatch = content.match(/\*\*(?:RECOMMENDED )?FOLLOW-UP QUESTIONS:\*\*\s*([\s\S]*?)(?=\*\*[A-Z][^:]*:\*\*|$)/i);
+  const remediesMatch = content.match(/\*\*(?:POTENTIAL )?REMEDIES:\*\*\s*([\s\S]*?)(?=\*\*[A-Z][^:]*:\*\*|$)/i);
   
-  // Extract strengths and weaknesses
-  const strengthsMatch = content.match(/\*\*(?:CASE STRENGTHS|STRENGTHS):\*\*([\s\S]*?)(?=\*\*|$)/i);
-  const weaknessesMatch = content.match(/\*\*(?:CASE WEAKNESSES|WEAKNESSES):\*\*([\s\S]*?)(?=\*\*|$)/i);
+  // Extract strengths and weaknesses with improved patterns
+  const strengthsMatch = content.match(/\*\*(?:CASE )?STRENGTHS:\*\*\s*([\s\S]*?)(?=\*\*[A-Z][^:]*:\*\*|$)/i);
+  const weaknessesMatch = content.match(/\*\*(?:CASE )?WEAKNESSES:\*\*\s*([\s\S]*?)(?=\*\*[A-Z][^:]*:\*\*|$)/i);
+
+  console.log("Parsing results:");
+  console.log("- Relevant Law found:", !!relevantLawMatch);
+  console.log("- Preliminary Analysis found:", !!preliminaryAnalysisMatch);
+  console.log("- Potential Issues found:", !!potentialIssuesMatch);
+  console.log("- Strengths found:", !!strengthsMatch);
+  console.log("- Weaknesses found:", !!weaknessesMatch);
 
   // Parse follow-up questions
   const parseFollowUpQuestions = (questions: string): string[] => {
@@ -155,21 +162,26 @@ const parseAnalysisContent = (content: string) => {
       .filter(q => q.length > 0);
   };
 
-  // Parse list items (strengths/weaknesses)
+  // Parse list items (strengths/weaknesses) with improved logic
   const parseListItems = (listText: string): string[] => {
     if (!listText) return [];
-    return listText
-      .split(/\n(?:\d+\.\s*|-\s*|\*\s*)/)
+    
+    // Split by numbered items, bullet points, or line breaks
+    const items = listText
+      .split(/\n(?:\d+\.\s*|-\s*|\*\s*|•\s*)/)
       .filter(Boolean)
-      .map(item => item.trim())
-      .filter(item => item.length > 10); // Filter out very short items
+      .map(item => item.trim().replace(/^\d+\.\s*/, '').replace(/^[-*•]\s*/, ''))
+      .filter(item => item.length > 5); // Filter out very short items
+    
+    console.log("Parsed list items:", items);
+    return items;
   };
 
   const strengths = strengthsMatch ? parseListItems(strengthsMatch[1]) : [];
   const weaknesses = weaknessesMatch ? parseListItems(weaknessesMatch[1]) : [];
 
-  console.log("Extracted strengths:", strengths);
-  console.log("Extracted weaknesses:", weaknesses);
+  console.log("Final extracted strengths:", strengths);
+  console.log("Final extracted weaknesses:", weaknesses);
 
   return {
     legalAnalysis: {
