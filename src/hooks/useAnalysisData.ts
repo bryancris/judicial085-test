@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -42,35 +43,61 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
     try {
       console.log(`Fetching analysis data for client: ${clientId}${caseId ? `, case: ${caseId}` : ''}`);
       
-      // Query for legal analysis - filter by case_id if provided
-      let analysisQuery = supabase
-        .from("legal_analyses")
-        .select("*")
-        .eq("client_id", clientId)
-        .order("created_at", { ascending: false })
-        .limit(1);
-      
-      // If case ID is provided, filter by it, otherwise get client-level analysis
+      let analysisResults = null;
+      let analysisError = null;
+
+      // If case ID is provided, first try to fetch case-specific analysis
       if (caseId) {
-        analysisQuery = analysisQuery.eq("case_id", caseId);
-      } else {
-        analysisQuery = analysisQuery.is("case_id", null);
+        console.log(`First attempt: Looking for case-specific analysis (case_id = ${caseId})`);
+        const { data: caseSpecificResults, error: caseSpecificError } = await supabase
+          .from("legal_analyses")
+          .select("*")
+          .eq("client_id", clientId)
+          .eq("case_id", caseId)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (caseSpecificError) {
+          throw new Error(`Failed to fetch case-specific legal analysis: ${caseSpecificError.message}`);
+        }
+
+        if (caseSpecificResults && caseSpecificResults.length > 0) {
+          console.log(`Found case-specific analysis for case ${caseId}`);
+          analysisResults = caseSpecificResults;
+        } else {
+          console.log(`No case-specific analysis found for case ${caseId}, trying client-level analysis`);
+        }
       }
 
-      const { data: analysisResults, error: analysisError } = await analysisQuery;
+      // If no case-specific analysis found (or no case ID provided), try client-level analysis
+      if (!analysisResults) {
+        console.log(`Fallback: Looking for client-level analysis (case_id IS NULL)`);
+        const { data: clientLevelResults, error: clientLevelError } = await supabase
+          .from("legal_analyses")
+          .select("*")
+          .eq("client_id", clientId)
+          .is("case_id", null)
+          .order("created_at", { ascending: false })
+          .limit(1);
 
-      if (analysisError) {
-        throw new Error(`Failed to fetch legal analysis: ${analysisError.message}`);
+        if (clientLevelError) {
+          throw new Error(`Failed to fetch client-level legal analysis: ${clientLevelError.message}`);
+        }
+
+        analysisResults = clientLevelResults;
+        if (analysisResults && analysisResults.length > 0) {
+          console.log(`Found client-level analysis for fallback`);
+        }
       }
 
       if (!analysisResults || analysisResults.length === 0) {
-        console.log(`No legal analysis found for client ${clientId}${caseId ? ` and case ${caseId}` : ''}`);
+        console.log(`No legal analysis found for client ${clientId}${caseId ? ` (tried both case-specific and client-level)` : ''}`);
         setAnalysisData(null);
         return;
       }
 
       const analysis = analysisResults[0];
-      console.log("Fetched analysis record:", analysis);
+      console.log("Using analysis record:", analysis);
       console.log("Raw analysis content:", analysis.content);
       console.log("Raw law references from DB:", analysis.law_references);
 
