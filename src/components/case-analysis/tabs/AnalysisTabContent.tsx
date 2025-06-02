@@ -28,7 +28,7 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
 }) => {
   return (
     <div className="space-y-8">
-      {/* Detailed Legal Analysis - completely without scholarly references */}
+      {/* Detailed Legal Analysis - now using raw content like Client Intake */}
       <DetailedLegalAnalysis
         relevantLaw={analysisData.legalAnalysis.relevantLaw}
         preliminaryAnalysis={analysisData.legalAnalysis.preliminaryAnalysis}
@@ -37,6 +37,7 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
         isLoading={isLoading}
         remedies={analysisData.remedies}
         caseType={analysisData.caseType}
+        rawContent={analysisData.rawContent}
       />
 
       {/* Law References Section */}

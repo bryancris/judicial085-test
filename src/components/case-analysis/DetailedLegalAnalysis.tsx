@@ -3,9 +3,7 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollText } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import FollowUpQuestionsSection from "./sections/FollowUpQuestionsSection";
-import RelevantLawSection from "./sections/RelevantLawSection";
-import AnalysisSection from "./sections/AnalysisSection";
+import AnalysisItem from "@/components/clients/chat/AnalysisItem";
 import RemediesSection from "./RemediesSection";
 
 interface DetailedLegalAnalysisProps {
@@ -16,6 +14,7 @@ interface DetailedLegalAnalysisProps {
   isLoading?: boolean;
   remedies?: string;
   caseType?: string;
+  rawContent?: string; // Add raw content prop
 }
 
 const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
@@ -25,9 +24,50 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
   followUpQuestions,
   isLoading = false,
   remedies,
-  caseType
+  caseType,
+  rawContent
 }) => {
-  // Check if we have minimal content to display
+  // If we have raw content, use it directly like Client Intake does
+  if (rawContent) {
+    return (
+      <div className="space-y-6">
+        {/* Render the remedies section if it exists */}
+        {remedies && remedies.trim() !== "" && (
+          <RemediesSection 
+            remedies={remedies}
+            isLoading={isLoading}
+            caseType={caseType}
+          />
+        )}
+        
+        <Card className="mb-6 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xl font-semibold flex items-center">
+              <ScrollText className="h-5 w-5 mr-2 text-blue-500" />
+              Detailed Legal Analysis
+              {isLoading && (
+                <span className="ml-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
+              )}
+              {caseType && caseType !== "general" && (
+                <span className="ml-2 text-xs font-medium bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full dark:bg-blue-900/30 dark:text-blue-200">
+                  {caseType === "consumer-protection" ? "Consumer Protection" : caseType}
+                </span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Use the same AnalysisItem component that Client Intake uses */}
+            <AnalysisItem 
+              content={rawContent}
+              timestamp={new Date().toISOString()}
+            />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Fallback to legacy parsed content if no raw content (shouldn't happen now)
   const hasContent = relevantLaw || preliminaryAnalysis || potentialIssues || followUpQuestions?.length > 0;
   
   if (!hasContent && !isLoading) {
@@ -38,88 +78,21 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
     );
   }
 
-  // We'll render the remedies section separately if it exists
-  const hasRemedies = remedies && remedies.trim() !== "";
-  
-  // Add state for collapsible sections
-  const [isRelevantLawOpen, setIsRelevantLawOpen] = useState(true);
-  const [isFollowUpOpen, setIsFollowUpOpen] = useState(true);
-  
-  // For this implementation, we'll use a simplified version of the processed content
-  const processedContent = relevantLaw;
-  const isConsumerCase = caseType === "consumer-protection";
-
   return (
     <div className="space-y-6">
-      {/* Render the remedies section if it exists */}
-      {hasRemedies && (
-        <RemediesSection 
-          remedies={remedies!}
-          isLoading={isLoading}
-          caseType={caseType}
-        />
-      )}
-      
       <Card className="mb-6 shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-xl font-semibold flex items-center">
             <ScrollText className="h-5 w-5 mr-2 text-blue-500" />
-            Detailed Legal Analysis
+            Detailed Legal Analysis (Legacy View)
             {isLoading && (
               <span className="ml-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
-            )}
-            {caseType && caseType !== "general" && (
-              <span className="ml-2 text-xs font-medium bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full dark:bg-blue-900/30 dark:text-blue-200">
-                {caseType === "consumer-protection" ? "Consumer Protection" : caseType}
-              </span>
             )}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-6">
-            {relevantLaw && (
-              <>
-                <RelevantLawSection 
-                  content={relevantLaw}
-                  isOpen={isRelevantLawOpen}
-                  isProcessing={isLoading}
-                  onToggle={() => setIsRelevantLawOpen(!isRelevantLawOpen)}
-                  processedContent={processedContent}
-                  isConsumerCase={isConsumerCase}
-                />
-                <Separator className="my-4" />
-              </>
-            )}
-            
-            {preliminaryAnalysis && (
-              <>
-                <AnalysisSection 
-                  title="Preliminary Analysis" 
-                  content={preliminaryAnalysis}
-                />
-                <Separator className="my-4" />
-              </>
-            )}
-            
-            {potentialIssues && (
-              <>
-                <AnalysisSection 
-                  title="Potential Legal Issues" 
-                  content={potentialIssues}
-                  variant={caseType === "consumer-protection" ? "consumer" : "standard"}
-                />
-                <Separator className="my-4" />
-              </>
-            )}
-            
-            {followUpQuestions && followUpQuestions.length > 0 && (
-              <FollowUpQuestionsSection 
-                questions={followUpQuestions}
-                isOpen={isFollowUpOpen}
-                searchTerm=""
-                onToggle={() => setIsFollowUpOpen(!isFollowUpOpen)}
-              />
-            )}
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">Raw content not available. This is the legacy parsed view.</p>
           </div>
         </CardContent>
       </Card>
