@@ -8,10 +8,9 @@ import { useCaseAnalysisChat } from "@/hooks/useCaseAnalysisChat";
 import { useClientDocuments } from "@/hooks/useClientDocuments";
 import EmptyAnalysisState from "./EmptyAnalysisState";
 import TabsContainer from "./tabs/TabsContainer";
-import { AnalysisData } from "@/hooks/useAnalysisData";
+import { useAnalysisData } from "@/hooks/useAnalysisData";
 import { useCase } from "@/contexts/CaseContext";
 import { useClientChatAnalysis } from "@/hooks/useClientChatAnalysis";
-import { useState as useAnalysisState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -27,15 +26,23 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
   caseId: propCaseId,
 }) => {
   const [selectedTab, setSelectedTab] = useState("analysis");
-  const [legalAnalysis, setLegalAnalysis] = useAnalysisState<any[]>([]);
-  const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
-  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const { currentCase } = useCase();
   const { toast } = useToast();
   
   // Use caseId from props or from context
   const caseId = propCaseId || currentCase?.id;
 
+  // Use the proper database-backed analysis hook instead of local state
+  const {
+    analysisData,
+    isLoading: isAnalysisLoading,
+    error: analysisError,
+    fetchAnalysisData
+  } = useAnalysisData(clientId, caseId);
+
+  // Create a dummy state setter for the hook (not actually used since we use fetchAnalysisData)
+  const [, setLegalAnalysis] = useState<any[]>([]);
+  
   // Use the same analysis system as Client Intake with document-only capability
   const { generateAnalysis } = useClientChatAnalysis(clientId, setLegalAnalysis);
     
@@ -73,9 +80,6 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
 
   // Generate analysis using the same system as Client Intake but allow document-only analysis
   const generateRealTimeAnalysis = async () => {
-    setIsAnalysisLoading(true);
-    setAnalysisError(null);
-
     try {
       // Fetch the client messages for this client
       const { data: messages, error: messagesError } = await supabase
@@ -121,78 +125,26 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
       // Use the same analysis generation as Client Intake but allow document-only analysis
       await generateAnalysis(formattedMessages, true); // true = allow document-only analysis
       
+      // After generating new analysis, refresh the data from the database
+      await fetchAnalysisData();
+      
       toast({
         title: "Analysis Generated",
         description: "Real-time case analysis generated successfully.",
       });
     } catch (err: any) {
       console.error("Error generating real-time analysis:", err);
-      setAnalysisError(err.message || "Failed to generate analysis");
       toast({
         title: "Generation Failed",
         description: err.message || "Failed to generate real-time analysis.",
         variant: "destructive",
       });
-    } finally {
-      setIsAnalysisLoading(false);
     }
   };
-
-  // Convert the analysis from Client Intake format to Case Analysis format
-  const convertToAnalysisData = (analysisItems: any[]): AnalysisData | null => {
-    if (!analysisItems || analysisItems.length === 0) return null;
-    
-    const latestAnalysis = analysisItems[analysisItems.length - 1];
-    const content = latestAnalysis.content || "";
-    
-    // Parse the analysis content (same logic as useAnalysisData)
-    const sections = content.split(/(\*\*.*?:\*\*)/).filter(Boolean);
-    const data: any = {};
-    let currentSection = null;
-
-    for (const section of sections) {
-      if (section.startsWith("**") && section.endsWith("**")) {
-        currentSection = section.slice(2, -2).replace(/:$/, '').trim();
-        data[currentSection] = "";
-      } else if (currentSection) {
-        data[currentSection] = section.trim();
-        currentSection = null;
-      }
-    }
-
-    const parseFollowUpQuestions = (questions: string): string[] => {
-      const questionList = questions.split(/\n\d+\.\s/).filter(Boolean);
-      return questionList.map(q => q.trim());
-    };
-
-    return {
-      legalAnalysis: {
-        relevantLaw: data["RELEVANT TEXAS LAW"] || "",
-        preliminaryAnalysis: data["PRELIMINARY ANALYSIS"] || "",
-        potentialIssues: data["POTENTIAL LEGAL ISSUES"] || "",
-        followUpQuestions: parseFollowUpQuestions(data["RECOMMENDED FOLLOW-UP QUESTIONS"] || ""),
-      },
-      strengths: [],
-      weaknesses: [],
-      conversationSummary: "",
-      outcome: {
-        defense: 0.5,
-        prosecution: 0.5,
-      },
-      remedies: data["REMEDIES"] || "",
-      timestamp: latestAnalysis.timestamp || new Date().toISOString(),
-      lawReferences: latestAnalysis.lawReferences || [], // Use the actual law references from the analysis
-      caseType: content.includes("Animal") || content.includes("Cruelty") ? "animal-protection" : 
-                content.includes("Consumer Protection") || content.includes("Deceptive Trade Practices") ? "consumer-protection" : "general"
-    };
-  };
-
-  // Get the current analysis data
-  const analysisData = convertToAnalysisData(legalAnalysis);
 
   // Handle error state
   if (analysisError) {
-    return <CaseAnalysisErrorState error={analysisError} onRefresh={generateRealTimeAnalysis} />;
+    return <CaseAnalysisErrorState error={analysisError} onRefresh={fetchAnalysisData} />;
   }
 
   // Handle loading state
