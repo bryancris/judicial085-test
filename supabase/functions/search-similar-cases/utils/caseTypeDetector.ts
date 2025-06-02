@@ -1,3 +1,4 @@
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.33.2";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
@@ -96,6 +97,7 @@ export function detectCaseTypeFromText(text: string): string {
   if (!text) return "general";
   
   const lowerText = text.toLowerCase();
+  console.log(`Analyzing text for case type detection: ${lowerText.substring(0, 200)}...`);
   
   // Define pattern matching scores for different case types
   let scores: Record<string, number> = {
@@ -112,34 +114,34 @@ export function detectCaseTypeFromText(text: string): string {
     "product-liability": 0
   };
   
-  // Animal Protection - HIGHEST PRIORITY PATTERNS with increased weights
+  // Animal Protection - HIGHEST PRIORITY PATTERNS with significantly increased weights
   if (lowerText.includes("§ 42.092") || 
       lowerText.includes("42.092") || 
       lowerText.includes("42.091") ||
       (lowerText.includes("texas penal code") && (lowerText.includes("42.09") || lowerText.includes("animal")))) {
-    scores["animal-protection"] += 25; // Increased from 15
-    console.log("Found Texas Penal Code animal cruelty statute - adding 25 points to animal-protection");
+    scores["animal-protection"] += 30; // Increased from 25
+    console.log("Found Texas Penal Code animal cruelty statute - adding 30 points to animal-protection");
   }
   
-  // Business-specific animal care indicators
+  // Business-specific animal care indicators - VERY HIGH PRIORITY
   if (lowerText.includes("dogtopia")) {
-    scores["animal-protection"] += 20; // High weight for specific business
-    console.log("Found 'Dogtopia' - adding 20 points to animal-protection");
+    scores["animal-protection"] += 25; // Increased from 20
+    console.log("Found 'Dogtopia' - adding 25 points to animal-protection");
   }
   
-  // Heat exposure + animal combination
+  // Heat exposure + animal combination - HIGH PRIORITY
   if (lowerText.includes("heat exposure") && lowerText.includes("animal")) {
-    scores["animal-protection"] += 15;
-    console.log("Found 'heat exposure' + 'animal' - adding 15 points to animal-protection");
+    scores["animal-protection"] += 20; // Increased from 15
+    console.log("Found 'heat exposure' + 'animal' - adding 20 points to animal-protection");
   }
   
-  // Strong animal protection indicators
+  // Strong animal protection indicators - HIGH PRIORITY
   if ((lowerText.includes("animal") && (lowerText.includes("cruelty") || lowerText.includes("abuse") || lowerText.includes("neglect"))) ||
       (lowerText.includes("pet") && (lowerText.includes("boarding") || lowerText.includes("care") || lowerText.includes("death"))) ||
       lowerText.includes("animal care") ||
       (lowerText.includes("heat exposure") && lowerText.includes("dog"))) {
-    scores["animal-protection"] += 15; // Increased from 12
-    console.log("Found strong animal protection indicators - adding 15 points to animal-protection");
+    scores["animal-protection"] += 18; // Increased from 15
+    console.log("Found strong animal protection indicators - adding 18 points to animal-protection");
   }
   
   // Consumer Protection - DTPA specific
@@ -159,66 +161,67 @@ export function detectCaseTypeFromText(text: string): string {
     scores["bailment"] += 10;
   }
   
-  // Personal injury terms - but weight MUCH lower if animal terms present
-  const personalInjuryScore = countMatches(lowerText, ["injury", "accident", "hurt", "pain", "medical", "wrongful death"]);
-  if (personalInjuryScore > 0 && scores["animal-protection"] < 10) { // Only if animal score is very low
-    scores["personal-injury"] += personalInjuryScore * 2; // Reduced weight
-    console.log(`Found personal injury terms but animal-protection score is ${scores["animal-protection"]} - adding ${personalInjuryScore * 2} to personal-injury`);
+  // General animal protection terms (increased weight)
+  const animalTerms = ["animal", "pet", "dog", "cat", "boarding", "veterinary"];
+  const animalCount = countMatches(lowerText, animalTerms);
+  if (animalCount > 0) {
+    scores["animal-protection"] += animalCount * 4; // Increased multiplier from 3
+    console.log(`Found ${animalCount} general animal terms - adding ${animalCount * 4} to animal-protection`);
   }
   
-  // General animal protection terms (lower weight)
-  if (countMatches(lowerText, ["animal", "pet", "dog", "cat", "boarding", "veterinary"])) {
-    const animalCount = countMatches(lowerText, ["animal", "pet", "dog", "cat", "boarding", "veterinary"]);
-    scores["animal-protection"] += animalCount * 3; // Increased multiplier
-    console.log(`Found ${animalCount} general animal terms - adding ${animalCount * 3} to animal-protection`);
-  }
-  
-  // Consumer protection terms
-  if (countMatches(lowerText, ["consumer", "warranty", "false advertising", "misleading", "protection", "service", "representation", "misrepresentation"])) {
-    scores["consumer-protection"] += countMatches(lowerText, ["consumer", "warranty", "false advertising", "misleading", "protection", "service", "representation", "misrepresentation"]);
-  }
-  
-  // Now score based on more general patterns with lower weights
-  
-  // Animal Protection general terms
-  if (countMatches(lowerText, ["animal", "pet", "dog", "cat", "boarding", "veterinary", "heat", "negligent supervision"])) {
-    scores["animal-protection"] += countMatches(lowerText, ["animal", "pet", "dog", "cat", "boarding", "veterinary", "heat", "negligent supervision"]) * 2;
+  // Personal injury terms - but HEAVILY penalized if animal terms present
+  const personalInjuryTerms = ["injury", "accident", "negligence", "hurt", "damage", "pain", "medical", "wrongful death"];
+  const personalInjuryScore = countMatches(lowerText, personalInjuryTerms);
+  if (personalInjuryScore > 0) {
+    // Only add personal injury score if animal protection score is very low
+    if (scores["animal-protection"] < 5) {
+      scores["personal-injury"] += personalInjuryScore * 2; // Reduced weight from 3
+      console.log(`Found personal injury terms but animal-protection score is ${scores["animal-protection"]} - adding ${personalInjuryScore * 2} to personal-injury`);
+    } else {
+      console.log(`Found personal injury terms but animal-protection score is ${scores["animal-protection"]} - NOT adding to personal-injury`);
+    }
   }
   
   // Consumer protection terms
-  if (countMatches(lowerText, ["consumer", "warranty", "false advertising", "misleading", "protection", "service", "representation", "misrepresentation"])) {
-    scores["consumer-protection"] += countMatches(lowerText, ["consumer", "warranty", "false advertising", "misleading", "protection", "service", "representation", "misrepresentation"]);
-  }
-  
-  // Personal injury terms - but weight lower if animal terms present
-  const personalInjuryScore = countMatches(lowerText, ["injury", "accident", "negligence", "hurt", "damage", "pain", "medical", "wrongful death"]);
-  if (personalInjuryScore > 0 && scores["animal-protection"] < 5) {
-    scores["personal-injury"] += personalInjuryScore;
+  const consumerTerms = ["consumer", "warranty", "false advertising", "misleading", "protection", "service", "representation", "misrepresentation"];
+  const consumerCount = countMatches(lowerText, consumerTerms);
+  if (consumerCount > 0) {
+    scores["consumer-protection"] += consumerCount;
   }
   
   // Real estate terms
-  if (countMatches(lowerText, ["real estate", "property", "land", "title", "deed", "lease", "landlord", "tenant", "eviction", "foreclosure"])) {
-    scores["real-estate"] += countMatches(lowerText, ["real estate", "property", "land", "title", "deed", "lease", "landlord", "tenant", "eviction", "foreclosure"]);
+  const realEstateTerms = ["real estate", "property", "land", "title", "deed", "lease", "landlord", "tenant", "eviction", "foreclosure"];
+  const realEstateCount = countMatches(lowerText, realEstateTerms);
+  if (realEstateCount > 0) {
+    scores["real-estate"] += realEstateCount;
   }
   
   // Contract terms
-  if (countMatches(lowerText, ["contract", "agreement", "breach", "terms", "consideration", "void", "enforceable", "specific performance"])) {
-    scores["contract"] += countMatches(lowerText, ["contract", "agreement", "breach", "terms", "consideration", "void", "enforceable", "specific performance"]);
+  const contractTerms = ["contract", "agreement", "breach", "terms", "consideration", "void", "enforceable", "specific performance"];
+  const contractCount = countMatches(lowerText, contractTerms);
+  if (contractCount > 0) {
+    scores["contract"] += contractCount;
   }
   
   // Family law terms
-  if (countMatches(lowerText, ["divorce", "custody", "child support", "alimony", "spousal support", "visitation", "conservatorship", "adoption", "family"])) {
-    scores["family"] += countMatches(lowerText, ["divorce", "custody", "child support", "alimony", "spousal support", "visitation", "conservatorship", "adoption", "family"]);
+  const familyTerms = ["divorce", "custody", "child support", "alimony", "spousal support", "visitation", "conservatorship", "adoption", "family"];
+  const familyCount = countMatches(lowerText, familyTerms);
+  if (familyCount > 0) {
+    scores["family"] += familyCount;
   }
   
   // Criminal law terms
-  if (countMatches(lowerText, ["criminal", "misdemeanor", "felony", "arrest", "charge", "defendant", "guilty", "innocent", "plea", "bail"])) {
-    scores["criminal"] += countMatches(lowerText, ["criminal", "misdemeanor", "felony", "arrest", "charge", "defendant", "guilty", "innocent", "plea", "bail"]);
+  const criminalTerms = ["criminal", "misdemeanor", "felony", "arrest", "charge", "defendant", "guilty", "innocent", "plea", "bail"];
+  const criminalCount = countMatches(lowerText, criminalTerms);
+  if (criminalCount > 0) {
+    scores["criminal"] += criminalCount;
   }
   
   // Product liability terms
-  if (countMatches(lowerText, ["product", "defect", "dangerous", "manufacturer", "failure", "recall", "warning", "design"])) {
-    scores["product-liability"] += countMatches(lowerText, ["product", "defect", "dangerous", "manufacturer", "failure", "recall", "warning", "design"]);
+  const productTerms = ["product", "defect", "dangerous", "manufacturer", "failure", "recall", "warning", "design"];
+  const productCount = countMatches(lowerText, productTerms);
+  if (productCount > 0) {
+    scores["product-liability"] += productCount;
   }
   
   // Find the highest scoring case type
@@ -234,7 +237,7 @@ export function detectCaseTypeFromText(text: string): string {
   }
   
   // Lower the threshold to detect specific case types more easily
-  if (highestScore >= 2) { // Reduced from 3
+  if (highestScore >= 2) { // Keep threshold low
     console.log(`Detected case type: ${detectedType} with score: ${highestScore}`);
     return detectedType;
   }

@@ -1,3 +1,4 @@
+
 // Generate search terms for case similarity search
 export function generateSearchTerms(content: string, caseType: string): string {
   try {
@@ -43,7 +44,7 @@ function extractKeyPhrases(content: string, caseType: string): string {
     caseSpecificTerms = extractGenericLegalTerms(content);
   }
   
-  // Extract statute references
+  // Extract statute references with improved patterns
   const statuteReferences = extractStatuteReferences(content);
   console.log(`Extracted statute references: ${statuteReferences.join(", ")}`);
   
@@ -139,7 +140,8 @@ function prioritizeAnimalProtectionTerms(terms: string[]): string[] {
     term.includes("pet boarding") || 
     term.includes("boarding facility") || 
     term.includes("animal care") ||
-    term.includes("heat exposure")
+    term.includes("heat exposure") ||
+    term.includes("Dogtopia")
   );
   prioritized.push(...businessTerms);
   
@@ -155,14 +157,16 @@ function prioritizeAnimalProtectionTerms(terms: string[]): string[] {
     !prioritized.includes(term) && 
     !term.includes("negligence damages") && 
     !term.includes("breach damages") &&
-    !term.includes("duty breach")
+    !term.includes("duty breach") &&
+    !term.includes("security breach") &&
+    !term.includes("data breach")
   );
   prioritized.push(...remaining);
   
   return prioritized;
 }
 
-// Extract business names and specific entities
+// Extract business names and specific entities with improved patterns
 function extractBusinessNames(content: string): string[] {
   const businesses = [];
   const lowerContent = content.toLowerCase();
@@ -272,7 +276,7 @@ function extractCaseCitations(content: string): string[] {
   return caseCitations;
 }
 
-// Extract statute references with improved patterns
+// Extract statute references with improved patterns for animal protection
 function extractStatuteReferences(content: string): string[] {
   const statutes = [];
   
@@ -283,7 +287,7 @@ function extractStatuteReferences(content: string): string[] {
     statutes.push(`Texas Penal Code ${match[1]}`);
   }
   
-  // Specific animal cruelty statute patterns
+  // Specific animal cruelty statute patterns - HIGHEST PRIORITY
   if (content.includes("§ 42.092") || content.includes("42.092")) {
     statutes.push("Texas Penal Code 42.092 animal cruelty");
   }
