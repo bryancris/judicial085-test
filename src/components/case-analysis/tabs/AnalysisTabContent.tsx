@@ -28,7 +28,7 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
 }) => {
   return (
     <div className="space-y-8">
-      {/* Detailed Legal Analysis - AT THE TOP (without any scholarly references) */}
+      {/* Detailed Legal Analysis - completely without scholarly references */}
       <DetailedLegalAnalysis
         relevantLaw={analysisData.legalAnalysis.relevantLaw}
         preliminaryAnalysis={analysisData.legalAnalysis.preliminaryAnalysis}
@@ -37,9 +37,6 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
         isLoading={isLoading}
         remedies={analysisData.remedies}
         caseType={analysisData.caseType}
-        scholarlyReferences={[]}
-        isScholarlyReferencesLoading={false}
-        onScholarSearch={() => {}}
       />
 
       {/* Law References Section */}
@@ -62,7 +59,7 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
       {/* Similar Cases with integrated Outcome Prediction */}
       <SearchSimilarCasesSection clientId={clientId} caseType={analysisData.caseType} />
 
-      {/* Scholarly Legal References - AT THE BOTTOM ONLY */}
+      {/* Scholarly Legal References - ONLY HERE AT THE BOTTOM */}
       <ScholarlyReferencesSection
         references={scholarlyReferences}
         isLoading={isScholarlyReferencesLoading}
