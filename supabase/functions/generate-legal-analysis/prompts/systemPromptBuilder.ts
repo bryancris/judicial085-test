@@ -4,7 +4,8 @@ export function buildSystemPrompt(
   relevantLawReferences: any[],
   hasConversation: boolean,
   clientDocuments: any[],
-  detectedCaseType: string
+  detectedCaseType: string,
+  researchUpdates?: any[]
 ): string {
   // Create base system prompt
   let systemPrompt = `
@@ -39,6 +40,23 @@ Make sure each question:
 
 After the last follow-up question, don't add any additional content, comments, or new sections. Generate exactly 4 follow-up questions, no more and no less.
 `;
+
+  // Add research updates integration instruction if available
+  if (researchUpdates && researchUpdates.length > 0) {
+    systemPrompt += `
+CRITICAL INSTRUCTION - RESEARCH UPDATES INTEGRATION:
+The user has provided ${researchUpdates.length} research update(s) from previous case discussions that contain detailed legal information. You MUST integrate the specific statute details, legal provisions, and analysis from these research updates into the appropriate sections of your analysis. 
+
+DO NOT create separate "Research Update" sections. Instead:
+- Take the detailed statute information from the research updates and incorporate it directly into the "RELEVANT TEXAS LAW" section
+- Use the specific legal analysis from the research updates to enhance the "PRELIMINARY ANALYSIS" section
+- Incorporate any legal issues identified in the research updates into the "POTENTIAL LEGAL ISSUES" section
+
+For example, if a research update contains detailed DTPA statute information (§ 17.46, treble damages, etc.), integrate that specific information directly into the DTPA portion of the "RELEVANT TEXAS LAW" section rather than keeping it as a separate update.
+
+The goal is to create a cohesive, comprehensive analysis that incorporates all previous research findings seamlessly into the main analysis structure.
+`;
+  }
 
   // Add client documents section if available
   if (clientDocuments.length > 0) {

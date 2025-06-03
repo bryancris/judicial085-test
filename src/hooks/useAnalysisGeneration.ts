@@ -12,9 +12,23 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
   const [, setLegalAnalysis] = useState<any[]>([]);
   const { generateAnalysis } = useClientChatAnalysis(clientId, setLegalAnalysis);
 
-  // Improved function to extract research updates from existing analysis
-  const extractExistingResearchUpdates = (analysisContent: string): string[] => {
+  // Enhanced function to extract and categorize research updates
+  const extractAndCategorizeResearchUpdates = (analysisContent: string): {
+    updates: Array<{
+      section: string;
+      content: string;
+      statutes: string[];
+      topics: string[];
+    }>;
+    rawUpdates: string[];
+  } => {
     const researchUpdates: string[] = [];
+    const categorizedUpdates: Array<{
+      section: string;
+      content: string;
+      statutes: string[];
+      topics: string[];
+    }> = [];
     
     // Look for research update patterns with more robust matching
     const researchUpdatePattern = /\*\*RESEARCH UPDATE[^*]*\*\*:?([\s\S]*?)(?=\n\s*\*\*[A-Z\s]+(?:UPDATE|ANALYSIS|CONCLUSION|SUMMARY)|$)/gi;
@@ -22,9 +36,29 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
     let match;
     while ((match = researchUpdatePattern.exec(analysisContent)) !== null) {
       const fullUpdate = match[0].trim();
-      if (fullUpdate && fullUpdate.length > 20) { // Only include substantial updates
+      if (fullUpdate && fullUpdate.length > 20) {
         researchUpdates.push(fullUpdate);
-        console.log("Extracted research update:", fullUpdate.substring(0, 100) + "...");
+        
+        // Extract statutes and legal topics from the update
+        const statutes = extractStatutesFromText(fullUpdate);
+        const topics = extractLegalTopicsFromText(fullUpdate);
+        
+        // Determine which section this update should enhance
+        const targetSection = determineTargetSection(fullUpdate, statutes, topics);
+        
+        categorizedUpdates.push({
+          section: targetSection,
+          content: fullUpdate,
+          statutes,
+          topics
+        });
+        
+        console.log("Categorized research update:", {
+          section: targetSection,
+          statutes,
+          topics,
+          preview: fullUpdate.substring(0, 100) + "..."
+        });
       }
     }
 
@@ -33,43 +67,134 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
       const lines = analysisContent.split('\n');
       let currentUpdate = '';
       let inResearchUpdate = false;
-      let updateStartIndex = -1;
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         
         if (line.includes('**RESEARCH UPDATE')) {
-          // Start of a new research update
           if (currentUpdate.trim()) {
             researchUpdates.push(currentUpdate.trim());
+            // Also categorize fallback updates
+            const statutes = extractStatutesFromText(currentUpdate);
+            const topics = extractLegalTopicsFromText(currentUpdate);
+            const targetSection = determineTargetSection(currentUpdate, statutes, topics);
+            
+            categorizedUpdates.push({
+              section: targetSection,
+              content: currentUpdate.trim(),
+              statutes,
+              topics
+            });
           }
           currentUpdate = line;
           inResearchUpdate = true;
-          updateStartIndex = i;
         } else if (inResearchUpdate) {
-          // Check if we've reached the end of the update (next major section)
           if (line.match(/^\*\*[A-Z\s]+:?\*\*/) && !line.includes('RESEARCH UPDATE')) {
-            // This is a new section, end the current update
             if (currentUpdate.trim()) {
               researchUpdates.push(currentUpdate.trim());
+              // Categorize this update too
+              const statutes = extractStatutesFromText(currentUpdate);
+              const topics = extractLegalTopicsFromText(currentUpdate);
+              const targetSection = determineTargetSection(currentUpdate, statutes, topics);
+              
+              categorizedUpdates.push({
+                section: targetSection,
+                content: currentUpdate.trim(),
+                statutes,
+                topics
+              });
             }
             currentUpdate = '';
             inResearchUpdate = false;
           } else {
-            // Continue building the current update
             currentUpdate += '\n' + line;
           }
         }
       }
 
-      // Add the last update if it exists
       if (currentUpdate.trim()) {
         researchUpdates.push(currentUpdate.trim());
+        const statutes = extractStatutesFromText(currentUpdate);
+        const topics = extractLegalTopicsFromText(currentUpdate);
+        const targetSection = determineTargetSection(currentUpdate, statutes, topics);
+        
+        categorizedUpdates.push({
+          section: targetSection,
+          content: currentUpdate.trim(),
+          statutes,
+          topics
+        });
       }
     }
 
-    console.log(`Found ${researchUpdates.length} research updates to preserve`);
-    return researchUpdates;
+    console.log(`Found ${researchUpdates.length} research updates, categorized into ${categorizedUpdates.length} sections`);
+    return { updates: categorizedUpdates, rawUpdates: researchUpdates };
+  };
+
+  // Helper function to extract statutes from text
+  const extractStatutesFromText = (text: string): string[] => {
+    const statutes: string[] = [];
+    
+    // Pattern for Texas codes with section numbers
+    const codePattern = /(Texas\s+[A-Za-z]+(?:\s+[&]?\s*[A-Za-z]+)*\s+Code\s+§\s+\d+\.\d+)/gi;
+    const sectionPattern = /§\s+\d+\.\d+/gi;
+    const dtpaPattern = /(DTPA|Texas\s+Deceptive\s+Trade\s+Practices\s+Act)/gi;
+    
+    let match;
+    while ((match = codePattern.exec(text)) !== null) {
+      statutes.push(match[1]);
+    }
+    while ((match = sectionPattern.exec(text)) !== null) {
+      statutes.push(match[0]);
+    }
+    while ((match = dtpaPattern.exec(text)) !== null) {
+      statutes.push(match[1]);
+    }
+    
+    return [...new Set(statutes)];
+  };
+
+  // Helper function to extract legal topics from text
+  const extractLegalTopicsFromText = (text: string): string[] => {
+    const topics: string[] = [];
+    const lowerText = text.toLowerCase();
+    
+    if (lowerText.includes('deceptive trade') || lowerText.includes('dtpa') || lowerText.includes('consumer protection')) {
+      topics.push('consumer-protection');
+    }
+    if (lowerText.includes('animal') || lowerText.includes('cruelty') || lowerText.includes('pet')) {
+      topics.push('animal-protection');
+    }
+    if (lowerText.includes('contract') || lowerText.includes('breach')) {
+      topics.push('contract');
+    }
+    if (lowerText.includes('negligence') || lowerText.includes('tort')) {
+      topics.push('tort');
+    }
+    
+    return topics;
+  };
+
+  // Helper function to determine which section the update should enhance
+  const determineTargetSection = (updateText: string, statutes: string[], topics: string[]): string => {
+    const lowerText = updateText.toLowerCase();
+    
+    // Check for specific legal areas
+    if (lowerText.includes('dtpa') || lowerText.includes('deceptive trade') || statutes.some(s => s.includes('17.'))) {
+      return 'RELEVANT TEXAS LAW - DTPA';
+    }
+    if (lowerText.includes('animal') || lowerText.includes('cruelty') || statutes.some(s => s.includes('42.09'))) {
+      return 'RELEVANT TEXAS LAW - Animal Protection';
+    }
+    if (lowerText.includes('contract') || lowerText.includes('breach')) {
+      return 'PRELIMINARY ANALYSIS - Contract Issues';
+    }
+    if (lowerText.includes('damages') || lowerText.includes('remedy')) {
+      return 'POTENTIAL LEGAL ISSUES - Remedies';
+    }
+    
+    // Default to relevant law section
+    return 'RELEVANT TEXAS LAW';
   };
 
   const generateRealTimeAnalysis = async (fetchAnalysisData: () => Promise<void>) => {
@@ -89,14 +214,26 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
         .order("created_at", { ascending: false })
         .limit(1);
 
-      let existingResearchUpdates: string[] = [];
+      let categorizedResearchUpdates: Array<{
+        section: string;
+        content: string;
+        statutes: string[];
+        topics: string[];
+      }> = [];
+
       if (existingAnalysis && existingAnalysis.length > 0) {
-        existingResearchUpdates = extractExistingResearchUpdates(existingAnalysis[0].content);
-        console.log("Found existing research updates:", existingResearchUpdates.length);
+        const { updates } = extractAndCategorizeResearchUpdates(existingAnalysis[0].content);
+        categorizedResearchUpdates = updates;
+        console.log("Found and categorized existing research updates:", categorizedResearchUpdates.length);
         
-        // Log each update for debugging
-        existingResearchUpdates.forEach((update, index) => {
-          console.log(`Research Update ${index + 1}:`, update.substring(0, 200) + "...");
+        // Log each categorized update for debugging
+        categorizedResearchUpdates.forEach((update, index) => {
+          console.log(`Categorized Update ${index + 1}:`, {
+            section: update.section,
+            statutes: update.statutes,
+            topics: update.topics,
+            preview: update.content.substring(0, 200) + "..."
+          });
         });
       }
 
@@ -141,46 +278,16 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
         timestamp: msg.timestamp
       })) : [];
       
-      // Use the analysis generation system with document-only capability
-      await generateAnalysis(formattedMessages, true);
-      
-      // CRITICAL: After generating new analysis, append existing research updates
-      if (existingResearchUpdates.length > 0) {
-        const { data: newAnalysis } = await supabase
-          .from("legal_analyses")
-          .select("id, content")
-          .eq("client_id", clientId)
-          .order("created_at", { ascending: false })
-          .limit(1);
-
-        if (newAnalysis && newAnalysis.length > 0) {
-          // Ensure proper formatting with clear separators
-          const researchSection = existingResearchUpdates.join('\n\n');
-          const updatedContent = newAnalysis[0].content + '\n\n' + researchSection;
-          
-          console.log("Preserving research updates in new analysis");
-          console.log("Original content length:", newAnalysis[0].content.length);
-          console.log("Research updates to add:", researchSection.length);
-          
-          await supabase
-            .from("legal_analyses")
-            .update({
-              content: updatedContent,
-              updated_at: new Date().toISOString()
-            })
-            .eq("id", newAnalysis[0].id);
-
-          console.log("Successfully preserved", existingResearchUpdates.length, "research updates in new analysis");
-        }
-      }
+      // Use the analysis generation system with research updates integration
+      await generateAnalysisWithResearchIntegration(formattedMessages, categorizedResearchUpdates);
       
       // CRITICAL: After generating new analysis, refresh from database
       await fetchAnalysisData();
       
       toast({
         title: "Analysis Generated",
-        description: existingResearchUpdates.length > 0 
-          ? `Analysis generated successfully and ${existingResearchUpdates.length} research update(s) preserved.`
+        description: categorizedResearchUpdates.length > 0 
+          ? `Analysis generated successfully with ${categorizedResearchUpdates.length} research update(s) integrated into relevant sections.`
           : "Real-time case analysis generated successfully.",
       });
     } catch (err: any) {
@@ -192,6 +299,94 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
       });
     } finally {
       setIsGeneratingAnalysis(false);
+    }
+  };
+
+  // New function to generate analysis with research integration
+  const generateAnalysisWithResearchIntegration = async (
+    formattedMessages: any[],
+    researchUpdates: Array<{
+      section: string;
+      content: string;
+      statutes: string[];
+      topics: string[];
+    }>
+  ) => {
+    try {
+      console.log("Generating analysis with research integration:", {
+        messagesCount: formattedMessages.length,
+        researchUpdatesCount: researchUpdates.length
+      });
+
+      // Call the enhanced edge function with research updates
+      const { data, error } = await supabase.functions.invoke('generate-legal-analysis', {
+        body: {
+          clientId,
+          conversation: formattedMessages,
+          caseId,
+          researchUpdates: researchUpdates // Pass the categorized research updates
+        }
+      });
+
+      if (error) {
+        console.error("Error calling generate-legal-analysis:", error);
+        throw new Error(error.message || "Failed to generate analysis");
+      }
+
+      const { analysis, lawReferences, documentsUsed, caseType } = data;
+
+      if (!analysis) {
+        throw new Error("No analysis content received from the service");
+      }
+
+      console.log("Analysis generated successfully with research integration");
+
+      // Save the integrated analysis (research updates should now be integrated, not appended)
+      const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
+      const { data: existingAnalyses } = await supabase
+        .from('legal_analyses')
+        .select('id')
+        .eq('client_id', clientId);
+        
+      if (existingAnalyses && existingAnalyses.length > 0) {
+        const { error: updateError } = await supabase
+          .from('legal_analyses')
+          .update({ 
+            content: analysis, // This should now have research updates integrated
+            timestamp,
+            updated_at: new Date().toISOString(),
+            law_references: lawReferences ? JSON.stringify(lawReferences) : null,
+            case_type: caseType || 'general'
+          })
+          .eq('client_id', clientId);
+          
+        if (updateError) {
+          console.error("Error updating legal analysis:", updateError);
+          throw new Error(updateError.message);
+        }
+      } else {
+        const { data: userData } = await supabase.auth.getUser();
+        const { error: insertError } = await supabase
+          .from('legal_analyses')
+          .insert({
+            client_id: clientId,
+            content: analysis,
+            timestamp,
+            law_references: lawReferences ? JSON.stringify(lawReferences) : null,
+            case_type: caseType || 'general',
+            user_id: userData.user?.id || 'anonymous'
+          });
+          
+        if (insertError) {
+          console.error("Error inserting legal analysis:", insertError);
+          throw new Error(insertError.message);
+        }
+      }
+
+    } catch (error: any) {
+      console.error("Error in generateAnalysisWithResearchIntegration:", error);
+      throw error;
     }
   };
 

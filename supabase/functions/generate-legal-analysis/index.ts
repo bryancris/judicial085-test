@@ -92,7 +92,7 @@ serve(async (req) => {
   }
 
   try {
-    const { clientId, conversation, caseId } = await req.json();
+    const { clientId, conversation, caseId, researchUpdates } = await req.json();
 
     if (!openAIApiKey) {
       console.error('OpenAI API key is not configured');
@@ -105,6 +105,7 @@ serve(async (req) => {
     // Log the request details for debugging
     console.log(`Generating legal analysis for client: ${clientId}${caseId ? `, case: ${caseId}` : ''}`);
     console.log(`Conversation length: ${conversation?.length || 0}`);
+    console.log(`Research updates to integrate: ${researchUpdates?.length || 0}`);
 
     // Determine if we have a conversation or should use documents
     const hasConversation = conversation && conversation.length > 0;
@@ -173,13 +174,14 @@ serve(async (req) => {
     const isConsumerCase = detectedCaseType === "consumer-protection";
     console.log(`Case identified as consumer protection case: ${isConsumerCase}`);
     
-    // Create system prompt
+    // Create system prompt with research updates integration
     const systemPrompt = buildSystemPrompt(
       analysisSource,
       relevantLawReferences,
       hasConversation,
       clientDocuments,
-      detectedCaseType
+      detectedCaseType,
+      researchUpdates // Pass research updates to system prompt
     );
 
     // Format the content for the API request
@@ -196,12 +198,24 @@ serve(async (req) => {
       ).join('\n\n')}`;
     }
 
+    // Add research updates context if available
+    if (researchUpdates && researchUpdates.length > 0) {
+      userContent += "\n\nIMPORTANT: The following research updates should be integrated into the appropriate sections of your analysis:\n\n";
+      researchUpdates.forEach((update, index) => {
+        userContent += `RESEARCH UPDATE ${index + 1} (Target: ${update.section}):\n`;
+        userContent += `Statutes: ${update.statutes.join(', ')}\n`;
+        userContent += `Topics: ${update.topics.join(', ')}\n`;
+        userContent += `Content: ${update.content}\n\n`;
+      });
+      userContent += "Please integrate the specific statute details and legal information from these research updates into the relevant sections of your analysis instead of keeping them as separate updates.";
+    }
+
     const messages = [
       { role: "system", content: systemPrompt },
       { role: "user", content: userContent }
     ];
 
-    console.log(`Sending request to OpenAI with ${analysisSource} context`);
+    console.log(`Sending request to OpenAI with ${analysisSource} context and ${researchUpdates?.length || 0} research updates`);
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -268,9 +282,9 @@ serve(async (req) => {
 
     // Add note about source of analysis
     if (analysis) {
-      const sourceNote = `*Analysis generated from ${analysisSource}${clientDocuments.length > 0 ? ` (${clientDocuments.length} document${clientDocuments.length > 1 ? 's' : ''}: ${clientDocuments.map(doc => doc.title).join(', ')})` : ''}*\n\n`;
+      const sourceNote = `*Analysis generated from ${analysisSource}${clientDocuments.length > 0 ? ` (${clientDocuments.length} document${clientDocuments.length > 1 ? 's' : ''}: ${clientDocuments.map(doc => doc.title).join(', ')})` : ''}${researchUpdates && researchUpdates.length > 0 ? ` with ${researchUpdates.length} research update(s) integrated` : ''}*\n\n`;
       analysis = sourceNote + analysis;
-      console.log(`Legal analysis generated successfully from ${analysisSource}`);
+      console.log(`Legal analysis generated successfully from ${analysisSource} with research integration`);
     }
 
     // Return knowledge base law references with direct PDF URLs
