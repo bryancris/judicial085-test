@@ -3,6 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, MessageCircle, StickyNote, Upload, Sparkles, RefreshCw } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface CaseAnalysisHeaderProps {
   title: string;
@@ -12,6 +13,7 @@ interface CaseAnalysisHeaderProps {
   isGenerating: boolean;
   onGenerate: () => void;
   caseType?: string;
+  hasUnincorporatedFindings?: boolean;
 }
 
 const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
@@ -21,7 +23,8 @@ const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
   setSelectedTab,
   isGenerating,
   onGenerate,
-  caseType
+  caseType,
+  hasUnincorporatedFindings = false
 }) => {
   const handleRegenerateClick = () => {
     console.log("Regenerating real-time analysis...");
@@ -47,7 +50,10 @@ const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
               disabled={isGenerating}
               variant="outline"
               size="sm"
-              className="flex items-center gap-2"
+              className={cn(
+                "flex items-center gap-2",
+                hasUnincorporatedFindings && !isGenerating && "animate-pulse bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
+              )}
             >
               {isGenerating ? (
                 <>
@@ -57,7 +63,7 @@ const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
               ) : (
                 <>
                   <RefreshCw className="h-4 w-4" />
-                  Regenerate Analysis
+                  {hasUnincorporatedFindings ? "Update Analysis" : "Regenerate Analysis"}
                 </>
               )}
             </Button>

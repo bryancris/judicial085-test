@@ -12,6 +12,37 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
   const [, setLegalAnalysis] = useState<any[]>([]);
   const { generateAnalysis } = useClientChatAnalysis(clientId, setLegalAnalysis);
 
+  // Helper function to extract research updates from existing analysis
+  const extractExistingResearchUpdates = (analysisContent: string): string[] => {
+    const researchUpdates: string[] = [];
+    const lines = analysisContent.split('\n');
+    let currentUpdate = '';
+    let inResearchUpdate = false;
+
+    for (const line of lines) {
+      if (line.includes('**RESEARCH UPDATE')) {
+        inResearchUpdate = true;
+        currentUpdate = line;
+      } else if (inResearchUpdate) {
+        if (line.trim() === '' && currentUpdate.trim() !== '') {
+          // End of current research update
+          researchUpdates.push(currentUpdate.trim());
+          currentUpdate = '';
+          inResearchUpdate = false;
+        } else {
+          currentUpdate += '\n' + line;
+        }
+      }
+    }
+
+    // Add the last update if it exists
+    if (currentUpdate.trim() !== '') {
+      researchUpdates.push(currentUpdate.trim());
+    }
+
+    return researchUpdates;
+  };
+
   const generateRealTimeAnalysis = async (fetchAnalysisData: () => Promise<void>) => {
     setIsGeneratingAnalysis(true);
     try {
@@ -20,6 +51,20 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
         title: "Generating Analysis",
         description: "Real-time case analysis is being generated...",
       });
+
+      // First, get any existing research updates that were manually added
+      const { data: existingAnalysis } = await supabase
+        .from("legal_analyses")
+        .select("content")
+        .eq("client_id", clientId)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      let existingResearchUpdates: string[] = [];
+      if (existingAnalysis && existingAnalysis.length > 0) {
+        existingResearchUpdates = extractExistingResearchUpdates(existingAnalysis[0].content);
+        console.log("Found existing research updates:", existingResearchUpdates.length);
+      }
 
       // Fetch the client messages for this client
       const { data: messages, error: messagesError } = await supabase
@@ -65,12 +110,38 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
       // Use the analysis generation system with document-only capability
       await generateAnalysis(formattedMessages, true);
       
+      // CRITICAL: After generating new analysis, append existing research updates
+      if (existingResearchUpdates.length > 0) {
+        const { data: newAnalysis } = await supabase
+          .from("legal_analyses")
+          .select("id, content")
+          .eq("client_id", clientId)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (newAnalysis && newAnalysis.length > 0) {
+          const updatedContent = newAnalysis[0].content + '\n\n' + existingResearchUpdates.join('\n\n');
+          
+          await supabase
+            .from("legal_analyses")
+            .update({
+              content: updatedContent,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", newAnalysis[0].id);
+
+          console.log("Preserved", existingResearchUpdates.length, "research updates in new analysis");
+        }
+      }
+      
       // CRITICAL: After generating new analysis, refresh from database
       await fetchAnalysisData();
       
       toast({
         title: "Analysis Generated",
-        description: "Real-time case analysis generated successfully.",
+        description: existingResearchUpdates.length > 0 
+          ? `Analysis generated successfully and ${existingResearchUpdates.length} research update(s) preserved.`
+          : "Real-time case analysis generated successfully.",
       });
     } catch (err: any) {
       console.error("Error generating real-time analysis:", err);

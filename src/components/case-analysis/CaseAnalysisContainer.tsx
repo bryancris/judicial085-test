@@ -33,6 +33,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
     analysisData,
     isAnalysisLoading,
     analysisError,
+    hasUnincorporatedFindings,
     fetchAnalysisData,
     scholarlyReferences,
     isScholarlyReferencesLoading,
@@ -105,6 +106,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
         isGenerating={isCombinedLoading}
         onGenerate={handleGenerateAnalysis}
         caseType={analysisData?.caseType}
+        hasUnincorporatedFindings={hasUnincorporatedFindings}
       />
 
       {/* Main content area with tabs */}
