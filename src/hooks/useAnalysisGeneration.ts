@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -277,12 +278,21 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
       });
 
       // First, get any existing research updates that were manually added and preserve them
-      const { data: existingAnalysis } = await supabase
+      let query = supabase
         .from("legal_analyses")
         .select("content")
         .eq("client_id", clientId)
         .order("created_at", { ascending: false })
         .limit(1);
+
+      // Apply case filtering properly
+      if (caseId) {
+        query = query.eq("case_id", caseId);
+      } else {
+        query = query.is("case_id", null);
+      }
+
+      const { data: existingAnalysis } = await query;
 
       let preservedResearchUpdates: Array<{
         section: string;
@@ -432,12 +442,20 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
       const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       
       // First, check for existing analyses and handle them properly
-      const { data: existingAnalyses, error: fetchError } = await supabase
+      let existingQuery = supabase
         .from('legal_analyses')
         .select('id, content')
         .eq('client_id', clientId)
-        .is('case_id', caseId || null) // Handle both case-specific and client-level analyses
         .order('created_at', { ascending: false });
+
+      // Apply case filtering properly  
+      if (caseId) {
+        existingQuery = existingQuery.eq('case_id', caseId);
+      } else {
+        existingQuery = existingQuery.is('case_id', null);
+      }
+
+      const { data: existingAnalyses, error: fetchError } = await existingQuery;
         
       if (fetchError) {
         console.error("Error fetching existing analyses:", fetchError);
@@ -472,11 +490,19 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
       if (existingAnalyses && existingAnalyses.length > 0) {
         console.log(`Removing ${existingAnalyses.length} existing analysis record(s) to prevent duplicates`);
         
-        const { error: deleteError } = await supabase
+        let deleteQuery = supabase
           .from('legal_analyses')
           .delete()
-          .eq('client_id', clientId)
-          .is('case_id', caseId || null);
+          .eq('client_id', clientId);
+
+        // Apply case filtering for deletion
+        if (caseId) {
+          deleteQuery = deleteQuery.eq('case_id', caseId);
+        } else {
+          deleteQuery = deleteQuery.is('case_id', null);
+        }
+          
+        const { error: deleteError } = await deleteQuery;
           
         if (deleteError) {
           console.error("Error deleting existing analyses:", deleteError);
