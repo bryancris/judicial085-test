@@ -143,7 +143,15 @@ export const mapCitationsToKnowledgeBase = (citations: string[]): KnowledgeBaseL
 };
 
 /**
- * Generate knowledge base URLs for law documents
+ * Generate direct PDF URLs for law documents from Supabase storage
+ */
+export const generateDirectPdfUrl = (filename: string): string => {
+  // Direct link to PDF in Supabase storage - documents bucket
+  return `https://ghpljdgecjmhkwkfctgy.supabase.co/storage/v1/object/public/documents/${filename}`;
+};
+
+/**
+ * Generate knowledge base URLs for law documents (for internal search use)
  */
 export const generateKnowledgeBaseUrl = (filename: string): string => {
   return `/knowledge?search=${encodeURIComponent(filename)}`;

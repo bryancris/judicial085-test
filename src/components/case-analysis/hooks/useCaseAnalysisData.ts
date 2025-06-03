@@ -1,9 +1,10 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AnalysisData } from "@/hooks/useAnalysisData";
 import { ScholarlyArticle } from "@/utils/api/scholarApiService";
 import { ProcessDocumentContentFunction } from "@/types/caseAnalysis";
-import { extractLegalCitations, mapCitationsToKnowledgeBase, generateKnowledgeBaseUrl } from "@/utils/lawReferences/knowledgeBaseMapping";
+import { extractLegalCitations, mapCitationsToKnowledgeBase, generateDirectPdfUrl } from "@/utils/lawReferences/knowledgeBaseMapping";
 
 export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
@@ -85,12 +86,12 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
         const knowledgeBaseDocs = mapCitationsToKnowledgeBase(extractedCitations);
         console.log("Mapped knowledge base documents:", knowledgeBaseDocs);
         
-        // Convert knowledge base docs to law references format
+        // Convert knowledge base docs to law references format with direct PDF URLs
         const lawReferences = knowledgeBaseDocs.map(doc => ({
           id: doc.id,
           title: doc.title,
-          url: generateKnowledgeBaseUrl(doc.filename),
-          content: `Click to view the full ${doc.title} document in the knowledge base.`
+          url: generateDirectPdfUrl(doc.filename),
+          content: `Click to view the full ${doc.title} document.`
         }));
         
         // Transform the analysis into the expected format
@@ -109,7 +110,7 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
             prosecution: 35
           },
           timestamp: analysis.timestamp || new Date().toLocaleTimeString(),
-          lawReferences: lawReferences, // Use mapped knowledge base docs instead of DB references
+          lawReferences: lawReferences, // Use mapped knowledge base docs with direct PDF URLs
           caseType: analysis.case_type || "general",
           remedies: "",
           rawContent: analysis.content

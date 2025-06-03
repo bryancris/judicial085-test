@@ -60,7 +60,7 @@ function extractLegalCitations(content) {
   return [...new Set(citations)];
 }
 
-// Map citations to knowledge base documents
+// Map citations to knowledge base documents with direct PDF URLs
 function mapCitationsToKnowledgeBase(citations) {
   const matchedDocs = [];
   
@@ -75,8 +75,8 @@ function mapCitationsToKnowledgeBase(citations) {
         matchedDocs.push({
           id: doc.id,
           title: doc.title,
-          url: `/knowledge?search=${encodeURIComponent(doc.filename)}`,
-          content: `Click to view the full ${doc.title} document in the knowledge base.`
+          url: `https://ghpljdgecjmhkwkfctgy.supabase.co/storage/v1/object/public/documents/${doc.filename}`,
+          content: `Click to view the full ${doc.title} document.`
         });
       }
     }
@@ -230,12 +230,12 @@ serve(async (req) => {
     // Extract and verify the analysis
     let analysis = data.choices[0]?.message?.content || '';
     
-    // Extract citations from the generated analysis and map to knowledge base
+    // Extract citations from the generated analysis and map to knowledge base with direct PDF URLs
     const extractedCitations = extractLegalCitations(analysis);
     const knowledgeBaseLawReferences = mapCitationsToKnowledgeBase(extractedCitations);
     
     console.log("Extracted citations from analysis:", extractedCitations);
-    console.log("Mapped to knowledge base documents:", knowledgeBaseLawReferences);
+    console.log("Mapped to knowledge base documents with direct URLs:", knowledgeBaseLawReferences);
 
     // Add post-processing for consumer protection cases
     if (isConsumerCase && analysis) {
@@ -273,11 +273,11 @@ serve(async (req) => {
       console.log(`Legal analysis generated successfully from ${analysisSource}`);
     }
 
-    // Return knowledge base law references instead of generic ones
+    // Return knowledge base law references with direct PDF URLs
     return new Response(
       JSON.stringify({ 
         analysis, 
-        lawReferences: knowledgeBaseLawReferences, // Use knowledge base mappings
+        lawReferences: knowledgeBaseLawReferences, // Use knowledge base mappings with direct PDF URLs
         documentsUsed: clientDocuments.map(doc => ({
           id: doc.id,
           title: doc.title,

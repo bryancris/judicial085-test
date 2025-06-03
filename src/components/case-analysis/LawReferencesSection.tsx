@@ -3,7 +3,6 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Scale, ExternalLink, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
 
 interface LawReference {
   id: string;
@@ -38,7 +37,7 @@ const LawReferencesSection: React.FC<LawReferencesSectionProps> = ({
           )}
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Legal documents from the knowledge base relevant to this case
+          Legal documents relevant to this case analysis
         </p>
       </CardHeader>
       <CardContent>
@@ -61,28 +60,15 @@ const LawReferencesSection: React.FC<LawReferencesSectionProps> = ({
                 
                 {ref.url && (
                   <div className="ml-4">
-                    {ref.url.startsWith('/knowledge') ? (
-                      <Link to={ref.url}>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="flex items-center gap-2 bg-white hover:bg-blue-50"
-                        >
-                          <FileText className="h-4 w-4" />
-                          View in Knowledge Base
-                        </Button>
-                      </Link>
-                    ) : (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="flex items-center gap-2 bg-white hover:bg-blue-50"
-                        onClick={() => window.open(ref.url!, "_blank")}
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                        View Document
-                      </Button>
-                    )}
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="flex items-center gap-2 bg-white hover:bg-blue-50"
+                      onClick={() => window.open(ref.url!, "_blank")}
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      View Document
+                    </Button>
                   </div>
                 )}
               </div>
@@ -92,7 +78,7 @@ const LawReferencesSection: React.FC<LawReferencesSectionProps> = ({
         
         <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-md">
           <p className="text-sm text-blue-700 dark:text-blue-200">
-            <strong>Note:</strong> These references are automatically extracted from the legal analysis and linked to relevant Texas law documents in the knowledge base. Click "View in Knowledge Base" to access the full document text.
+            <strong>Note:</strong> These references are automatically extracted from the legal analysis and linked to relevant Texas law documents. Click "View Document" to open the full PDF document.
           </p>
         </div>
       </CardContent>
