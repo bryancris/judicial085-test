@@ -43,6 +43,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
       <TabsContent value="case-discussion" className="mt-6">
         <CaseDiscussionContainer 
           clientId={client.id}
+          clientName={`${client.first_name} ${client.last_name}`}
         />
       </TabsContent>
 

@@ -96,7 +96,8 @@ const CaseDiscussionContainer: React.FC<CaseDiscussionContainerProps> = ({
           <TabsContent value="voice-chat" className="flex-grow flex flex-col mt-0">
             <VoiceDiscussionInterface 
               clientId={clientId}
-              clientName={clientName}
+              onTranscriptUpdate={() => {}}
+              onConnectionChange={() => {}}
             />
           </TabsContent>
         </Tabs>
