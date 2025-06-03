@@ -4,7 +4,7 @@ import EmptyAnalysisState from "./EmptyAnalysisState";
 import AnalysisLoadingState from "./AnalysisLoadingState";
 import AnalysisItem from "./AnalysisItem";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, File } from "lucide-react";
+import { AlertCircle, File, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -19,7 +19,7 @@ interface LegalAnalysisViewProps {
   isLoading: boolean;
   error?: string | null;
   onQuestionClick?: (question: string) => void;
-  clientId?: string; // Added clientId as optional prop
+  clientId?: string;
 }
 
 const LegalAnalysisView = ({ analysisItems, isLoading, error, onQuestionClick, clientId }: LegalAnalysisViewProps) => {
@@ -49,6 +49,25 @@ const LegalAnalysisView = ({ analysisItems, isLoading, error, onQuestionClick, c
         <div className="legal-analysis-container">
           {analysisItems.map((item, index) => (
             <div key={index} className="relative">
+              {/* Show research update badge if content contains research updates */}
+              {item.content.includes('**RESEARCH UPDATE') && (
+                <div className="mb-2">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge variant="outline" className="flex items-center gap-1 px-2 py-1 font-normal text-xs bg-green-50">
+                          <RefreshCw className="h-3 w-3" />
+                          Research Update
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">This analysis includes findings from case discussion research</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              )}
+              
               {item.documentsUsed && item.documentsUsed.length > 0 && (
                 <div className="mb-2">
                   <TooltipProvider>
