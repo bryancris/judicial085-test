@@ -35,3 +35,25 @@
 .legal-analysis-content ul > li::marker {
   @apply text-blue-600 dark:text-blue-300 font-bold;
 }
+
+/* Clickable follow-up questions styling */
+.question-item {
+  @apply text-blue-600 dark:text-blue-400 cursor-pointer transition-colors duration-200;
+}
+
+.question-item:hover {
+  @apply text-blue-800 dark:text-blue-300 underline;
+}
+
+.question-item:focus {
+  @apply outline-none ring-2 ring-blue-500 ring-opacity-50 rounded;
+}
+
+.clickable-question {
+  @apply inline-block;
+}
+
+/* Ensure questions stand out */
+.legal-analysis-content .question-item {
+  @apply font-medium;
+}
