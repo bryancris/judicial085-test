@@ -133,32 +133,30 @@ const ResearchFindingsButton: React.FC<ResearchFindingsButtonProps> = ({
   }
 
   return (
-    <div className="mt-2 flex justify-end">
-      <Button
-        onClick={handleAddToAnalysis}
-        disabled={isAdding || isAdded}
-        size="sm"
-        variant="outline"
-        className="text-xs"
-      >
-        {isAdding ? (
-          <span className="flex items-center gap-1">
-            <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
-            Adding...
-          </span>
-        ) : isAdded ? (
-          <span className="flex items-center gap-1 text-green-600">
-            <Check className="h-3 w-3" />
-            Added to Analysis
-          </span>
-        ) : (
-          <span className="flex items-center gap-1">
-            <PlusCircle className="h-3 w-3" />
-            Add to Case Analysis
-          </span>
-        )}
-      </Button>
-    </div>
+    <Button
+      onClick={handleAddToAnalysis}
+      disabled={isAdding || isAdded}
+      size="sm"
+      variant="secondary"
+      className="text-xs bg-white/80 hover:bg-white/90 text-blue-900 border border-blue-200"
+    >
+      {isAdding ? (
+        <span className="flex items-center gap-1">
+          <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
+          Adding...
+        </span>
+      ) : isAdded ? (
+        <span className="flex items-center gap-1 text-green-600">
+          <Check className="h-3 w-3" />
+          Added to Analysis
+        </span>
+      ) : (
+        <span className="flex items-center gap-1">
+          <PlusCircle className="h-3 w-3" />
+          Add to Case Analysis
+        </span>
+      )}
+    </Button>
   );
 };
 

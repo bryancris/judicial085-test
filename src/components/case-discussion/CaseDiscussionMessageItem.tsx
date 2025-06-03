@@ -49,24 +49,26 @@ const CaseDiscussionMessageItem: React.FC<CaseDiscussionMessageItemProps> = ({
         "max-w-[80%] md:max-w-[70%]"
       )}>
         <div className={cn(
-          "px-4 py-2 rounded-lg",
+          "px-4 py-2 rounded-lg relative",
           isAttorney ? "bg-purple-100 text-purple-900" : "bg-blue-100 text-blue-900"
         )}>
           <div 
             className="text-sm prose prose-sm max-w-none"
             dangerouslySetInnerHTML={{ __html: processedContent }}
           />
+          
+          {/* Add Research Findings Button inside AI messages */}
+          {!isAttorney && clientId && (
+            <div className="mt-3 flex justify-end">
+              <ResearchFindingsButton
+                messageContent={message.content}
+                clientId={clientId}
+                onFindingsAdded={onFindingsAdded}
+              />
+            </div>
+          )}
         </div>
         <span className="text-xs mt-1 text-muted-foreground">{message.timestamp}</span>
-        
-        {/* Add Research Findings Button for AI messages */}
-        {!isAttorney && clientId && (
-          <ResearchFindingsButton
-            messageContent={message.content}
-            clientId={clientId}
-            onFindingsAdded={onFindingsAdded}
-          />
-        )}
       </div>
     </div>
   );
