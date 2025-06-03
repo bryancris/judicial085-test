@@ -6,49 +6,13 @@ import { LogIn, LogOut, Gavel } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "./ThemeToggle";
+import { useAuthState } from "@/hooks/useAuthState";
 
 const NavBar: React.FC = () => {
-  const [session, setSession] = useState<any>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const isMounted = useRef(true);
+  const { session } = useAuthState();
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  useEffect(() => {
-    // Component mount indicator
-    isMounted.current = true;
-    
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
-      if (isMounted.current) {
-        setSession(currentSession);
-      }
-    });
-
-    // Check for existing session
-    const checkSession = async () => {
-      try {
-        const { data, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error("Error fetching session:", error.message);
-          return;
-        }
-        if (isMounted.current) {
-          setSession(data.session);
-        }
-      } catch (err) {
-        console.error("Unexpected error checking session:", err);
-      }
-    };
-
-    checkSession();
-
-    // Cleanup function
-    return () => {
-      isMounted.current = false;
-      subscription.unsubscribe();
-    };
-  }, []);
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
@@ -61,26 +25,20 @@ const NavBar: React.FC = () => {
         throw new Error(error.message);
       }
       
-      if (isMounted.current) {
-        toast({
-          title: "Logged out successfully",
-        });
-        // Redirect to home page after logout
-        navigate('/');
-      }
+      toast({
+        title: "Logged out successfully",
+      });
+      // Redirect to home page after logout
+      navigate('/');
     } catch (error: any) {
       console.error("Logout error:", error);
-      if (isMounted.current) {
-        toast({
-          title: "Error logging out",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Error logging out",
+        description: error.message,
+        variant: "destructive",
+      });
     } finally {
-      if (isMounted.current) {
-        setIsLoggingOut(false);
-      }
+      setIsLoggingOut(false);
     }
   };
 

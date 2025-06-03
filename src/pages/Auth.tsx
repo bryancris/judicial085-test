@@ -10,12 +10,13 @@ import { FormValues } from "@/components/auth/AuthForm";
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { session, isLoading, setIsLoading, isMounted } = useAuthState();
+  const { session, isLoading } = useAuthState();
 
   const handleSubmit = async (values: FormValues) => {
-    setIsLoading(true);
+    setIsSubmitting(true);
     setError(null);
     
     try {
@@ -71,9 +72,7 @@ const Auth = () => {
         variant: "destructive",
       });
     } finally {
-      if (isMounted.current) {
-        setIsLoading(false);
-      }
+      setIsSubmitting(false);
     }
   };
 
@@ -82,7 +81,19 @@ const Auth = () => {
     setError(null);
   };
 
-  // Redirect if already logged in - IMPORTANT: This conditional return must come after all hook calls
+  // Show loading while checking auth state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+        <div className="flex items-center gap-2">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
+          Loading...
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect if already logged in
   if (session) {
     return <Navigate to="/clients" />;
   }
@@ -91,7 +102,7 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
       <AuthCard
         isLogin={isLogin}
-        isLoading={isLoading}
+        isLoading={isSubmitting}
         error={error}
         onSubmit={handleSubmit}
         onToggleAuthMode={toggleAuthMode}
