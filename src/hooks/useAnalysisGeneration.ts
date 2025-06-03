@@ -12,34 +12,63 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
   const [, setLegalAnalysis] = useState<any[]>([]);
   const { generateAnalysis } = useClientChatAnalysis(clientId, setLegalAnalysis);
 
-  // Helper function to extract research updates from existing analysis
+  // Improved function to extract research updates from existing analysis
   const extractExistingResearchUpdates = (analysisContent: string): string[] => {
     const researchUpdates: string[] = [];
-    const lines = analysisContent.split('\n');
-    let currentUpdate = '';
-    let inResearchUpdate = false;
-
-    for (const line of lines) {
-      if (line.includes('**RESEARCH UPDATE')) {
-        inResearchUpdate = true;
-        currentUpdate = line;
-      } else if (inResearchUpdate) {
-        if (line.trim() === '' && currentUpdate.trim() !== '') {
-          // End of current research update
-          researchUpdates.push(currentUpdate.trim());
-          currentUpdate = '';
-          inResearchUpdate = false;
-        } else {
-          currentUpdate += '\n' + line;
-        }
+    
+    // Look for research update patterns with more robust matching
+    const researchUpdatePattern = /\*\*RESEARCH UPDATE[^*]*\*\*:?([\s\S]*?)(?=\n\s*\*\*[A-Z\s]+(?:UPDATE|ANALYSIS|CONCLUSION|SUMMARY)|$)/gi;
+    
+    let match;
+    while ((match = researchUpdatePattern.exec(analysisContent)) !== null) {
+      const fullUpdate = match[0].trim();
+      if (fullUpdate && fullUpdate.length > 20) { // Only include substantial updates
+        researchUpdates.push(fullUpdate);
+        console.log("Extracted research update:", fullUpdate.substring(0, 100) + "...");
       }
     }
 
-    // Add the last update if it exists
-    if (currentUpdate.trim() !== '') {
-      researchUpdates.push(currentUpdate.trim());
+    // Fallback: Look for any content after "RESEARCH UPDATE" markers
+    if (researchUpdates.length === 0) {
+      const lines = analysisContent.split('\n');
+      let currentUpdate = '';
+      let inResearchUpdate = false;
+      let updateStartIndex = -1;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        
+        if (line.includes('**RESEARCH UPDATE')) {
+          // Start of a new research update
+          if (currentUpdate.trim()) {
+            researchUpdates.push(currentUpdate.trim());
+          }
+          currentUpdate = line;
+          inResearchUpdate = true;
+          updateStartIndex = i;
+        } else if (inResearchUpdate) {
+          // Check if we've reached the end of the update (next major section)
+          if (line.match(/^\*\*[A-Z\s]+:?\*\*/) && !line.includes('RESEARCH UPDATE')) {
+            // This is a new section, end the current update
+            if (currentUpdate.trim()) {
+              researchUpdates.push(currentUpdate.trim());
+            }
+            currentUpdate = '';
+            inResearchUpdate = false;
+          } else {
+            // Continue building the current update
+            currentUpdate += '\n' + line;
+          }
+        }
+      }
+
+      // Add the last update if it exists
+      if (currentUpdate.trim()) {
+        researchUpdates.push(currentUpdate.trim());
+      }
     }
 
+    console.log(`Found ${researchUpdates.length} research updates to preserve`);
     return researchUpdates;
   };
 
@@ -64,6 +93,11 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
       if (existingAnalysis && existingAnalysis.length > 0) {
         existingResearchUpdates = extractExistingResearchUpdates(existingAnalysis[0].content);
         console.log("Found existing research updates:", existingResearchUpdates.length);
+        
+        // Log each update for debugging
+        existingResearchUpdates.forEach((update, index) => {
+          console.log(`Research Update ${index + 1}:`, update.substring(0, 200) + "...");
+        });
       }
 
       // Fetch the client messages for this client
@@ -120,7 +154,13 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
           .limit(1);
 
         if (newAnalysis && newAnalysis.length > 0) {
-          const updatedContent = newAnalysis[0].content + '\n\n' + existingResearchUpdates.join('\n\n');
+          // Ensure proper formatting with clear separators
+          const researchSection = existingResearchUpdates.join('\n\n');
+          const updatedContent = newAnalysis[0].content + '\n\n' + researchSection;
+          
+          console.log("Preserving research updates in new analysis");
+          console.log("Original content length:", newAnalysis[0].content.length);
+          console.log("Research updates to add:", researchSection.length);
           
           await supabase
             .from("legal_analyses")
@@ -130,7 +170,7 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
             })
             .eq("id", newAnalysis[0].id);
 
-          console.log("Preserved", existingResearchUpdates.length, "research updates in new analysis");
+          console.log("Successfully preserved", existingResearchUpdates.length, "research updates in new analysis");
         }
       }
       

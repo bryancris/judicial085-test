@@ -13,7 +13,7 @@ export const generateContentHash = (content: string): string => {
   return Math.abs(hash).toString();
 };
 
-// Check if content already exists in legal analyses
+// Check if content already exists in legal analyses with improved logic
 export const checkContentDuplicate = async (
   content: string, 
   clientId: string
@@ -35,40 +35,46 @@ export const checkContentDuplicate = async (
     }
 
     const contentHash = generateContentHash(content);
+    const cleanNewContent = content.trim().toLowerCase();
     
     // Check if the exact content or very similar content already exists
     for (const analysis of existingAnalysis) {
       const existingHash = generateContentHash(analysis.content);
+      const cleanExistingContent = analysis.content.trim().toLowerCase();
       
       // Check for exact hash match
       if (existingHash === contentHash) {
+        console.log("Found exact hash match");
         return true;
       }
       
-      // Check if the content is already included in the analysis
-      const cleanExistingContent = analysis.content.trim();
-      const cleanNewContent = content.trim();
+      // Check if the content is already included in the analysis (substring match)
+      if (cleanExistingContent.includes(cleanNewContent) && cleanNewContent.length > 50) {
+        console.log("Found substring match for substantial content");
+        return true;
+      }
       
-      if (cleanExistingContent.includes(cleanNewContent) || 
-          cleanNewContent.includes(cleanExistingContent)) {
+      if (cleanNewContent.includes(cleanExistingContent) && cleanExistingContent.length > 50) {
+        console.log("Found reverse substring match for substantial content");
         return true;
       }
 
-      // Check for similar content patterns (research updates)
-      if (cleanExistingContent.includes('**RESEARCH UPDATE') && 
-          cleanNewContent.length > 50) {
-        const existingLines = cleanExistingContent.split('\n');
-        const newLines = cleanNewContent.split('\n');
+      // Check for similar content patterns (research updates) with improved detection
+      if (cleanExistingContent.includes('research update') && cleanNewContent.length > 50) {
+        // Extract key legal patterns for comparison
+        const existingPatterns = extractLegalPatterns(analysis.content);
+        const newPatterns = extractLegalPatterns(content);
         
-        // Check if any significant line from new content already exists
-        for (const newLine of newLines) {
-          if (newLine.trim().length > 20) {
-            for (const existingLine of existingLines) {
-              if (existingLine.includes(newLine.trim()) || newLine.includes(existingLine.trim())) {
-                return true;
-              }
-            }
-          }
+        // If significant overlap in legal patterns, consider it a duplicate
+        const overlap = newPatterns.filter(pattern => 
+          existingPatterns.some(existing => 
+            existing.includes(pattern.toLowerCase()) || pattern.toLowerCase().includes(existing)
+          )
+        );
+        
+        if (overlap.length > 0 && overlap.length / Math.max(newPatterns.length, 1) > 0.6) {
+          console.log("Found significant legal pattern overlap");
+          return true;
         }
       }
     }
@@ -100,6 +106,12 @@ export const extractLegalPatterns = (content: string): string[] => {
   const violationMatches = content.match(/violation[^.]*\./gi);
   if (violationMatches) {
     patterns.push(...violationMatches.map(match => match.toLowerCase().trim()));
+  }
+  
+  // Extract DTPA references
+  const dtpaMatches = content.match(/dtpa[^.]*\./gi);
+  if (dtpaMatches) {
+    patterns.push(...dtpaMatches.map(match => match.toLowerCase().trim()));
   }
   
   return patterns;
@@ -137,8 +149,8 @@ export const checkLegalPatternDuplicate = async (
         )
       );
       
-      // If more than 70% of patterns overlap, consider it a duplicate
-      if (overlap.length > 0 && overlap.length / newPatterns.length > 0.7) {
+      // If more than 60% of patterns overlap, consider it a duplicate
+      if (overlap.length > 0 && overlap.length / newPatterns.length > 0.6) {
         return true;
       }
     }
