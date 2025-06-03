@@ -12,14 +12,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface CaseDiscussionContainerProps {
   clientId: string;
   clientName: string;
+  onFindingsAdded?: () => void;
 }
 
 const CaseDiscussionContainer: React.FC<CaseDiscussionContainerProps> = ({ 
   clientId, 
-  clientName 
+  clientName,
+  onFindingsAdded
 }) => {
   const [activeTab, setActiveTab] = useState("text-chat");
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   const {
     messages,
@@ -30,9 +31,11 @@ const CaseDiscussionContainer: React.FC<CaseDiscussionContainerProps> = ({
   } = useCaseDiscussion(clientId);
 
   const handleFindingsAdded = () => {
-    // Trigger a refresh or notification that findings were added
-    setRefreshTrigger(prev => prev + 1);
     console.log("Research findings added to case analysis");
+    // Trigger refresh in parent component (Case Analysis)
+    if (onFindingsAdded) {
+      onFindingsAdded();
+    }
   };
 
   if (isLoadingHistory) {

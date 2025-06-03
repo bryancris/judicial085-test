@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState, useCallback } from "react";
 import { TabsContent } from "@/components/ui/tabs";
 import ClientIntakeChat from "@/components/clients/chat/ClientIntakeChat";
 import CaseAnalysisContainer from "@/components/case-analysis/CaseAnalysisContainer";
@@ -22,6 +22,13 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
   activeTab 
 }) => {
   const { currentCase } = useCase();
+  const [analysisRefreshTrigger, setAnalysisRefreshTrigger] = useState(0);
+  
+  // Callback to trigger analysis refresh when findings are added
+  const handleAnalysisRefresh = useCallback(() => {
+    setAnalysisRefreshTrigger(prev => prev + 1);
+    console.log("Analysis refresh triggered from case discussion");
+  }, []);
   
   return (
     <>
@@ -37,6 +44,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
           clientId={client.id}
           clientName={`${client.first_name} ${client.last_name}`}
           caseId={currentCase?.id}
+          refreshTrigger={analysisRefreshTrigger}
         />
       </TabsContent>
 
@@ -44,6 +52,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
         <CaseDiscussionContainer 
           clientId={client.id}
           clientName={`${client.first_name} ${client.last_name}`}
+          onFindingsAdded={handleAnalysisRefresh}
         />
       </TabsContent>
 

@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import CaseAnalysisErrorState from "./CaseAnalysisErrorState";
 import CaseAnalysisLoadingSkeleton from "./CaseAnalysisLoadingSkeleton";
 import CaseAnalysisHeader from "./CaseAnalysisHeader";
@@ -13,12 +13,14 @@ interface CaseAnalysisContainerProps {
   clientId: string;
   clientName: string;
   caseId?: string;
+  refreshTrigger?: number;
 }
 
 const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
   clientId,
   clientName,
   caseId: propCaseId,
+  refreshTrigger,
 }) => {
   const [selectedTab, setSelectedTab] = useState("analysis");
   const { currentCase } = useCase();
@@ -47,6 +49,14 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
 
   // Get analysis generation functionality
   const { isGeneratingAnalysis, generateRealTimeAnalysis } = useAnalysisGeneration(clientId, caseId);
+
+  // Refresh analysis when trigger changes (from Case Discussion)
+  useEffect(() => {
+    if (refreshTrigger && refreshTrigger > 0) {
+      console.log("Refreshing analysis due to external trigger:", refreshTrigger);
+      fetchAnalysisData();
+    }
+  }, [refreshTrigger, fetchAnalysisData]);
 
   // Wrapper to pass fetchAnalysisData to generation function
   const handleGenerateAnalysis = () => {
