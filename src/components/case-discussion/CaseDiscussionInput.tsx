@@ -41,7 +41,7 @@ const CaseDiscussionInput: React.FC<CaseDiscussionInputProps> = ({
       <div className="flex gap-2 items-end">
         <TextareaAutosize
           ref={textareaRef}
-          className="flex-grow resize-none border rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#9b87f5] focus:border-transparent"
+          className="flex-grow resize-none border rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[#9b87f5] focus:border-transparent text-foreground bg-background dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600 placeholder:text-muted-foreground"
           placeholder="Ask a question about this case..."
           value={message}
           onChange={(e) => setMessage(e.target.value)}
