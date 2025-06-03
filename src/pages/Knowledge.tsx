@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import NavBar from '@/components/NavBar';
-import { BookOpen, AlertCircle, Loader2, Database, Book } from 'lucide-react';
+import { BookOpen, AlertCircle, Loader2, Database, Book, Scale } from 'lucide-react';
 import SearchBar from '@/components/knowledge/SearchBar';
 import DocumentList from '@/components/knowledge/DocumentList';
 import { useDocuments } from '@/hooks/useDocuments';
@@ -10,11 +10,12 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ScholarlyResearch from '@/components/knowledge/ScholarlyResearch';
+import TexasLawDocuments from '@/components/knowledge/TexasLawDocuments';
 
 const Knowledge = () => {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [debugMode, setDebugMode] = useState(false);
-  const [activeTab, setActiveTab] = useState<"documents" | "scholarly">("documents");
+  const [activeTab, setActiveTab] = useState<"documents" | "scholarly" | "law">("documents");
   
   const {
     session,
@@ -100,7 +101,7 @@ const Knowledge = () => {
         
         <Tabs 
           value={activeTab} 
-          onValueChange={(value) => setActiveTab(value as "documents" | "scholarly")}
+          onValueChange={(value) => setActiveTab(value as "documents" | "scholarly" | "law")}
           className="mb-6"
         >
           <TabsList>
@@ -111,6 +112,10 @@ const Knowledge = () => {
             <TabsTrigger value="scholarly" className="flex items-center gap-1">
               <Book className="h-4 w-4" />
               Scholarly Research
+            </TabsTrigger>
+            <TabsTrigger value="law" className="flex items-center gap-1">
+              <Scale className="h-4 w-4" />
+              Texas Law Documents
             </TabsTrigger>
           </TabsList>
           
@@ -176,6 +181,10 @@ const Knowledge = () => {
           
           <TabsContent value="scholarly" className="mt-6">
             <ScholarlyResearch />
+          </TabsContent>
+
+          <TabsContent value="law" className="mt-6">
+            <TexasLawDocuments />
           </TabsContent>
         </Tabs>
       </main>
