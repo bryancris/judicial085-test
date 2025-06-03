@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -75,7 +74,7 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
       }
     }
 
-    // Fallback: Look for any content after "RESEARCH UPDATE" markers
+    // Fallback logic for finding research updates
     if (researchUpdates.length === 0) {
       const lines = analysisContent.split('\n');
       let currentUpdate = '';
@@ -267,6 +266,7 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
     return 'RELEVANT TEXAS LAW';
   };
 
+  // Enhanced generateRealTimeAnalysis function with better duplicate prevention
   const generateRealTimeAnalysis = async (fetchAnalysisData: () => Promise<void>) => {
     setIsGeneratingAnalysis(true);
     try {
@@ -372,7 +372,7 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
     }
   };
 
-  // Enhanced function to generate analysis with research preservation
+  // Enhanced function to generate analysis with research preservation and duplicate prevention
   const generateAnalysisWithResearchPreservation = async (
     formattedMessages: any[],
     preservedResearchUpdates: Array<{
@@ -428,48 +428,82 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
         });
       }
 
-      // Save the enhanced analysis with preserved research updates
+      // ENHANCED: Better duplicate prevention and update logic
       const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       
-      const { data: existingAnalyses } = await supabase
+      // First, check for existing analyses and handle them properly
+      const { data: existingAnalyses, error: fetchError } = await supabase
         .from('legal_analyses')
-        .select('id')
-        .eq('client_id', clientId);
+        .select('id, content')
+        .eq('client_id', clientId)
+        .is('case_id', caseId || null) // Handle both case-specific and client-level analyses
+        .order('created_at', { ascending: false });
         
-      if (existingAnalyses && existingAnalyses.length > 0) {
-        const { error: updateError } = await supabase
-          .from('legal_analyses')
-          .update({ 
-            content: finalAnalysisContent,
-            timestamp,
-            updated_at: new Date().toISOString(),
-            law_references: lawReferences ? JSON.stringify(lawReferences) : null,
-            case_type: caseType || 'general'
-          })
-          .eq('client_id', clientId);
-          
-        if (updateError) {
-          console.error("Error updating legal analysis:", updateError);
-          throw new Error(updateError.message);
+      if (fetchError) {
+        console.error("Error fetching existing analyses:", fetchError);
+        throw new Error(fetchError.message);
+      }
+
+      // Generate content hash for duplicate detection
+      const generateContentHash = (content: string): string => {
+        const cleanContent = content.trim().toLowerCase().replace(/\s+/g, ' ');
+        let hash = 0;
+        for (let i = 0; i < cleanContent.length; i++) {
+          const char = cleanContent.charCodeAt(i);
+          hash = ((hash << 5) - hash) + char;
+          hash = hash & hash;
         }
-      } else {
-        const { data: userData } = await supabase.auth.getUser();
-        const { error: insertError } = await supabase
+        return Math.abs(hash).toString();
+      };
+
+      const newContentHash = generateContentHash(finalAnalysisContent);
+      
+      // Check for exact duplicates
+      const isDuplicate = existingAnalyses?.some(existing => 
+        generateContentHash(existing.content) === newContentHash
+      );
+
+      if (isDuplicate) {
+        console.log("Detected duplicate analysis content, skipping database operation");
+        return;
+      }
+
+      // Delete any existing analyses before inserting the new one to prevent duplicates
+      if (existingAnalyses && existingAnalyses.length > 0) {
+        console.log(`Removing ${existingAnalyses.length} existing analysis record(s) to prevent duplicates`);
+        
+        const { error: deleteError } = await supabase
           .from('legal_analyses')
-          .insert({
-            client_id: clientId,
-            content: finalAnalysisContent,
-            timestamp,
-            law_references: lawReferences ? JSON.stringify(lawReferences) : null,
-            case_type: caseType || 'general',
-            user_id: userData.user?.id || 'anonymous'
-          });
+          .delete()
+          .eq('client_id', clientId)
+          .is('case_id', caseId || null);
           
-        if (insertError) {
-          console.error("Error inserting legal analysis:", insertError);
-          throw new Error(insertError.message);
+        if (deleteError) {
+          console.error("Error deleting existing analyses:", deleteError);
+          // Continue with insert even if delete fails
         }
       }
+
+      // Insert the new analysis
+      const { data: userData } = await supabase.auth.getUser();
+      const { error: insertError } = await supabase
+        .from('legal_analyses')
+        .insert({
+          client_id: clientId,
+          case_id: caseId || null,
+          content: finalAnalysisContent,
+          timestamp,
+          law_references: lawReferences ? JSON.stringify(lawReferences) : null,
+          case_type: caseType || 'general',
+          user_id: userData.user?.id || 'anonymous'
+        });
+        
+      if (insertError) {
+        console.error("Error inserting legal analysis:", insertError);
+        throw new Error(insertError.message);
+      }
+
+      console.log("Analysis successfully saved with duplicate prevention");
 
     } catch (error: any) {
       console.error("Error in generateAnalysisWithResearchPreservation:", error);

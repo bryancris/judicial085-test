@@ -1,10 +1,10 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AnalysisData } from "@/hooks/useAnalysisData";
 import { ScholarlyArticle } from "@/utils/api/scholarApiService";
 import { ProcessDocumentContentFunction } from "@/types/caseAnalysis";
 import { extractLegalCitations, mapCitationsToKnowledgeBase, generateDirectPdfUrl } from "@/utils/lawReferences/knowledgeBaseMapping";
+import { cleanupDuplicateAnalyses } from "@/utils/duplicateCleanupService";
 
 export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
@@ -64,11 +64,26 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
     setAnalysisError(null);
     
     try {
-      // Fetch the latest legal analysis
-      const { data: analyses, error: analysisError } = await supabase
+      // First, clean up any duplicate analyses for this client
+      const cleanupResult = await cleanupDuplicateAnalyses(clientId);
+      if (cleanupResult.duplicatesRemoved > 0) {
+        console.log(`Cleaned up ${cleanupResult.duplicatesRemoved} duplicate analyses for client ${clientId}`);
+      }
+
+      // Fetch the latest legal analysis with proper case filtering
+      let query = supabase
         .from("legal_analyses")
         .select("*")
-        .eq("client_id", clientId)
+        .eq("client_id", clientId);
+
+      // Apply case filtering properly
+      if (caseId) {
+        query = query.eq("case_id", caseId);
+      } else {
+        query = query.is("case_id", null);
+      }
+
+      const { data: analyses, error: analysisError } = await query
         .order("created_at", { ascending: false })
         .limit(1);
 

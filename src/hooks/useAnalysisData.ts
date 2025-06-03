@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -31,6 +30,43 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // Helper function to generate content hash for deduplication
+  const generateContentHash = (content: string): string => {
+    const cleanContent = content.trim().toLowerCase().replace(/\s+/g, ' ');
+    let hash = 0;
+    for (let i = 0; i < cleanContent.length; i++) {
+      const char = cleanContent.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return Math.abs(hash).toString();
+  };
+
+  // Helper function to deduplicate analysis records
+  const deduplicateAnalyses = (analyses: any[]): any[] => {
+    if (!analyses || analyses.length === 0) return analyses;
+    
+    const seen = new Set<string>();
+    const deduplicated = [];
+    
+    for (const analysis of analyses) {
+      const contentHash = generateContentHash(analysis.content);
+      if (!seen.has(contentHash)) {
+        seen.add(contentHash);
+        deduplicated.push(analysis);
+      } else {
+        console.log("Filtered out duplicate analysis record:", {
+          id: analysis.id,
+          timestamp: analysis.timestamp,
+          contentPreview: analysis.content.substring(0, 100) + "..."
+        });
+      }
+    }
+    
+    console.log(`Deduplication: ${analyses.length} -> ${deduplicated.length} records`);
+    return deduplicated;
+  };
+
   const fetchAnalysisData = useCallback(async () => {
     if (!clientId) {
       setError("No client ID provided");
@@ -44,7 +80,6 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
       console.log(`Fetching analysis data for client: ${clientId}${caseId ? `, case: ${caseId}` : ''}`);
       
       let analysisResults = null;
-      let analysisError = null;
 
       // If case ID is provided, first try to fetch case-specific analysis
       if (caseId) {
@@ -54,16 +89,19 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
           .select("*")
           .eq("client_id", clientId)
           .eq("case_id", caseId)
-          .order("created_at", { ascending: false })
-          .limit(1);
+          .order("created_at", { ascending: false });
 
         if (caseSpecificError) {
           throw new Error(`Failed to fetch case-specific legal analysis: ${caseSpecificError.message}`);
         }
 
         if (caseSpecificResults && caseSpecificResults.length > 0) {
-          console.log(`Found case-specific analysis for case ${caseId}`);
-          analysisResults = caseSpecificResults;
+          console.log(`Found ${caseSpecificResults.length} case-specific analysis record(s) for case ${caseId}`);
+          // Apply deduplication to case-specific results
+          const deduplicatedResults = deduplicateAnalyses(caseSpecificResults);
+          if (deduplicatedResults.length > 0) {
+            analysisResults = [deduplicatedResults[0]]; // Take the most recent after deduplication
+          }
         } else {
           console.log(`No case-specific analysis found for case ${caseId}, trying client-level analysis`);
         }
@@ -77,16 +115,19 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
           .select("*")
           .eq("client_id", clientId)
           .is("case_id", null)
-          .order("created_at", { ascending: false })
-          .limit(1);
+          .order("created_at", { ascending: false });
 
         if (clientLevelError) {
           throw new Error(`Failed to fetch client-level legal analysis: ${clientLevelError.message}`);
         }
 
-        analysisResults = clientLevelResults;
-        if (analysisResults && analysisResults.length > 0) {
-          console.log(`Found client-level analysis for fallback`);
+        if (clientLevelResults && clientLevelResults.length > 0) {
+          console.log(`Found ${clientLevelResults.length} client-level analysis record(s)`);
+          // Apply deduplication to client-level results
+          const deduplicatedResults = deduplicateAnalyses(clientLevelResults);
+          if (deduplicatedResults.length > 0) {
+            analysisResults = [deduplicatedResults[0]]; // Take the most recent after deduplication
+          }
         }
       }
 
