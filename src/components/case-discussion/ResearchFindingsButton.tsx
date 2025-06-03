@@ -1,7 +1,6 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Check } from "lucide-react";
+import { PlusCircle, Check, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -18,7 +17,20 @@ const ResearchFindingsButton: React.FC<ResearchFindingsButtonProps> = ({
 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
+  const [isDuplicate, setIsDuplicate] = useState(false);
   const { toast } = useToast();
+
+  // Generate a simple hash for content comparison
+  const generateContentHash = (content: string): string => {
+    const cleanContent = content.trim().toLowerCase().replace(/\s+/g, ' ');
+    let hash = 0;
+    for (let i = 0; i < cleanContent.length; i++) {
+      const char = cleanContent.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString();
+  };
 
   // Detect if message contains transferable legal findings
   const hasLegalFindings = (content: string): boolean => {
@@ -36,11 +48,73 @@ const ResearchFindingsButton: React.FC<ResearchFindingsButtonProps> = ({
     return legalPatterns.some(pattern => pattern.test(content));
   };
 
+  // Check for duplicate content in existing analysis
+  const checkForDuplicates = async (content: string): Promise<boolean> => {
+    try {
+      const { data: existingAnalysis, error } = await supabase
+        .from("legal_analyses")
+        .select("content")
+        .eq("client_id", clientId)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error checking for duplicates:", error);
+        return false;
+      }
+
+      if (!existingAnalysis || existingAnalysis.length === 0) {
+        return false;
+      }
+
+      const contentHash = generateContentHash(content);
+      
+      // Check if the exact content or very similar content already exists
+      for (const analysis of existingAnalysis) {
+        const existingHash = generateContentHash(analysis.content);
+        
+        // Check for exact hash match
+        if (existingHash === contentHash) {
+          return true;
+        }
+        
+        // Check if the content is already included in the analysis
+        if (analysis.content.includes(content.trim()) || 
+            content.trim().includes(analysis.content.trim())) {
+          return true;
+        }
+      }
+
+      return false;
+    } catch (error) {
+      console.error("Error in duplicate check:", error);
+      return false;
+    }
+  };
+
+  // Check for duplicates when component mounts
+  useEffect(() => {
+    if (hasLegalFindings(messageContent)) {
+      checkForDuplicates(messageContent).then(setIsDuplicate);
+    }
+  }, [messageContent, clientId]);
+
   const handleAddToAnalysis = async () => {
     if (!hasLegalFindings(messageContent)) {
       toast({
         title: "No Legal Findings Detected",
         description: "This message doesn't contain transferable legal findings.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check for duplicates before adding
+    const isDuplicateContent = await checkForDuplicates(messageContent);
+    if (isDuplicateContent) {
+      setIsDuplicate(true);
+      toast({
+        title: "Duplicate Content Detected",
+        description: "This research has already been added to the case analysis.",
         variant: "destructive"
       });
       return;
@@ -112,8 +186,8 @@ const ResearchFindingsButton: React.FC<ResearchFindingsButtonProps> = ({
         onFindingsAdded();
       }
 
-      // Reset the added state after 3 seconds
-      setTimeout(() => setIsAdded(false), 3000);
+      // Keep the added state permanently for this session
+      // Don't reset it back to allow adding again
 
     } catch (error: any) {
       console.error("Error adding research to analysis:", error);
@@ -130,6 +204,21 @@ const ResearchFindingsButton: React.FC<ResearchFindingsButtonProps> = ({
   // Only show button if message contains legal findings
   if (!hasLegalFindings(messageContent)) {
     return null;
+  }
+
+  // Show different states based on current status
+  if (isDuplicate) {
+    return (
+      <Button
+        disabled
+        size="sm"
+        variant="secondary"
+        className="text-xs bg-orange-50 hover:bg-orange-50 text-orange-700 border border-orange-200 cursor-not-allowed"
+      >
+        <AlertCircle className="h-3 w-3 mr-1" />
+        Already Added
+      </Button>
+    );
   }
 
   return (
