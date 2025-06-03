@@ -2,10 +2,11 @@
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquare, Mic } from "lucide-react";
+import { MessageSquare, Mic, FileText } from "lucide-react";
 import CaseDiscussionChatView from "./CaseDiscussionChatView";
 import CaseDiscussionInput from "./CaseDiscussionInput";
 import VoiceDiscussionInterface from "./VoiceDiscussionInterface";
+import VoiceTranscriptViewer from "./VoiceTranscriptViewer";
 import { useCaseDiscussion } from "@/hooks/useCaseDiscussion";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -72,7 +73,7 @@ const CaseDiscussionContainer: React.FC<CaseDiscussionContainerProps> = ({
       
       <CardContent className="flex-grow flex flex-col p-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-grow flex flex-col">
-          <TabsList className="grid w-full grid-cols-2 mx-4 mt-2">
+          <TabsList className="grid w-full grid-cols-3 mx-4 mt-2">
             <TabsTrigger value="text-chat" className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
               Text Chat
@@ -80,6 +81,10 @@ const CaseDiscussionContainer: React.FC<CaseDiscussionContainerProps> = ({
             <TabsTrigger value="voice-chat" className="flex items-center gap-2">
               <Mic className="h-4 w-4" />
               Voice Chat
+            </TabsTrigger>
+            <TabsTrigger value="transcripts" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Transcripts
             </TabsTrigger>
           </TabsList>
           
@@ -102,6 +107,10 @@ const CaseDiscussionContainer: React.FC<CaseDiscussionContainerProps> = ({
               onTranscriptUpdate={() => {}}
               onConnectionChange={() => {}}
             />
+          </TabsContent>
+          
+          <TabsContent value="transcripts" className="flex-grow flex flex-col mt-0 p-4">
+            <VoiceTranscriptViewer clientId={clientId} />
           </TabsContent>
         </Tabs>
       </CardContent>
