@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { searchRelevantLaw } from "./services/lawSearchService.ts";
@@ -12,6 +11,79 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Knowledge base law documents mapping for citation extraction
+const KNOWLEDGE_BASE_LAW_DOCS = [
+  {
+    id: "texas-penal-code",
+    title: "Texas Penal Code",
+    filename: "PENALCODE.pdf",
+    citations: ["Texas Penal Code", "Penal Code", "§ 42.092", "§ 42.091", "§ 42.09", "Chapter 42"],
+    searchTerms: ["animal cruelty", "cruelty to animals", "attack on assistance animal"]
+  },
+  {
+    id: "texas-business-commerce-code", 
+    title: "Texas Business & Commerce Code",
+    filename: "BUSINESSANDCOMMERCECODE.pdf",
+    citations: ["Texas Business & Commerce Code", "Business & Commerce Code", "DTPA", "Texas Deceptive Trade Practices Act", "§ 17.41", "§ 17.46", "§ 17.50", "§ 17.505"],
+    searchTerms: ["consumer protection", "deceptive trade practices", "false advertising"]
+  },
+  {
+    id: "texas-civil-practice-remedies-code",
+    title: "Texas Civil Practice & Remedies Code",
+    filename: "CIVILPRACTICEANDREMEDIESCODE.pdf", 
+    citations: ["Texas Civil Practice & Remedies Code", "Civil Practice & Remedies Code", "§ 16.003", "§ 33.001", "§ 41.001"],
+    searchTerms: ["statute of limitations", "proportionate responsibility", "damages"]
+  }
+];
+
+// Extract legal citations from analysis content
+function extractLegalCitations(content) {
+  const citations = [];
+  
+  // Pattern for Texas codes with section numbers
+  const codePattern = /(Texas\s+[A-Za-z]+(?:\s+[&]?\s*[A-Za-z]+)*\s+Code\s+§\s+\d+\.\d+)/gi;
+  const sectionPattern = /§\s+\d+\.\d+/gi;
+  const lawPattern = /(Texas\s+Deceptive\s+Trade\s+Practices\s+Act|DTPA|Texas\s+Penal\s+Code|Penal\s+Code)/gi;
+  
+  let match;
+  while ((match = codePattern.exec(content)) !== null) {
+    citations.push(match[1]);
+  }
+  while ((match = sectionPattern.exec(content)) !== null) {
+    citations.push(match[0]);
+  }
+  while ((match = lawPattern.exec(content)) !== null) {
+    citations.push(match[1]);
+  }
+  
+  return [...new Set(citations)];
+}
+
+// Map citations to knowledge base documents
+function mapCitationsToKnowledgeBase(citations) {
+  const matchedDocs = [];
+  
+  for (const citation of citations) {
+    for (const doc of KNOWLEDGE_BASE_LAW_DOCS) {
+      const isMatch = doc.citations.some(pattern => 
+        citation.toLowerCase().includes(pattern.toLowerCase()) ||
+        pattern.toLowerCase().includes(citation.toLowerCase())
+      );
+      
+      if (isMatch && !matchedDocs.find(d => d.id === doc.id)) {
+        matchedDocs.push({
+          id: doc.id,
+          title: doc.title,
+          url: `/knowledge?search=${encodeURIComponent(doc.filename)}`,
+          content: `Click to view the full ${doc.title} document in the knowledge base.`
+        });
+      }
+    }
+  }
+  
+  return matchedDocs;
+}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -158,6 +230,13 @@ serve(async (req) => {
     // Extract and verify the analysis
     let analysis = data.choices[0]?.message?.content || '';
     
+    // Extract citations from the generated analysis and map to knowledge base
+    const extractedCitations = extractLegalCitations(analysis);
+    const knowledgeBaseLawReferences = mapCitationsToKnowledgeBase(extractedCitations);
+    
+    console.log("Extracted citations from analysis:", extractedCitations);
+    console.log("Mapped to knowledge base documents:", knowledgeBaseLawReferences);
+
     // Add post-processing for consumer protection cases
     if (isConsumerCase && analysis) {
       console.log("Post-processing consumer protection case analysis");
@@ -194,24 +273,11 @@ serve(async (req) => {
       console.log(`Legal analysis generated successfully from ${analysisSource}`);
     }
 
-    // CRITICAL: Store ACTUAL law references, not document names
-    // Only use actual legal statute references from our law search service
-    const formattedLawReferences = relevantLawReferences.map(ref => ({
-      id: ref.id || 'unknown',
-      title: ref.title || 'Unknown Law',
-      url: ref.url || null,
-      content: ref.content ? ref.content.substring(0, 500) : null
-    }));
-
-    console.log(`Returning ${formattedLawReferences.length} formatted law references:`, formattedLawReferences.map(ref => ref.title));
-
-    // Log the analysis content for debugging
-    console.log("Analysis content preview:", analysis.substring(0, 1000));
-
+    // Return knowledge base law references instead of generic ones
     return new Response(
       JSON.stringify({ 
         analysis, 
-        lawReferences: formattedLawReferences, // Store actual law references ONLY
+        lawReferences: knowledgeBaseLawReferences, // Use knowledge base mappings
         documentsUsed: clientDocuments.map(doc => ({
           id: doc.id,
           title: doc.title,

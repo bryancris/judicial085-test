@@ -1,9 +1,9 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AnalysisData } from "@/hooks/useAnalysisData";
 import { ScholarlyArticle } from "@/utils/api/scholarApiService";
 import { ProcessDocumentContentFunction } from "@/types/caseAnalysis";
+import { extractLegalCitations, mapCitationsToKnowledgeBase, generateKnowledgeBaseUrl } from "@/utils/lawReferences/knowledgeBaseMapping";
 
 export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
@@ -78,23 +78,20 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
       if (analyses && analyses.length > 0) {
         const analysis = analyses[0];
         
-        // Safely handle law_references - ensure it's an array
-        let lawReferences: any[] = [];
-        if (analysis.law_references) {
-          if (Array.isArray(analysis.law_references)) {
-            lawReferences = analysis.law_references;
-          } else {
-            // If it's not an array, try to parse it or default to empty array
-            try {
-              const parsed = typeof analysis.law_references === 'string' 
-                ? JSON.parse(analysis.law_references)
-                : analysis.law_references;
-              lawReferences = Array.isArray(parsed) ? parsed : [];
-            } catch {
-              lawReferences = [];
-            }
-          }
-        }
+        // Extract legal citations from the analysis content and map to knowledge base
+        const extractedCitations = extractLegalCitations(analysis.content);
+        console.log("Extracted citations from analysis:", extractedCitations);
+        
+        const knowledgeBaseDocs = mapCitationsToKnowledgeBase(extractedCitations);
+        console.log("Mapped knowledge base documents:", knowledgeBaseDocs);
+        
+        // Convert knowledge base docs to law references format
+        const lawReferences = knowledgeBaseDocs.map(doc => ({
+          id: doc.id,
+          title: doc.title,
+          url: generateKnowledgeBaseUrl(doc.filename),
+          content: `Click to view the full ${doc.title} document in the knowledge base.`
+        }));
         
         // Transform the analysis into the expected format
         const transformedData: AnalysisData = {
@@ -112,10 +109,10 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
             prosecution: 35
           },
           timestamp: analysis.timestamp || new Date().toLocaleTimeString(),
-          lawReferences: lawReferences,
+          lawReferences: lawReferences, // Use mapped knowledge base docs instead of DB references
           caseType: analysis.case_type || "general",
           remedies: "",
-          rawContent: analysis.content // Store the raw content for display
+          rawContent: analysis.content
         };
 
         setAnalysisData(transformedData);
