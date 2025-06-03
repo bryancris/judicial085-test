@@ -77,6 +77,24 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
       if (analyses && analyses.length > 0) {
         const analysis = analyses[0];
         
+        // Safely handle law_references - ensure it's an array
+        let lawReferences: any[] = [];
+        if (analysis.law_references) {
+          if (Array.isArray(analysis.law_references)) {
+            lawReferences = analysis.law_references;
+          } else {
+            // If it's not an array, try to parse it or default to empty array
+            try {
+              const parsed = typeof analysis.law_references === 'string' 
+                ? JSON.parse(analysis.law_references)
+                : analysis.law_references;
+              lawReferences = Array.isArray(parsed) ? parsed : [];
+            } catch {
+              lawReferences = [];
+            }
+          }
+        }
+        
         // Transform the analysis into the expected format
         const transformedData: AnalysisData = {
           legalAnalysis: {
@@ -89,7 +107,7 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
           weaknesses: [],
           conversationSummary: "",
           timestamp: analysis.timestamp || new Date().toLocaleTimeString(),
-          lawReferences: analysis.law_references || [],
+          lawReferences: lawReferences,
           caseType: analysis.case_type || "general",
           remedies: "",
           rawContent: analysis.content // Store the raw content for display
