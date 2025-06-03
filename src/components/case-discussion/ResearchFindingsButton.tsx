@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Check, AlertCircle } from "lucide-react";
@@ -20,9 +21,11 @@ const ResearchFindingsButton: React.FC<ResearchFindingsButtonProps> = ({
   const [isDuplicate, setIsDuplicate] = useState(false);
   const { toast } = useToast();
 
-  // Generate a simple hash for content comparison
+  // Enhanced hash generation for content comparison
   const generateContentHash = (content: string): string => {
-    const cleanContent = content.trim().toLowerCase().replace(/\s+/g, ' ');
+    const cleanContent = content.trim().toLowerCase()
+      .replace(/\s+/g, ' ')
+      .replace(/[^\w\s§]/g, ''); // Remove punctuation but keep section symbols
     let hash = 0;
     for (let i = 0; i < cleanContent.length; i++) {
       const char = cleanContent.charCodeAt(i);
@@ -32,23 +35,30 @@ const ResearchFindingsButton: React.FC<ResearchFindingsButtonProps> = ({
     return Math.abs(hash).toString();
   };
 
-  // Detect if message contains transferable legal findings
+  // Enhanced detection of legal findings with more specific patterns
   const hasLegalFindings = (content: string): boolean => {
     const legalPatterns = [
       /§\s*\d+\.\d+/i, // Section references like § 17.46
       /section\s+\d+\.\d+/i, // "Section 17.46"
       /dtpa\s+§/i, // DTPA section references
       /texas\s+business\s+&\s+commerce\s+code/i, // Texas Business & Commerce Code
+      /texas\s+deceptive\s+trade\s+practices/i, // Texas Deceptive Trade Practices
       /violation.*of.*§/i, // Violation of section
       /under\s+§/i, // Under section
       /pursuant\s+to\s+§/i, // Pursuant to section
       /code\s+§\s*\d+/i, // Code section references
+      /treble\s+damages/i, // Treble damages
+      /economic\s+damages/i, // Economic damages
+      /mental\s+anguish/i, // Mental anguish
+      /attorney\s+fees/i, // Attorney fees
+      /pre-suit\s+notice/i, // Pre-suit notice
+      /knowing\s+violations/i, // Knowing violations
     ];
     
     return legalPatterns.some(pattern => pattern.test(content));
   };
 
-  // Check for duplicate content in existing analysis
+  // Enhanced duplicate checking with better integration detection
   const checkForDuplicates = async (content: string): Promise<boolean> => {
     try {
       const { data: existingAnalysis, error } = await supabase
@@ -68,7 +78,11 @@ const ResearchFindingsButton: React.FC<ResearchFindingsButtonProps> = ({
 
       const contentHash = generateContentHash(content);
       
-      // Check if the exact content or very similar content already exists
+      // Extract key legal concepts from the content
+      const keyStatutes = extractKeyStatutes(content);
+      const keyPhrases = extractKeyPhrases(content);
+      
+      // Check if the content or its key legal concepts are already in the analysis
       for (const analysis of existingAnalysis) {
         const existingHash = generateContentHash(analysis.content);
         
@@ -77,7 +91,26 @@ const ResearchFindingsButton: React.FC<ResearchFindingsButtonProps> = ({
           return true;
         }
         
-        // Check if the content is already included in the analysis
+        // Check if key statutes are already well-represented in the analysis
+        if (keyStatutes.length > 0) {
+          const statuteMatches = keyStatutes.filter(statute => 
+            analysis.content.toLowerCase().includes(statute.toLowerCase())
+          );
+          
+          // If most key statutes are present and detailed, consider it integrated
+          if (statuteMatches.length >= keyStatutes.length * 0.7) {
+            // Check if there's substantial detail about these statutes
+            const hasSubstantialDetail = keyPhrases.some(phrase => 
+              analysis.content.toLowerCase().includes(phrase.toLowerCase())
+            );
+            
+            if (hasSubstantialDetail) {
+              return true;
+            }
+          }
+        }
+        
+        // Check if the exact content is already included
         if (analysis.content.includes(content.trim()) || 
             content.trim().includes(analysis.content.trim())) {
           return true;
@@ -91,10 +124,51 @@ const ResearchFindingsButton: React.FC<ResearchFindingsButtonProps> = ({
     }
   };
 
-  // Check for duplicates when component mounts
+  // Helper function to extract key statutes from content
+  const extractKeyStatutes = (content: string): string[] => {
+    const statutes: string[] = [];
+    const patterns = [
+      /§\s*\d+\.\d+/gi,
+      /section\s+\d+\.\d+/gi,
+      /dtpa/gi,
+      /texas\s+business\s+&\s+commerce\s+code/gi,
+      /texas\s+deceptive\s+trade\s+practices/gi
+    ];
+    
+    patterns.forEach(pattern => {
+      const matches = content.match(pattern);
+      if (matches) {
+        statutes.push(...matches);
+      }
+    });
+    
+    return [...new Set(statutes)];
+  };
+
+  // Helper function to extract key phrases from content
+  const extractKeyPhrases = (content: string): string[] => {
+    const phrases: string[] = [];
+    const lowerContent = content.toLowerCase();
+    
+    if (lowerContent.includes('treble damages')) phrases.push('treble damages');
+    if (lowerContent.includes('economic damages')) phrases.push('economic damages');
+    if (lowerContent.includes('mental anguish')) phrases.push('mental anguish');
+    if (lowerContent.includes('attorney fees')) phrases.push('attorney fees');
+    if (lowerContent.includes('pre-suit notice')) phrases.push('pre-suit notice');
+    if (lowerContent.includes('knowing violations')) phrases.push('knowing violations');
+    if (lowerContent.includes('consumer protection')) phrases.push('consumer protection');
+    if (lowerContent.includes('deceptive practices')) phrases.push('deceptive practices');
+    
+    return phrases;
+  };
+
+  // Check for duplicates when component mounts and when clientId changes
   useEffect(() => {
     if (hasLegalFindings(messageContent)) {
-      checkForDuplicates(messageContent).then(setIsDuplicate);
+      checkForDuplicates(messageContent).then(isDupe => {
+        setIsDuplicate(isDupe);
+        setIsAdded(isDupe); // If it's a duplicate, mark as added
+      });
     }
   }, [messageContent, clientId]);
 
@@ -112,9 +186,10 @@ const ResearchFindingsButton: React.FC<ResearchFindingsButtonProps> = ({
     const isDuplicateContent = await checkForDuplicates(messageContent);
     if (isDuplicateContent) {
       setIsDuplicate(true);
+      setIsAdded(true);
       toast({
-        title: "Duplicate Content Detected",
-        description: "This research has already been added to the case analysis.",
+        title: "Content Already Integrated",
+        description: "This research has already been integrated into the case analysis.",
         variant: "destructive"
       });
       return;
@@ -143,11 +218,19 @@ const ResearchFindingsButton: React.FC<ResearchFindingsButtonProps> = ({
       }
 
       const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const researchUpdate = `\n\n**RESEARCH UPDATE (${timestamp}):**\n\n${messageContent}`;
+      const researchUpdate = `**RESEARCH UPDATE (${timestamp}):**\n\n${messageContent}`;
 
       if (existingAnalysis && existingAnalysis.length > 0) {
-        // Update existing analysis
-        const updatedContent = existingAnalysis[0].content + researchUpdate;
+        // Update existing analysis with improved formatting
+        const existingContent = existingAnalysis[0].content;
+        let updatedContent;
+        
+        // Check if there are already research updates and append appropriately
+        if (existingContent.includes('**RESEARCH UPDATE')) {
+          updatedContent = existingContent + '\n\n' + researchUpdate;
+        } else {
+          updatedContent = existingContent + '\n\n' + researchUpdate;
+        }
         
         const { error: updateError } = await supabase
           .from("legal_analyses")
@@ -177,17 +260,16 @@ const ResearchFindingsButton: React.FC<ResearchFindingsButtonProps> = ({
       }
 
       setIsAdded(true);
+      setIsDuplicate(false); // Reset duplicate status since we successfully added
+      
       toast({
         title: "Research Added to Case Analysis",
-        description: "The legal findings have been successfully added to the case analysis.",
+        description: "The legal findings have been successfully added to the case analysis and will be preserved during regeneration.",
       });
 
       if (onFindingsAdded) {
         onFindingsAdded();
       }
-
-      // Keep the added state permanently for this session
-      // Don't reset it back to allow adding again
 
     } catch (error: any) {
       console.error("Error adding research to analysis:", error);
@@ -207,16 +289,16 @@ const ResearchFindingsButton: React.FC<ResearchFindingsButtonProps> = ({
   }
 
   // Show different states based on current status
-  if (isDuplicate) {
+  if (isDuplicate || isAdded) {
     return (
       <Button
         disabled
         size="sm"
         variant="secondary"
-        className="text-xs bg-orange-50 hover:bg-orange-50 text-orange-700 border border-orange-200 cursor-not-allowed"
+        className="text-xs bg-green-50 hover:bg-green-50 text-green-700 border border-green-200 cursor-not-allowed"
       >
-        <AlertCircle className="h-3 w-3 mr-1" />
-        Already Added
+        <Check className="h-3 w-3 mr-1" />
+        Integrated in Analysis
       </Button>
     );
   }
@@ -224,7 +306,7 @@ const ResearchFindingsButton: React.FC<ResearchFindingsButtonProps> = ({
   return (
     <Button
       onClick={handleAddToAnalysis}
-      disabled={isAdding || isAdded}
+      disabled={isAdding}
       size="sm"
       variant="secondary"
       className="text-xs bg-white/80 hover:bg-white/90 text-blue-900 border border-blue-200"
@@ -233,11 +315,6 @@ const ResearchFindingsButton: React.FC<ResearchFindingsButtonProps> = ({
         <span className="flex items-center gap-1">
           <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
           Adding...
-        </span>
-      ) : isAdded ? (
-        <span className="flex items-center gap-1 text-green-600">
-          <Check className="h-3 w-3" />
-          Added to Analysis
         </span>
       ) : (
         <span className="flex items-center gap-1">

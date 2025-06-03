@@ -12,13 +12,15 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
   const [, setLegalAnalysis] = useState<any[]>([]);
   const { generateAnalysis } = useClientChatAnalysis(clientId, setLegalAnalysis);
 
-  // Enhanced function to extract and categorize research updates
+  // Enhanced function to extract and categorize research updates with better persistence
   const extractAndCategorizeResearchUpdates = (analysisContent: string): {
     updates: Array<{
       section: string;
       content: string;
       statutes: string[];
       topics: string[];
+      timestamp: string;
+      isIntegrated: boolean;
     }>;
     rawUpdates: string[];
   } => {
@@ -28,14 +30,18 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
       content: string;
       statutes: string[];
       topics: string[];
+      timestamp: string;
+      isIntegrated: boolean;
     }> = [];
     
-    // Look for research update patterns with more robust matching
-    const researchUpdatePattern = /\*\*RESEARCH UPDATE[^*]*\*\*:?([\s\S]*?)(?=\n\s*\*\*[A-Z\s]+(?:UPDATE|ANALYSIS|CONCLUSION|SUMMARY)|$)/gi;
+    // Enhanced pattern to capture research updates with timestamps
+    const researchUpdatePattern = /\*\*RESEARCH UPDATE[^*]*\(([^)]+)\)\*\*:?([\s\S]*?)(?=\n\s*\*\*[A-Z\s]+(?:UPDATE|ANALYSIS|CONCLUSION|SUMMARY)|$)/gi;
     
     let match;
     while ((match = researchUpdatePattern.exec(analysisContent)) !== null) {
+      const timestamp = match[1].trim();
       const fullUpdate = match[0].trim();
+      
       if (fullUpdate && fullUpdate.length > 20) {
         researchUpdates.push(fullUpdate);
         
@@ -46,17 +52,24 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
         // Determine which section this update should enhance
         const targetSection = determineTargetSection(fullUpdate, statutes, topics);
         
+        // Check if this update appears to be integrated into the main content
+        const isIntegrated = checkIfUpdateIsIntegrated(analysisContent, fullUpdate, statutes);
+        
         categorizedUpdates.push({
           section: targetSection,
           content: fullUpdate,
           statutes,
-          topics
+          topics,
+          timestamp,
+          isIntegrated
         });
         
-        console.log("Categorized research update:", {
+        console.log("Categorized research update with integration status:", {
           section: targetSection,
           statutes,
           topics,
+          timestamp,
+          isIntegrated,
           preview: fullUpdate.substring(0, 100) + "..."
         });
       }
@@ -67,23 +80,33 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
       const lines = analysisContent.split('\n');
       let currentUpdate = '';
       let inResearchUpdate = false;
+      let currentTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         
         if (line.includes('**RESEARCH UPDATE')) {
+          // Extract timestamp if present
+          const timestampMatch = line.match(/\(([^)]+)\)/);
+          if (timestampMatch) {
+            currentTimestamp = timestampMatch[1];
+          }
+          
           if (currentUpdate.trim()) {
             researchUpdates.push(currentUpdate.trim());
             // Also categorize fallback updates
             const statutes = extractStatutesFromText(currentUpdate);
             const topics = extractLegalTopicsFromText(currentUpdate);
             const targetSection = determineTargetSection(currentUpdate, statutes, topics);
+            const isIntegrated = checkIfUpdateIsIntegrated(analysisContent, currentUpdate, statutes);
             
             categorizedUpdates.push({
               section: targetSection,
               content: currentUpdate.trim(),
               statutes,
-              topics
+              topics,
+              timestamp: currentTimestamp,
+              isIntegrated
             });
           }
           currentUpdate = line;
@@ -96,12 +119,15 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
               const statutes = extractStatutesFromText(currentUpdate);
               const topics = extractLegalTopicsFromText(currentUpdate);
               const targetSection = determineTargetSection(currentUpdate, statutes, topics);
+              const isIntegrated = checkIfUpdateIsIntegrated(analysisContent, currentUpdate, statutes);
               
               categorizedUpdates.push({
                 section: targetSection,
                 content: currentUpdate.trim(),
                 statutes,
-                topics
+                topics,
+                timestamp: currentTimestamp,
+                isIntegrated
               });
             }
             currentUpdate = '';
@@ -117,18 +143,62 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
         const statutes = extractStatutesFromText(currentUpdate);
         const topics = extractLegalTopicsFromText(currentUpdate);
         const targetSection = determineTargetSection(currentUpdate, statutes, topics);
+        const isIntegrated = checkIfUpdateIsIntegrated(analysisContent, currentUpdate, statutes);
         
         categorizedUpdates.push({
           section: targetSection,
           content: currentUpdate.trim(),
           statutes,
-          topics
+          topics,
+          timestamp: currentTimestamp,
+          isIntegrated
         });
       }
     }
 
     console.log(`Found ${researchUpdates.length} research updates, categorized into ${categorizedUpdates.length} sections`);
     return { updates: categorizedUpdates, rawUpdates: researchUpdates };
+  };
+
+  // New function to check if research update is integrated into main content
+  const checkIfUpdateIsIntegrated = (analysisContent: string, updateContent: string, statutes: string[]): boolean => {
+    // Check if key statutes from the update appear in the main analysis sections
+    const mainSections = analysisContent.split('**RESEARCH UPDATE')[0]; // Only check content before research updates
+    
+    // Look for statute references in the main content
+    for (const statute of statutes) {
+      if (mainSections.includes(statute)) {
+        return true;
+      }
+    }
+    
+    // Check for key phrases from the update in main sections
+    const updateKeyPhrases = extractKeyPhrases(updateContent);
+    for (const phrase of updateKeyPhrases) {
+      if (mainSections.toLowerCase().includes(phrase.toLowerCase())) {
+        return true;
+      }
+    }
+    
+    return false;
+  };
+
+  // Helper function to extract key phrases from update content
+  const extractKeyPhrases = (content: string): string[] => {
+    const phrases: string[] = [];
+    const lowerContent = content.toLowerCase();
+    
+    // Extract important legal concepts
+    if (lowerContent.includes('dtpa')) phrases.push('DTPA');
+    if (lowerContent.includes('deceptive trade practices')) phrases.push('deceptive trade practices');
+    if (lowerContent.includes('treble damages')) phrases.push('treble damages');
+    if (lowerContent.includes('economic damages')) phrases.push('economic damages');
+    if (lowerContent.includes('mental anguish')) phrases.push('mental anguish');
+    if (lowerContent.includes('attorney fees')) phrases.push('attorney fees');
+    if (lowerContent.includes('pre-suit notice')) phrases.push('pre-suit notice');
+    if (lowerContent.includes('knowing violations')) phrases.push('knowing violations');
+    
+    return phrases;
   };
 
   // Helper function to extract statutes from text
@@ -203,10 +273,10 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
       // Show loading toast
       toast({
         title: "Generating Analysis",
-        description: "Real-time case analysis is being generated...",
+        description: "Preserving research updates and generating enhanced analysis...",
       });
 
-      // First, get any existing research updates that were manually added
+      // First, get any existing research updates that were manually added and preserve them
       const { data: existingAnalysis } = await supabase
         .from("legal_analyses")
         .select("content")
@@ -214,27 +284,25 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
         .order("created_at", { ascending: false })
         .limit(1);
 
-      let categorizedResearchUpdates: Array<{
+      let preservedResearchUpdates: Array<{
         section: string;
         content: string;
         statutes: string[];
         topics: string[];
+        timestamp: string;
+        isIntegrated: boolean;
       }> = [];
 
       if (existingAnalysis && existingAnalysis.length > 0) {
         const { updates } = extractAndCategorizeResearchUpdates(existingAnalysis[0].content);
-        categorizedResearchUpdates = updates;
-        console.log("Found and categorized existing research updates:", categorizedResearchUpdates.length);
+        preservedResearchUpdates = updates;
         
-        // Log each categorized update for debugging
-        categorizedResearchUpdates.forEach((update, index) => {
-          console.log(`Categorized Update ${index + 1}:`, {
-            section: update.section,
-            statutes: update.statutes,
-            topics: update.topics,
-            preview: update.content.substring(0, 200) + "..."
-          });
-        });
+        console.log("Preserved existing research updates:", preservedResearchUpdates.length);
+        console.log("Integration status:", preservedResearchUpdates.map(u => ({ 
+          timestamp: u.timestamp, 
+          isIntegrated: u.isIntegrated,
+          statutes: u.statutes.slice(0, 2) // First 2 statutes for logging
+        })));
       }
 
       // Fetch the client messages for this client
@@ -278,17 +346,19 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
         timestamp: msg.timestamp
       })) : [];
       
-      // Use the analysis generation system with research updates integration
-      await generateAnalysisWithResearchIntegration(formattedMessages, categorizedResearchUpdates);
+      // Use the enhanced analysis generation system with preserved research updates
+      await generateAnalysisWithResearchPreservation(formattedMessages, preservedResearchUpdates);
       
       // CRITICAL: After generating new analysis, refresh from database
       await fetchAnalysisData();
       
+      const nonIntegratedCount = preservedResearchUpdates.filter(u => !u.isIntegrated).length;
+      
       toast({
-        title: "Analysis Generated",
-        description: categorizedResearchUpdates.length > 0 
-          ? `Analysis generated successfully with ${categorizedResearchUpdates.length} research update(s) integrated into relevant sections.`
-          : "Real-time case analysis generated successfully.",
+        title: "Analysis Generated with Preserved Updates",
+        description: preservedResearchUpdates.length > 0 
+          ? `Analysis generated successfully with ${preservedResearchUpdates.length} research update(s) preserved. ${nonIntegratedCount > 0 ? `${nonIntegratedCount} update(s) kept as separate sections.` : 'All updates integrated into main sections.'}`
+          : "Enhanced analysis generated successfully.",
       });
     } catch (err: any) {
       console.error("Error generating real-time analysis:", err);
@@ -302,29 +372,31 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
     }
   };
 
-  // New function to generate analysis with research integration
-  const generateAnalysisWithResearchIntegration = async (
+  // Enhanced function to generate analysis with research preservation
+  const generateAnalysisWithResearchPreservation = async (
     formattedMessages: any[],
-    researchUpdates: Array<{
+    preservedResearchUpdates: Array<{
       section: string;
       content: string;
       statutes: string[];
       topics: string[];
+      timestamp: string;
+      isIntegrated: boolean;
     }>
   ) => {
     try {
-      console.log("Generating analysis with research integration:", {
+      console.log("Generating analysis with research preservation:", {
         messagesCount: formattedMessages.length,
-        researchUpdatesCount: researchUpdates.length
+        preservedUpdatesCount: preservedResearchUpdates.length
       });
 
-      // Call the enhanced edge function with research updates
+      // Call the enhanced edge function with preserved research updates
       const { data, error } = await supabase.functions.invoke('generate-legal-analysis', {
         body: {
           clientId,
           conversation: formattedMessages,
           caseId,
-          researchUpdates: researchUpdates // Pass the categorized research updates
+          researchUpdates: preservedResearchUpdates // Pass the preserved research updates
         }
       });
 
@@ -339,9 +411,24 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
         throw new Error("No analysis content received from the service");
       }
 
-      console.log("Analysis generated successfully with research integration");
+      console.log("Analysis generated successfully with research preservation");
 
-      // Save the integrated analysis (research updates should now be integrated, not appended)
+      // Check if preserved research updates were properly integrated
+      let finalAnalysisContent = analysis;
+      const nonIntegratedUpdates = preservedResearchUpdates.filter(update => 
+        !checkIfUpdateIsIntegrated(analysis, update.content, update.statutes)
+      );
+
+      // If some updates weren't integrated, append them to preserve the information
+      if (nonIntegratedUpdates.length > 0) {
+        console.log(`Appending ${nonIntegratedUpdates.length} non-integrated research updates`);
+        finalAnalysisContent += "\n\n**PRESERVED RESEARCH UPDATES:**\n\n";
+        nonIntegratedUpdates.forEach(update => {
+          finalAnalysisContent += `${update.content}\n\n`;
+        });
+      }
+
+      // Save the enhanced analysis with preserved research updates
       const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       
       const { data: existingAnalyses } = await supabase
@@ -353,7 +440,7 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
         const { error: updateError } = await supabase
           .from('legal_analyses')
           .update({ 
-            content: analysis, // This should now have research updates integrated
+            content: finalAnalysisContent,
             timestamp,
             updated_at: new Date().toISOString(),
             law_references: lawReferences ? JSON.stringify(lawReferences) : null,
@@ -371,7 +458,7 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
           .from('legal_analyses')
           .insert({
             client_id: clientId,
-            content: analysis,
+            content: finalAnalysisContent,
             timestamp,
             law_references: lawReferences ? JSON.stringify(lawReferences) : null,
             case_type: caseType || 'general',
@@ -385,7 +472,7 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
       }
 
     } catch (error: any) {
-      console.error("Error in generateAnalysisWithResearchIntegration:", error);
+      console.error("Error in generateAnalysisWithResearchPreservation:", error);
       throw error;
     }
   };
