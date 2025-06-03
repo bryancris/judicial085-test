@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AnalysisData } from "@/hooks/useAnalysisData";
@@ -106,6 +107,10 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
           strengths: [],
           weaknesses: [],
           conversationSummary: "",
+          outcome: {
+            defense: 65,
+            prosecution: 35
+          },
           timestamp: analysis.timestamp || new Date().toLocaleTimeString(),
           lawReferences: lawReferences,
           caseType: analysis.case_type || "general",
