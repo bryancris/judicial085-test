@@ -18,70 +18,147 @@ const KNOWLEDGE_BASE_LAW_DOCS = [
     id: "texas-penal-code",
     title: "Texas Penal Code",
     filename: "PENALCODE.pdf",
-    citations: ["Texas Penal Code", "Penal Code", "§ 42.092", "§ 42.091", "§ 42.09", "Chapter 42"],
+    citations: ["Texas Penal Code", "Penal Code", "§ 42.092", "§ 42.091", "§ 42.09", "Chapter 42", "Section 42.092", "Section 42.091"],
     searchTerms: ["animal cruelty", "cruelty to animals", "attack on assistance animal"]
   },
   {
     id: "texas-business-commerce-code", 
     title: "Texas Business & Commerce Code",
     filename: "BUSINESSANDCOMMERCECODE.pdf",
-    citations: ["Texas Business & Commerce Code", "Business & Commerce Code", "DTPA", "Texas Deceptive Trade Practices Act", "§ 17.41", "§ 17.46", "§ 17.50", "§ 17.505"],
+    citations: [
+      "Texas Business & Commerce Code", 
+      "Business & Commerce Code", 
+      "DTPA", 
+      "Texas Deceptive Trade Practices Act", 
+      "Deceptive Trade Practices-Consumer Protection Act",
+      "§ 17.41", "§ 17.46", "§ 17.50", "§ 17.505", "§ 17.63",
+      "Section 17.41", "Section 17.46", "Section 17.50", "Section 17.505", "Section 17.63",
+      "Section 17.46(a)", "Section 17.46(b)", "Section 17.46(b)(24)",
+      "Section 17.50(a)", "Section 17.50(a)(2)", "Section 17.50(a)(3)",
+      "Section 17.50(b)", "Section 17.50(b)(1)", "Section 17.50(d)",
+      "Chapter 17", "Chapter 601", "§ 601.001"
+    ],
     searchTerms: ["consumer protection", "deceptive trade practices", "false advertising"]
   },
   {
     id: "texas-civil-practice-remedies-code",
     title: "Texas Civil Practice & Remedies Code",
     filename: "CIVILPRACTICEANDREMEDIESCODE.pdf", 
-    citations: ["Texas Civil Practice & Remedies Code", "Civil Practice & Remedies Code", "§ 16.003", "§ 33.001", "§ 41.001"],
+    citations: [
+      "Texas Civil Practice & Remedies Code", 
+      "Civil Practice & Remedies Code", 
+      "§ 16.003", "§ 33.001", "§ 41.001",
+      "Section 16.003", "Section 33.001", "Section 41.001",
+      "Chapter 16", "Chapter 33", "Chapter 41"
+    ],
     searchTerms: ["statute of limitations", "proportionate responsibility", "damages"]
   }
 ];
 
-// Extract legal citations from analysis content
+// Enhanced extract legal citations from analysis content
 function extractLegalCitations(content) {
   const citations = [];
   
-  // Pattern for Texas codes with section numbers
-  const codePattern = /(Texas\s+[A-Za-z]+(?:\s+[&]?\s*[A-Za-z]+)*\s+Code\s+§\s+\d+\.\d+)/gi;
-  const sectionPattern = /§\s+\d+\.\d+/gi;
-  const lawPattern = /(Texas\s+Deceptive\s+Trade\s+Practices\s+Act|DTPA|Texas\s+Penal\s+Code|Penal\s+Code)/gi;
+  console.log("Extracting citations from content preview:", content.substring(0, 500) + "...");
   
-  let match;
-  while ((match = codePattern.exec(content)) !== null) {
-    citations.push(match[1]);
-  }
-  while ((match = sectionPattern.exec(content)) !== null) {
-    citations.push(match[0]);
-  }
-  while ((match = lawPattern.exec(content)) !== null) {
-    citations.push(match[1]);
-  }
+  // Enhanced patterns for comprehensive citation extraction
+  const patterns = [
+    // Texas codes with section numbers (e.g., Texas Business & Commerce Code § 17.46)
+    /(Texas\s+[A-Za-z]+(?:\s+[&]?\s*[A-Za-z]+)*\s+Code\s+§\s+\d+\.\d+(?:\([a-z0-9]+\))?)/gi,
+    
+    // Section references with subsections (e.g., Section 17.46(b), Section 17.50(a)(2))
+    /(Section\s+\d+\.\d+(?:\([a-z0-9]+\))?(?:\([a-z0-9]+\))?)/gi,
+    
+    // Standalone section symbols (e.g., § 17.46, § 17.50(b))
+    /(§\s+\d+\.\d+(?:\([a-z0-9]+\))?(?:\([a-z0-9]+\))?)/gi,
+    
+    // Chapter references (e.g., Chapter 17, Chapter 42)
+    /(Chapter\s+\d+)/gi,
+    
+    // DTPA and specific law names
+    /(Texas\s+Deceptive\s+Trade\s+Practices\s+Act|DTPA|Texas\s+Penal\s+Code|Penal\s+Code|Business\s+&\s+Commerce\s+Code)/gi,
+    
+    // Deceptive Trade Practices-Consumer Protection Act
+    /(Deceptive\s+Trade\s+Practices-Consumer\s+Protection\s+Act)/gi,
+    
+    // Texas Home Solicitation Act
+    /(Texas\s+Home\s+Solicitation\s+Act)/gi,
+    
+    // Texas Debt Collection Act  
+    /(Texas\s+Debt\s+Collection\s+Act)/gi
+  ];
   
-  return [...new Set(citations)];
+  // Extract citations using all patterns
+  patterns.forEach((pattern, index) => {
+    let match;
+    const patternRegex = new RegExp(pattern);
+    while ((match = patternRegex.exec(content)) !== null) {
+      if (match[1] && match[1].trim()) {
+        citations.push(match[1].trim());
+      }
+    }
+  });
+  
+  const uniqueCitations = [...new Set(citations)];
+  console.log("Extracted unique citations:", uniqueCitations);
+  
+  return uniqueCitations;
 }
 
-// Map citations to knowledge base documents with direct PDF URLs
+// Enhanced map citations to knowledge base documents with direct PDF URLs
 function mapCitationsToKnowledgeBase(citations) {
   const matchedDocs = [];
   
+  console.log("Mapping citations to knowledge base:", citations);
+  
   for (const citation of citations) {
+    console.log("Processing citation:", citation);
+    
     for (const doc of KNOWLEDGE_BASE_LAW_DOCS) {
-      const isMatch = doc.citations.some(pattern => 
-        citation.toLowerCase().includes(pattern.toLowerCase()) ||
-        pattern.toLowerCase().includes(citation.toLowerCase())
-      );
+      // Enhanced matching logic
+      const isMatch = doc.citations.some(pattern => {
+        const citationLower = citation.toLowerCase();
+        const patternLower = pattern.toLowerCase();
+        
+        // Exact match
+        if (citationLower === patternLower) return true;
+        
+        // Citation contains pattern
+        if (citationLower.includes(patternLower)) return true;
+        
+        // Pattern contains citation (for broader matches)
+        if (patternLower.includes(citationLower) && citationLower.length > 5) return true;
+        
+        // Special DTPA matching
+        if ((citationLower.includes('dtpa') || citationLower.includes('deceptive trade')) && 
+            (patternLower.includes('dtpa') || patternLower.includes('deceptive trade'))) return true;
+            
+        // Business & Commerce Code matching for section references
+        if (citationLower.match(/section\s+17\./i) && patternLower.includes('business')) return true;
+        if (citationLower.match(/§\s+17\./i) && patternLower.includes('business')) return true;
+        
+        // Penal Code matching for section references  
+        if (citationLower.match(/section\s+42\./i) && patternLower.includes('penal')) return true;
+        if (citationLower.match(/§\s+42\./i) && patternLower.includes('penal')) return true;
+        
+        return false;
+      });
       
       if (isMatch && !matchedDocs.find(d => d.id === doc.id)) {
-        matchedDocs.push({
+        const mappedDoc = {
           id: doc.id,
           title: doc.title,
           url: `https://ghpljdgecjmhkwkfctgy.supabase.co/storage/v1/object/public/documents/${doc.filename}`,
           content: `Click to view the full ${doc.title} document.`
-        });
+        };
+        
+        console.log("Matched citation to document:", { citation, doc: mappedDoc.title });
+        matchedDocs.push(mappedDoc);
       }
     }
   }
   
+  console.log("Final matched documents:", matchedDocs.map(doc => doc.title));
   return matchedDocs;
 }
 
@@ -244,12 +321,13 @@ serve(async (req) => {
     // Extract and verify the analysis
     let analysis = data.choices[0]?.message?.content || '';
     
-    // Extract citations from the generated analysis and map to knowledge base with direct PDF URLs
+    // Enhanced citation extraction and mapping with debugging
+    console.log("Starting enhanced citation extraction from analysis...");
     const extractedCitations = extractLegalCitations(analysis);
-    const knowledgeBaseLawReferences = mapCitationsToKnowledgeBase(extractedCitations);
+    console.log("Final extracted citations count:", extractedCitations.length);
     
-    console.log("Extracted citations from analysis:", extractedCitations);
-    console.log("Mapped to knowledge base documents with direct URLs:", knowledgeBaseLawReferences);
+    const knowledgeBaseLawReferences = mapCitationsToKnowledgeBase(extractedCitations);
+    console.log("Final knowledge base law references count:", knowledgeBaseLawReferences.length);
 
     // Add post-processing for consumer protection cases
     if (isConsumerCase && analysis) {
@@ -287,11 +365,11 @@ serve(async (req) => {
       console.log(`Legal analysis generated successfully from ${analysisSource} with research integration`);
     }
 
-    // Return knowledge base law references with direct PDF URLs
+    // Return enhanced knowledge base law references with direct PDF URLs
     return new Response(
       JSON.stringify({ 
         analysis, 
-        lawReferences: knowledgeBaseLawReferences, // Use knowledge base mappings with direct PDF URLs
+        lawReferences: knowledgeBaseLawReferences, // Use enhanced knowledge base mappings with direct PDF URLs
         documentsUsed: clientDocuments.map(doc => ({
           id: doc.id,
           title: doc.title,
