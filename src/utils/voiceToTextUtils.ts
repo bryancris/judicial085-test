@@ -27,11 +27,9 @@ export const useSpeechRecognition = () => {
     
     let finalTranscript = '';
     let isAborted = false;
-    let hasStarted = false;
     
     recognition.onstart = () => {
-      console.log("Speech recognition actually started");
-      hasStarted = true;
+      console.log("Speech recognition started");
     };
     
     recognition.onresult = (event: any) => {
@@ -52,23 +50,17 @@ export const useSpeechRecognition = () => {
     };
     
     recognition.onerror = (event: any) => {
-      console.error("Speech recognition error", event.error, "hasStarted:", hasStarted);
+      console.error("Speech recognition error", event.error);
       
       if (isAborted) {
         // Don't show error for intentional stops
         return;
       }
       
-      // If we get a not-allowed error before the recognition has even started,
-      // it means the user denied permission or there's a permission issue
-      if (event.error === 'not-allowed') {
-        if (!hasStarted) {
-          onErrorCallback("Microphone access was denied. Please click the microphone icon in your browser's address bar, allow access, and try again.");
-        }
-        return;
-      }
-      
       switch (event.error) {
+        case 'not-allowed':
+          onErrorCallback("Microphone access was denied. Please click the microphone icon in your browser's address bar, allow access, and try again.");
+          break;
         case 'no-speech':
           onErrorCallback("No speech detected. Please speak clearly and try again.");
           break;
@@ -94,7 +86,7 @@ export const useSpeechRecognition = () => {
     };
     
     try {
-      console.log("Attempting to start speech recognition");
+      console.log("Starting speech recognition");
       recognition.start();
     } catch (error: any) {
       console.error("Error starting recognition:", error);
