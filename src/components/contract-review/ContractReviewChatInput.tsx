@@ -17,6 +17,7 @@ const ContractReviewChatInput: React.FC<ContractReviewChatInputProps> = ({
 }) => {
   const [message, setMessage] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const [isRequestingPermission, setIsRequestingPermission] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const stopRecordingRef = useRef<{ stop: () => void } | null>(null);
   const { toast } = useToast();
@@ -53,7 +54,7 @@ const ContractReviewChatInput: React.FC<ContractReviewChatInputProps> = ({
     }
   };
   
-  const toggleRecording = () => {
+  const toggleRecording = async () => {
     if (isRecording) {
       // Stop recording
       if (stopRecordingRef.current) {
@@ -66,34 +67,52 @@ const ContractReviewChatInput: React.FC<ContractReviewChatInputProps> = ({
       if (!isSupported) {
         toast({
           title: "Speech Recognition Not Supported",
-          description: "Your browser doesn't support speech recognition. Try using a modern browser like Chrome.",
+          description: "Your browser doesn't support speech recognition. Try using Chrome, Edge, or Safari.",
           variant: "destructive",
         });
         return;
       }
 
-      toast({
-        title: "Recording Started",
-        description: "Speak now. The text will appear in the input field.",
-      });
+      setIsRequestingPermission(true);
 
-      setIsRecording(true);
-      
-      const recorder = startRecording(
-        (text) => {
-          setMessage(text);
-        },
-        (error) => {
+      try {
+        toast({
+          title: "Requesting Microphone Access",
+          description: "Please allow microphone access to use voice input.",
+        });
+
+        const recorder = await startRecording(
+          (text) => {
+            setMessage(text);
+          },
+          (error) => {
+            toast({
+              title: "Recording Error",
+              description: error,
+              variant: "destructive",
+            });
+            setIsRecording(false);
+          }
+        );
+        
+        if (recorder) {
+          setIsRecording(true);
+          stopRecordingRef.current = recorder;
+          
           toast({
-            title: "Recording Error",
-            description: error,
-            variant: "destructive",
+            title: "Recording Started",
+            description: "Speak now. The text will appear in the input field.",
           });
-          setIsRecording(false);
         }
-      );
-      
-      stopRecordingRef.current = recorder;
+      } catch (error: any) {
+        toast({
+          title: "Failed to Start Recording",
+          description: error.message || "Unable to access microphone",
+          variant: "destructive",
+        });
+      } finally {
+        setIsRequestingPermission(false);
+      }
     }
   };
 
@@ -135,10 +154,12 @@ const ContractReviewChatInput: React.FC<ContractReviewChatInputProps> = ({
             onClick={toggleRecording}
             title={isRecording ? "Stop recording" : "Start voice input"}
             type="button"
-            disabled={isLoading}
+            disabled={isLoading || isRequestingPermission}
             className={isRecording ? "" : "bg-green-500 hover:bg-green-600 text-white"}
           >
-            {isRecording ? (
+            {isRequestingPermission ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : isRecording ? (
               <MicOff className="h-4 w-4" />
             ) : (
               <Mic className="h-4 w-4" />

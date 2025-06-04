@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from "react";
-import { SendHorizontal, Mic, MicOff } from "lucide-react";
+import { SendHorizontal, Mic, MicOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useSpeechRecognition } from "@/utils/voiceToTextUtils";
@@ -20,6 +20,7 @@ const AttorneyNoteInput: React.FC<AttorneyNoteInputProps> = ({
   onSend,
 }) => {
   const [isRecording, setIsRecording] = useState(false);
+  const [isRequestingPermission, setIsRequestingPermission] = useState(false);
   const stopRecordingRef = useRef<{ stop: () => void } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
@@ -43,7 +44,7 @@ const AttorneyNoteInput: React.FC<AttorneyNoteInputProps> = ({
     }
   };
   
-  const toggleRecording = () => {
+  const toggleRecording = async () => {
     if (isRecording) {
       // Stop recording
       if (stopRecordingRef.current) {
@@ -56,34 +57,52 @@ const AttorneyNoteInput: React.FC<AttorneyNoteInputProps> = ({
       if (!isSupported) {
         toast({
           title: "Speech Recognition Not Supported",
-          description: "Your browser doesn't support speech recognition. Try using a modern browser like Chrome.",
+          description: "Your browser doesn't support speech recognition. Try using Chrome, Edge, or Safari.",
           variant: "destructive",
         });
         return;
       }
 
-      toast({
-        title: "Recording Started",
-        description: "Speak now. The text will appear in the input field.",
-      });
+      setIsRequestingPermission(true);
 
-      setIsRecording(true);
-      
-      const recorder = startRecording(
-        (text) => {
-          setNoteInput(text);
-        },
-        (error) => {
+      try {
+        toast({
+          title: "Requesting Microphone Access",
+          description: "Please allow microphone access to use voice input.",
+        });
+
+        const recorder = await startRecording(
+          (text) => {
+            setNoteInput(text);
+          },
+          (error) => {
+            toast({
+              title: "Recording Error",
+              description: error,
+              variant: "destructive",
+            });
+            setIsRecording(false);
+          }
+        );
+        
+        if (recorder) {
+          setIsRecording(true);
+          stopRecordingRef.current = recorder;
+          
           toast({
-            title: "Recording Error",
-            description: error,
-            variant: "destructive",
+            title: "Recording Started",
+            description: "Speak now. The text will appear in the input field.",
           });
-          setIsRecording(false);
         }
-      );
-      
-      stopRecordingRef.current = recorder;
+      } catch (error: any) {
+        toast({
+          title: "Failed to Start Recording",
+          description: error.message || "Unable to access microphone",
+          variant: "destructive",
+        });
+      } finally {
+        setIsRequestingPermission(false);
+      }
     }
   };
 
@@ -106,10 +125,12 @@ const AttorneyNoteInput: React.FC<AttorneyNoteInputProps> = ({
             onClick={toggleRecording}
             title={isRecording ? "Stop recording" : "Start voice input"}
             type="button"
-            disabled={isSending}
+            disabled={isSending || isRequestingPermission}
             className={isRecording ? "" : "bg-[#0EA5E9] hover:bg-[#0EA5E9]/80 text-white"}
           >
-            {isRecording ? (
+            {isRequestingPermission ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : isRecording ? (
               <MicOff className="h-4 w-4" />
             ) : (
               <Mic className="h-4 w-4" />
