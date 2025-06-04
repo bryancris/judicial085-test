@@ -84,17 +84,19 @@ const ContractReviewChatInput: React.FC<ContractReviewChatInputProps> = ({
               variant: "destructive",
             });
             setIsRecording(false);
+          },
+          () => {
+            // This callback is called only when recording actually starts
+            toast({
+              title: "Recording Started",
+              description: "Speak now. The text will appear in the input field.",
+            });
           }
         );
         
         if (recorder) {
           setIsRecording(true);
           stopRecordingRef.current = recorder;
-          
-          toast({
-            title: "Recording Started",
-            description: "Speak now. The text will appear in the input field.",
-          });
         }
       } catch (error: any) {
         toast({

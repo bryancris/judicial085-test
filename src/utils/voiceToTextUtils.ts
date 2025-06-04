@@ -8,7 +8,7 @@ export const useSpeechRecognition = () => {
   // Check if speech recognition is supported
   const isSupported = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
   
-  const startRecording = async (onResultCallback: (text: string) => void, onErrorCallback: (error: string) => void) => {
+  const startRecording = async (onResultCallback: (text: string) => void, onErrorCallback: (error: string) => void, onStartCallback?: () => void) => {
     if (!isSupported) {
       onErrorCallback("Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.");
       return { stop: () => {} };
@@ -29,7 +29,11 @@ export const useSpeechRecognition = () => {
     let isAborted = false;
     
     recognition.onstart = () => {
-      console.log("Speech recognition started");
+      console.log("Speech recognition started successfully");
+      // Only call the success callback once we know recording actually started
+      if (onStartCallback) {
+        onStartCallback();
+      }
     };
     
     recognition.onresult = (event: any) => {
@@ -59,7 +63,7 @@ export const useSpeechRecognition = () => {
       
       switch (event.error) {
         case 'not-allowed':
-          onErrorCallback("Microphone access was denied. Please click the microphone icon in your browser's address bar, allow access, and try again.");
+          onErrorCallback("Microphone access was denied. Please enable microphone permissions for this website in your browser settings and try again.");
           break;
         case 'no-speech':
           onErrorCallback("No speech detected. Please speak clearly and try again.");
