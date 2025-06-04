@@ -1,5 +1,52 @@
 
-// Voice to text utilities using Web Speech API with simplified permission handling
+// Voice to text utilities using Web Speech API with proper permission handling
+
+/**
+ * Check microphone permissions and request if needed
+ */
+const checkMicrophonePermissions = async (): Promise<boolean> => {
+  try {
+    // First check if the Permissions API is available
+    if ('permissions' in navigator) {
+      const permission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+      console.log('Microphone permission status:', permission.state);
+      
+      if (permission.state === 'denied') {
+        return false;
+      }
+      
+      if (permission.state === 'granted') {
+        // Even if granted, we should test actual access
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach(track => track.stop());
+          return true;
+        } catch (error) {
+          console.log('Permission granted but getUserMedia failed:', error);
+          return false;
+        }
+      }
+    }
+    
+    // For browsers without Permissions API or when state is 'prompt'
+    // Try to get user media to trigger permission request
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop());
+      return true;
+    } catch (error: any) {
+      console.log('getUserMedia failed:', error);
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        return false;
+      }
+      // For other errors (like NotFoundError), we'll let the speech recognition try
+      return true;
+    }
+  } catch (error) {
+    console.log('Permission check failed:', error);
+    return false;
+  }
+};
 
 /**
  * Handles speech recognition using the browser's Web Speech API
@@ -8,14 +55,22 @@ export const useSpeechRecognition = () => {
   // Check if speech recognition is supported
   const isSupported = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
   
-  // Initialize the speech recognition API directly without explicit permission check
   const startRecording = async (onResultCallback: (text: string) => void, onErrorCallback: (error: string) => void) => {
     if (!isSupported) {
       onErrorCallback("Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.");
       return { stop: () => {} };
     }
 
-    console.log("Starting speech recognition directly...");
+    console.log("Checking microphone permissions...");
+    
+    // Check permissions before starting speech recognition
+    const hasPermission = await checkMicrophonePermissions();
+    if (!hasPermission) {
+      onErrorCallback("Microphone access is required for voice input. Please allow microphone access in your browser settings and try again.");
+      return { stop: () => {} };
+    }
+
+    console.log("Starting speech recognition...");
 
     // Use the appropriate speech recognition API
     const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -27,8 +82,7 @@ export const useSpeechRecognition = () => {
     recognition.lang = 'en-US';
     
     let finalTranscript = '';
-    let retryCount = 0;
-    const maxRetries = 2;
+    let isAborted = false;
     
     recognition.onresult = (event: any) => {
       let interimTranscript = '';
@@ -41,7 +95,7 @@ export const useSpeechRecognition = () => {
           onResultCallback(finalTranscript);
         } else {
           interimTranscript += transcript;
-          // For real-time feedback you could call the callback with interim results
+          // For real-time feedback
           onResultCallback(finalTranscript + interimTranscript);
         }
       }
@@ -50,40 +104,35 @@ export const useSpeechRecognition = () => {
     recognition.onerror = (event: any) => {
       console.error("Speech recognition error", event.error);
       
-      if (event.error === 'not-allowed') {
-        onErrorCallback("Microphone access was denied. Please click the microphone icon in your browser's address bar and allow access, then try again.");
-      } else if (event.error === 'no-speech') {
-        onErrorCallback("No speech detected. Please speak clearly and try again.");
-      } else if (event.error === 'audio-capture') {
-        onErrorCallback("Microphone is not available. Please check your microphone connection.");
-      } else if (event.error === 'network') {
-        onErrorCallback("Network error occurred. Please check your internet connection.");
-      } else if (event.error === 'aborted') {
-        console.log("Speech recognition was aborted");
+      if (isAborted) {
         // Don't show error for intentional stops
-      } else {
-        // For other errors, try to retry if we haven't exceeded max retries
-        if (retryCount < maxRetries) {
-          retryCount++;
-          console.log(`Retrying speech recognition (attempt ${retryCount}/${maxRetries})`);
-          setTimeout(() => {
-            try {
-              recognition.start();
-            } catch (error) {
-              console.error("Error on retry:", error);
-              onErrorCallback(`Speech recognition failed after ${maxRetries} attempts. Please try again.`);
-            }
-          }, 1000);
-        } else {
+        return;
+      }
+      
+      switch (event.error) {
+        case 'not-allowed':
+          onErrorCallback("Microphone access was denied. Please click the microphone icon in your browser's address bar, allow access, and try again.");
+          break;
+        case 'no-speech':
+          onErrorCallback("No speech detected. Please speak clearly and try again.");
+          break;
+        case 'audio-capture':
+          onErrorCallback("Microphone is not available. Please check your microphone connection and try again.");
+          break;
+        case 'network':
+          onErrorCallback("Network error occurred. Please check your internet connection and try again.");
+          break;
+        case 'aborted':
+          console.log("Speech recognition was aborted");
+          break;
+        default:
           onErrorCallback(`Speech recognition error: ${event.error}. Please try again.`);
-        }
       }
     };
     
     recognition.onend = () => {
       console.log("Speech recognition ended");
-      // Only call the callback with final transcript if something was recognized
-      if (finalTranscript) {
+      if (finalTranscript && !isAborted) {
         onResultCallback(finalTranscript);
       }
     };
@@ -100,6 +149,7 @@ export const useSpeechRecognition = () => {
     return {
       stop: () => {
         try {
+          isAborted = true;
           recognition.stop();
         } catch (error) {
           console.error("Error stopping recognition:", error);
