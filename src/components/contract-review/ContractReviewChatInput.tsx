@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from "react";
-import { SendHorizonal, Mic, MicOff, Loader2, Upload } from "lucide-react";
+import { SendHorizonal, Mic, MicOff, Upload } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
 import { Button } from "@/components/ui/button";
 import { useSpeechRecognition } from "@/utils/voiceToTextUtils";
@@ -17,7 +17,6 @@ const ContractReviewChatInput: React.FC<ContractReviewChatInputProps> = ({
 }) => {
   const [message, setMessage] = useState("");
   const [isRecording, setIsRecording] = useState(false);
-  const [isStartingRecording, setIsStartingRecording] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const stopRecordingRef = useRef<{ stop: () => void } | null>(null);
   const { toast } = useToast();
@@ -73,8 +72,6 @@ const ContractReviewChatInput: React.FC<ContractReviewChatInputProps> = ({
         return;
       }
 
-      setIsStartingRecording(true);
-
       try {
         const recorder = await startRecording(
           (text) => {
@@ -105,8 +102,6 @@ const ContractReviewChatInput: React.FC<ContractReviewChatInputProps> = ({
           description: error.message || "Unable to start speech recognition",
           variant: "destructive",
         });
-      } finally {
-        setIsStartingRecording(false);
       }
     }
   };
@@ -149,12 +144,10 @@ const ContractReviewChatInput: React.FC<ContractReviewChatInputProps> = ({
             onClick={toggleRecording}
             title={isRecording ? "Stop recording" : "Start voice input"}
             type="button"
-            disabled={isLoading || isStartingRecording}
+            disabled={isLoading}
             className={isRecording ? "" : "bg-green-500 hover:bg-green-600 text-white"}
           >
-            {isStartingRecording ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : isRecording ? (
+            {isRecording ? (
               <MicOff className="h-4 w-4" />
             ) : (
               <Mic className="h-4 w-4" />
@@ -165,11 +158,7 @@ const ContractReviewChatInput: React.FC<ContractReviewChatInputProps> = ({
             disabled={!message.trim() || isLoading}
             className="bg-green-500 hover:bg-green-600 text-white"
           >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <SendHorizonal className="h-4 w-4" />
-            )}
+            <SendHorizonal className="h-4 w-4" />
             <span className="sr-only">Send</span>
           </Button>
         </div>

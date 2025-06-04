@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from "react";
-import { SendHorizontal, Mic, MicOff, Loader2 } from "lucide-react";
+import { SendHorizontal, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useSpeechRecognition } from "@/utils/voiceToTextUtils";
@@ -20,7 +20,6 @@ const AttorneyNoteInput: React.FC<AttorneyNoteInputProps> = ({
   onSend,
 }) => {
   const [isRecording, setIsRecording] = useState(false);
-  const [isStartingRecording, setIsStartingRecording] = useState(false);
   const stopRecordingRef = useRef<{ stop: () => void } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
@@ -63,8 +62,6 @@ const AttorneyNoteInput: React.FC<AttorneyNoteInputProps> = ({
         return;
       }
 
-      setIsStartingRecording(true);
-
       try {
         const recorder = await startRecording(
           (text) => {
@@ -95,8 +92,6 @@ const AttorneyNoteInput: React.FC<AttorneyNoteInputProps> = ({
           description: error.message || "Unable to start speech recognition",
           variant: "destructive",
         });
-      } finally {
-        setIsStartingRecording(false);
       }
     }
   };
@@ -120,12 +115,10 @@ const AttorneyNoteInput: React.FC<AttorneyNoteInputProps> = ({
             onClick={toggleRecording}
             title={isRecording ? "Stop recording" : "Start voice input"}
             type="button"
-            disabled={isSending || isStartingRecording}
+            disabled={isSending}
             className={isRecording ? "" : "bg-[#0EA5E9] hover:bg-[#0EA5E9]/80 text-white"}
           >
-            {isStartingRecording ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : isRecording ? (
+            {isRecording ? (
               <MicOff className="h-4 w-4" />
             ) : (
               <Mic className="h-4 w-4" />
