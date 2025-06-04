@@ -2,53 +2,6 @@
 // Voice to text utilities using Web Speech API with proper permission handling
 
 /**
- * Check microphone permissions and request if needed
- */
-const checkMicrophonePermissions = async (): Promise<boolean> => {
-  try {
-    // First check if the Permissions API is available
-    if ('permissions' in navigator) {
-      const permission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-      console.log('Microphone permission status:', permission.state);
-      
-      if (permission.state === 'denied') {
-        return false;
-      }
-      
-      if (permission.state === 'granted') {
-        // Even if granted, we should test actual access
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          stream.getTracks().forEach(track => track.stop());
-          return true;
-        } catch (error) {
-          console.log('Permission granted but getUserMedia failed:', error);
-          return false;
-        }
-      }
-    }
-    
-    // For browsers without Permissions API or when state is 'prompt'
-    // Try to get user media to trigger permission request
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(track => track.stop());
-      return true;
-    } catch (error: any) {
-      console.log('getUserMedia failed:', error);
-      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-        return false;
-      }
-      // For other errors (like NotFoundError), we'll let the speech recognition try
-      return true;
-    }
-  } catch (error) {
-    console.log('Permission check failed:', error);
-    return false;
-  }
-};
-
-/**
  * Handles speech recognition using the browser's Web Speech API
  */
 export const useSpeechRecognition = () => {
@@ -58,15 +11,6 @@ export const useSpeechRecognition = () => {
   const startRecording = async (onResultCallback: (text: string) => void, onErrorCallback: (error: string) => void) => {
     if (!isSupported) {
       onErrorCallback("Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.");
-      return { stop: () => {} };
-    }
-
-    console.log("Checking microphone permissions...");
-    
-    // Check permissions before starting speech recognition
-    const hasPermission = await checkMicrophonePermissions();
-    if (!hasPermission) {
-      onErrorCallback("Microphone access is required for voice input. Please allow microphone access in your browser settings and try again.");
       return { stop: () => {} };
     }
 
