@@ -20,7 +20,7 @@ const AttorneyNoteInput: React.FC<AttorneyNoteInputProps> = ({
   onSend,
 }) => {
   const [isRecording, setIsRecording] = useState(false);
-  const [isRequestingPermission, setIsRequestingPermission] = useState(false);
+  const [isStartingRecording, setIsStartingRecording] = useState(false);
   const stopRecordingRef = useRef<{ stop: () => void } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
@@ -63,14 +63,9 @@ const AttorneyNoteInput: React.FC<AttorneyNoteInputProps> = ({
         return;
       }
 
-      setIsRequestingPermission(true);
+      setIsStartingRecording(true);
 
       try {
-        toast({
-          title: "Requesting Microphone Access",
-          description: "Please allow microphone access to use voice input.",
-        });
-
         const recorder = await startRecording(
           (text) => {
             setNoteInput(text);
@@ -97,11 +92,11 @@ const AttorneyNoteInput: React.FC<AttorneyNoteInputProps> = ({
       } catch (error: any) {
         toast({
           title: "Failed to Start Recording",
-          description: error.message || "Unable to access microphone",
+          description: error.message || "Unable to start speech recognition",
           variant: "destructive",
         });
       } finally {
-        setIsRequestingPermission(false);
+        setIsStartingRecording(false);
       }
     }
   };
@@ -125,10 +120,10 @@ const AttorneyNoteInput: React.FC<AttorneyNoteInputProps> = ({
             onClick={toggleRecording}
             title={isRecording ? "Stop recording" : "Start voice input"}
             type="button"
-            disabled={isSending || isRequestingPermission}
+            disabled={isSending || isStartingRecording}
             className={isRecording ? "" : "bg-[#0EA5E9] hover:bg-[#0EA5E9]/80 text-white"}
           >
-            {isRequestingPermission ? (
+            {isStartingRecording ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : isRecording ? (
               <MicOff className="h-4 w-4" />

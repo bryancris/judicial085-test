@@ -23,7 +23,7 @@ const ChatInput = ({
 }: ChatInputProps) => {
   const [message, setMessage] = useState("");
   const [isRecording, setIsRecording] = useState(false);
-  const [isRequestingPermission, setIsRequestingPermission] = useState(false);
+  const [isStartingRecording, setIsStartingRecording] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
   const stopRecordingRef = useRef<{ stop: () => void } | null>(null);
@@ -89,14 +89,9 @@ const ChatInput = ({
         return;
       }
 
-      setIsRequestingPermission(true);
+      setIsStartingRecording(true);
       
       try {
-        toast({
-          title: "Requesting Microphone Access",
-          description: "Please allow microphone access to use voice input.",
-        });
-
         const recorder = await startRecording(
           (text) => {
             setMessage(text);
@@ -123,11 +118,11 @@ const ChatInput = ({
       } catch (error: any) {
         toast({
           title: "Failed to Start Recording",
-          description: error.message || "Unable to access microphone",
+          description: error.message || "Unable to start speech recognition",
           variant: "destructive",
         });
       } finally {
-        setIsRequestingPermission(false);
+        setIsStartingRecording(false);
       }
     }
   };
@@ -187,10 +182,10 @@ const ChatInput = ({
               onClick={toggleRecording}
               title={isRecording ? "Stop recording" : "Start voice input"}
               type="button"
-              disabled={isRequestingPermission}
+              disabled={isStartingRecording}
               className={isRecording ? "" : "bg-[#0EA5E9] hover:bg-[#0EA5E9]/80 text-white"}
             >
-              {isRequestingPermission ? (
+              {isStartingRecording ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : isRecording ? (
                 <MicOff className="h-4 w-4" />

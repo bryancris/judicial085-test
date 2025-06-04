@@ -1,72 +1,21 @@
 
-// Voice to text utilities using Web Speech API with improved permission handling
+// Voice to text utilities using Web Speech API with simplified permission handling
 
 /**
- * Handles speech recognition using the browser's Web Speech API with proper permission management
+ * Handles speech recognition using the browser's Web Speech API
  */
 export const useSpeechRecognition = () => {
   // Check if speech recognition is supported
   const isSupported = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
   
-  // Request microphone permissions explicitly
-  const requestMicrophonePermission = async (): Promise<{ granted: boolean; error?: string }> => {
-    try {
-      // First check if getUserMedia is available
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        return { granted: false, error: "Microphone access is not available in this browser" };
-      }
-
-      // Request microphone permission
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
-      // Stop the stream immediately as we only needed permission
-      stream.getTracks().forEach(track => track.stop());
-      
-      return { granted: true };
-    } catch (error: any) {
-      console.error("Microphone permission error:", error);
-      
-      if (error.name === 'NotAllowedError') {
-        return { 
-          granted: false, 
-          error: "Microphone access was denied. Please click the microphone icon in your browser's address bar and allow access, then try again." 
-        };
-      } else if (error.name === 'NotFoundError') {
-        return { 
-          granted: false, 
-          error: "No microphone found. Please connect a microphone and try again." 
-        };
-      } else if (error.name === 'NotSupportedError') {
-        return { 
-          granted: false, 
-          error: "Microphone access is not supported in this browser. Try using Chrome or Edge." 
-        };
-      } else {
-        return { 
-          granted: false, 
-          error: `Microphone access error: ${error.message}` 
-        };
-      }
-    }
-  };
-  
-  // Initialize the speech recognition API with permission check
+  // Initialize the speech recognition API directly without explicit permission check
   const startRecording = async (onResultCallback: (text: string) => void, onErrorCallback: (error: string) => void) => {
     if (!isSupported) {
       onErrorCallback("Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.");
       return { stop: () => {} };
     }
 
-    // Request microphone permission first
-    console.log("Requesting microphone permission...");
-    const permissionResult = await requestMicrophonePermission();
-    
-    if (!permissionResult.granted) {
-      onErrorCallback(permissionResult.error || "Microphone permission denied");
-      return { stop: () => {} };
-    }
-
-    console.log("Microphone permission granted, starting speech recognition...");
+    console.log("Starting speech recognition directly...");
 
     // Use the appropriate speech recognition API
     const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -78,6 +27,8 @@ export const useSpeechRecognition = () => {
     recognition.lang = 'en-US';
     
     let finalTranscript = '';
+    let retryCount = 0;
+    const maxRetries = 2;
     
     recognition.onresult = (event: any) => {
       let interimTranscript = '';
@@ -100,15 +51,32 @@ export const useSpeechRecognition = () => {
       console.error("Speech recognition error", event.error);
       
       if (event.error === 'not-allowed') {
-        onErrorCallback("Microphone access was denied. Please refresh the page and allow microphone access when prompted.");
+        onErrorCallback("Microphone access was denied. Please click the microphone icon in your browser's address bar and allow access, then try again.");
       } else if (event.error === 'no-speech') {
         onErrorCallback("No speech detected. Please speak clearly and try again.");
       } else if (event.error === 'audio-capture') {
         onErrorCallback("Microphone is not available. Please check your microphone connection.");
       } else if (event.error === 'network') {
         onErrorCallback("Network error occurred. Please check your internet connection.");
+      } else if (event.error === 'aborted') {
+        console.log("Speech recognition was aborted");
+        // Don't show error for intentional stops
       } else {
-        onErrorCallback(`Speech recognition error: ${event.error}`);
+        // For other errors, try to retry if we haven't exceeded max retries
+        if (retryCount < maxRetries) {
+          retryCount++;
+          console.log(`Retrying speech recognition (attempt ${retryCount}/${maxRetries})`);
+          setTimeout(() => {
+            try {
+              recognition.start();
+            } catch (error) {
+              console.error("Error on retry:", error);
+              onErrorCallback(`Speech recognition failed after ${maxRetries} attempts. Please try again.`);
+            }
+          }, 1000);
+        } else {
+          onErrorCallback(`Speech recognition error: ${event.error}. Please try again.`);
+        }
       }
     };
     
