@@ -2,6 +2,23 @@
 // Voice to text utilities using Web Speech API with proper permission handling
 
 /**
+ * Check if microphone permissions are available
+ */
+const checkMicrophonePermissions = async (): Promise<boolean> => {
+  try {
+    // Try to get permission state if available
+    if ('permissions' in navigator) {
+      const permission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+      return permission.state === 'granted';
+    }
+    return true; // Assume available if we can't check
+  } catch (error) {
+    console.log('Permission check not available, proceeding with speech recognition');
+    return true;
+  }
+};
+
+/**
  * Handles speech recognition using the browser's Web Speech API
  */
 export const useSpeechRecognition = () => {
@@ -15,6 +32,13 @@ export const useSpeechRecognition = () => {
     }
 
     console.log("Starting speech recognition...");
+
+    // Check permissions first
+    const hasPermission = await checkMicrophonePermissions();
+    if (!hasPermission) {
+      onErrorCallback("Microphone access was denied. Please click the microphone icon in your browser's address bar (🎤) and allow access, then try again.");
+      return { stop: () => {} };
+    }
 
     // Use the appropriate speech recognition API
     const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -63,7 +87,7 @@ export const useSpeechRecognition = () => {
       
       switch (event.error) {
         case 'not-allowed':
-          onErrorCallback("Microphone access was denied. Please enable microphone permissions for this website in your browser settings and try again.");
+          onErrorCallback("Microphone access was denied. Please:\n1. Click the microphone icon (🎤) in your browser's address bar\n2. Select 'Allow' for microphone access\n3. Try the voice input again\n\nIf you don't see the icon, try refreshing the page.");
           break;
         case 'no-speech':
           onErrorCallback("No speech detected. Please speak clearly and try again.");
