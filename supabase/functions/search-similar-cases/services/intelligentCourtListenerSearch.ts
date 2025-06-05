@@ -25,7 +25,7 @@ export async function intelligentCourtListenerSearch(
     
     console.log(`Agent analysis complete: { legalConcepts: ${agentAnalysis.legalConcepts.length}, keyFacts: ${agentAnalysis.keyFacts.length}, searchQueries: ${agentAnalysis.searchQueries.length} }`);
     
-    // Step 2: Use agent's search queries to search CourtListener
+    // Step 2: Use agent's search queries to search CourtListener V4
     console.log("Step 2: Searching CourtListener with agent queries...");
     console.log(`Agent provided ${agentAnalysis.searchQueries.length} search queries`);
     
@@ -44,7 +44,7 @@ export async function intelligentCourtListenerSearch(
       console.log(`Executing search query ${i + 1}: ${query}`);
       
       try {
-        const queryResults = await searchCourtListener(query, courtListenerApiKey);
+        const queryResults = await searchCourtListenerV4(query, courtListenerApiKey);
         console.log(`Query ${i + 1} returned ${queryResults.length} results`);
         
         allResults.push(...queryResults);
@@ -73,7 +73,7 @@ export async function intelligentCourtListenerSearch(
       try {
         const scoredCases = await agent.scoreCaseRelevance(analysisContent, uniqueResults);
         
-        // Filter cases with score >= 30 (lowered from 40)
+        // Filter cases with score >= 30 (lowered threshold)
         validatedCases = scoredCases
           .filter(scored => scored.relevanceScore >= 30)
           .map(scored => ({
@@ -115,12 +115,13 @@ export async function intelligentCourtListenerSearch(
   }
 }
 
-async function searchCourtListener(query: string, apiKey: string): Promise<any[]> {
+async function searchCourtListenerV4(query: string, apiKey: string): Promise<any[]> {
   try {
     const encodedQuery = encodeURIComponent(query);
-    const url = `https://www.courtlistener.com/api/rest/v3/search/?q=${encodedQuery}&type=o&stat_Precedential=on&court=tex,texapp,texcrimapp,texjpml&page_size=10`;
+    // FIXED: Using V4 API instead of V3
+    const url = `https://www.courtlistener.com/api/rest/v4/search/?q=${encodedQuery}&type=o&stat_Precedential=on&court=tex,texapp,texcrimapp,texjpml&page_size=10`;
     
-    console.log(`🔍 Searching CourtListener: ${query}`);
+    console.log(`🔍 Searching CourtListener V4: ${query}`);
     console.log(`📍 URL: ${url}`);
     
     const response = await fetch(url, {
@@ -139,7 +140,22 @@ async function searchCourtListener(query: string, apiKey: string): Promise<any[]
     const data = await response.json();
     console.log(`✅ CourtListener returned ${data.results?.length || 0} results for query: ${query}`);
     
-    return data.results || [];
+    // Process V4 API response format
+    const processedResults = (data.results || []).map((result: any) => ({
+      id: result.id,
+      caseName: result.case_name || result.caseName || "Unknown Case",
+      case_name: result.case_name || result.caseName || "Unknown Case",
+      court: result.court || "Unknown Court",
+      court_name: result.court || "Unknown Court", 
+      citation: result.citation?.[0] || "No citation",
+      dateFiled: result.date_filed || result.dateFiled,
+      date_filed: result.date_filed || result.dateFiled,
+      absolute_url: result.absolute_url || result.absolute_uri,
+      snippet: result.snippet || result.text || "No summary available",
+      text: result.snippet || result.text || "No summary available"
+    }));
+    
+    return processedResults;
   } catch (error) {
     console.error(`Error searching CourtListener for "${query}":`, error);
     return [];
@@ -154,6 +170,7 @@ function deduplicateResults(results: any[]): any[] {
     // Create a unique key based on opinion ID, case name, or snippet
     const key = result.id || 
                 result.caseName || 
+                result.case_name ||
                 result.snippet?.substring(0, 100) || 
                 JSON.stringify(result).substring(0, 100);
     

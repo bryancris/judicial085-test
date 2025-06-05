@@ -1,8 +1,8 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "./utils/corsUtils.ts";
-import { handleAdaptiveClientSearch } from "./handlers/adaptiveClientSearchHandler.ts";
 import { intelligentCourtListenerSearch } from "./services/intelligentCourtListenerSearch.ts";
+import { getIntelligentFallbackByArea } from "./utils/intelligentFallbackCases.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { determineFinalCaseType } from "./utils/caseTypeDetector.ts";
 
@@ -97,23 +97,47 @@ serve(async (req) => {
       courtListenerApiKey
     );
     
+    // NEW: If no results from CourtListener, use intelligent fallbacks
+    let finalResults = searchResult.results;
+    let fallbackUsed = false;
+    
+    if (finalResults.length === 0) {
+      console.log("⚠️ No results from CourtListener, using intelligent fallbacks");
+      const fallbackCases = getIntelligentFallbackByArea(finalCaseType);
+      finalResults = fallbackCases.map((fallbackCase: any) => ({
+        source: "courtlistener" as const,
+        clientId: null,
+        clientName: fallbackCase.clientName || "Similar Case",
+        similarity: fallbackCase.similarity || 60,
+        relevantFacts: fallbackCase.relevantFacts || "No summary available",
+        outcome: fallbackCase.outcome || "Case outcome details not available",
+        court: fallbackCase.court || "Unknown Court",
+        citation: fallbackCase.citation || "No citation",
+        dateDecided: fallbackCase.dateDecided || null,
+        url: fallbackCase.url || null,
+        agentReasoning: "Intelligent fallback - similar case type"
+      }));
+      fallbackUsed = true;
+      console.log(`✅ Provided ${finalResults.length} intelligent fallback cases`);
+    }
+    
     // Format results for frontend
-    const formattedCases = searchResult.results.map((result: any) => ({
+    const formattedCases = finalResults.map((result: any) => ({
       source: "courtlistener" as const,
       clientId: null,
-      clientName: result.caseName || result.case_name || "Unknown Case",
+      clientName: result.caseName || result.case_name || result.clientName || "Unknown Case",
       similarity: result.similarity || 50,
-      relevantFacts: result.snippet || result.text || "No summary available",
-      outcome: `Court: ${result.court || "Unknown"}`,
-      court: result.court || "Unknown Court",
-      citation: result.citation?.[0] || "No citation",
-      dateDecided: result.dateFiled || result.date_filed || null,
-      url: result.absolute_url || null,
+      relevantFacts: result.snippet || result.text || result.relevantFacts || "No summary available",
+      outcome: result.outcome || `Court: ${result.court || "Unknown"}`,
+      court: result.court || result.court_name || "Unknown Court",
+      citation: result.citation?.[0] || result.citation || "No citation",
+      dateDecided: result.dateFiled || result.date_filed || result.dateDecided || null,
+      url: result.absolute_url || result.url || null,
       agentReasoning: result.agentReasoning || "AI analysis completed"
     }));
     
     if (formattedCases.length === 0) {
-      console.log("No similar cases found in legal databases");
+      console.log("❌ No similar cases found despite fallback attempts");
       return new Response(JSON.stringify({
         similarCases: [],
         fallbackUsed: false,
@@ -128,17 +152,17 @@ serve(async (req) => {
       });
     }
     
-    console.log(`✅ Found ${formattedCases.length} similar cases using AI-powered search`);
+    console.log(`✅ Found ${formattedCases.length} similar cases using ${fallbackUsed ? 'intelligent fallback' : 'AI-powered search'}`);
     
     return new Response(JSON.stringify({
       similarCases: formattedCases,
-      fallbackUsed: false,
+      fallbackUsed: fallbackUsed,
       analysisFound: true,
-      searchStrategy: "ai-agent-powered",
+      searchStrategy: fallbackUsed ? "intelligent-fallback" : "ai-agent-powered",
       caseType: finalCaseType,
       searchQueries: searchResult.searchQueries,
       agentAnalysis: searchResult.agentAnalysis,
-      message: `Found ${formattedCases.length} similar cases using AI analysis`
+      message: `Found ${formattedCases.length} similar cases using ${fallbackUsed ? 'intelligent fallback system' : 'AI analysis'}`
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });

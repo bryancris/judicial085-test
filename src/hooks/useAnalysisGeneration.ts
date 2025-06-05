@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -268,7 +267,7 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
   };
 
   // Enhanced generateRealTimeAnalysis function with better duplicate prevention
-  const generateRealTimeAnalysis = async (fetchAnalysisData: () => Promise<void>) => {
+  const generateRealTimeAnalysis = async (fetchAnalysisData: () => Promise<void>, fetchSimilarCases?: () => Promise<void>) => {
     setIsGeneratingAnalysis(true);
     try {
       // Show loading toast
@@ -308,11 +307,6 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
         preservedResearchUpdates = updates;
         
         console.log("Preserved existing research updates:", preservedResearchUpdates.length);
-        console.log("Integration status:", preservedResearchUpdates.map(u => ({ 
-          timestamp: u.timestamp, 
-          isIntegrated: u.isIntegrated,
-          statutes: u.statutes.slice(0, 2) // First 2 statutes for logging
-        })));
       }
 
       // Fetch the client messages for this client
@@ -361,6 +355,26 @@ export const useAnalysisGeneration = (clientId: string, caseId?: string) => {
       
       // CRITICAL: After generating new analysis, refresh from database
       await fetchAnalysisData();
+      
+      // NEW: Automatically trigger similar case search after analysis generation
+      if (fetchSimilarCases) {
+        console.log("🔍 Automatically triggering similar case search after analysis generation");
+        toast({
+          title: "Analysis Complete",
+          description: "Analysis generated successfully. Now searching for similar cases...",
+        });
+        
+        // Small delay to ensure analysis is fully saved
+        setTimeout(async () => {
+          try {
+            await fetchSimilarCases();
+            console.log("✅ Similar cases search completed automatically");
+          } catch (error) {
+            console.error("Error in automatic similar cases search:", error);
+            // Don't show error toast for automatic search
+          }
+        }, 1000);
+      }
       
       const nonIntegratedCount = preservedResearchUpdates.filter(u => !u.isIntegrated).length;
       

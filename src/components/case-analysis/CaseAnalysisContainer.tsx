@@ -64,13 +64,14 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
     }
   }, [refreshTrigger, fetchAnalysisData]);
 
-  // Wrapper to pass fetchAnalysisData and fetchSimilarCases to generation function
+  // UPDATED: Wrapper to pass fetchAnalysisData and fetchSimilarCases to generation function
   const handleGenerateAnalysis = () => {
-    generateRealTimeAnalysis(async () => {
-      await fetchAnalysisData();
-      // Now explicitly fetch similar cases after analysis is generated
-      await fetchSimilarCases();
-    });
+    generateRealTimeAnalysis(
+      async () => {
+        await fetchAnalysisData();
+      },
+      fetchSimilarCases // Pass similar cases fetch function for automatic triggering
+    );
   };
 
   // Handle error state
