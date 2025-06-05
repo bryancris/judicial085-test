@@ -50,13 +50,17 @@ export const searchGoogleScholar = async (
 
     if (error) {
       console.error("Error searching Google Scholar:", error);
+      // Handle specific error cases
+      if (error.includes("not configured") || error.includes("SerpAPI")) {
+        return { results: [], error: "Google Scholar search requires SerpAPI configuration" };
+      }
       return { results: [], error };
     }
 
     return { results: data?.results || [] };
   } catch (err: any) {
     console.error("Exception searching Google Scholar:", err);
-    return { results: [], error: err.message };
+    return { results: [], error: err.message || "Failed to search scholarly articles" };
   }
 };
 
@@ -87,7 +91,7 @@ export const getScholarlyReferences = async (
     }
     
     if (!analysisData || analysisData.length === 0) {
-      return { results: [], error: "No legal analysis found" };
+      return { results: [], error: "No legal analysis found. Please generate a legal analysis first." };
     }
     
     // Extract important terms from the analysis content
@@ -119,11 +123,11 @@ function extractKeyTerms(content: string, caseType: string): string {
   // Extract case-specific terms based on case type
   let specializedTerms = "";
   
-  if (caseType === "consumer-protection") {
+  if (caseType === "consumer-protection" || caseType === "deceptive_trade") {
     specializedTerms = "deceptive trade practices DTPA consumer protection";
   } else if (caseType === "personal-injury") {
     specializedTerms = "negligence damages liability personal injury";
-  } else if (caseType === "real-estate") {
+  } else if (caseType === "real-estate" || caseType === "property-law") {
     specializedTerms = "property real estate title lease contract";
   } else if (caseType.includes("contract")) {
     specializedTerms = "contract breach agreement damages consideration";
@@ -131,11 +135,11 @@ function extractKeyTerms(content: string, caseType: string): string {
   
   // Extract statute references
   const statuteMatches = content.match(/\b\d+\.\d+\b/g) || [];
-  const statutes = statuteMatches.length > 0 ? statuteMatches.join(" ") : "";
+  const statutes = statuteMatches.length > 0 ? statuteMatches.slice(0, 3).join(" ") : "";
   
   // Extract case names
   const caseMatches = content.match(/[A-Z][a-z]+\s+v\.\s+[A-Z][a-z]+/g) || [];
-  const cases = caseMatches.length > 0 ? caseMatches.join(" ") : "";
+  const cases = caseMatches.length > 0 ? caseMatches.slice(0, 2).join(" ") : "";
   
   // Combine everything
   return `${specializedTerms} ${statutes} ${cases}`.trim();

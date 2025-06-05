@@ -12,6 +12,10 @@ export const useScholarlyReferences = (clientId?: string, caseType?: string) => 
   useEffect(() => {
     if (clientId) {
       fetchReferences();
+    } else {
+      // Clear references when no clientId
+      setReferences([]);
+      setError(null);
     }
   }, [clientId, caseType]);
 
@@ -22,20 +26,37 @@ export const useScholarlyReferences = (clientId?: string, caseType?: string) => 
     setError(null);
     
     try {
+      console.log("Fetching scholarly references for client:", clientId);
       const { results, error } = await getScholarlyReferences(clientId, caseType);
       
       if (error) {
+        console.error("Error fetching scholarly references:", error);
         setError(error);
-        toast({
-          title: "Error",
-          description: `Failed to fetch scholarly references: ${error}`,
-          variant: "destructive",
-        });
+        if (error.includes("SerpAPI") || error.includes("not configured")) {
+          toast({
+            title: "Configuration Required",
+            description: "Google Scholar search requires API configuration. Contact administrator.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: `Failed to fetch scholarly references: ${error}`,
+            variant: "destructive",
+          });
+        }
       } else {
+        console.log("Successfully fetched scholarly references:", results.length);
         setReferences(results);
+        if (results.length === 0) {
+          toast({
+            title: "No Results",
+            description: "No scholarly articles found for this case analysis.",
+          });
+        }
       }
     } catch (err: any) {
-      console.error("Error in useScholarlyReferences:", err);
+      console.error("Exception in useScholarlyReferences:", err);
       setError(err.message || "An unexpected error occurred");
       toast({
         title: "Error",
@@ -52,9 +73,11 @@ export const useScholarlyReferences = (clientId?: string, caseType?: string) => 
     setError(null);
     
     try {
+      console.log("Searching scholarly references with query:", query);
       const { results, error } = await searchGoogleScholar(query);
       
       if (error) {
+        console.error("Search error:", error);
         setError(error);
         toast({
           title: "Search Error",
