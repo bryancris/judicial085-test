@@ -211,63 +211,74 @@ async function collectCaseData(supabase: any, clientId: string, caseId?: string)
 async function generatePDF(data: CaseAnalysisData): Promise<Uint8Array> {
   const pdfShiftApiKey = Deno.env.get('PDFSHIFT_API_KEY')
   
+  console.log('PDFShift API Key check:', pdfShiftApiKey ? 'Present' : 'Missing')
+  
   if (!pdfShiftApiKey) {
     throw new Error('PDFShift API key not configured')
   }
 
   const html = generateHTMLContent(data)
   
-  console.log('Sending HTML to PDFShift for conversion...')
+  console.log('Generated HTML length:', html.length)
+  console.log('HTML preview (first 500 chars):', html.substring(0, 500))
   
+  // Simplified PDFShift request for debugging
   const requestBody = {
     source: html,
     landscape: false,
     format: 'A4',
-    margin: '1in',
-    wait_for: 500,
-    css: `
-      @media print {
-        body { margin: 0; padding: 20px; }
-        .page-break { page-break-before: always; }
-      }
-    `,
-    viewport: "1280x1024"
+    margin: '1in'
   }
 
-  console.log('PDFShift request body:', JSON.stringify(requestBody, null, 2))
+  console.log('Simplified PDFShift request:', JSON.stringify(requestBody, null, 2))
   
-  const response = await fetch('https://api.pdfshift.io/v3/convert/pdf', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Basic ${btoa(`api:${pdfShiftApiKey}`)}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(requestBody),
-  })
+  try {
+    const response = await fetch('https://api.pdfshift.io/v3/convert/pdf', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${btoa(`api:${pdfShiftApiKey}`)}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    })
 
-  if (!response.ok) {
-    const errorText = await response.text()
-    console.error('PDFShift error response:', errorText)
-    console.error('PDFShift status:', response.status)
-    console.error('PDFShift headers:', Object.fromEntries(response.headers.entries()))
-    
-    let errorMessage = 'PDF generation failed'
-    try {
-      const errorJson = JSON.parse(errorText)
-      if (errorJson.errors) {
-        errorMessage = `PDF generation failed: ${JSON.stringify(errorJson.errors)}`
+    console.log('PDFShift response status:', response.status)
+    console.log('PDFShift response headers:', Object.fromEntries(response.headers.entries()))
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('PDFShift error response:', errorText)
+      
+      let detailedError = 'PDF generation failed'
+      try {
+        const errorJson = JSON.parse(errorText)
+        console.error('PDFShift error details:', errorJson)
+        if (errorJson.errors) {
+          detailedError = `PDF generation failed: ${JSON.stringify(errorJson.errors)}`
+        } else if (errorJson.error) {
+          detailedError = `PDF generation failed: ${errorJson.error}`
+        }
+      } catch (parseError) {
+        console.error('Could not parse PDFShift error:', parseError)
+        detailedError = `PDF generation failed: HTTP ${response.status} - ${errorText}`
       }
-    } catch (e) {
-      errorMessage = `PDF generation failed: ${response.status} - ${errorText}`
+      
+      throw new Error(detailedError)
+    }
+
+    const pdfBuffer = await response.arrayBuffer()
+    console.log('PDF generated successfully, size:', pdfBuffer.byteLength)
+    
+    if (pdfBuffer.byteLength === 0) {
+      throw new Error('Received empty PDF from PDFShift')
     }
     
-    throw new Error(errorMessage)
-  }
+    return new Uint8Array(pdfBuffer)
 
-  const pdfBuffer = await response.arrayBuffer()
-  console.log('PDF generated successfully, size:', pdfBuffer.byteLength)
-  
-  return new Uint8Array(pdfBuffer)
+  } catch (networkError) {
+    console.error('Network error calling PDFShift:', networkError)
+    throw new Error(`PDF generation failed: Network error - ${networkError.message}`)
+  }
 }
 
 async function generateWord(data: CaseAnalysisData): Promise<Uint8Array> {
