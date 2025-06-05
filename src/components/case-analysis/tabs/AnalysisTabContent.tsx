@@ -2,7 +2,6 @@
 import React from "react";
 import { ProcessDocumentContentFunction } from "@/types/caseAnalysis";
 import DetailedLegalAnalysis from "../DetailedLegalAnalysis";
-import CaseStrengthsWeaknesses from "../CaseStrengthsWeaknesses";
 import SearchSimilarCasesSection from "../SearchSimilarCasesSection";
 import LawReferencesSection from "../LawReferencesSection";
 import ScholarlyReferencesSection from "../ScholarlyReferencesSection";
@@ -48,14 +47,6 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
           caseType={analysisData.caseType}
         />
       )}
-
-      {/* Strengths and Weaknesses */}
-      <CaseStrengthsWeaknesses
-        strengths={analysisData.strengths}
-        weaknesses={analysisData.weaknesses}
-        isLoading={isLoading}
-        caseType={analysisData.caseType}
-      />
 
       {/* Similar Cases with integrated Outcome Prediction */}
       <SearchSimilarCasesSection clientId={clientId} caseType={analysisData.caseType} />
