@@ -1,4 +1,5 @@
 
+
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { generateLegalAnalysis } from "@/utils/api/analysisApiService";
@@ -71,8 +72,8 @@ export const useClientChatAnalysis = (
         
         setLegalAnalysis(prev => [...prev, newAnalysis]);
         
-        // Save analysis to database
-        const { success, error: saveError } = await saveLegalAnalysis(clientId, analysis, timestamp, docsUsed);
+        // Save analysis to database - fix the function call to use correct number of arguments
+        const { success, error: saveError } = await saveLegalAnalysis(clientId, analysis, timestamp);
         
         if (!success) {
           toast({
@@ -109,3 +110,4 @@ export const useClientChatAnalysis = (
     generateAnalysis
   };
 };
+

@@ -1,3 +1,4 @@
+
 import { invokeFunction } from "./api/baseApiService";
 
 export interface SimilarCase {
@@ -26,7 +27,18 @@ export interface SearchSimilarCasesResult {
 
 export const searchSimilarCases = async (clientId: string): Promise<SearchSimilarCasesResult> => {
   try {
-    return await invokeFunction("search-similar-cases", { clientId });
+    const result = await invokeFunction("search-similar-cases", { clientId });
+    
+    // Ensure the result conforms to SearchSimilarCasesResult interface
+    return {
+      similarCases: result.similarCases || [],
+      error: result.error,
+      fallbackUsed: result.fallbackUsed,
+      analysisFound: result.analysisFound,
+      searchStrategy: result.searchStrategy,
+      message: result.message,
+      caseType: result.caseType
+    };
   } catch (error: any) {
     console.error("Error in searchSimilarCases:", error);
     return { 
@@ -40,3 +52,4 @@ export const searchSimilarCases = async (clientId: string): Promise<SearchSimila
     };
   }
 };
+
