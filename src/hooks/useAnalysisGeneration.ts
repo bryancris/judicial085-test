@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { generateLegalAnalysis } from "@/utils/api/analysisApiService";
 import { useToast } from "@/hooks/use-toast";
+import { ChatMessageProps } from "@/components/clients/chat/ChatMessage";
 
 export const useAnalysisGeneration = (clientId?: string, caseId?: string) => {
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
@@ -27,13 +28,20 @@ export const useAnalysisGeneration = (clientId?: string, caseId?: string) => {
       
       // Get messages from the database instead of using chat hook
       const { supabase } = await import("@/integrations/supabase/client");
-      const { data: messages } = await supabase
+      const { data: dbMessages } = await supabase
         .from("client_messages")
         .select("*")
         .eq("client_id", clientId)
         .order("created_at", { ascending: true });
 
-      const result = await generateLegalAnalysis(clientId, messages || [], caseId);
+      // Transform database messages to ChatMessageProps format
+      const messages: ChatMessageProps[] = (dbMessages || []).map(msg => ({
+        content: msg.content,
+        timestamp: msg.timestamp,
+        role: msg.role as "attorney" | "client"
+      }));
+
+      const result = await generateLegalAnalysis(clientId, messages, caseId);
       
       if (result.error) {
         console.error("Analysis generation failed:", result.error);
