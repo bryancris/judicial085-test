@@ -1,6 +1,6 @@
 import { corsHeaders } from "../utils/corsUtils.ts";
 import { addExplicitLegalTerms } from "../utils/searchTermGenerator.ts";
-import { getFallbackCasesByType } from "../utils/fallbackCases.ts";
+import { getIntelligentFallbackByArea } from "../utils/intelligentFallbackCases.ts";
 import { detectCaseTypeFromText } from "../utils/caseTypeDetector.ts";
 
 // Process Court Listener API results
@@ -121,7 +121,7 @@ export async function processCourtListenerResults(
         console.log("🐾 Using animal protection specific fallback cases");
         courtListenerResults = getAnimalProtectionFallbackCases();
       } else {
-        courtListenerResults = getFallbackCasesByType(detectedType);
+        courtListenerResults = getIntelligentFallbackByArea(detectedType);
       }
     }
     
@@ -136,7 +136,7 @@ export async function processCourtListenerResults(
       console.log("🐾 Using animal protection fallback due to API error");
       courtListenerResults = getAnimalProtectionFallbackCases();
     } else {
-      courtListenerResults = getFallbackCasesByType(detectedType);
+      courtListenerResults = getIntelligentFallbackByArea(detectedType);
     }
   }
   
@@ -294,7 +294,7 @@ export function extractOutcomeFromOpinion(opinionText: string): string {
 // New function to create client-specific fallback cases
 function getClientSpecificFallbackCases(caseType: string, clientContent: string): any[] {
   // Start with generic fallbacks based on case type
-  const baseFallbacks = getFallbackCasesByType(caseType);
+  const baseFallbacks = getIntelligentFallbackByArea(caseType);
   
   // Extract key details from client content to customize the fallback cases
   const keyDetails = extractKeyDetailsFromClient(clientContent);
