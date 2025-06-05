@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TabsContent } from "@/components/ui/tabs";
 import AnalysisTabContent from "./AnalysisTabContent";
 import ConversationList from "../conversation/ConversationList";
 import AttorneyNotesList from "../conversation/AttorneyNotesList";
@@ -55,15 +55,8 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
 }) => {
   return (
     <div className="mt-6">
-      <Tabs value={selectedTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="analysis">Analysis</TabsTrigger>
-          <TabsTrigger value="conversation">Conversation</TabsTrigger>
-          <TabsTrigger value="notes">Notes</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="analysis" className="mt-6">
+      {selectedTab === "analysis" && (
+        <div className="mt-6">
           <AnalysisTabContent
             analysisData={analysisData}
             isLoading={isLoading}
@@ -76,23 +69,29 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
             analysisFound={analysisFound}
             fallbackUsed={fallbackUsed}
           />
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="conversation" className="mt-6">
+      {selectedTab === "conversation" && (
+        <div className="mt-6">
           <ConversationList 
             conversation={conversation}
             loading={conversationLoading}
           />
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="notes" className="mt-6">
+      {selectedTab === "notes" && (
+        <div className="mt-6">
           <AttorneyNotesList 
             notes={notes}
             isLoading={notesLoading}
           />
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="documents" className="mt-6">
+      {selectedTab === "documents" && (
+        <div className="mt-6">
           <ClientDocumentsSection
             clientId={clientId}
             documents={clientDocuments}
@@ -102,8 +101,8 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
             onToggleDocumentAnalysis={async () => {}}
             isProcessing={isProcessingDocument}
           />
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
     </div>
   );
 };
