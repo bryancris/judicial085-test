@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { saveMessage } from "@/utils/openaiService";
+import { saveMessage } from "@/utils/api/messageApiService";
 import { ChatMessageProps } from "@/components/clients/chat/ChatMessage";
 
 export const useClientChatMessages = (

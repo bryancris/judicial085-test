@@ -1,7 +1,8 @@
 
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { generateLegalAnalysis, saveLegalAnalysis } from "@/utils/openaiService";
+import { generateLegalAnalysis } from "@/utils/api/analysisApiService";
+import { saveLegalAnalysis } from "@/utils/api/legalContentApiService";
 import { ChatMessageProps } from "@/components/clients/chat/ChatMessage";
 import { AnalysisItem } from "./useClientChatHistory";
 

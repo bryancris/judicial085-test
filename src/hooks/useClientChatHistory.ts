@@ -1,7 +1,8 @@
 
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { getClientMessages, getClientLegalAnalyses } from "@/utils/openaiService";
+import { getClientMessages } from "@/utils/api/messageApiService";
+import { getClientLegalAnalyses } from "@/utils/api/legalContentApiService";
 import { ChatMessageProps } from "@/components/clients/chat/ChatMessage";
 
 export interface AnalysisItem {

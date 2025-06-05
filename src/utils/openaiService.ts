@@ -1,4 +1,4 @@
-import { invokeFunction } from "./baseApiService";
+import { invokeFunction } from "./api/baseApiService";
 
 export interface SimilarCase {
   source: "internal" | "courtlistener";
