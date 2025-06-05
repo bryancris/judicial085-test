@@ -70,7 +70,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
       async () => {
         await fetchAnalysisData();
       },
-      fetchSimilarCases // Pass similar cases fetch function for automatic triggering
+      fetchSimilarCases // This will now automatically save to database
     );
   };
 

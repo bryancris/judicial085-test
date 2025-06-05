@@ -25,13 +25,15 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
     handleScholarSearch
   } = useScholarlyReferencesData(clientId);
 
-  // Similar cases
+  // Similar cases with database persistence
   const {
     similarCases,
     isSimilarCasesLoading,
     analysisFound,
     fallbackUsed,
-    fetchSimilarCases
+    fetchSimilarCases,
+    loadSimilarCasesFromDb,
+    checkSimilarCasesForAnalysis
   } = useSimilarCasesData(clientId);
 
   // Conversation data
@@ -70,9 +72,13 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
     }
   }, [analysisData?.caseType, fetchScholarlyReferences]);
 
-  // REMOVED: Auto-fetch similar cases when analysis data is available
-  // This was causing unnecessary API calls on tab switches and re-renders
-  // Similar cases will now only be fetched when analysis is explicitly generated
+  // Auto-load similar cases when analysis data is available
+  useEffect(() => {
+    if (analysisData?.id) {
+      console.log("Analysis data available, loading similar cases for analysis:", analysisData.id);
+      loadSimilarCasesFromDb(analysisData.id);
+    }
+  }, [analysisData?.id, loadSimilarCasesFromDb]);
 
   // Load data on mount
   useEffect(() => {
@@ -87,6 +93,15 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
     loadAllData();
   }, [fetchAnalysisData, fetchConversation, fetchNotes, fetchClientDocuments, checkForUnincorporatedFindings]);
 
+  // Enhanced fetchSimilarCases that includes the current analysis ID
+  const fetchSimilarCasesWithPersistence = () => {
+    if (analysisData?.id) {
+      fetchSimilarCases(analysisData.id);
+    } else {
+      fetchSimilarCases();
+    }
+  };
+
   return {
     analysisData,
     isAnalysisLoading,
@@ -100,7 +115,7 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
     isSimilarCasesLoading,
     analysisFound,
     fallbackUsed,
-    fetchSimilarCases,
+    fetchSimilarCases: fetchSimilarCasesWithPersistence,
     conversation,
     notes,
     conversationLoading,

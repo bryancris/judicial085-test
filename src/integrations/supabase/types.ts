@@ -695,6 +695,51 @@ export type Database = {
         }
         Relationships: []
       }
+      similar_cases: {
+        Row: {
+          case_data: Json
+          client_id: string
+          created_at: string
+          id: string
+          legal_analysis_id: string
+          search_metadata: Json | null
+          updated_at: string
+        }
+        Insert: {
+          case_data: Json
+          client_id: string
+          created_at?: string
+          id?: string
+          legal_analysis_id: string
+          search_metadata?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          case_data?: Json
+          client_id?: string
+          created_at?: string
+          id?: string
+          legal_analysis_id?: string
+          search_metadata?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "similar_cases_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "similar_cases_legal_analysis_id_fkey"
+            columns: ["legal_analysis_id"]
+            isOneToOne: false
+            referencedRelation: "legal_analyses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       voice_transcripts: {
         Row: {
           client_id: string
