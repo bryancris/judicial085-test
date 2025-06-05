@@ -3,3 +3,6 @@ project_id = "ghpljdgecjmhkwkfctgy"
 
 [functions.realtime-voice-chat]
 verify_jwt = false
+
+[functions.export-case-analysis]
+verify_jwt = true

@@ -3,6 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { FileText, MessageCircle, StickyNote, Upload, Sparkles, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ExportButton } from "./export/ExportButton";
 
 interface CaseAnalysisHeaderProps {
   title: string;
@@ -51,6 +52,11 @@ const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
         
         {selectedTab === "analysis" && (
           <div className="flex gap-2">
+            <ExportButton
+              clientId={clientId}
+              disabled={isGenerating}
+            />
+            
             <Button
               onClick={handleRegenerateClick}
               disabled={isGenerating}
