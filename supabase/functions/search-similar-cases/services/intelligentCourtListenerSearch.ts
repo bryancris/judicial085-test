@@ -32,8 +32,12 @@ export async function intelligentCourtListenerSearch(
     const allResults: any[] = [];
     const searchQueries: string[] = [];
     
-    for (let i = 0; i < agentAnalysis.searchQueries.length; i++) {
-      const query = agentAnalysis.searchQueries[i];
+    // Enhanced search strategy with broader terms
+    const enhancedQueries = generateEnhancedSearchQueries(agentAnalysis, caseType);
+    console.log(`Generated ${enhancedQueries.length} enhanced search queries:`, enhancedQueries);
+    
+    for (let i = 0; i < enhancedQueries.length; i++) {
+      const query = enhancedQueries[i];
       
       // Skip invalid queries
       if (!query || query.trim().length < 3 || query.includes("**")) {
@@ -50,9 +54,15 @@ export async function intelligentCourtListenerSearch(
         allResults.push(...queryResults);
         searchQueries.push(query);
         
+        // Stop if we found enough results
+        if (allResults.length >= 10) {
+          console.log(`Found sufficient results (${allResults.length}), stopping search`);
+          break;
+        }
+        
         // Add delay between requests to avoid rate limiting
-        if (i < agentAnalysis.searchQueries.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+        if (i < enhancedQueries.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       } catch (error) {
         console.error(`Error executing query ${i + 1}:`, error);
@@ -115,11 +125,50 @@ export async function intelligentCourtListenerSearch(
   }
 }
 
+// Enhanced search query generation
+function generateEnhancedSearchQueries(agentAnalysis: AgentAnalysis, caseType: string): string[] {
+  const queries: string[] = [];
+  
+  // Start with agent's queries
+  queries.push(...agentAnalysis.searchQueries);
+  
+  // Add broader case-type specific queries
+  if (caseType.includes("premises") || caseType.includes("liability")) {
+    queries.push(
+      "premises liability Texas",
+      "slip and fall Texas store",
+      "negligence dangerous condition",
+      "invitee business premises",
+      "actual constructive knowledge",
+      "Wal-Mart premises liability"
+    );
+  }
+  
+  // Add common legal terms that appear in court opinions
+  if (agentAnalysis.keyFacts.some(fact => fact.includes("slip") || fact.includes("fall"))) {
+    queries.push(
+      "slip fall retail store",
+      "spilled substance floor",
+      "unsafe condition premises"
+    );
+  }
+  
+  // Add statute-based searches
+  if (agentAnalysis.relevantStatutes.length > 0) {
+    agentAnalysis.relevantStatutes.forEach(statute => {
+      queries.push(`"${statute}"`);
+    });
+  }
+  
+  // Remove duplicates and return
+  return [...new Set(queries)].slice(0, 8); // Limit to 8 queries
+}
+
 async function searchCourtListenerV4(query: string, apiKey: string): Promise<any[]> {
   try {
     const encodedQuery = encodeURIComponent(query);
-    // FIXED: Using V4 API instead of V3
-    const url = `https://www.courtlistener.com/api/rest/v4/search/?q=${encodedQuery}&type=o&stat_Precedential=on&court=tex,texapp,texcrimapp,texjpml&page_size=10`;
+    // Enhanced V4 API with better parameters
+    const url = `https://www.courtlistener.com/api/rest/v4/search/?q=${encodedQuery}&type=o&stat_Precedential=on&court=tex,texapp,texcrimapp,texjpml,tex.bankr&order_by=score%20desc&page_size=20`;
     
     console.log(`🔍 Searching CourtListener V4: ${query}`);
     console.log(`📍 URL: ${url}`);
@@ -127,29 +176,38 @@ async function searchCourtListenerV4(query: string, apiKey: string): Promise<any
     const response = await fetch(url, {
       headers: {
         'Authorization': `Token ${apiKey}`,
-        'User-Agent': 'LegalAnalysis/1.0'
+        'User-Agent': 'LegalAnalysis/1.0',
+        'Accept': 'application/json'
       }
     });
     
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`CourtListener API error: ${response.status} - ${errorText}`);
+      
+      // Log detailed error for debugging
+      if (response.status === 403) {
+        console.error("❌ 403 Forbidden - Check API key and permissions");
+      } else if (response.status === 429) {
+        console.error("❌ 429 Rate Limited - Too many requests");
+      }
+      
       return [];
     }
     
     const data = await response.json();
     console.log(`✅ CourtListener returned ${data.results?.length || 0} results for query: ${query}`);
     
-    // Process V4 API response format
+    // Enhanced V4 API response processing
     const processedResults = (data.results || []).map((result: any) => ({
       id: result.id,
-      caseName: result.case_name || result.caseName || "Unknown Case",
-      case_name: result.case_name || result.caseName || "Unknown Case",
-      court: result.court || "Unknown Court",
-      court_name: result.court || "Unknown Court", 
-      citation: result.citation?.[0] || "No citation",
-      dateFiled: result.date_filed || result.dateFiled,
-      date_filed: result.date_filed || result.dateFiled,
+      caseName: result.caseName || result.case_name || "Unknown Case",
+      case_name: result.caseName || result.case_name || "Unknown Case",
+      court: result.court || result.court_id || "Unknown Court",
+      court_name: result.court || result.court_id || "Unknown Court", 
+      citation: Array.isArray(result.citation) ? result.citation[0] : result.citation || "No citation",
+      dateFiled: result.dateFiled || result.date_filed,
+      date_filed: result.dateFiled || result.date_filed,
       absolute_url: result.absolute_url || result.absolute_uri,
       snippet: result.snippet || result.text || "No summary available",
       text: result.snippet || result.text || "No summary available"

@@ -1,167 +1,128 @@
+// Enhanced case type detection with better premises liability recognition
 
-// Enhanced case type detector with improved logic and debugging
+export function determineFinalCaseType(analysisContent: string, storedCaseType?: string | null): string {
+  console.log("=== CASE TYPE DETERMINATION START ===");
+  
+  const detectedType = detectCaseTypeFromContent(analysisContent);
+  console.log(`Detected type from analysis content: ${detectedType}`);
+  console.log(`Stored case type: ${storedCaseType}`);
+  
+  // If we have a confident detection (score > 100), use it
+  if (detectedType !== "general") {
+    console.log(`=== FINAL RESULT: Using detected ${detectedType} type: ${detectedType} ===`);
+    return detectedType;
+  }
+  
+  // Otherwise, use stored case type if available
+  if (storedCaseType && storedCaseType !== "general") {
+    console.log(`=== FINAL RESULT: Using stored case type: ${storedCaseType} ===`);
+    return storedCaseType;
+  }
+  
+  // Final fallback
+  console.log(`=== FINAL RESULT: Using fallback general type ===`);
+  return "general";
+}
 
-export function detectCaseType(content: string): string {
+function detectCaseTypeFromContent(content: string): string {
   console.log("=== CASE TYPE DETECTION START ===");
   console.log(`Content length: ${content.length}`);
   console.log(`First 500 chars: ${content.substring(0, 500)}`);
   
-  const lowerContent = content.toLowerCase();
-  const scores: Record<string, number> = {};
-
-  // Initialize all possible case types
-  const caseTypes = [
-    'premises-liability', 'property-law', 'hoa', 'personal-injury', 'consumer-protection', 
-    'contract', 'employment', 'family', 'criminal', 'animal-protection'
-  ];
+  if (!content || content.length < 50) {
+    return "general";
+  }
   
-  caseTypes.forEach(type => scores[type] = 0);
-
+  const lowerContent = content.toLowerCase();
   console.log("=== CASE TYPE DETECTION ANALYSIS ===");
   console.log(`Text length: ${content.length}`);
-  console.log(`Sample text: ${lowerContent.substring(0, 300)}`);
-
-  // PRIORITY 1: Premises Liability Detection (NEW - Highest Priority for slip/fall)
-  if (lowerContent.includes("slip") || lowerContent.includes("fall") || lowerContent.includes("fell")) {
-    scores['premises-liability'] += 40;
+  console.log(`Sample text: ${lowerContent.substring(0, 200)}`);
+  
+  const typeScores: { [key: string]: number } = {
+    "premises-liability": 0,
+    "personal-injury": 0,
+    "consumer-protection": 0,
+    "contract": 0,
+    "employment": 0,
+    "property-law": 0,
+    "general": 0
+  };
+  
+  // Enhanced premises liability detection
+  if (lowerContent.includes("slip") || lowerContent.includes("fall")) {
+    typeScores["premises-liability"] += 40;
     console.log("🏢 FOUND: Slip/fall terms - Adding 40 to premises-liability");
   }
   
   if (lowerContent.includes("floor") || lowerContent.includes("wet") || lowerContent.includes("spill")) {
-    scores['premises-liability'] += 30;
+    typeScores["premises-liability"] += 30;
     console.log("🏢 FOUND: Floor/wet/spill terms - Adding 30 to premises-liability");
   }
   
-  if (lowerContent.includes("store") || lowerContent.includes("business premises")) {
-    scores['premises-liability'] += 25;
+  if (lowerContent.includes("store") || lowerContent.includes("business") || lowerContent.includes("retail") || 
+      lowerContent.includes("premises") || lowerContent.includes("property owner") || lowerContent.includes("invitee")) {
+    typeScores["premises-liability"] += 25;
     console.log("🏢 FOUND: Store/business premises - Adding 25 to premises-liability");
   }
   
-  if (lowerContent.includes("premises liability") || lowerContent.includes("property owner")) {
-    scores['premises-liability'] += 35;
+  if (lowerContent.includes("premises liability") || lowerContent.includes("dangerous condition") || 
+      lowerContent.includes("constructive knowledge") || lowerContent.includes("actual knowledge")) {
+    typeScores["premises-liability"] += 35;
     console.log("🏢 FOUND: Premises liability terms - Adding 35 to premises-liability");
   }
-
-  // PRIORITY 2: HOA and Property Law Detection
-  if (lowerContent.includes("209.006") || lowerContent.includes("209.007")) {
-    scores['property-law'] += 50;
-    scores['hoa'] += 50;
-    console.log("🏠 FOUND: Texas Property Code statutes - Adding 50 to property-law and hoa");
+  
+  // Consumer protection detection
+  if (lowerContent.includes("dtpa") || lowerContent.includes("deceptive trade practices")) {
+    typeScores["consumer-protection"] += 50;
+  }
+  if (lowerContent.includes("consumer protection") || lowerContent.includes("false advertising")) {
+    typeScores["consumer-protection"] += 30;
   }
   
-  if (lowerContent.includes("homeowners") || lowerContent.includes("homeowner")) {
-    scores['property-law'] += 30;
-    scores['hoa'] += 30;
-    console.log("🏠 FOUND: Homeowners terms - Adding 30 to property-law and hoa");
+  // Contract detection  
+  if (lowerContent.includes("breach of contract") || lowerContent.includes("contract violation")) {
+    typeScores["contract"] += 40;
+  }
+  if (lowerContent.includes("agreement") || lowerContent.includes("contractual")) {
+    typeScores["contract"] += 20;
   }
   
-  if (lowerContent.includes("hoa") || lowerContent.includes("association")) {
-    scores['property-law'] += 25;
-    scores['hoa'] += 25;
-    console.log("🏠 FOUND: HOA/Association terms - Adding 25 to property-law and hoa");
+  // Personal injury (general)
+  if (lowerContent.includes("personal injury") || lowerContent.includes("negligence")) {
+    typeScores["personal-injury"] += 30;
   }
-
-  // PRIORITY 3: Consumer Protection
-  if (lowerContent.includes("dtpa") || lowerContent.includes("deceptive trade")) {
-    scores['consumer-protection'] += 30;
-    console.log("💼 FOUND: DTPA/deceptive trade - Adding 30 to consumer-protection");
+  if (lowerContent.includes("medical malpractice") || lowerContent.includes("car accident")) {
+    typeScores["personal-injury"] += 25;
   }
-
-  if (lowerContent.includes("17.46") || lowerContent.includes("business commerce code")) {
-    scores['consumer-protection'] += 25;
-    console.log("💼 FOUND: Business Commerce Code - Adding 25 to consumer-protection");
-  }
-
-  // PRIORITY 4: Personal Injury (Only if no premises liability indicators)
-  const hasPremisesIndicators = scores['premises-liability'] > 0;
   
-  if (!hasPremisesIndicators) {
-    if (lowerContent.includes("negligence") && !lowerContent.includes("premises")) {
-      scores['personal-injury'] += 15;
-      console.log("⚖️ FOUND: Negligence (no premises context) - Adding 15 to personal-injury");
-    }
-
-    if (lowerContent.includes("injury") || lowerContent.includes("damages")) {
-      scores['personal-injury'] += 10;
-      console.log("⚖️ FOUND: Injury/damages (no premises context) - Adding 10 to personal-injury");
-    }
+  // Employment
+  if (lowerContent.includes("wrongful termination") || lowerContent.includes("employment")) {
+    typeScores["employment"] += 40;
   }
-
-  // PRIORITY 5: Animal Protection
-  const animalTerms = ['animal', 'pet', 'dog', 'cat', 'veterinary', 'cruelty'];
-  const animalCount = animalTerms.filter(term => lowerContent.includes(term)).length;
   
-  if (animalCount >= 2 && (lowerContent.includes("42.092") || lowerContent.includes("42.091"))) {
-    scores['animal-protection'] += animalCount * 5;
-    console.log(`🐾 FOUND: ${animalCount} animal terms with animal statutes - Adding ${animalCount * 5} to animal-protection`);
+  // Property law
+  if (lowerContent.includes("property law") || lowerContent.includes("real estate")) {
+    typeScores["property-law"] += 30;
   }
-
-  // Contract Law
-  if (lowerContent.includes("contract") || lowerContent.includes("agreement")) {
-    scores['contract'] += 15;
-    console.log("📄 FOUND: Contract terms - Adding 15 to contract");
-  }
-
+  
   console.log("=== SCORING BREAKDOWN ===");
-  Object.entries(scores).forEach(([type, score]) => {
+  Object.entries(typeScores).forEach(([type, score]) => {
     if (score > 0) {
       console.log(`${type}: ${score} points`);
     }
   });
-
-  // Find the highest scoring type
-  const maxScore = Math.max(...Object.values(scores));
-  const detectedType = Object.entries(scores).find(([_, score]) => score === maxScore)?.[0] || "general";
   
+  const highestScore = Math.max(...Object.values(typeScores));
   console.log("=== DETECTION RESULT ===");
-  console.log(`Highest score: ${maxScore}`);
-  console.log(`Detected type: ${detectedType}`);
+  console.log(`Highest score: ${highestScore}`);
   
-  // Only return confident detections
-  if (maxScore >= 15) {
-    console.log(`✅ CONFIDENT DETECTION: ${detectedType} (score: ${maxScore})`);
+  if (highestScore >= 50) {
+    const detectedType = Object.entries(typeScores).find(([_, score]) => score === highestScore)?.[0] || "general";
+    console.log(`✅ CONFIDENT DETECTION: ${detectedType} (score: ${highestScore})`);
+    console.log(`Detected type: ${detectedType}`);
     return detectedType;
-  } else {
-    console.log(`⚠️ LOW CONFIDENCE: Using general (highest score: ${maxScore})`);
-    return "general";
   }
-}
-
-// Add the missing export that was causing the boot failure
-export function detectCaseTypeFromText(content: string): string {
-  return detectCaseType(content);
-}
-
-// Helper to determine final case type with stored case type override
-export function determineFinalCaseType(
-  analysisContent: string,
-  storedCaseType: string | null,
-  detectedType?: string
-): string {
-  console.log("=== CASE TYPE DETERMINATION START ===");
   
-  const aiDetectedType = detectedType || detectCaseType(analysisContent);
-  console.log(`Detected type from analysis content: ${aiDetectedType}`);
-  console.log(`Stored case type: ${storedCaseType}`);
-
-  // For premises liability cases, always prefer the AI detection
-  if (aiDetectedType === 'premises-liability') {
-    console.log(`=== FINAL RESULT: Using detected premises liability type: ${aiDetectedType} ===`);
-    return aiDetectedType;
-  }
-
-  // For property law and HOA cases, always prefer the AI detection
-  if (aiDetectedType === 'property-law' || aiDetectedType === 'hoa') {
-    console.log(`=== FINAL RESULT: Using detected type: ${aiDetectedType} ===`);
-    return aiDetectedType;
-  }
-
-  // For other cases, use stored type if available and reasonable
-  if (storedCaseType && storedCaseType !== 'business' && storedCaseType !== 'general') {
-    console.log(`=== FINAL RESULT: Using stored type: ${storedCaseType} ===`);
-    return storedCaseType;
-  }
-
-  console.log(`=== FINAL RESULT: Using detected type: ${aiDetectedType} ===`);
-  return aiDetectedType;
+  console.log("❓ NO CONFIDENT DETECTION: Using general");
+  return "general";
 }

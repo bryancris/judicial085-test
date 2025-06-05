@@ -15,36 +15,31 @@ export class LegalCaseAgent {
   }
 
   async analyzeCaseForSimilarity(caseContent: string, caseType?: string): Promise<AgentAnalysis> {
-    const prompt = `Please analyze this case content for similarity searching:
+    const prompt = `Please analyze this case content for similarity searching. Generate BROADER search terms that will find relevant cases in legal databases.
 
 CASE TYPE: ${caseType || 'Unknown'}
 
 CASE CONTENT:
 ${caseContent}
 
-I need you to generate BROADER, more practical search terms that will find relevant cases. Focus on:
+For this analysis, I need you to focus on generating search terms that practicing attorneys would use to find similar cases. 
 
-1. Extract the main legal concepts using terms practicing attorneys would search for
-2. Identify the core factual scenario (e.g., if someone slipped and fell, focus on "slip and fall" and "premises liability")
-3. List relevant statutes mentioned
-4. Generate 3-5 PRACTICAL search queries that cast a wider net
-
-IMPORTANT: For premises liability cases involving slips, falls, or store incidents, make sure to include terms like:
-- "slip and fall"
-- "premises liability" 
-- "negligence"
-- "store liability"
-- "dangerous condition"
+IMPORTANT GUIDELINES:
+1. For premises liability cases involving slips/falls: Include terms like "premises liability", "slip and fall", "negligence", "dangerous condition", "invitee", "business premises"
+2. Use broader legal concepts rather than very specific facts
+3. Include relevant Texas statutes and common case citations
+4. Generate 5-7 practical search queries that cast a wider net
+5. Focus on legal standards and elements rather than specific factual details
 
 CRITICAL: Format your response EXACTLY like this (no bullets, no numbers, no markdown):
 
-Legal Concepts: premises liability, negligence, dangerous condition, duty of care
-Key Facts: slip and fall, wet floor, store premises, customer injury
+Legal Concepts: premises liability, negligence, dangerous condition, duty of care, invitee status
+Key Facts: slip and fall, spilled substance, retail store, customer injury, notice requirement
 Relevant Statutes: Texas Civil Practice Remedies Code 75.002
-Search Queries: premises liability Texas, slip and fall negligence, store liability dangerous condition, premises duty care Texas, negligence wet floor liability
-Case Theory: Premises liability case involving store owner duty to maintain safe conditions
+Search Queries: premises liability Texas, slip and fall negligence store, dangerous condition notice, invitee duty care, negligence retail establishment
+Case Theory: Premises liability case involving store owner duty to maintain safe conditions for business invitees
 
-Focus on practical terminology that will find cases with similar legal issues, even if the specific facts vary.`;
+Focus on terms that will find cases with similar legal issues and standards, even if the specific facts vary.`;
 
     const content = await this.assistantService.runAssistantAnalysis(prompt);
     console.log('✅ Received assistant response');
