@@ -54,93 +54,19 @@ export class LegalCaseAgent {
 
 Always provide specific, actionable legal analysis with concrete reasoning for your recommendations.`,
         model: "gpt-4o",
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "analyze_case_for_similarity",
-              description: "Analyze a legal case to extract key concepts for similarity search",
-              parameters: {
-                type: "object",
-                properties: {
-                  caseContent: {
-                    type: "string",
-                    description: "The full case content including facts, legal analysis, and client information"
-                  },
-                  caseType: {
-                    type: "string",
-                    description: "The type of case (e.g., property-law, consumer-protection, etc.)"
-                  }
-                },
-                required: ["caseContent"]
-              }
-            }
-          },
-          {
-            type: "function",
-            function: {
-              name: "generate_search_queries",
-              description: "Generate multiple sophisticated search queries for legal case databases",
-              parameters: {
-                type: "object",
-                properties: {
-                  legalConcepts: {
-                    type: "array",
-                    items: { type: "string" },
-                    description: "Key legal concepts from the case"
-                  },
-                  statutes: {
-                    type: "array", 
-                    items: { type: "string" },
-                    description: "Relevant statutes and regulations"
-                  },
-                  keyFacts: {
-                    type: "array",
-                    items: { type: "string" },
-                    description: "Important factual elements"
-                  }
-                },
-                required: ["legalConcepts"]
-              }
-            }
-          },
-          {
-            type: "function",
-            function: {
-              name: "score_case_relevance",
-              description: "Score how relevant a found case is to the original case",
-              parameters: {
-                type: "object",
-                properties: {
-                  originalCase: {
-                    type: "string",
-                    description: "Content of the original case being analyzed"
-                  },
-                  foundCase: {
-                    type: "object",
-                    description: "The case found in search results",
-                    properties: {
-                      title: { type: "string" },
-                      facts: { type: "string" },
-                      outcome: { type: "string" },
-                      court: { type: "string" }
-                    }
-                  }
-                },
-                required: ["originalCase", "foundCase"]
-              }
-            }
-          }
-        ]
+        tools: []
       })
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to create assistant: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('Failed to create assistant:', response.status, errorText);
+      throw new Error(`Failed to create assistant: ${response.status} - ${errorText}`);
     }
 
     const assistant = await response.json();
     this.assistantId = assistant.id;
+    console.log(`✅ Created assistant with ID: ${assistant.id}`);
     return assistant.id;
   }
 
@@ -160,10 +86,17 @@ Always provide specific, actionable legal analysis with concrete reasoning for y
       body: JSON.stringify({})
     });
 
+    if (!threadResponse.ok) {
+      const errorText = await threadResponse.text();
+      console.error('Failed to create thread:', threadResponse.status, errorText);
+      throw new Error(`Failed to create thread: ${threadResponse.status}`);
+    }
+
     const thread = await threadResponse.json();
+    console.log(`✅ Created thread: ${thread.id}`);
 
     // Add a message to the thread
-    await fetch(`https://api.openai.com/v1/threads/${thread.id}/messages`, {
+    const messageResponse = await fetch(`https://api.openai.com/v1/threads/${thread.id}/messages`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.openaiApiKey}`,
@@ -186,9 +119,22 @@ I need you to:
 4. Generate 3-5 sophisticated search queries for finding similar cases
 5. Provide a brief case theory summary
 
-Focus on legal precedent and similar legal issues rather than just keyword matching.`
+Focus on legal precedent and similar legal issues rather than just keyword matching.
+
+Please format your response clearly with sections for:
+- Legal Concepts: [list the main legal theories and claims]
+- Key Facts: [list the most important factual elements]
+- Relevant Statutes: [list any statutes or regulations mentioned]
+- Search Queries: [list 3-5 search queries for legal databases]
+- Case Theory: [brief summary of the legal theory]`
       })
     });
+
+    if (!messageResponse.ok) {
+      const errorText = await messageResponse.text();
+      console.error('Failed to add message:', messageResponse.status, errorText);
+      throw new Error(`Failed to add message: ${messageResponse.status}`);
+    }
 
     // Run the assistant
     const runResponse = await fetch(`https://api.openai.com/v1/threads/${thread.id}/runs`, {
@@ -203,12 +149,23 @@ Focus on legal precedent and similar legal issues rather than just keyword match
       })
     });
 
-    const run = await runResponse.json();
+    if (!runResponse.ok) {
+      const errorText = await runResponse.text();
+      console.error('Failed to start run:', runResponse.status, errorText);
+      throw new Error(`Failed to start run: ${runResponse.status}`);
+    }
 
-    // Wait for completion
+    const run = await runResponse.json();
+    console.log(`✅ Started run: ${run.id}`);
+
+    // Wait for completion with proper timeout
     let runStatus = run;
-    while (runStatus.status === 'in_progress' || runStatus.status === 'queued') {
+    let attempts = 0;
+    const maxAttempts = 60; // 60 seconds timeout
+    
+    while ((runStatus.status === 'in_progress' || runStatus.status === 'queued') && attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, 1000));
+      attempts++;
       
       const statusResponse = await fetch(`https://api.openai.com/v1/threads/${thread.id}/runs/${run.id}`, {
         headers: {
@@ -216,7 +173,19 @@ Focus on legal precedent and similar legal issues rather than just keyword match
           'OpenAI-Beta': 'assistants=v2'
         }
       });
+
+      if (!statusResponse.ok) {
+        console.error('Failed to check run status:', statusResponse.status);
+        break;
+      }
+
       runStatus = await statusResponse.json();
+      console.log(`Run status: ${runStatus.status} (attempt ${attempts})`);
+    }
+
+    if (runStatus.status !== 'completed') {
+      console.error('Run did not complete successfully:', runStatus.status);
+      throw new Error(`Assistant run failed with status: ${runStatus.status}`);
     }
 
     // Get the messages
@@ -227,20 +196,30 @@ Focus on legal precedent and similar legal issues rather than just keyword match
       }
     });
 
+    if (!messagesResponse.ok) {
+      const errorText = await messagesResponse.text();
+      console.error('Failed to get messages:', messagesResponse.status, errorText);
+      throw new Error(`Failed to get messages: ${messagesResponse.status}`);
+    }
+
     const messages = await messagesResponse.json();
     const assistantMessage = messages.data.find((msg: any) => msg.role === 'assistant');
     
-    if (!assistantMessage) {
+    if (!assistantMessage || !assistantMessage.content || assistantMessage.content.length === 0) {
+      console.error('No assistant response received');
       throw new Error('No assistant response received');
     }
 
     const content = assistantMessage.content[0].text.value;
+    console.log('✅ Received assistant response');
     
     // Parse the agent's response to extract structured data
     return this.parseAgentAnalysis(content);
   }
 
   private parseAgentAnalysis(content: string): AgentAnalysis {
+    console.log('Parsing agent analysis...');
+    
     // Extract structured information from the agent's response
     const legalConceptsMatch = content.match(/(?:legal concepts?|claims?|theories?):\s*[:\-]?\s*(.*?)(?:\n\n|\n(?=[A-Z])|$)/is);
     const factsMatch = content.match(/(?:key facts?|factual elements?):\s*[:\-]?\s*(.*?)(?:\n\n|\n(?=[A-Z])|$)/is);
@@ -255,13 +234,23 @@ Focus on legal precedent and similar legal issues rather than just keyword match
         .slice(0, 10); // Limit to 10 items
     };
 
-    return {
+    const analysis = {
       legalConcepts: legalConceptsMatch ? parseList(legalConceptsMatch[1]) : [],
       keyFacts: factsMatch ? parseList(factsMatch[1]) : [],
       relevantStatutes: statutesMatch ? parseList(statutesMatch[1]) : [],
       searchQueries: queriesMatch ? parseList(queriesMatch[1]) : [],
       caseTheory: theoryMatch ? theoryMatch[1].trim() : ''
     };
+
+    console.log('✅ Parsed analysis:', {
+      legalConcepts: analysis.legalConcepts.length,
+      keyFacts: analysis.keyFacts.length,
+      relevantStatutes: analysis.relevantStatutes.length,
+      searchQueries: analysis.searchQueries.length,
+      caseTheory: analysis.caseTheory.length > 0
+    });
+
+    return analysis;
   }
 
   async scoreCaseRelevance(originalCase: string, foundCases: any[]): Promise<ScoredCase[]> {
@@ -283,6 +272,11 @@ Focus on legal precedent and similar legal issues rather than just keyword match
           },
           body: JSON.stringify({})
         });
+
+        if (!threadResponse.ok) {
+          console.error(`Failed to create scoring thread for case ${foundCase.clientName}`);
+          continue;
+        }
 
         const thread = await threadResponse.json();
 
@@ -329,6 +323,11 @@ Format: SCORE: [number] REASONING: [explanation]`
           })
         });
 
+        if (!runResponse.ok) {
+          console.error(`Failed to start scoring run for case ${foundCase.clientName}`);
+          continue;
+        }
+
         const run = await runResponse.json();
 
         // Wait for completion (simplified)
@@ -343,41 +342,41 @@ Format: SCORE: [number] REASONING: [explanation]`
               'OpenAI-Beta': 'assistants=v2'
             }
           });
-          runStatus = await statusResponse.json();
+          
+          if (statusResponse.ok) {
+            runStatus = await statusResponse.json();
+          }
           attempts++;
         }
 
-        // Get the response
-        const messagesResponse = await fetch(`https://api.openai.com/v1/threads/${thread.id}/messages`, {
-          headers: {
-            'Authorization': `Bearer ${this.openaiApiKey}`,
-            'OpenAI-Beta': 'assistants=v2'
+        if (runStatus.status === 'completed') {
+          // Get the response
+          const messagesResponse = await fetch(`https://api.openai.com/v1/threads/${thread.id}/messages`, {
+            headers: {
+              'Authorization': `Bearer ${this.openaiApiKey}`,
+              'OpenAI-Beta': 'assistants=v2'
+            }
+          });
+
+          if (messagesResponse.ok) {
+            const messages = await messagesResponse.json();
+            const assistantMessage = messages.data.find((msg: any) => msg.role === 'assistant');
+            
+            if (assistantMessage) {
+              const content = assistantMessage.content[0].text.value;
+              const scoreMatch = content.match(/SCORE:\s*(\d+)/i);
+              const reasoningMatch = content.match(/REASONING:\s*(.*?)$/is);
+              
+              const score = scoreMatch ? parseInt(scoreMatch[1]) : 50;
+              const reasoning = reasoningMatch ? reasoningMatch[1].trim() : 'Score assigned by agent';
+
+              scoredCases.push({
+                case: foundCase,
+                relevanceScore: score,
+                reasoning: reasoning
+              });
+            }
           }
-        });
-
-        const messages = await messagesResponse.json();
-        const assistantMessage = messages.data.find((msg: any) => msg.role === 'assistant');
-        
-        if (assistantMessage) {
-          const content = assistantMessage.content[0].text.value;
-          const scoreMatch = content.match(/SCORE:\s*(\d+)/i);
-          const reasoningMatch = content.match(/REASONING:\s*(.*?)$/is);
-          
-          const score = scoreMatch ? parseInt(scoreMatch[1]) : 50;
-          const reasoning = reasoningMatch ? reasoningMatch[1].trim() : 'Score assigned by agent';
-
-          scoredCases.push({
-            case: foundCase,
-            relevanceScore: score,
-            reasoning: reasoning
-          });
-        } else {
-          // Fallback scoring
-          scoredCases.push({
-            case: foundCase,
-            relevanceScore: 60,
-            reasoning: 'Default score - agent response unavailable'
-          });
         }
       } catch (error) {
         console.error(`Error scoring case ${foundCase.clientName}:`, error);
@@ -404,6 +403,7 @@ Format: SCORE: [number] REASONING: [explanation]`
             'OpenAI-Beta': 'assistants=v2'
           }
         });
+        console.log(`✅ Cleaned up assistant: ${this.assistantId}`);
       } catch (error) {
         console.error('Error cleaning up assistant:', error);
       }

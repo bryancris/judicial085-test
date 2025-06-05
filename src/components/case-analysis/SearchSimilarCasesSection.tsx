@@ -19,6 +19,7 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
   const [similarCases, setSimilarCases] = useState<SimilarCase[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchResult, setSearchResult] = useState<any>(null);
   const { toast } = useToast();
   
   // Default outcome prediction values - will be updated based on case analysis
@@ -30,6 +31,7 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
     console.log(`SearchSimilarCasesSection: Client changed to ${clientId}, clearing previous search state`);
     setSimilarCases([]);
     setSearchError(null);
+    setSearchResult(null);
     setIsDialogOpen(false);
     setIsSearchingCases(false);
     // Reset outcome predictions to defaults
@@ -43,25 +45,28 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
     setIsSearchingCases(true);
     setIsDialogOpen(true);
     setSearchError(null);
+    setSearchResult(null);
     
     try {
       console.log("Starting search for similar cases for client:", clientId);
-      const { similarCases, error, fallbackUsed, analysisFound } = await searchSimilarCases(clientId);
+      const result = await searchSimilarCases(clientId);
       
-      if (error) {
-        setSearchError(error);
+      setSearchResult(result);
+      
+      if (result.error) {
+        setSearchError(result.error);
         toast({
           title: "Search Failed",
-          description: error,
+          description: result.error,
           variant: "destructive",
         });
       } else {
-        setSimilarCases(similarCases || []);
+        setSimilarCases(result.similarCases || []);
         
         // Update the prediction percentages based on similar cases
-        if (similarCases?.length > 0) {
+        if (result.similarCases?.length > 0) {
           let favorableCases = 0;
-          similarCases.forEach(c => {
+          result.similarCases.forEach((c: SimilarCase) => {
             const outcome = c.outcome?.toLowerCase() || '';
             if (outcome.includes('favorable') || outcome.includes('victory') || 
                 outcome.includes('ruled in favor') || outcome.includes('prevailed') ||
@@ -72,8 +77,8 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
           });
           
           // Calculate win likelihood based on similar case outcomes
-          if (similarCases.length > 0) {
-            const winRate = (favorableCases / similarCases.length) * 100;
+          if (result.similarCases.length > 0) {
+            const winRate = (favorableCases / result.similarCases.length) * 100;
             // Adjust the win percentage but keep it between 25-85% to avoid extreme predictions
             const adjustedDefense = Math.min(Math.max(winRate, 25), 85);
             setOutcomeDefense(Math.round(adjustedDefense));
@@ -81,57 +86,46 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
           }
         }
         
-        if (!analysisFound) {
+        // Handle different search outcomes
+        if (result.analysisFound === false) {
           toast({
             title: "Legal Analysis Required",
-            description: "Please generate a legal analysis first to find relevant similar cases.",
-            variant: "warning",
+            description: "Please generate a legal analysis first to enable similar case search.",
+            variant: "destructive",
           });
-        } else if (fallbackUsed) {
+        } else if (result.searchStrategy === "missing-api-keys") {
           toast({
-            title: "Using Similar Case Examples",
-            description: "Showing sample cases with similar legal issues from our database.",
-            variant: "default",
+            title: "Configuration Required",
+            description: "API keys not configured for similar case search.",
+            variant: "destructive",
           });
-        } else if (similarCases.length === 0) {
+        } else if (result.similarCases.length === 0) {
           toast({
             title: "No Similar Cases Found",
-            description: "We couldn't find any cases with similar facts or legal issues.",
+            description: result.message || "No similar cases were found in available legal databases.",
           });
         } else {
           // Determine case type from results
-          const caseType = determineCaseTypeFromResults(similarCases);
+          const detectedCaseType = result.caseType || determineCaseTypeFromResults(result.similarCases);
           
           toast({
-            title: `Similar ${caseType} Cases Found`,
-            description: `Found ${similarCases.length} cases with similar facts or legal issues.`,
+            title: `Similar ${detectedCaseType} Cases Found`,
+            description: `Found ${result.similarCases.length} verified cases with similar legal issues.`,
           });
         }
       }
     } catch (err: any) {
       console.error("Error searching for similar cases:", err);
       setSearchError(err.message || "An unexpected error occurred");
+      setSearchResult(null);
       toast({
         title: "Search Error",
         description: err.message || "An unexpected error occurred while searching for similar cases.",
         variant: "destructive",
       });
       
-      // Set fallback cases if there's an error
-      setSimilarCases([
-        {
-          source: "courtlistener",
-          clientId: null,
-          clientName: "Error Retrieving Cases",
-          similarity: 0,
-          relevantFacts: "There was an error retrieving similar cases. Please try again later.",
-          outcome: "No outcome available",
-          court: "N/A",
-          citation: "N/A",
-          dateDecided: "N/A",
-          url: null
-        }
-      ]);
+      // Clear any previous results on error
+      setSimilarCases([]);
     } finally {
       setIsSearchingCases(false);
     }
@@ -195,6 +189,7 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
         similarCases={similarCases}
         isLoading={isSearchingCases}
         error={searchError}
+        searchResult={searchResult}
       />
     </>
   );
