@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAnalysisData } from "./useAnalysisData";
 import { useConversationData } from "./useConversationData";
 import { useNotesData } from "./useNotesData";
@@ -9,6 +9,8 @@ import { useScholarlyReferencesData } from "./useScholarlyReferencesData";
 import { useSimilarCasesData } from "./useSimilarCasesData";
 
 export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
+  const [currentAnalysisId, setCurrentAnalysisId] = useState<string | null>(null);
+
   // Core analysis data
   const {
     analysisData,
@@ -65,6 +67,43 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
     checkForUnincorporatedFindings
   } = useUnincorporatedFindings(clientId);
 
+  // Track the current analysis ID when analysis data changes
+  useEffect(() => {
+    // We need to get the analysis ID from the database since AnalysisData doesn't have it
+    const fetchAnalysisId = async () => {
+      if (!clientId) return;
+      
+      try {
+        const { supabase } = await import("@/integrations/supabase/client");
+        
+        let query = supabase
+          .from("legal_analyses")
+          .select("id")
+          .eq("client_id", clientId);
+
+        if (caseId) {
+          query = query.eq("case_id", caseId);
+        } else {
+          query = query.is("case_id", null);
+        }
+
+        const { data } = await query
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (data && data.length > 0) {
+          setCurrentAnalysisId(data[0].id);
+        }
+      } catch (error) {
+        console.error("Error fetching analysis ID:", error);
+      }
+    };
+
+    if (analysisData) {
+      fetchAnalysisId();
+    }
+  }, [analysisData, clientId, caseId]);
+
   // Auto-fetch scholarly references when analysis data is available
   useEffect(() => {
     if (analysisData?.caseType) {
@@ -72,13 +111,13 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
     }
   }, [analysisData?.caseType, fetchScholarlyReferences]);
 
-  // Auto-load similar cases when analysis data is available
+  // Auto-load similar cases when analysis ID is available
   useEffect(() => {
-    if (analysisData?.id) {
-      console.log("Analysis data available, loading similar cases for analysis:", analysisData.id);
-      loadSimilarCasesFromDb(analysisData.id);
+    if (currentAnalysisId) {
+      console.log("Analysis ID available, loading similar cases for analysis:", currentAnalysisId);
+      loadSimilarCasesFromDb(currentAnalysisId);
     }
-  }, [analysisData?.id, loadSimilarCasesFromDb]);
+  }, [currentAnalysisId, loadSimilarCasesFromDb]);
 
   // Load data on mount
   useEffect(() => {
@@ -95,8 +134,8 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
 
   // Enhanced fetchSimilarCases that includes the current analysis ID
   const fetchSimilarCasesWithPersistence = () => {
-    if (analysisData?.id) {
-      fetchSimilarCases(analysisData.id);
+    if (currentAnalysisId) {
+      fetchSimilarCases(currentAnalysisId);
     } else {
       fetchSimilarCases();
     }

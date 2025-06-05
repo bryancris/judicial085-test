@@ -7,7 +7,7 @@ import { useClientChatMessages } from "./useClientChatMessages";
 export const useAnalysisGeneration = (clientId?: string, caseId?: string) => {
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
   const { toast } = useToast();
-  const { messages } = useClientChatMessages(clientId);
+  const chatMessages = useClientChatMessages(clientId);
 
   const generateRealTimeAnalysis = async (
     onAnalysisComplete?: () => Promise<void>,
@@ -27,6 +27,8 @@ export const useAnalysisGeneration = (clientId?: string, caseId?: string) => {
     try {
       console.log("Starting real-time analysis generation for client:", clientId);
       
+      // Get messages from the chat messages hook
+      const messages = chatMessages.messages || [];
       const result = await generateLegalAnalysis(clientId, messages, caseId);
       
       if (result.error) {

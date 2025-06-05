@@ -1,6 +1,19 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { SimilarCase } from "@/components/case-analysis/SimilarCasesDialog";
+
+export interface SimilarCase {
+  source: "internal" | "courtlistener";
+  clientId: string | null;
+  clientName: string;
+  similarity: number;
+  relevantFacts: string;
+  outcome: string;
+  court?: string;
+  citation?: string;
+  dateDecided?: string;
+  url?: string | null;
+  agentReasoning?: string;
+}
 
 export interface SimilarCasesRecord {
   id: string;
@@ -44,14 +57,18 @@ export const saveSimilarCases = async (
       return { success: false, error: deleteError.message };
     }
 
+    // Convert SimilarCase[] to JSON for database storage
+    const caseDataJson = JSON.parse(JSON.stringify(similarCases));
+    const metadataJson = JSON.parse(JSON.stringify(metadata));
+
     // Insert new similar cases
     const { error: insertError } = await supabase
       .from("similar_cases")
       .insert({
         client_id: clientId,
         legal_analysis_id: legalAnalysisId,
-        case_data: similarCases,
-        search_metadata: metadata
+        case_data: caseDataJson,
+        search_metadata: metadataJson
       });
 
     if (insertError) {
@@ -102,12 +119,22 @@ export const loadSimilarCases = async (
       return { similarCases: [] };
     }
 
-    const record = data[0] as SimilarCasesRecord;
-    console.log("✅ Loaded similar cases from database:", record.case_data.length);
+    const record = data[0];
+    
+    // Parse the JSON data back to SimilarCase[]
+    const similarCases = Array.isArray(record.case_data) 
+      ? record.case_data as SimilarCase[]
+      : [];
+    
+    const metadata = typeof record.search_metadata === 'object' 
+      ? record.search_metadata as any
+      : {};
+    
+    console.log("✅ Loaded similar cases from database:", similarCases.length);
     
     return { 
-      similarCases: record.case_data || [],
-      metadata: record.search_metadata || {}
+      similarCases,
+      metadata
     };
   } catch (err: any) {
     console.error("Exception loading similar cases:", err);
