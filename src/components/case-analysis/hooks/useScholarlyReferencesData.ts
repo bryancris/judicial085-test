@@ -1,7 +1,14 @@
 
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ScholarlyArticle, searchGoogleScholar, getScholarlyReferences } from "@/utils/api/scholarApiService";
+import { 
+  ScholarlyArticle, 
+  searchGoogleScholar, 
+  getScholarlyReferences,
+  saveScholarlyReferences,
+  loadScholarlyReferences,
+  checkScholarlyReferencesExist
+} from "@/utils/api/scholarApiService";
 import { useToast } from "@/hooks/use-toast";
 
 export const useScholarlyReferencesData = (clientId: string) => {
@@ -9,13 +16,45 @@ export const useScholarlyReferencesData = (clientId: string) => {
   const [isScholarlyReferencesLoading, setIsScholarlyReferencesLoading] = useState(false);
   const { toast } = useToast();
 
-  const fetchScholarlyReferences = useCallback(async (caseType?: string) => {
+  // Load scholarly references from database for a specific legal analysis
+  const loadScholarlyReferencesFromDb = useCallback(async (legalAnalysisId: string) => {
+    if (!clientId || !legalAnalysisId) return;
+    
+    setIsScholarlyReferencesLoading(true);
+    
+    try {
+      console.log("Loading scholarly references from database for analysis:", legalAnalysisId);
+      const result = await loadScholarlyReferences(clientId, legalAnalysisId);
+      
+      if (result.error) {
+        console.error("Error loading scholarly references from DB:", result.error);
+      } else if (result.references.length > 0) {
+        console.log("✅ Loaded saved scholarly references:", result.references.length);
+        setScholarlyReferences(result.references);
+        
+        toast({
+          title: "Scholarly References Loaded",
+          description: `Loaded ${result.references.length} previously found scholarly references.`,
+        });
+      } else {
+        // No saved scholarly references found
+        setScholarlyReferences([]);
+      }
+    } catch (err: any) {
+      console.error("Exception loading scholarly references from DB:", err);
+    } finally {
+      setIsScholarlyReferencesLoading(false);
+    }
+  }, [clientId, toast]);
+
+  // Fetch new scholarly references from API and save to database
+  const fetchScholarlyReferences = useCallback(async (caseType?: string, legalAnalysisId?: string) => {
     if (!clientId) return;
     
     setIsScholarlyReferencesLoading(true);
     
     try {
-      console.log("Auto-fetching scholarly references for client:", clientId, "case type:", caseType);
+      console.log("Fetching scholarly references for client:", clientId, "case type:", caseType);
       const { results, error } = await getScholarlyReferences(clientId, caseType);
       
       if (error) {
@@ -36,6 +75,17 @@ export const useScholarlyReferencesData = (clientId: string) => {
       } else {
         console.log("Successfully fetched scholarly references:", results.length);
         setScholarlyReferences(results);
+        
+        // Save to database if we have a legal analysis ID
+        if (legalAnalysisId && results.length > 0) {
+          const saveResult = await saveScholarlyReferences(clientId, legalAnalysisId, results, caseType);
+          if (saveResult.success) {
+            console.log("✅ Scholarly references saved to database");
+          } else {
+            console.error("Failed to save scholarly references:", saveResult.error);
+          }
+        }
+        
         if (results.length === 0) {
           toast({
             title: "No Results",
@@ -88,10 +138,25 @@ export const useScholarlyReferencesData = (clientId: string) => {
     }
   }, [toast]);
 
+  // Check if scholarly references exist for a legal analysis
+  const checkScholarlyReferencesForAnalysis = useCallback(async (legalAnalysisId: string) => {
+    if (!clientId || !legalAnalysisId) return false;
+    
+    try {
+      const result = await checkScholarlyReferencesExist(clientId, legalAnalysisId);
+      return result.exists;
+    } catch (err: any) {
+      console.error("Error checking scholarly references existence:", err);
+      return false;
+    }
+  }, [clientId]);
+
   return {
     scholarlyReferences,
     isScholarlyReferencesLoading,
     fetchScholarlyReferences,
-    handleScholarSearch
+    handleScholarSearch,
+    loadScholarlyReferencesFromDb,
+    checkScholarlyReferencesForAnalysis
   };
 };

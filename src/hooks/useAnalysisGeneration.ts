@@ -10,7 +10,8 @@ export const useAnalysisGeneration = (clientId?: string, caseId?: string) => {
 
   const generateRealTimeAnalysis = async (
     onAnalysisComplete?: () => Promise<void>,
-    onSimilarCasesComplete?: () => void
+    onSimilarCasesComplete?: () => void,
+    onScholarlyReferencesComplete?: () => void
   ) => {
     if (!clientId) {
       toast({
@@ -70,9 +71,18 @@ export const useAnalysisGeneration = (clientId?: string, caseId?: string) => {
         }, 1000);
       }
 
+      // Auto-trigger scholarly references search after analysis is complete
+      if (onScholarlyReferencesComplete) {
+        console.log("📚 Auto-triggering scholarly references search...");
+        // Small delay to ensure analysis data is properly loaded
+        setTimeout(() => {
+          onScholarlyReferencesComplete();
+        }, 1500);
+      }
+
       toast({
         title: "Analysis Complete",
-        description: "Legal analysis has been generated successfully. Similar cases search initiated automatically.",
+        description: "Legal analysis has been generated successfully. Similar cases and scholarly references search initiated automatically.",
       });
 
     } catch (error: any) {

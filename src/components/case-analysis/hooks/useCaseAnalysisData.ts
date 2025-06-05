@@ -19,12 +19,13 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
     fetchAnalysisData
   } = useAnalysisData(clientId, caseId);
 
-  // Scholarly references
+  // Scholarly references with database persistence
   const {
     scholarlyReferences,
     isScholarlyReferencesLoading,
     fetchScholarlyReferences,
-    handleScholarSearch
+    handleScholarSearch,
+    loadScholarlyReferencesFromDb
   } = useScholarlyReferencesData(clientId);
 
   // Similar cases with database persistence
@@ -104,12 +105,13 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
     }
   }, [analysisData, clientId, caseId]);
 
-  // Auto-fetch scholarly references when analysis data is available
+  // UPDATED: Auto-load scholarly references from database when analysis ID is available
   useEffect(() => {
-    if (analysisData?.caseType) {
-      fetchScholarlyReferences(analysisData.caseType);
+    if (currentAnalysisId) {
+      console.log("Analysis ID available, loading scholarly references from database for analysis:", currentAnalysisId);
+      loadScholarlyReferencesFromDb(currentAnalysisId);
     }
-  }, [analysisData?.caseType, fetchScholarlyReferences]);
+  }, [currentAnalysisId, loadScholarlyReferencesFromDb]);
 
   // Auto-load similar cases when analysis ID is available
   useEffect(() => {
@@ -141,6 +143,15 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
     }
   };
 
+  // Enhanced fetchScholarlyReferences that includes the current analysis ID
+  const fetchScholarlyReferencesWithPersistence = () => {
+    if (currentAnalysisId && analysisData?.caseType) {
+      fetchScholarlyReferences(analysisData.caseType, currentAnalysisId);
+    } else if (analysisData?.caseType) {
+      fetchScholarlyReferences(analysisData.caseType);
+    }
+  };
+
   return {
     analysisData,
     isAnalysisLoading,
@@ -150,6 +161,7 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
     scholarlyReferences,
     isScholarlyReferencesLoading,
     handleScholarSearch,
+    fetchScholarlyReferences: fetchScholarlyReferencesWithPersistence,
     similarCases,
     isSimilarCasesLoading,
     analysisFound,

@@ -38,6 +38,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
     scholarlyReferences,
     isScholarlyReferencesLoading,
     handleScholarSearch,
+    fetchScholarlyReferences,
     similarCases,
     isSimilarCasesLoading,
     analysisFound,
@@ -64,13 +65,14 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
     }
   }, [refreshTrigger, fetchAnalysisData]);
 
-  // UPDATED: Wrapper to pass fetchAnalysisData and fetchSimilarCases to generation function
+  // UPDATED: Wrapper to pass fetchAnalysisData, fetchSimilarCases, and fetchScholarlyReferences to generation function
   const handleGenerateAnalysis = () => {
     generateRealTimeAnalysis(
       async () => {
         await fetchAnalysisData();
       },
-      fetchSimilarCases // This will now automatically save to database
+      fetchSimilarCases, // This will now automatically save to database
+      fetchScholarlyReferences // This will now automatically save to database
     );
   };
 

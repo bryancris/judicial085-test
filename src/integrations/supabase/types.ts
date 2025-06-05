@@ -695,6 +695,36 @@ export type Database = {
         }
         Relationships: []
       }
+      scholarly_references: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          legal_analysis_id: string
+          reference_data: Json
+          search_metadata: Json | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          legal_analysis_id: string
+          reference_data?: Json
+          search_metadata?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          legal_analysis_id?: string
+          reference_data?: Json
+          search_metadata?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       similar_cases: {
         Row: {
           case_data: Json

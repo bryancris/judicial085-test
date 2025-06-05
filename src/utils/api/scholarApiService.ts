@@ -28,6 +28,137 @@ export interface ScholarSearchResults {
 }
 
 /**
+ * Save scholarly references to database
+ */
+export const saveScholarlyReferences = async (
+  clientId: string,
+  legalAnalysisId: string,
+  references: ScholarlyArticle[],
+  searchQuery?: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    console.log("Saving scholarly references to database:", { clientId, legalAnalysisId, count: references.length });
+    
+    // First, delete any existing scholarly references for this analysis
+    const { error: deleteError } = await supabase
+      .from("scholarly_references")
+      .delete()
+      .eq("client_id", clientId)
+      .eq("legal_analysis_id", legalAnalysisId);
+
+    if (deleteError) {
+      console.error("Error deleting existing scholarly references:", deleteError);
+      return { success: false, error: deleteError.message };
+    }
+
+    // Insert new scholarly references
+    const { error: insertError } = await supabase
+      .from("scholarly_references")
+      .insert({
+        client_id: clientId,
+        legal_analysis_id: legalAnalysisId,
+        reference_data: references as any,
+        search_metadata: {
+          query: searchQuery,
+          timestamp: new Date().toISOString(),
+          count: references.length
+        } as any
+      });
+
+    if (insertError) {
+      console.error("Error saving scholarly references:", insertError);
+      return { success: false, error: insertError.message };
+    }
+
+    console.log("✅ Successfully saved scholarly references to database");
+    return { success: true };
+  } catch (err: any) {
+    console.error("Exception saving scholarly references:", err);
+    return { success: false, error: err.message };
+  }
+};
+
+/**
+ * Load scholarly references from database
+ */
+export const loadScholarlyReferences = async (
+  clientId: string,
+  legalAnalysisId: string
+): Promise<{ 
+  references: ScholarlyArticle[]; 
+  metadata?: any;
+  error?: string 
+}> => {
+  try {
+    console.log("Loading scholarly references from database:", { clientId, legalAnalysisId });
+    
+    const { data, error } = await supabase
+      .from("scholarly_references")
+      .select("*")
+      .eq("client_id", clientId)
+      .eq("legal_analysis_id", legalAnalysisId)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error("Error loading scholarly references:", error);
+      return { references: [], error: error.message };
+    }
+
+    if (!data || data.length === 0) {
+      console.log("No saved scholarly references found");
+      return { references: [] };
+    }
+
+    const record = data[0];
+    
+    // Safely parse the JSON data back to ScholarlyArticle[]
+    const references = Array.isArray(record.reference_data) 
+      ? (record.reference_data as unknown as ScholarlyArticle[])
+      : [];
+    
+    const metadata = typeof record.search_metadata === 'object' && record.search_metadata !== null
+      ? record.search_metadata
+      : {};
+    
+    console.log("✅ Loaded scholarly references from database:", references.length);
+    
+    return { 
+      references,
+      metadata
+    };
+  } catch (err: any) {
+    console.error("Exception loading scholarly references:", err);
+    return { references: [], error: err.message };
+  }
+};
+
+/**
+ * Check if scholarly references exist for a legal analysis
+ */
+export const checkScholarlyReferencesExist = async (
+  clientId: string,
+  legalAnalysisId: string
+): Promise<{ exists: boolean; error?: string }> => {
+  try {
+    const { data, error } = await supabase
+      .from("scholarly_references")
+      .select("id")
+      .eq("client_id", clientId)
+      .eq("legal_analysis_id", legalAnalysisId)
+      .limit(1);
+
+    if (error) {
+      return { exists: false, error: error.message };
+    }
+
+    return { exists: data && data.length > 0 };
+  } catch (err: any) {
+    return { exists: false, error: err.message };
+  }
+};
+
+/**
  * Search for scholarly articles using Google Scholar API
  * @param query The search query
  * @param limit Maximum number of results to return (default: 5)
