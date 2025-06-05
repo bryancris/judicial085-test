@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
@@ -232,10 +231,7 @@ async function generatePDF(data: CaseAnalysisData): Promise<Uint8Array> {
         .page-break { page-break-before: always; }
       }
     `,
-    viewport: {
-      width: 1280,
-      height: 1024
-    }
+    viewport: "1280x1024"
   }
 
   console.log('PDFShift request body:', JSON.stringify(requestBody, null, 2))
