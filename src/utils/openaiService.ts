@@ -27,17 +27,31 @@ export interface SearchSimilarCasesResult {
 
 export const searchSimilarCases = async (clientId: string): Promise<SearchSimilarCasesResult> => {
   try {
-    const result = await invokeFunction("search-similar-cases", { clientId });
+    const { data, error } = await invokeFunction("search-similar-cases", { clientId });
     
-    // Ensure the result conforms to SearchSimilarCasesResult interface
+    if (error) {
+      return { 
+        similarCases: [], 
+        error,
+        fallbackUsed: false,
+        analysisFound: false,
+        searchStrategy: "error",
+        message: "An error occurred while searching for similar cases.",
+        caseType: "legal"
+      };
+    }
+    
+    // Cast the data to the expected type and ensure all required properties exist
+    const resultData = data as any;
+    
     return {
-      similarCases: result.similarCases || [],
-      error: result.error,
-      fallbackUsed: result.fallbackUsed,
-      analysisFound: result.analysisFound,
-      searchStrategy: result.searchStrategy,
-      message: result.message,
-      caseType: result.caseType
+      similarCases: resultData?.similarCases || [],
+      error: resultData?.error,
+      fallbackUsed: resultData?.fallbackUsed,
+      analysisFound: resultData?.analysisFound,
+      searchStrategy: resultData?.searchStrategy,
+      message: resultData?.message,
+      caseType: resultData?.caseType
     };
   } catch (error: any) {
     console.error("Error in searchSimilarCases:", error);
@@ -52,4 +66,3 @@ export const searchSimilarCases = async (clientId: string): Promise<SearchSimila
     };
   }
 };
-
