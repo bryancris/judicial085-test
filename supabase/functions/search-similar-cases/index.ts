@@ -2,7 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "./utils/corsUtils.ts";
 import { intelligentCourtListenerSearch } from "./services/intelligentCourtListenerSearch.ts";
-import { getIntelligentFallbackByArea } from "./utils/intelligentFallbackCases.ts";
+import { getIntelligentFallbackByArea, generateCourtListenerSearchUrl } from "./utils/intelligentFallbackCases.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { determineFinalCaseType } from "./utils/caseTypeDetector.ts";
 
@@ -121,20 +121,32 @@ serve(async (req) => {
       console.log(`✅ Provided ${finalResults.length} intelligent fallback cases`);
     }
     
-    // Format results for frontend
-    const formattedCases = finalResults.map((result: any) => ({
-      source: "courtlistener" as const,
-      clientId: null,
-      clientName: result.caseName || result.case_name || result.clientName || "Unknown Case",
-      similarity: result.similarity || 50,
-      relevantFacts: result.snippet || result.text || result.relevantFacts || "No summary available",
-      outcome: result.outcome || `Court: ${result.court || "Unknown"}`,
-      court: result.court || result.court_name || "Unknown Court",
-      citation: result.citation?.[0] || result.citation || "No citation",
-      dateDecided: result.dateFiled || result.date_filed || result.dateDecided || null,
-      url: result.absolute_url || result.url || null,
-      agentReasoning: result.agentReasoning || "AI analysis completed"
-    }));
+    // Format results for frontend and ensure all have viewable URLs
+    const formattedCases = finalResults.map((result: any) => {
+      const caseName = result.caseName || result.case_name || result.clientName || "Unknown Case";
+      const citation = result.citation?.[0] || result.citation || "No citation";
+      
+      // Ensure the case has a viewable URL
+      let caseUrl = result.absolute_url || result.url || null;
+      if (!caseUrl || caseUrl === null) {
+        // Generate a search URL if no direct URL is available
+        caseUrl = generateCourtListenerSearchUrl(caseName, citation);
+      }
+      
+      return {
+        source: "courtlistener" as const,
+        clientId: null,
+        clientName: caseName,
+        similarity: result.similarity || 50,
+        relevantFacts: result.snippet || result.text || result.relevantFacts || "No summary available",
+        outcome: result.outcome || `Court: ${result.court || result.court_name || "Unknown"}`,
+        court: result.court || result.court_name || "Unknown Court",
+        citation: citation,
+        dateDecided: result.dateFiled || result.date_filed || result.dateDecided || null,
+        url: caseUrl,
+        agentReasoning: result.agentReasoning || "AI analysis completed"
+      };
+    });
     
     if (formattedCases.length === 0) {
       console.log("❌ No similar cases found despite fallback attempts");
