@@ -81,7 +81,7 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
         <TabsContent value="conversation" className="mt-6">
           <ConversationList 
             conversation={conversation}
-            isLoading={conversationLoading}
+            loading={conversationLoading}
           />
         </TabsContent>
 
@@ -89,17 +89,18 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
           <AttorneyNotesList 
             notes={notes}
             isLoading={notesLoading}
-            clientId={clientId}
           />
         </TabsContent>
 
         <TabsContent value="documents" className="mt-6">
           <ClientDocumentsSection
-            clientDocuments={clientDocuments}
-            isLoading={documentsLoading}
             clientId={clientId}
-            processDocument={processDocument}
-            isProcessingDocument={isProcessingDocument}
+            documents={clientDocuments}
+            isLoading={documentsLoading}
+            onProcessDocument={processDocument}
+            onDeleteDocument={async () => {}}
+            onToggleDocumentAnalysis={async () => {}}
+            isProcessing={isProcessingDocument}
           />
         </TabsContent>
       </Tabs>
