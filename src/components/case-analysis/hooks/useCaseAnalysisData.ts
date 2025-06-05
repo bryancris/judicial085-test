@@ -1,20 +1,24 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AnalysisData } from "@/hooks/useAnalysisData";
-import { ScholarlyArticle } from "@/utils/api/scholarApiService";
+import { ScholarlyArticle, searchGoogleScholar, getScholarlyReferences } from "@/utils/api/scholarApiService";
 import { ProcessDocumentContentFunction } from "@/types/caseAnalysis";
 import { extractLegalCitations, mapCitationsToKnowledgeBase, generateDirectPdfUrl } from "@/utils/lawReferences/knowledgeBaseMapping";
 import { cleanupDuplicateAnalyses } from "@/utils/duplicateCleanupService";
+import { useToast } from "@/hooks/use-toast";
 
 export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [hasUnincorporatedFindings, setHasUnincorporatedFindings] = useState(false);
+  const { toast } = useToast();
   
-  // Other state variables for scholarly references, conversation, notes, documents
+  // Scholarly references state
   const [scholarlyReferences, setScholarlyReferences] = useState<ScholarlyArticle[]>([]);
   const [isScholarlyReferencesLoading, setIsScholarlyReferencesLoading] = useState(false);
+  
+  // Other state variables for conversation, notes, documents
   const [conversation, setConversation] = useState<any[]>([]);
   const [notes, setNotes] = useState<any[]>([]);
   const [conversationLoading, setConversationLoading] = useState(false);
@@ -22,6 +26,87 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
   const [clientDocuments, setClientDocuments] = useState<any[]>([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [isProcessingDocument, setIsProcessingDocument] = useState(false);
+
+  // Auto-fetch scholarly references when analysis data is available
+  const fetchScholarlyReferences = useCallback(async (caseType?: string) => {
+    if (!clientId) return;
+    
+    setIsScholarlyReferencesLoading(true);
+    
+    try {
+      console.log("Auto-fetching scholarly references for client:", clientId, "case type:", caseType);
+      const { results, error } = await getScholarlyReferences(clientId, caseType);
+      
+      if (error) {
+        console.error("Error fetching scholarly references:", error);
+        if (error.includes("SerpAPI") || error.includes("not configured")) {
+          toast({
+            title: "Configuration Required",
+            description: "Google Scholar search requires API configuration. Contact administrator.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: `Failed to fetch scholarly references: ${error}`,
+            variant: "destructive",
+          });
+        }
+      } else {
+        console.log("Successfully fetched scholarly references:", results.length);
+        setScholarlyReferences(results);
+        if (results.length === 0) {
+          toast({
+            title: "No Results",
+            description: "No scholarly articles found for this case analysis.",
+          });
+        }
+      }
+    } catch (err: any) {
+      console.error("Exception in fetchScholarlyReferences:", err);
+      toast({
+        title: "Error",
+        description: "Failed to fetch scholarly references. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsScholarlyReferencesLoading(false);
+    }
+  }, [clientId, toast]);
+
+  // Handle manual scholarly search
+  const handleScholarSearch = useCallback(async (query: string) => {
+    setIsScholarlyReferencesLoading(true);
+    
+    try {
+      console.log("Searching scholarly references with query:", query);
+      const { results, error } = await searchGoogleScholar(query);
+      
+      if (error) {
+        console.error("Search error:", error);
+        toast({
+          title: "Search Error",
+          description: error,
+          variant: "destructive",
+        });
+      } else {
+        setScholarlyReferences(results);
+        toast({
+          title: "Search Results",
+          description: `Found ${results.length} scholarly articles related to your query.`,
+        });
+      }
+    } catch (err: any) {
+      console.error("Error searching scholarly references:", err);
+      toast({
+        title: "Search Error",
+        description: "Failed to search scholarly references. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsScholarlyReferencesLoading(false);
+    }
+  }, [toast]);
 
   // Check for unincorporated findings from case discussions
   const checkForUnincorporatedFindings = useCallback(async () => {
@@ -125,15 +210,20 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
             prosecution: 35
           },
           timestamp: analysis.timestamp || new Date().toLocaleTimeString(),
-          lawReferences: lawReferences, // Use mapped knowledge base docs with direct PDF URLs
+          lawReferences: lawReferences,
           caseType: analysis.case_type || "general",
           remedies: "",
           rawContent: analysis.content
         };
 
         setAnalysisData(transformedData);
+
+        // Auto-fetch scholarly references based on the case type
+        await fetchScholarlyReferences(analysis.case_type);
       } else {
         setAnalysisData(null);
+        // Clear scholarly references if no analysis found
+        setScholarlyReferences([]);
       }
 
       // Check for unincorporated findings after fetching analysis
@@ -145,7 +235,7 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
     } finally {
       setIsAnalysisLoading(false);
     }
-  }, [clientId, caseId, checkForUnincorporatedFindings]);
+  }, [clientId, caseId, checkForUnincorporatedFindings, fetchScholarlyReferences]);
 
   // Fetch conversation data
   const fetchConversation = useCallback(async () => {
@@ -222,21 +312,6 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
       throw error;
     } finally {
       setIsProcessingDocument(false);
-    }
-  };
-
-  // Handle scholarly search
-  const handleScholarSearch = async (query: string) => {
-    setIsScholarlyReferencesLoading(true);
-    try {
-      // Implementation for scholarly search
-      console.log("Searching scholarly articles for:", query);
-      // Add your scholarly search logic here
-      setScholarlyReferences([]);
-    } catch (error) {
-      console.error("Error searching scholarly articles:", error);
-    } finally {
-      setIsScholarlyReferencesLoading(false);
     }
   };
 
