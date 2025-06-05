@@ -1,3 +1,4 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
@@ -219,26 +220,52 @@ async function generatePDF(data: CaseAnalysisData): Promise<Uint8Array> {
   
   console.log('Sending HTML to PDFShift for conversion...')
   
+  const requestBody = {
+    source: html,
+    landscape: false,
+    format: 'A4',
+    margin: '1in',
+    wait_for: 500,
+    css: `
+      @media print {
+        body { margin: 0; padding: 20px; }
+        .page-break { page-break-before: always; }
+      }
+    `,
+    viewport: {
+      width: 1280,
+      height: 1024
+    }
+  }
+
+  console.log('PDFShift request body:', JSON.stringify(requestBody, null, 2))
+  
   const response = await fetch('https://api.pdfshift.io/v3/convert/pdf', {
     method: 'POST',
     headers: {
       'Authorization': `Basic ${btoa(`api:${pdfShiftApiKey}`)}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      source: html,
-      landscape: false,
-      format: 'A4',
-      margin: '1in',
-      print_background: true,
-      wait_for: 500, // Wait 500ms for any dynamic content
-    }),
+    body: JSON.stringify(requestBody),
   })
 
   if (!response.ok) {
     const errorText = await response.text()
-    console.error('PDFShift error:', errorText)
-    throw new Error(`PDF generation failed: ${response.status} - ${errorText}`)
+    console.error('PDFShift error response:', errorText)
+    console.error('PDFShift status:', response.status)
+    console.error('PDFShift headers:', Object.fromEntries(response.headers.entries()))
+    
+    let errorMessage = 'PDF generation failed'
+    try {
+      const errorJson = JSON.parse(errorText)
+      if (errorJson.errors) {
+        errorMessage = `PDF generation failed: ${JSON.stringify(errorJson.errors)}`
+      }
+    } catch (e) {
+      errorMessage = `PDF generation failed: ${response.status} - ${errorText}`
+    }
+    
+    throw new Error(errorMessage)
   }
 
   const pdfBuffer = await response.arrayBuffer()
