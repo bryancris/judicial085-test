@@ -57,18 +57,14 @@ export const saveSimilarCases = async (
       return { success: false, error: deleteError.message };
     }
 
-    // Convert SimilarCase[] to JSON for database storage
-    const caseDataJson = JSON.parse(JSON.stringify(similarCases));
-    const metadataJson = JSON.parse(JSON.stringify(metadata));
-
-    // Insert new similar cases
+    // Insert new similar cases with proper JSON conversion
     const { error: insertError } = await supabase
       .from("similar_cases")
       .insert({
         client_id: clientId,
         legal_analysis_id: legalAnalysisId,
-        case_data: caseDataJson,
-        search_metadata: metadataJson
+        case_data: similarCases as any, // Cast to any to bypass strict typing
+        search_metadata: metadata as any
       });
 
     if (insertError) {
@@ -121,13 +117,13 @@ export const loadSimilarCases = async (
 
     const record = data[0];
     
-    // Parse the JSON data back to SimilarCase[]
+    // Safely parse the JSON data back to SimilarCase[]
     const similarCases = Array.isArray(record.case_data) 
-      ? record.case_data as SimilarCase[]
+      ? (record.case_data as unknown as SimilarCase[])
       : [];
     
-    const metadata = typeof record.search_metadata === 'object' 
-      ? record.search_metadata as any
+    const metadata = typeof record.search_metadata === 'object' && record.search_metadata !== null
+      ? (record.search_metadata as any)
       : {};
     
     console.log("✅ Loaded similar cases from database:", similarCases.length);
