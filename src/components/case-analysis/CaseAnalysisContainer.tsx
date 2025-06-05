@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import CaseAnalysisErrorState from "./CaseAnalysisErrorState";
 import CaseAnalysisLoadingSkeleton from "./CaseAnalysisLoadingSkeleton";
@@ -66,8 +65,8 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
 
   // Wrapper to pass fetchAnalysisData and fetchSimilarCases to generation function
   const handleGenerateAnalysis = () => {
-    generateRealTimeAnalysis(() => {
-      fetchAnalysisData();
+    generateRealTimeAnalysis(async () => {
+      await fetchAnalysisData();
       // Similar cases will be auto-fetched via useEffect when analysis data updates
     });
   };
