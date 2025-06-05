@@ -2,9 +2,9 @@
 import React from "react";
 import { ProcessDocumentContentFunction } from "@/types/caseAnalysis";
 import DetailedLegalAnalysis from "../DetailedLegalAnalysis";
-import SearchSimilarCasesSection from "../SearchSimilarCasesSection";
 import LawReferencesSection from "../LawReferencesSection";
 import ScholarlyReferencesSection from "../ScholarlyReferencesSection";
+import SimilarCasesSection, { SimilarCase } from "../SimilarCasesSection";
 import { ScholarlyArticle } from "@/utils/api/scholarApiService";
 import { AnalysisData } from "@/hooks/useAnalysisData";
 
@@ -15,6 +15,10 @@ interface AnalysisTabContentProps {
   scholarlyReferences: ScholarlyArticle[];
   isScholarlyReferencesLoading: boolean;
   onScholarSearch: (query: string) => void;
+  similarCases: SimilarCase[];
+  isSimilarCasesLoading: boolean;
+  analysisFound: boolean;
+  fallbackUsed: boolean;
 }
 
 const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
@@ -23,7 +27,11 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
   clientId,
   scholarlyReferences,
   isScholarlyReferencesLoading,
-  onScholarSearch
+  onScholarSearch,
+  similarCases,
+  isSimilarCasesLoading,
+  analysisFound,
+  fallbackUsed
 }) => {
   return (
     <div className="space-y-8">
@@ -49,7 +57,13 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
       )}
 
       {/* Similar Cases with integrated Outcome Prediction */}
-      <SearchSimilarCasesSection clientId={clientId} caseType={analysisData.caseType} />
+      <SimilarCasesSection
+        similarCases={similarCases}
+        isLoading={isSimilarCasesLoading}
+        caseType={analysisData.caseType}
+        analysisFound={analysisFound}
+        fallbackUsed={fallbackUsed}
+      />
 
       {/* Scholarly Legal References - ONLY HERE AT THE BOTTOM */}
       <ScholarlyReferencesSection

@@ -1,12 +1,14 @@
 
 import React from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import AnalysisTabContent from "./AnalysisTabContent";
 import ConversationList from "../conversation/ConversationList";
 import AttorneyNotesList from "../conversation/AttorneyNotesList";
 import ClientDocumentsSection from "../documents/ClientDocumentsSection";
-import AnalysisTabContent from "./AnalysisTabContent";
+import { AnalysisData } from "@/hooks/useAnalysisData";
 import { ProcessDocumentContentFunction } from "@/types/caseAnalysis";
 import { ScholarlyArticle } from "@/utils/api/scholarApiService";
-import { AnalysisData } from "@/hooks/useAnalysisData";
+import { SimilarCase } from "../SimilarCasesSection";
 
 interface TabsContainerProps {
   selectedTab: string;
@@ -24,6 +26,10 @@ interface TabsContainerProps {
   scholarlyReferences: ScholarlyArticle[];
   isScholarlyReferencesLoading: boolean;
   onScholarSearch: (query: string) => void;
+  similarCases: SimilarCase[];
+  isSimilarCasesLoading: boolean;
+  analysisFound: boolean;
+  fallbackUsed: boolean;
 }
 
 const TabsContainer: React.FC<TabsContainerProps> = ({
@@ -41,57 +47,64 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
   isProcessingDocument,
   scholarlyReferences,
   isScholarlyReferencesLoading,
-  onScholarSearch
+  onScholarSearch,
+  similarCases,
+  isSimilarCasesLoading,
+  analysisFound,
+  fallbackUsed
 }) => {
-  // Add a dummy delete function since this component doesn't need delete functionality
-  const handleDeleteDocument = async (documentId: string) => {
-    console.log("Delete not implemented in tabs container:", documentId);
-    return { success: false, error: "Delete not available in this view" };
-  };
+  return (
+    <div className="mt-6">
+      <Tabs value={selectedTab}>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="analysis">Analysis</TabsTrigger>
+          <TabsTrigger value="conversation">Conversation</TabsTrigger>
+          <TabsTrigger value="notes">Notes</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
+        </TabsList>
 
-  // Add a dummy toggle function since this component doesn't need toggle functionality
-  const handleToggleDocumentAnalysis = async (documentId: string, includeInAnalysis: boolean) => {
-    console.log("Toggle analysis not implemented in tabs container:", documentId, includeInAnalysis);
-    return { success: false, error: "Toggle analysis not available in this view" };
-  };
+        <TabsContent value="analysis" className="mt-6">
+          <AnalysisTabContent
+            analysisData={analysisData}
+            isLoading={isLoading}
+            clientId={clientId}
+            scholarlyReferences={scholarlyReferences}
+            isScholarlyReferencesLoading={isScholarlyReferencesLoading}
+            onScholarSearch={onScholarSearch}
+            similarCases={similarCases}
+            isSimilarCasesLoading={isSimilarCasesLoading}
+            analysisFound={analysisFound}
+            fallbackUsed={fallbackUsed}
+          />
+        </TabsContent>
 
-  // Render appropriate tab content based on selectedTab
-  switch (selectedTab) {
-    case "analysis":
-      return (
-        <AnalysisTabContent
-          analysisData={analysisData}
-          isLoading={isLoading}
-          clientId={clientId}
-          scholarlyReferences={scholarlyReferences}
-          isScholarlyReferencesLoading={isScholarlyReferencesLoading}
-          onScholarSearch={onScholarSearch}
-        />
-      );
-    
-    case "conversation":
-      return <ConversationList conversation={conversation || []} loading={conversationLoading} />;
-    
-    case "notes":
-      return <AttorneyNotesList notes={notes || []} isLoading={notesLoading} />;
-    
-    case "documents":
-      return (
-        <ClientDocumentsSection
-          clientId={clientId}
-          documents={clientDocuments}
-          isLoading={documentsLoading}
-          onProcessDocument={processDocument}
-          onDeleteDocument={handleDeleteDocument}
-          onToggleDocumentAnalysis={handleToggleDocumentAnalysis}
-          isProcessing={isProcessingDocument}
-          fullView
-        />
-      );
-    
-    default:
-      return null;
-  }
+        <TabsContent value="conversation" className="mt-6">
+          <ConversationList 
+            conversation={conversation}
+            isLoading={conversationLoading}
+          />
+        </TabsContent>
+
+        <TabsContent value="notes" className="mt-6">
+          <AttorneyNotesList 
+            notes={notes}
+            isLoading={notesLoading}
+            clientId={clientId}
+          />
+        </TabsContent>
+
+        <TabsContent value="documents" className="mt-6">
+          <ClientDocumentsSection
+            clientDocuments={clientDocuments}
+            isLoading={documentsLoading}
+            clientId={clientId}
+            processDocument={processDocument}
+            isProcessingDocument={isProcessingDocument}
+          />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
 };
 
 export default TabsContainer;

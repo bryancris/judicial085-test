@@ -38,6 +38,11 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
     scholarlyReferences,
     isScholarlyReferencesLoading,
     handleScholarSearch,
+    similarCases,
+    isSimilarCasesLoading,
+    analysisFound,
+    fallbackUsed,
+    fetchSimilarCases,
     conversation,
     notes,
     conversationLoading,
@@ -59,9 +64,12 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
     }
   }, [refreshTrigger, fetchAnalysisData]);
 
-  // Wrapper to pass fetchAnalysisData to generation function
+  // Wrapper to pass fetchAnalysisData and fetchSimilarCases to generation function
   const handleGenerateAnalysis = () => {
-    generateRealTimeAnalysis(fetchAnalysisData);
+    generateRealTimeAnalysis(() => {
+      fetchAnalysisData();
+      // Similar cases will be auto-fetched via useEffect when analysis data updates
+    });
   };
 
   // Handle error state
@@ -126,6 +134,10 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
         scholarlyReferences={scholarlyReferences}
         isScholarlyReferencesLoading={isScholarlyReferencesLoading}
         onScholarSearch={handleScholarSearch}
+        similarCases={similarCases}
+        isSimilarCasesLoading={isSimilarCasesLoading}
+        analysisFound={analysisFound}
+        fallbackUsed={fallbackUsed}
       />
     </div>
   );

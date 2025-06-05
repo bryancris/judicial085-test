@@ -6,6 +6,7 @@ import { useNotesData } from "./useNotesData";
 import { useDocumentsData } from "./useDocumentsData";
 import { useUnincorporatedFindings } from "./useUnincorporatedFindings";
 import { useScholarlyReferencesData } from "./useScholarlyReferencesData";
+import { useSimilarCasesData } from "./useSimilarCasesData";
 
 export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
   // Core analysis data
@@ -23,6 +24,15 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
     fetchScholarlyReferences,
     handleScholarSearch
   } = useScholarlyReferencesData(clientId);
+
+  // Similar cases
+  const {
+    similarCases,
+    isSimilarCasesLoading,
+    analysisFound,
+    fallbackUsed,
+    fetchSimilarCases
+  } = useSimilarCasesData(clientId);
 
   // Conversation data
   const {
@@ -60,6 +70,13 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
     }
   }, [analysisData?.caseType, fetchScholarlyReferences]);
 
+  // Auto-fetch similar cases when analysis data is available
+  useEffect(() => {
+    if (analysisData?.rawContent) {
+      fetchSimilarCases();
+    }
+  }, [analysisData?.rawContent, fetchSimilarCases]);
+
   // Load data on mount
   useEffect(() => {
     const loadAllData = async () => {
@@ -82,6 +99,11 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
     scholarlyReferences,
     isScholarlyReferencesLoading,
     handleScholarSearch,
+    similarCases,
+    isSimilarCasesLoading,
+    analysisFound,
+    fallbackUsed,
+    fetchSimilarCases,
     conversation,
     notes,
     conversationLoading,
