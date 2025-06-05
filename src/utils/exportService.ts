@@ -1,6 +1,5 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
 export interface ExportOptions {
   clientId: string;
@@ -13,20 +12,39 @@ export const exportCaseAnalysis = async (options: ExportOptions): Promise<void> 
   try {
     console.log('Starting export with options:', options);
 
-    const { data, error } = await supabase.functions.invoke('export-case-analysis', {
-      body: options,
+    // Get the current session for authentication
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      throw new Error('Authentication required for export');
+    }
+
+    // Use direct fetch instead of supabase.functions.invoke to handle binary data
+    const response = await fetch(`https://ghpljdgecjmhkwkfctgy.supabase.co/functions/v1/export-case-analysis`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdocGxqZGdlY2ptaGt3a2ZjdGd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyMDEyNjIsImV4cCI6MjA2MTc3NzI2Mn0._GXOu4i6i7iITULVAWiyZnY5G7AWcuuM2A9_t5C4bUI'
+      },
+      body: JSON.stringify(options)
     });
 
-    if (error) {
-      throw new Error(error.message || 'Export failed');
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Export function error:', errorText);
+      throw new Error(`Export failed: ${response.status} - ${errorText}`);
     }
 
-    // The response should be a blob/file
-    if (data instanceof Blob) {
-      downloadFile(data, generateFilename(options));
-    } else {
-      throw new Error('Invalid response format from export service');
+    // Handle the response as a blob for binary data
+    const blob = await response.blob();
+    
+    if (blob.size === 0) {
+      throw new Error('Received empty file from export service');
     }
+
+    console.log('Export successful, file size:', blob.size);
+    downloadFile(blob, generateFilename(options));
 
   } catch (error: any) {
     console.error('Export error:', error);
