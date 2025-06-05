@@ -1,4 +1,3 @@
-
 // Generate search terms for case similarity search
 export function generateSearchTerms(content: string, caseType: string): string {
   try {
@@ -112,9 +111,12 @@ function getDefaultSearchTermsForCaseType(caseType: string): string {
     case "consumer-protection":
       return '"DTPA" "deceptive trade practices" "consumer protection" Texas';
     case "personal-injury":
-      return '"personal injury" "negligence" "damages" Texas';
+    case "premises-liability":
+      return '"premises liability" "slip and fall" "negligence" Texas';
+    case "general":
+      return '"premises liability" "negligence" "liability" Texas';
     default:
-      return `${caseType} liability Texas law`;
+      return `${caseType} liability negligence Texas`;
   }
 }
 
@@ -122,10 +124,16 @@ function getDefaultSearchTermsForCaseType(caseType: string): string {
 function extractKeyPhrases(content: string, caseType: string): string {
   const lowerContent = content.toLowerCase();
   
+  // Detect premises liability/slip and fall cases first
+  const detectedType = detectSpecificCaseType(content, caseType);
+  console.log(`🔍 Detected specific case type: ${detectedType}`);
+  
   // Start with case-specific terms based on detected type
   let caseSpecificTerms: string[] = [];
   
-  if (caseType === "consumer-protection" || caseType === "deceptive-trade") {
+  if (detectedType === "premises-liability") {
+    caseSpecificTerms = extractPremisesLiabilityTerms(content);
+  } else if (caseType === "consumer-protection" || caseType === "deceptive-trade") {
     caseSpecificTerms = extractConsumerProtectionTerms(content);
   } else if (caseType === "personal-injury") {
     caseSpecificTerms = extractPersonalInjuryTerms(content);
@@ -134,24 +142,108 @@ function extractKeyPhrases(content: string, caseType: string): string {
   } else if (caseType === "contract") {
     caseSpecificTerms = extractContractTerms(content);
   } else {
-    // Generic extraction for unknown case types
-    caseSpecificTerms = extractGenericLegalTerms(content);
+    // For "general" cases, try to detect what type they really are
+    caseSpecificTerms = extractGeneralCaseTerms(content);
   }
   
   // Extract statute references
   const statuteReferences = extractStatuteReferences(content);
   
-  // Extract case citations
-  const caseCitations = extractCaseCitations(content);
+  // Combine all terms, prioritizing broader legal concepts
+  let allTerms = [...caseSpecificTerms, ...statuteReferences];
   
-  // Combine all terms
-  let allTerms = [...statuteReferences, ...caseSpecificTerms, ...caseCitations];
+  // Add Texas for jurisdiction
+  allTerms.push("Texas");
   
   // Remove duplicates and limit to most important terms
   const uniqueTerms = [...new Set(allTerms)];
   
-  // Return top 6 terms for effective search
-  return uniqueTerms.slice(0, 6).join(" ");
+  // Return top 5 terms for effective search (broader search)
+  const finalTerms = uniqueTerms.slice(0, 5).join(" ");
+  console.log(`🎯 Final search terms for ${detectedType}: ${finalTerms}`);
+  return finalTerms;
+}
+
+// Detect specific case types from content
+function detectSpecificCaseType(content: string, originalType: string): string {
+  const lowerContent = content.toLowerCase();
+  
+  // Check for premises liability indicators
+  if (lowerContent.includes("slip") || lowerContent.includes("fall") || 
+      lowerContent.includes("fell") || lowerContent.includes("floor") ||
+      lowerContent.includes("wet") || lowerContent.includes("spill") ||
+      lowerContent.includes("store") || lowerContent.includes("premises") ||
+      lowerContent.includes("property owner") || lowerContent.includes("negligence")) {
+    return "premises-liability";
+  }
+  
+  return originalType;
+}
+
+// Extract premises liability specific terms (NEW - for slip and fall cases)
+function extractPremisesLiabilityTerms(content: string): string[] {
+  const terms = [];
+  const lowerContent = content.toLowerCase();
+  
+  // Core premises liability terms
+  terms.push('"premises liability"');
+  
+  if (lowerContent.includes("slip") || lowerContent.includes("fall") || lowerContent.includes("fell")) {
+    terms.push('"slip and fall"');
+  }
+  
+  if (lowerContent.includes("negligence")) {
+    terms.push('"negligence"');
+  }
+  
+  if (lowerContent.includes("store") || lowerContent.includes("business")) {
+    terms.push('"business premises"');
+  }
+  
+  if (lowerContent.includes("wet") || lowerContent.includes("spill")) {
+    terms.push('"dangerous condition"');
+  }
+  
+  // Always include general liability for broader search
+  terms.push('"liability"');
+  
+  console.log(`✅ Generated premises liability terms: ${terms.join(', ')}`);
+  return terms;
+}
+
+// Extract general case terms (improved for "general" case types)
+function extractGeneralCaseTerms(content: string): string[] {
+  const terms = [];
+  const lowerContent = content.toLowerCase();
+  
+  // Check for premises liability first
+  if (lowerContent.includes("slip") || lowerContent.includes("fall") || 
+      lowerContent.includes("premises") || lowerContent.includes("floor")) {
+    terms.push('"premises liability"');
+    terms.push('"slip and fall"');
+  }
+  
+  // General liability terms
+  if (lowerContent.includes("negligence")) {
+    terms.push('"negligence"');
+  }
+  
+  if (lowerContent.includes("liability")) {
+    terms.push('"liability"');
+  }
+  
+  if (lowerContent.includes("damages")) {
+    terms.push('"damages"');
+  }
+  
+  // If no specific terms found, add broad legal terms
+  if (terms.length === 0) {
+    terms.push('"negligence"');
+    terms.push('"liability"');
+  }
+  
+  console.log(`✅ Generated general case terms: ${terms.join(', ')}`);
+  return terms;
 }
 
 // Extract consumer protection specific terms
@@ -207,17 +299,6 @@ function extractContractTerms(content: string): string[] {
   return terms;
 }
 
-// Extract generic legal terms as fallback
-function extractGenericLegalTerms(content: string): string[] {
-  const terms = [];
-  const lowerContent = content.toLowerCase();
-  
-  if (lowerContent.includes("liability")) terms.push('"liability"');
-  if (lowerContent.includes("damages")) terms.push('"damages"');
-  
-  return terms;
-}
-
 // Extract case citations
 function extractCaseCitations(content: string): string[] {
   const caseCitations = [];
@@ -248,16 +329,30 @@ function extractStatuteReferences(content: string): string[] {
     statutes.push('"Texas Business Commerce Code 17.46"');
   }
   
+  // Civil Practice and Remedies Code
+  if (content.includes("75.002")) {
+    statutes.push('"Texas Civil Practice Remedies Code 75.002"');
+  }
+  
   return statutes;
 }
 
-// Add case-specific terms with priority for animal protection
+// Add case-specific terms with priority for specific case types
 export function addExplicitLegalTerms(searchTerms: string, content: string, caseType: string): string {
   console.log(`=== ADDING EXPLICIT LEGAL TERMS ===`);
   console.log(`Original terms: ${searchTerms}`);
   console.log(`Case type: ${caseType}`);
   
   const normalizedType = (caseType || "").toLowerCase().replace(/[-_\s]/g, "");
+  const lowerContent = content.toLowerCase();
+  
+  // For premises liability/slip and fall cases
+  if (normalizedType.includes("general") || normalizedType.includes("premises") || 
+      lowerContent.includes("slip") || lowerContent.includes("fall")) {
+    const premisesTerms = `${searchTerms} "premises liability" "slip and fall" "negligence" Texas`;
+    console.log(`✅ Enhanced premises liability terms: ${premisesTerms}`);
+    return premisesTerms;
+  }
   
   // For animal protection, be very specific and avoid generic terms
   if (normalizedType.includes("animal") || normalizedType.includes("protection")) {
@@ -279,5 +374,5 @@ export function addExplicitLegalTerms(searchTerms: string, content: string, case
   }
   
   // Default added terms
-  return `${searchTerms} Texas law`;
+  return `${searchTerms} Texas law liability`;
 }

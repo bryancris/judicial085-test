@@ -11,7 +11,7 @@ export function detectCaseType(content: string): string {
 
   // Initialize all possible case types
   const caseTypes = [
-    'property-law', 'hoa', 'personal-injury', 'consumer-protection', 
+    'premises-liability', 'property-law', 'hoa', 'personal-injury', 'consumer-protection', 
     'contract', 'employment', 'family', 'criminal', 'animal-protection'
   ];
   
@@ -21,9 +21,30 @@ export function detectCaseType(content: string): string {
   console.log(`Text length: ${content.length}`);
   console.log(`Sample text: ${lowerContent.substring(0, 300)}`);
 
-  // PRIORITY 1: HOA and Property Law Detection (Highest Priority)
+  // PRIORITY 1: Premises Liability Detection (NEW - Highest Priority for slip/fall)
+  if (lowerContent.includes("slip") || lowerContent.includes("fall") || lowerContent.includes("fell")) {
+    scores['premises-liability'] += 40;
+    console.log("🏢 FOUND: Slip/fall terms - Adding 40 to premises-liability");
+  }
+  
+  if (lowerContent.includes("floor") || lowerContent.includes("wet") || lowerContent.includes("spill")) {
+    scores['premises-liability'] += 30;
+    console.log("🏢 FOUND: Floor/wet/spill terms - Adding 30 to premises-liability");
+  }
+  
+  if (lowerContent.includes("store") || lowerContent.includes("business premises")) {
+    scores['premises-liability'] += 25;
+    console.log("🏢 FOUND: Store/business premises - Adding 25 to premises-liability");
+  }
+  
+  if (lowerContent.includes("premises liability") || lowerContent.includes("property owner")) {
+    scores['premises-liability'] += 35;
+    console.log("🏢 FOUND: Premises liability terms - Adding 35 to premises-liability");
+  }
+
+  // PRIORITY 2: HOA and Property Law Detection
   if (lowerContent.includes("209.006") || lowerContent.includes("209.007")) {
-    scores['property-law'] += 50; // Very high score for specific statutes
+    scores['property-law'] += 50;
     scores['hoa'] += 50;
     console.log("🏠 FOUND: Texas Property Code statutes - Adding 50 to property-law and hoa");
   }
@@ -40,18 +61,7 @@ export function detectCaseType(content: string): string {
     console.log("🏠 FOUND: HOA/Association terms - Adding 25 to property-law and hoa");
   }
 
-  if (lowerContent.includes("property code") || lowerContent.includes("texas property")) {
-    scores['property-law'] += 20;
-    console.log("🏠 FOUND: Property code references - Adding 20 to property-law");
-  }
-
-  if (lowerContent.includes("fine") && (lowerContent.includes("notice") || lowerContent.includes("violation"))) {
-    scores['property-law'] += 15;
-    scores['hoa'] += 15;
-    console.log("🏠 FOUND: Fine and notice/violation - Adding 15 to property-law and hoa");
-  }
-
-  // PRIORITY 2: Consumer Protection
+  // PRIORITY 3: Consumer Protection
   if (lowerContent.includes("dtpa") || lowerContent.includes("deceptive trade")) {
     scores['consumer-protection'] += 30;
     console.log("💼 FOUND: DTPA/deceptive trade - Adding 30 to consumer-protection");
@@ -62,26 +72,25 @@ export function detectCaseType(content: string): string {
     console.log("💼 FOUND: Business Commerce Code - Adding 25 to consumer-protection");
   }
 
-  // PRIORITY 3: Personal Injury (Only if no property/HOA indicators)
-  const hasPropertyIndicators = scores['property-law'] > 0 || scores['hoa'] > 0;
+  // PRIORITY 4: Personal Injury (Only if no premises liability indicators)
+  const hasPremisesIndicators = scores['premises-liability'] > 0;
   
-  if (!hasPropertyIndicators) {
-    if (lowerContent.includes("negligence") || lowerContent.includes("liability")) {
-      scores['personal-injury'] += 10; // Lower score to avoid conflicts
-      console.log("⚖️ FOUND: Negligence/liability (no property context) - Adding 10 to personal-injury");
+  if (!hasPremisesIndicators) {
+    if (lowerContent.includes("negligence") && !lowerContent.includes("premises")) {
+      scores['personal-injury'] += 15;
+      console.log("⚖️ FOUND: Negligence (no premises context) - Adding 15 to personal-injury");
     }
 
     if (lowerContent.includes("injury") || lowerContent.includes("damages")) {
-      scores['personal-injury'] += 8;
-      console.log("⚖️ FOUND: Injury/damages (no property context) - Adding 8 to personal-injury");
+      scores['personal-injury'] += 10;
+      console.log("⚖️ FOUND: Injury/damages (no premises context) - Adding 10 to personal-injury");
     }
   }
 
-  // PRIORITY 4: Animal Protection (Only with specific animal indicators)
+  // PRIORITY 5: Animal Protection
   const animalTerms = ['animal', 'pet', 'dog', 'cat', 'veterinary', 'cruelty'];
   const animalCount = animalTerms.filter(term => lowerContent.includes(term)).length;
   
-  // Only consider animal protection if we have multiple animal terms AND specific statutes
   if (animalCount >= 2 && (lowerContent.includes("42.092") || lowerContent.includes("42.091"))) {
     scores['animal-protection'] += animalCount * 5;
     console.log(`🐾 FOUND: ${animalCount} animal terms with animal statutes - Adding ${animalCount * 5} to animal-protection`);
@@ -102,7 +111,7 @@ export function detectCaseType(content: string): string {
 
   // Find the highest scoring type
   const maxScore = Math.max(...Object.values(scores));
-  const detectedType = Object.entries(scores).find(([_, score]) => score === maxScore)?.[0] || "general-legal-matter";
+  const detectedType = Object.entries(scores).find(([_, score]) => score === maxScore)?.[0] || "general";
   
   console.log("=== DETECTION RESULT ===");
   console.log(`Highest score: ${maxScore}`);
@@ -113,8 +122,8 @@ export function detectCaseType(content: string): string {
     console.log(`✅ CONFIDENT DETECTION: ${detectedType} (score: ${maxScore})`);
     return detectedType;
   } else {
-    console.log(`⚠️ LOW CONFIDENCE: Using general-legal-matter (highest score: ${maxScore})`);
-    return "general-legal-matter";
+    console.log(`⚠️ LOW CONFIDENCE: Using general (highest score: ${maxScore})`);
+    return "general";
   }
 }
 
@@ -134,6 +143,12 @@ export function determineFinalCaseType(
   const aiDetectedType = detectedType || detectCaseType(analysisContent);
   console.log(`Detected type from analysis content: ${aiDetectedType}`);
   console.log(`Stored case type: ${storedCaseType}`);
+
+  // For premises liability cases, always prefer the AI detection
+  if (aiDetectedType === 'premises-liability') {
+    console.log(`=== FINAL RESULT: Using detected premises liability type: ${aiDetectedType} ===`);
+    return aiDetectedType;
+  }
 
   // For property law and HOA cases, always prefer the AI detection
   if (aiDetectedType === 'property-law' || aiDetectedType === 'hoa') {

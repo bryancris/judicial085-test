@@ -36,21 +36,28 @@ export class LegalCaseAgent {
         instructions: `You are an expert legal research assistant specializing in finding similar cases. Your role is to:
 
 1. ANALYZE legal documents and case facts to extract:
-   - Key legal concepts and theories
+   - Key legal concepts and theories (focus on broad, practical terms)
    - Relevant statutes and regulations
-   - Important factual patterns
+   - Important factual patterns (especially for premises liability cases)
    - Legal issues and claims
 
-2. GENERATE sophisticated search queries for legal databases that focus on:
-   - Legal precedents and similar holdings
-   - Cases with similar fact patterns
-   - Relevant statutory interpretations
-   - Procedural similarities
+2. GENERATE practical search queries for legal databases that focus on:
+   - Common legal terminology attorneys actually use
+   - Broader legal concepts rather than overly specific technical terms
+   - Similar fact patterns (like "slip and fall" for premises liability)
+   - Relevant statutory areas
 
 3. EVALUATE case relevance by scoring based on:
-   - Legal similarity (70% weight): Similar legal issues, statutes, claims
-   - Factual similarity (20% weight): Similar circumstances and parties
+   - Legal similarity (60% weight): Similar legal issues, broad legal concepts, general liability theories
+   - Factual similarity (30% weight): Similar circumstances and incident types
    - Precedential value (10% weight): Court level and jurisdiction
+
+IMPORTANT GUIDELINES:
+- Use broader, more practical legal terms that practicing attorneys would search for
+- For premises liability cases, focus on terms like "slip and fall", "premises liability", "negligence"
+- Avoid overly technical or narrow search terms
+- Generate 3-5 search queries that cast a wider net for finding relevant cases
+- Be more inclusive in relevance scoring - cases with similar legal theories should score well even if facts differ
 
 Always provide specific, actionable legal analysis with concrete reasoning for your recommendations.`,
         model: "gpt-4o",
@@ -95,7 +102,7 @@ Always provide specific, actionable legal analysis with concrete reasoning for y
     const thread = await threadResponse.json();
     console.log(`✅ Created thread: ${thread.id}`);
 
-    // Add a message to the thread
+    // Add a message to the thread with improved prompt
     const messageResponse = await fetch(`https://api.openai.com/v1/threads/${thread.id}/messages`, {
       method: 'POST',
       headers: {
@@ -112,21 +119,28 @@ CASE TYPE: ${caseType || 'Unknown'}
 CASE CONTENT:
 ${caseContent}
 
-I need you to:
-1. Extract the key legal concepts, theories, and claims
-2. Identify relevant statutes and regulations mentioned
-3. Extract the most important factual elements
-4. Generate 3-5 sophisticated search queries for finding similar cases
-5. Provide a brief case theory summary
+I need you to generate BROADER, more practical search terms that will find relevant cases. Focus on:
 
-Focus on legal precedent and similar legal issues rather than just keyword matching.
+1. Extract the main legal concepts using terms practicing attorneys would search for
+2. Identify the core factual scenario (e.g., if someone slipped and fell, focus on "slip and fall" and "premises liability")
+3. List relevant statutes mentioned
+4. Generate 3-5 PRACTICAL search queries that cast a wider net
+
+IMPORTANT: For premises liability cases involving slips, falls, or store incidents, make sure to include terms like:
+- "slip and fall"
+- "premises liability" 
+- "negligence"
+- "store liability"
+- "dangerous condition"
 
 Please format your response clearly with sections for:
-- Legal Concepts: [list the main legal theories and claims]
-- Key Facts: [list the most important factual elements]
-- Relevant Statutes: [list any statutes or regulations mentioned]
-- Search Queries: [list 3-5 search queries for legal databases]
-- Case Theory: [brief summary of the legal theory]`
+- Legal Concepts: [broad legal theories and claims that would find similar cases]
+- Key Facts: [the most important factual elements that define the incident type]
+- Relevant Statutes: [any statutes or regulations mentioned]
+- Search Queries: [3-5 practical search queries using common legal terminology]
+- Case Theory: [brief summary of the legal theory]
+
+Focus on practical terminology that will find cases with similar legal issues, even if the specific facts vary.`
       })
     });
 
@@ -212,6 +226,7 @@ Please format your response clearly with sections for:
 
     const content = assistantMessage.content[0].text.value;
     console.log('✅ Received assistant response');
+    console.log('🔍 Agent Analysis:', content.substring(0, 500) + '...');
     
     // Parse the agent's response to extract structured data
     return this.parseAgentAnalysis(content);
@@ -250,6 +265,8 @@ Please format your response clearly with sections for:
       caseTheory: analysis.caseTheory.length > 0
     });
 
+    console.log('🔍 Generated search queries:', analysis.searchQueries);
+
     return analysis;
   }
 
@@ -280,7 +297,7 @@ Please format your response clearly with sections for:
 
         const thread = await threadResponse.json();
 
-        // Add scoring message
+        // Add scoring message with more lenient criteria
         await fetch(`https://api.openai.com/v1/threads/${thread.id}/messages`, {
           method: 'POST',
           headers: {
@@ -304,7 +321,15 @@ Court: ${foundCase.court}
 Provide:
 1. A relevance score (0-100)
 2. Brief reasoning for the score
-3. Focus on legal similarity over factual similarity
+
+SCORING GUIDELINES:
+- 80-100: Very similar legal issues and fact patterns
+- 60-79: Similar legal concepts with some factual differences
+- 40-59: Related legal areas with different facts
+- 20-39: Some legal similarity but mostly different
+- 0-19: Unrelated cases
+
+Be more generous with scoring - cases dealing with similar legal concepts (like negligence, liability, premises issues) should score at least 40+ even if specific facts differ.
 
 Format: SCORE: [number] REASONING: [explanation]`
           })
@@ -367,8 +392,10 @@ Format: SCORE: [number] REASONING: [explanation]`
               const scoreMatch = content.match(/SCORE:\s*(\d+)/i);
               const reasoningMatch = content.match(/REASONING:\s*(.*?)$/is);
               
-              const score = scoreMatch ? parseInt(scoreMatch[1]) : 50;
+              const score = scoreMatch ? parseInt(scoreMatch[1]) : 40; // Default to 40 instead of 50
               const reasoning = reasoningMatch ? reasoningMatch[1].trim() : 'Score assigned by agent';
+
+              console.log(`📊 Case "${foundCase.clientName}" scored: ${score} - ${reasoning.substring(0, 100)}...`);
 
               scoredCases.push({
                 case: foundCase,
@@ -380,17 +407,20 @@ Format: SCORE: [number] REASONING: [explanation]`
         }
       } catch (error) {
         console.error(`Error scoring case ${foundCase.clientName}:`, error);
-        // Add with default score
+        // Add with default score of 40 instead of 50
         scoredCases.push({
           case: foundCase,
-          relevanceScore: 50,
+          relevanceScore: 40,
           reasoning: 'Error in scoring - default assigned'
         });
       }
     }
 
-    // Sort by relevance score descending
-    return scoredCases.sort((a, b) => b.relevanceScore - a.relevanceScore);
+    // Sort by relevance score descending and log results
+    const sortedCases = scoredCases.sort((a, b) => b.relevanceScore - a.relevanceScore);
+    console.log(`📊 Scoring complete: ${sortedCases.length} cases scored. Top scores: ${sortedCases.slice(0, 3).map(c => c.relevanceScore).join(', ')}`);
+    
+    return sortedCases;
   }
 
   async cleanup(): Promise<void> {

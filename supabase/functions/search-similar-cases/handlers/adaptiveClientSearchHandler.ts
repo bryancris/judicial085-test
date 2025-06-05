@@ -20,10 +20,10 @@ export async function handleAdaptiveClientSearch(
     console.log(`Generated search terms: ${searchTerms}`);
     
     // Search for similar cases using the adaptive terms
-    const courtListenerResults = await handleCourtListenerSearch(searchTerms, courtListenerApiKey);
+    let courtListenerResults = await handleCourtListenerSearch(searchTerms, courtListenerApiKey);
     
     // Parse the response to check for results
-    const courtListenerData = await courtListenerResults.json();
+    let courtListenerData = await courtListenerResults.json();
     
     if (courtListenerData.similarCases && courtListenerData.similarCases.length > 0) {
       console.log(`Found ${courtListenerData.similarCases.length} similar cases via adaptive search`);
@@ -44,6 +44,8 @@ export async function handleAdaptiveClientSearch(
     // If no results found, try with broader search terms
     console.log("No results with specific terms, trying broader search...");
     const broaderTerms = generateBroaderSearchTerms(analysisResult);
+    console.log(`Broader search terms: ${broaderTerms}`);
+    
     const broaderResults = await handleCourtListenerSearch(broaderTerms, courtListenerApiKey);
     const broaderData = await broaderResults.json();
     
@@ -61,6 +63,30 @@ export async function handleAdaptiveClientSearch(
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+    
+    // If still no results, try very basic premises liability search for general cases
+    if (analysisResult.primaryLegalArea === "general" || analysisResult.primaryLegalArea === "premises-liability") {
+      console.log("Trying basic premises liability search as final attempt...");
+      const basicTerms = '"premises liability" OR "slip and fall" OR "negligence" Texas';
+      const basicResults = await handleCourtListenerSearch(basicTerms, courtListenerApiKey);
+      const basicData = await basicResults.json();
+      
+      if (basicData.similarCases && basicData.similarCases.length > 0) {
+        console.log(`Found ${basicData.similarCases.length} cases with basic premises liability search`);
+        
+        return new Response(
+          JSON.stringify({
+            similarCases: basicData.similarCases,
+            fallbackUsed: false,
+            analysisFound: true,
+            searchStrategy: "basic-premises-search",
+            legalArea: "premises-liability",
+            confidence: 0.6
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
     
     // If still no results, use intelligent fallback based on detected legal area
@@ -99,26 +125,42 @@ export async function handleAdaptiveClientSearch(
 function generateBroaderSearchTerms(analysisResult: any): string {
   const broaderTerms: string[] = [];
   
-  // Use primary legal area
-  if (analysisResult.primaryLegalArea && analysisResult.primaryLegalArea !== "general-legal-matter") {
-    const areaTerms = analysisResult.primaryLegalArea.replace(/-/g, ' ');
-    broaderTerms.push(`"${areaTerms}"`);
+  // Use primary legal area with broader interpretation
+  if (analysisResult.primaryLegalArea && analysisResult.primaryLegalArea !== "general") {
+    if (analysisResult.primaryLegalArea === "premises-liability") {
+      broaderTerms.push('"premises liability"', '"slip and fall"', '"negligence"');
+    } else {
+      const areaTerms = analysisResult.primaryLegalArea.replace(/-/g, ' ');
+      broaderTerms.push(`"${areaTerms}"`);
+    }
   }
   
-  // Add most important legal concepts
-  if (analysisResult.legalConcepts.length > 0) {
+  // Add most important legal concepts (broader terms)
+  if (analysisResult.legalConcepts && analysisResult.legalConcepts.length > 0) {
+    // Take first 2 concepts for broader search
     broaderTerms.push(`"${analysisResult.legalConcepts[0]}"`);
+    if (analysisResult.legalConcepts.length > 1) {
+      broaderTerms.push(`"${analysisResult.legalConcepts[1]}"`);
+    }
   }
   
   // Add Texas and general legal terms
-  broaderTerms.push("Texas", "law", "liability");
+  broaderTerms.push("Texas", "liability");
   
-  return broaderTerms.join(' ');
+  // If this appears to be a general case, add premises liability terms
+  if (analysisResult.primaryLegalArea === "general") {
+    broaderTerms.push('"premises liability"');
+  }
+  
+  const finalTerms = broaderTerms.join(' OR ');
+  console.log(`Generated broader terms: ${finalTerms}`);
+  return finalTerms;
 }
 
 function getIntelligentFallbackCases(legalArea: string): any[] {
   // Map AI-detected legal areas to appropriate fallback cases
   const legalAreaMap: Record<string, string> = {
+    "premises-liability": "premises-liability",
     "property-law": "real-estate",
     "real-estate": "real-estate", 
     "hoa": "real-estate",
@@ -131,7 +173,8 @@ function getIntelligentFallbackCases(legalArea: string): any[] {
     "employment-law": "employment",
     "family-law": "family",
     "criminal-law": "criminal",
-    "animal-protection": "animal-protection"
+    "animal-protection": "animal-protection",
+    "general": "premises-liability" // Default general cases to premises liability
   };
   
   const fallbackType = legalAreaMap[legalArea] || "general-liability";
