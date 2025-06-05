@@ -2,7 +2,7 @@
 import { corsHeaders } from "../utils/corsUtils.ts";
 import { analyzeCase, generateAdaptiveSearchTerms } from "../services/adaptiveCaseAnalyzer.ts";
 import { handleCourtListenerSearch } from "./courtListenerHandler.ts";
-import { getFallbackCasesByType } from "../utils/fallbackCases.ts";
+import { getFallbackCasesByType } from "../utils/intelligentFallbackCases.ts";
 
 export async function handleAdaptiveClientSearch(
   clientId: string,
