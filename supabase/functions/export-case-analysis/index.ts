@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
@@ -210,46 +209,42 @@ async function collectCaseData(supabase: any, clientId: string, caseId?: string)
 }
 
 async function generatePDF(data: CaseAnalysisData): Promise<Uint8Array> {
-  // Using Puppeteer to generate PDF from HTML
-  const puppeteer = await import('https://deno.land/x/puppeteer@16.2.0/mod.ts')
+  const pdfShiftApiKey = Deno.env.get('PDFSHIFT_API_KEY')
   
-  const browser = await puppeteer.launch({
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  })
-  
-  try {
-    const page = await browser.newPage()
-    
-    const html = generateHTMLContent(data)
-    
-    await page.setContent(html, { waitUntil: 'networkidle0' })
-    
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      margin: {
-        top: '1in',
-        right: '1in',
-        bottom: '1in',
-        left: '1in'
-      },
-      printBackground: true,
-      displayHeaderFooter: true,
-      headerTemplate: `
-        <div style="font-size: 10px; width: 100%; text-align: center;">
-          Case Analysis - ${data.client?.first_name || ''} ${data.client?.last_name || ''}
-        </div>
-      `,
-      footerTemplate: `
-        <div style="font-size: 10px; width: 100%; text-align: center;">
-          Page <span class="pageNumber"></span> of <span class="totalPages"></span>
-        </div>
-      `
-    })
-    
-    return new Uint8Array(pdfBuffer)
-  } finally {
-    await browser.close()
+  if (!pdfShiftApiKey) {
+    throw new Error('PDFShift API key not configured')
   }
+
+  const html = generateHTMLContent(data)
+  
+  console.log('Sending HTML to PDFShift for conversion...')
+  
+  const response = await fetch('https://api.pdfshift.io/v3/convert/pdf', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${btoa(`api:${pdfShiftApiKey}`)}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      source: html,
+      landscape: false,
+      format: 'A4',
+      margin: '1in',
+      print_background: true,
+      wait_for: 500, // Wait 500ms for any dynamic content
+    }),
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    console.error('PDFShift error:', errorText)
+    throw new Error(`PDF generation failed: ${response.status} - ${errorText}`)
+  }
+
+  const pdfBuffer = await response.arrayBuffer()
+  console.log('PDF generated successfully, size:', pdfBuffer.byteLength)
+  
+  return new Uint8Array(pdfBuffer)
 }
 
 async function generateWord(data: CaseAnalysisData): Promise<Uint8Array> {
@@ -430,124 +425,282 @@ function generateHTMLContent(data: CaseAnalysisData): string {
         <title>Case Analysis Report</title>
         <style>
           body {
-            font-family: 'Times New Roman', serif;
+            font-family: 'Georgia', 'Times New Roman', serif;
             line-height: 1.6;
-            color: #333;
+            color: #2c3e50;
             max-width: 800px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 40px 30px;
+            background: white;
           }
           
-          h1 {
+          .header {
+            text-align: center;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 20px;
+            margin-bottom: 40px;
+          }
+          
+          .header h1 {
             color: #2c3e50;
-            border-bottom: 2px solid #3498db;
-            padding-bottom: 10px;
+            font-size: 28px;
+            margin: 0;
+            font-weight: bold;
+          }
+          
+          .header .subtitle {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-top: 10px;
           }
           
           h2 {
-            color: #34495e;
-            margin-top: 30px;
+            color: #2c3e50;
+            font-size: 20px;
+            margin-top: 35px;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #ecf0f1;
           }
           
-          .client-info, .case-info {
+          h3 {
+            color: #34495e;
+            font-size: 16px;
+            margin-top: 25px;
+            margin-bottom: 10px;
+          }
+          
+          .info-section {
             background: #f8f9fa;
-            padding: 15px;
+            padding: 20px;
             border-left: 4px solid #3498db;
             margin: 20px 0;
+            border-radius: 0 5px 5px 0;
+          }
+          
+          .info-row {
+            margin: 8px 0;
+            display: flex;
+          }
+          
+          .info-label {
+            font-weight: bold;
+            color: #2c3e50;
+            min-width: 120px;
+            margin-right: 10px;
+          }
+          
+          .info-value {
+            color: #34495e;
+            flex: 1;
           }
           
           .analysis-content {
             background: #fff;
-            padding: 20px;
+            padding: 25px;
             border: 1px solid #ddd;
-            border-radius: 5px;
+            border-radius: 8px;
+            margin: 20px 0;
             white-space: pre-wrap;
+            font-size: 14px;
+            line-height: 1.8;
+          }
+          
+          .similar-case, .reference, .note, .document {
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
           }
           
           .similar-case {
-            margin: 10px 0;
-            padding: 10px;
             background: #f1f2f6;
-            border-radius: 3px;
+            border-left-color: #9b59b6;
           }
           
           .reference {
-            margin: 8px 0;
-            padding: 8px;
             background: #e8f4f8;
-            border-radius: 3px;
+            border-left-color: #3498db;
           }
           
           .note {
-            margin: 10px 0;
-            padding: 10px;
             background: #fff3cd;
-            border-radius: 3px;
+            border-left-color: #f39c12;
           }
           
           .document {
-            margin: 5px 0;
-            padding: 8px;
             background: #f8f9fa;
-            border-radius: 3px;
+            border-left-color: #95a5a6;
+          }
+          
+          .case-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+          }
+          
+          .case-details {
+            font-size: 14px;
+            color: #34495e;
+            margin-bottom: 8px;
+          }
+          
+          .case-outcome {
+            font-style: italic;
+            color: #7f8c8d;
+            font-size: 13px;
+          }
+          
+          .reference-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+          }
+          
+          .reference-meta {
+            color: #7f8c8d;
+            font-size: 13px;
+            margin-bottom: 8px;
+          }
+          
+          .reference-snippet {
+            color: #34495e;
+            font-size: 14px;
+          }
+          
+          .note-date {
+            font-weight: bold;
+            color: #f39c12;
+            margin-bottom: 5px;
+          }
+          
+          .note-content {
+            color: #34495e;
+          }
+          
+          .doc-name {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+          }
+          
+          .doc-meta {
+            color: #7f8c8d;
+            font-size: 13px;
+          }
+          
+          .footer {
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 1px solid #ecf0f1;
+            text-align: center;
+            font-size: 12px;
+            color: #95a5a6;
+          }
+          
+          .page-break {
+            page-break-before: always;
+          }
+          
+          @media print {
+            body { margin: 0; padding: 20px; }
+            .page-break { page-break-before: always; }
           }
         </style>
       </head>
       <body>
-        <h1>Case Analysis Report</h1>
+        <div class="header">
+          <h1>Case Analysis Report</h1>
+          <div class="subtitle">Confidential Attorney Work Product</div>
+        </div>
         
-        <div class="client-info">
+        <div class="info-section">
           <h2>Client Information</h2>
-          <p><strong>Name:</strong> ${data.client?.first_name || ''} ${data.client?.last_name || ''}</p>
-          <p><strong>Email:</strong> ${data.client?.email || 'N/A'}</p>
-          <p><strong>Phone:</strong> ${data.client?.phone || 'N/A'}</p>
-          ${data.client?.address ? `<p><strong>Address:</strong> ${data.client.address}, ${data.client.city || ''}, ${data.client.state || ''} ${data.client.zip_code || ''}</p>` : ''}
+          <div class="info-row">
+            <span class="info-label">Name:</span>
+            <span class="info-value">${data.client?.first_name || ''} ${data.client?.last_name || ''}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Email:</span>
+            <span class="info-value">${data.client?.email || 'N/A'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Phone:</span>
+            <span class="info-value">${data.client?.phone || 'N/A'}</span>
+          </div>
+          ${data.client?.address ? `
+          <div class="info-row">
+            <span class="info-label">Address:</span>
+            <span class="info-value">${data.client.address}, ${data.client.city || ''}, ${data.client.state || ''} ${data.client.zip_code || ''}</span>
+          </div>
+          ` : ''}
         </div>
         
         ${data.case ? `
-          <div class="case-info">
+          <div class="info-section">
             <h2>Case Information</h2>
-            <p><strong>Case Title:</strong> ${data.case.case_title}</p>
-            <p><strong>Case Type:</strong> ${data.case.case_type || 'N/A'}</p>
-            <p><strong>Status:</strong> ${data.case.status}</p>
-            ${data.case.case_description ? `<p><strong>Description:</strong> ${data.case.case_description}</p>` : ''}
+            <div class="info-row">
+              <span class="info-label">Case Title:</span>
+              <span class="info-value">${data.case.case_title}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Case Type:</span>
+              <span class="info-value">${data.case.case_type || 'N/A'}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Status:</span>
+              <span class="info-value">${data.case.status}</span>
+            </div>
+            ${data.case.case_description ? `
+            <div class="info-row">
+              <span class="info-label">Description:</span>
+              <span class="info-value">${data.case.case_description}</span>
+            </div>
+            ` : ''}
           </div>
         ` : ''}
         
         ${data.analysis ? `
           <h2>Legal Analysis</h2>
-          <p><strong>Case Type:</strong> ${data.analysis.case_type || 'N/A'}</p>
+          <div class="info-row">
+            <span class="info-label">Case Type:</span>
+            <span class="info-value">${data.analysis.case_type || 'N/A'}</span>
+          </div>
+          <h3>Analysis Content:</h3>
           <div class="analysis-content">${data.analysis.content || 'No analysis content available.'}</div>
         ` : ''}
         
         ${data.similarCases.length > 0 ? `
+          <div class="page-break"></div>
           <h2>Similar Cases</h2>
           ${data.similarCases.slice(0, 5).map((similarCase: any) => `
             <div class="similar-case">
-              <strong>${similarCase.clientName || 'Unknown Case'}</strong><br>
-              ${similarCase.relevantFacts || 'No details available.'}<br>
-              <em>Outcome: ${similarCase.outcome || 'Unknown'}</em>
+              <div class="case-title">${similarCase.clientName || 'Unknown Case'}</div>
+              <div class="case-details">${similarCase.relevantFacts || 'No details available.'}</div>
+              <div class="case-outcome">Outcome: ${similarCase.outcome || 'Unknown'}</div>
             </div>
           `).join('')}
         ` : ''}
         
         ${data.scholarlyReferences.length > 0 ? `
+          <div class="page-break"></div>
           <h2>Scholarly References</h2>
           ${data.scholarlyReferences.slice(0, 10).map((ref: any) => `
             <div class="reference">
-              <strong>${ref.title || 'Untitled Reference'}</strong><br>
-              ${ref.authors || 'Unknown Author'} (${ref.year || 'Unknown Year'})<br>
-              ${ref.snippet || ''}
+              <div class="reference-title">${ref.title || 'Untitled Reference'}</div>
+              <div class="reference-meta">${ref.authors || 'Unknown Author'} (${ref.year || 'Unknown Year'})</div>
+              ${ref.snippet ? `<div class="reference-snippet">${ref.snippet}</div>` : ''}
             </div>
           `).join('')}
         ` : ''}
         
         ${data.notes.length > 0 ? `
+          <div class="page-break"></div>
           <h2>Attorney Notes</h2>
           ${data.notes.map((note: any) => `
             <div class="note">
-              <strong>${new Date(note.timestamp).toLocaleDateString()}:</strong><br>
-              ${note.content}
+              <div class="note-date">${new Date(note.timestamp).toLocaleDateString()}</div>
+              <div class="note-content">${note.content}</div>
             </div>
           `).join('')}
         ` : ''}
@@ -556,14 +709,13 @@ function generateHTMLContent(data: CaseAnalysisData): string {
           <h2>Case Documents</h2>
           ${data.documents.map((doc: any) => `
             <div class="document">
-              <strong>${doc.title || 'Untitled Document'}</strong><br>
-              Status: ${doc.processing_status || 'Unknown'} | 
-              Created: ${new Date(doc.created_at).toLocaleDateString()}
+              <div class="doc-name">${doc.title || 'Untitled Document'}</div>
+              <div class="doc-meta">Status: ${doc.processing_status || 'Unknown'} | Created: ${new Date(doc.created_at).toLocaleDateString()}</div>
             </div>
           `).join('')}
         ` : ''}
         
-        <div style="margin-top: 50px; text-align: center; font-size: 12px; color: #666;">
+        <div class="footer">
           <p>Generated on ${new Date().toLocaleDateString()} | Confidential Attorney Work Product</p>
         </div>
       </body>
