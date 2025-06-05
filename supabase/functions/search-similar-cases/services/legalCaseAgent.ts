@@ -59,6 +59,19 @@ IMPORTANT GUIDELINES:
 - Generate 3-5 search queries that cast a wider net for finding relevant cases
 - Be more inclusive in relevance scoring - cases with similar legal theories should score well even if facts differ
 
+CRITICAL OUTPUT FORMAT REQUIREMENTS:
+- Format your response in clear sections with these exact headers:
+- Legal Concepts: [list concepts separated by commas]
+- Key Facts: [list facts separated by commas]
+- Relevant Statutes: [list statutes separated by commas]
+- Search Queries: [list queries separated by commas]
+- Case Theory: [brief summary]
+
+- DO NOT use bullet points, markdown formatting, or numbered lists
+- Each section should have items separated by commas only
+- Keep search queries simple and practical
+- Example search query: premises liability Texas, slip and fall negligence, dangerous condition liability
+
 Always provide specific, actionable legal analysis with concrete reasoning for your recommendations.`,
         model: "gpt-4o",
         tools: []
@@ -133,12 +146,13 @@ IMPORTANT: For premises liability cases involving slips, falls, or store inciden
 - "store liability"
 - "dangerous condition"
 
-Please format your response clearly with sections for:
-- Legal Concepts: [broad legal theories and claims that would find similar cases]
-- Key Facts: [the most important factual elements that define the incident type]
-- Relevant Statutes: [any statutes or regulations mentioned]
-- Search Queries: [3-5 practical search queries using common legal terminology]
-- Case Theory: [brief summary of the legal theory]
+CRITICAL: Format your response EXACTLY like this (no bullets, no numbers, no markdown):
+
+Legal Concepts: premises liability, negligence, dangerous condition, duty of care
+Key Facts: slip and fall, wet floor, store premises, customer injury
+Relevant Statutes: Texas Civil Practice Remedies Code 75.002
+Search Queries: premises liability Texas, slip and fall negligence, store liability dangerous condition, premises duty care Texas, negligence wet floor liability
+Case Theory: Premises liability case involving store owner duty to maintain safe conditions
 
 Focus on practical terminology that will find cases with similar legal issues, even if the specific facts vary.`
       })
@@ -229,33 +243,54 @@ Focus on practical terminology that will find cases with similar legal issues, e
     console.log('🔍 Agent Analysis:', content.substring(0, 500) + '...');
     
     // Parse the agent's response to extract structured data
-    return this.parseAgentAnalysis(content);
+    return this.parseAgentAnalysis(content, caseContent, caseType);
   }
 
-  private parseAgentAnalysis(content: string): AgentAnalysis {
+  private parseAgentAnalysis(content: string, caseContent: string, caseType?: string): AgentAnalysis {
     console.log('Parsing agent analysis...');
     
-    // Extract structured information from the agent's response
-    const legalConceptsMatch = content.match(/(?:legal concepts?|claims?|theories?):\s*[:\-]?\s*(.*?)(?:\n\n|\n(?=[A-Z])|$)/is);
-    const factsMatch = content.match(/(?:key facts?|factual elements?):\s*[:\-]?\s*(.*?)(?:\n\n|\n(?=[A-Z])|$)/is);
-    const statutesMatch = content.match(/(?:statutes?|regulations?):\s*[:\-]?\s*(.*?)(?:\n\n|\n(?=[A-Z])|$)/is);
-    const queriesMatch = content.match(/(?:search queries?|queries?):\s*[:\-]?\s*(.*?)(?:\n\n|\n(?=[A-Z])|$)/is);
-    const theoryMatch = content.match(/(?:case theory|theory|summary):\s*[:\-]?\s*(.*?)(?:\n\n|\n(?=[A-Z])|$)/is);
+    // Extract structured information from the agent's response with improved parsing
+    const legalConceptsMatch = content.match(/Legal Concepts?:\s*(.*?)(?:\n|$)/i);
+    const factsMatch = content.match(/Key Facts?:\s*(.*?)(?:\n|$)/i);
+    const statutesMatch = content.match(/(?:Relevant )?Statutes?:\s*(.*?)(?:\n|$)/i);
+    const queriesMatch = content.match(/Search Queries?:\s*(.*?)(?:\n|$)/i);
+    const theoryMatch = content.match(/Case Theory:\s*(.*?)(?:\n|$)/i);
 
     const parseList = (text: string): string[] => {
-      return text.split(/[,\n\-•]/)
+      if (!text) return [];
+      
+      return text.split(/[,\n]/)
         .map(item => item.trim())
-        .filter(item => item.length > 0 && !item.match(/^\d+\.?\s*$/))
+        .filter(item => {
+          // Filter out empty items, markdown formatting, and invalid characters
+          return item.length > 0 && 
+                 !item.match(/^\*+$/) && 
+                 !item.match(/^-+$/) && 
+                 !item.match(/^\d+\.?\s*$/) &&
+                 item !== "**" &&
+                 item.length < 200; // Reasonable length limit
+        })
         .slice(0, 10); // Limit to 10 items
     };
 
-    const analysis = {
+    let analysis = {
       legalConcepts: legalConceptsMatch ? parseList(legalConceptsMatch[1]) : [],
       keyFacts: factsMatch ? parseList(factsMatch[1]) : [],
       relevantStatutes: statutesMatch ? parseList(statutesMatch[1]) : [],
       searchQueries: queriesMatch ? parseList(queriesMatch[1]) : [],
       caseTheory: theoryMatch ? theoryMatch[1].trim() : ''
     };
+
+    // FALLBACK: If agent parsing failed or produced invalid queries, generate backup searches
+    if (analysis.searchQueries.length === 0 || analysis.searchQueries.some(q => q.includes("**") || q.length < 3)) {
+      console.log('⚠️ Agent parsing failed or produced invalid queries, generating fallback searches...');
+      analysis.searchQueries = this.generateFallbackSearchQueries(caseContent, caseType, analysis.legalConcepts, analysis.keyFacts);
+    }
+
+    // Ensure we have at least some basic legal concepts if none were extracted
+    if (analysis.legalConcepts.length === 0) {
+      analysis.legalConcepts = this.extractBasicLegalConcepts(caseContent, caseType);
+    }
 
     console.log('✅ Parsed analysis:', {
       legalConcepts: analysis.legalConcepts.length,
@@ -268,6 +303,96 @@ Focus on practical terminology that will find cases with similar legal issues, e
     console.log('🔍 Generated search queries:', analysis.searchQueries);
 
     return analysis;
+  }
+
+  private generateFallbackSearchQueries(caseContent: string, caseType?: string, legalConcepts?: string[], keyFacts?: string[]): string[] {
+    console.log('🔄 Generating fallback search queries...');
+    
+    const queries: string[] = [];
+    const lowerContent = caseContent.toLowerCase();
+    const normalizedType = (caseType || "").toLowerCase().replace(/[-_\s]/g, "");
+
+    // For premises liability cases
+    if (normalizedType.includes("premises") || normalizedType.includes("general") ||
+        lowerContent.includes("slip") || lowerContent.includes("fall") ||
+        lowerContent.includes("store") || lowerContent.includes("premises")) {
+      queries.push("premises liability Texas");
+      queries.push("slip and fall negligence");
+      queries.push("dangerous condition liability");
+      queries.push("store owner duty care");
+    }
+
+    // For consumer protection cases
+    if (normalizedType.includes("consumer") || lowerContent.includes("dtpa") || lowerContent.includes("deceptive")) {
+      queries.push("DTPA Texas consumer protection");
+      queries.push("deceptive trade practices");
+    }
+
+    // For personal injury cases
+    if (normalizedType.includes("personal") || normalizedType.includes("injury") || lowerContent.includes("negligence")) {
+      queries.push("personal injury negligence Texas");
+      queries.push("liability damages");
+    }
+
+    // For animal protection cases
+    if (normalizedType.includes("animal") || lowerContent.includes("animal") || lowerContent.includes("pet")) {
+      queries.push("animal cruelty Texas Penal Code");
+      queries.push("pet boarding negligence liability");
+    }
+
+    // Generic fallback if no specific type detected
+    if (queries.length === 0) {
+      queries.push("negligence liability Texas");
+      queries.push("civil liability damages");
+      queries.push("tort law Texas");
+    }
+
+    // Add from extracted concepts if available
+    if (legalConcepts && legalConcepts.length > 0) {
+      const conceptQuery = legalConcepts.slice(0, 2).join(" ") + " Texas";
+      if (!queries.includes(conceptQuery)) {
+        queries.push(conceptQuery);
+      }
+    }
+
+    console.log(`✅ Generated ${queries.length} fallback search queries:`, queries);
+    return queries.slice(0, 5); // Limit to 5 queries
+  }
+
+  private extractBasicLegalConcepts(caseContent: string, caseType?: string): string[] {
+    const concepts: string[] = [];
+    const lowerContent = caseContent.toLowerCase();
+    const normalizedType = (caseType || "").toLowerCase();
+
+    // Extract based on content analysis
+    if (lowerContent.includes("premises") || lowerContent.includes("slip") || lowerContent.includes("fall")) {
+      concepts.push("premises liability", "negligence", "duty of care");
+    }
+    
+    if (lowerContent.includes("negligence")) {
+      concepts.push("negligence", "liability");
+    }
+    
+    if (lowerContent.includes("contract")) {
+      concepts.push("contract law", "breach of contract");
+    }
+    
+    if (lowerContent.includes("dtpa") || lowerContent.includes("deceptive")) {
+      concepts.push("consumer protection", "deceptive trade practices");
+    }
+
+    // Fallback based on case type
+    if (concepts.length === 0) {
+      if (normalizedType.includes("premises")) {
+        concepts.push("premises liability", "negligence");
+      } else if (normalizedType.includes("consumer")) {
+        concepts.push("consumer protection", "DTPA");
+      } else {
+        concepts.push("liability", "negligence");
+      }
+    }
+
+    return concepts;
   }
 
   async scoreCaseRelevance(originalCase: string, foundCases: any[]): Promise<ScoredCase[]> {
@@ -322,14 +447,14 @@ Provide:
 1. A relevance score (0-100)
 2. Brief reasoning for the score
 
-SCORING GUIDELINES:
-- 80-100: Very similar legal issues and fact patterns
-- 60-79: Similar legal concepts with some factual differences
-- 40-59: Related legal areas with different facts
-- 20-39: Some legal similarity but mostly different
-- 0-19: Unrelated cases
+SCORING GUIDELINES (UPDATED - MORE LENIENT):
+- 70-100: Very similar legal issues and fact patterns
+- 50-69: Similar legal concepts with some factual differences
+- 30-49: Related legal areas with different facts
+- 15-29: Some legal similarity but mostly different
+- 0-14: Unrelated cases
 
-Be more generous with scoring - cases dealing with similar legal concepts (like negligence, liability, premises issues) should score at least 40+ even if specific facts differ.
+Be more generous with scoring - cases dealing with similar legal concepts (like negligence, liability, premises issues) should score at least 30+ even if specific facts differ.
 
 Format: SCORE: [number] REASONING: [explanation]`
           })
@@ -392,7 +517,7 @@ Format: SCORE: [number] REASONING: [explanation]`
               const scoreMatch = content.match(/SCORE:\s*(\d+)/i);
               const reasoningMatch = content.match(/REASONING:\s*(.*?)$/is);
               
-              const score = scoreMatch ? parseInt(scoreMatch[1]) : 40; // Default to 40 instead of 50
+              const score = scoreMatch ? parseInt(scoreMatch[1]) : 30; // Default to 30 instead of 40
               const reasoning = reasoningMatch ? reasoningMatch[1].trim() : 'Score assigned by agent';
 
               console.log(`📊 Case "${foundCase.clientName}" scored: ${score} - ${reasoning.substring(0, 100)}...`);
@@ -407,10 +532,10 @@ Format: SCORE: [number] REASONING: [explanation]`
         }
       } catch (error) {
         console.error(`Error scoring case ${foundCase.clientName}:`, error);
-        // Add with default score of 40 instead of 50
+        // Add with default score of 30 instead of 40
         scoredCases.push({
           case: foundCase,
-          relevanceScore: 40,
+          relevanceScore: 30,
           reasoning: 'Error in scoring - default assigned'
         });
       }

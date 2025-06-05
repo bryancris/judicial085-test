@@ -1,203 +1,167 @@
 
-import { AgentAnalysis } from './legalCaseAgent.ts';
+import { LegalCaseAgent, AgentAnalysis } from "./legalCaseAgent.ts";
 
 export interface CourtListenerSearchResult {
-  id: string;
-  caseName: string;
-  court: string;
-  citation: string;
-  dateFiled: string;
-  snippet: string;
-  absoluteUrl: string;
-  relevantFacts?: string;
-  outcome?: string;
+  results: any[];
+  searchQueries: string[];
+  agentAnalysis?: AgentAnalysis;
 }
 
-export class IntelligentCourtListenerSearch {
-  private courtListenerApiKey: string;
-
-  constructor(courtListenerApiKey: string) {
-    this.courtListenerApiKey = courtListenerApiKey;
-  }
-
-  async searchWithAgentQueries(analysis: AgentAnalysis): Promise<CourtListenerSearchResult[]> {
-    console.log('=== INTELLIGENT COURTLISTENER SEARCH START ===');
-    console.log(`Agent provided ${analysis.searchQueries.length} search queries`);
+export async function intelligentCourtListenerSearch(
+  analysisContent: string,
+  caseType: string,
+  openaiApiKey: string,
+  courtListenerApiKey: string
+): Promise<CourtListenerSearchResult> {
+  console.log("=== INTELLIGENT COURTLISTENER SEARCH START ===");
+  
+  try {
+    console.log("🤖 USING AI AGENT-POWERED SEARCH");
     
-    const allResults: CourtListenerSearchResult[] = [];
+    // Step 1: Analyze the case with AI agent
+    console.log("Step 1: Analyzing case with AI agent...");
+    const agent = new LegalCaseAgent(openaiApiKey);
+    const agentAnalysis = await agent.analyzeCaseForSimilarity(analysisContent, caseType);
     
-    // Try each search query from the agent
-    for (let i = 0; i < analysis.searchQueries.length && i < 3; i++) {
-      const query = analysis.searchQueries[i];
+    console.log(`Agent analysis complete: { legalConcepts: ${agentAnalysis.legalConcepts.length}, keyFacts: ${agentAnalysis.keyFacts.length}, searchQueries: ${agentAnalysis.searchQueries.length} }`);
+    
+    // Step 2: Use agent's search queries to search CourtListener
+    console.log("Step 2: Searching CourtListener with agent queries...");
+    console.log(`Agent provided ${agentAnalysis.searchQueries.length} search queries`);
+    
+    const allResults: any[] = [];
+    const searchQueries: string[] = [];
+    
+    for (let i = 0; i < agentAnalysis.searchQueries.length; i++) {
+      const query = agentAnalysis.searchQueries[i];
+      
+      // Skip invalid queries
+      if (!query || query.trim().length < 3 || query.includes("**")) {
+        console.log(`⚠️ Skipping invalid query: "${query}"`);
+        continue;
+      }
+      
       console.log(`Executing search query ${i + 1}: ${query}`);
       
       try {
-        const results = await this.executeSearch(query);
-        console.log(`Query ${i + 1} returned ${results.length} results`);
-        allResults.push(...results);
+        const queryResults = await searchCourtListener(query, courtListenerApiKey);
+        console.log(`Query ${i + 1} returned ${queryResults.length} results`);
+        
+        allResults.push(...queryResults);
+        searchQueries.push(query);
+        
+        // Add delay between requests to avoid rate limiting
+        if (i < agentAnalysis.searchQueries.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
       } catch (error) {
-        console.error(`Error in search query ${i + 1}:`, error);
+        console.error(`Error executing query ${i + 1}:`, error);
+        continue;
       }
     }
-
-    // Deduplicate results by case name and citation
-    const uniqueResults = this.deduplicateResults(allResults);
+    
+    // Remove duplicates based on opinion ID or case name
+    const uniqueResults = deduplicateResults(allResults);
     console.log(`After deduplication: ${uniqueResults.length} unique results`);
     
-    return uniqueResults.slice(0, 15); // Limit to 15 results for agent scoring
-  }
-
-  private async executeSearch(query: string): Promise<CourtListenerSearchResult[]> {
-    const queryParams = new URLSearchParams({
-      q: query,
-      order_by: 'score desc',
-      type: 'o', // opinions
-      format: 'json'
-    });
+    // Step 3: Score and filter results using the agent
+    let validatedCases: any[] = [];
     
-    const url = `https://www.courtlistener.com/api/rest/v4/search/?${queryParams.toString()}`;
+    if (uniqueResults.length > 0) {
+      console.log("Step 3: Scoring cases with AI agent...");
+      
+      try {
+        const scoredCases = await agent.scoreCaseRelevance(analysisContent, uniqueResults);
+        
+        // Filter cases with score >= 30 (lowered from 40)
+        validatedCases = scoredCases
+          .filter(scored => scored.relevanceScore >= 30)
+          .map(scored => ({
+            ...scored.case,
+            similarity: scored.relevanceScore,
+            agentReasoning: scored.reasoning
+          }));
+        
+        console.log(`Found ${validatedCases.length} cases with relevance score >= 30`);
+      } catch (error) {
+        console.error("Error in AI scoring, using all results:", error);
+        // Fallback: use all results with default scoring
+        validatedCases = uniqueResults.map(result => ({
+          ...result,
+          similarity: 50,
+          agentReasoning: "Default score - AI scoring failed"
+        }));
+      }
+    }
+    
+    // Clean up the agent
+    await agent.cleanup();
+    
+    console.log(`Found ${validatedCases.length} validated cases from CourtListener`);
+    
+    return {
+      results: validatedCases,
+      searchQueries: searchQueries,
+      agentAnalysis: agentAnalysis
+    };
+    
+  } catch (error) {
+    console.error("Error in intelligent CourtListener search:", error);
+    return {
+      results: [],
+      searchQueries: [],
+      agentAnalysis: undefined
+    };
+  }
+}
+
+async function searchCourtListener(query: string, apiKey: string): Promise<any[]> {
+  try {
+    const encodedQuery = encodeURIComponent(query);
+    const url = `https://www.courtlistener.com/api/rest/v3/search/?q=${encodedQuery}&type=o&stat_Precedential=on&court=tex,texapp,texcrimapp,texjpml&page_size=10`;
+    
+    console.log(`🔍 Searching CourtListener: ${query}`);
+    console.log(`📍 URL: ${url}`);
     
     const response = await fetch(url, {
       headers: {
-        'Authorization': `Token ${this.courtListenerApiKey}`,
-        'Content-Type': 'application/json'
+        'Authorization': `Token ${apiKey}`,
+        'User-Agent': 'LegalAnalysis/1.0'
       }
     });
-
+    
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`CourtListener API error: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    
-    if (!data.results || data.results.length === 0) {
+      console.error(`CourtListener API error: ${response.status} - ${errorText}`);
       return [];
     }
-
-    // Process and enhance results
-    const results: CourtListenerSearchResult[] = [];
     
-    for (const result of data.results.slice(0, 10)) {
-      try {
-        // Get more detailed information if available
-        let relevantFacts = result.snippet || '';
-        let outcome = '';
-        
-        // Try to get the full opinion text for better analysis
-        const opinionId = result.id || result.resource_uri?.split('/').filter(Boolean).pop();
-        if (opinionId) {
-          try {
-            const opinionUrl = `https://www.courtlistener.com/api/rest/v4/opinions/${opinionId}/`;
-            const opinionResponse = await fetch(opinionUrl, {
-              headers: {
-                'Authorization': `Token ${this.courtListenerApiKey}`,
-                'Content-Type': 'application/json'
-              }
-            });
-            
-            if (opinionResponse.ok) {
-              const opinionData = await opinionResponse.json();
-              if (opinionData.plain_text) {
-                relevantFacts = this.extractRelevantFacts(opinionData.plain_text, query);
-                outcome = this.extractOutcome(opinionData.plain_text);
-              }
-            }
-          } catch (opinionError) {
-            console.log(`Could not fetch opinion details for ${opinionId}:`, opinionError);
-          }
-        }
-
-        results.push({
-          id: result.id || `case_${Date.now()}_${Math.random()}`,
-          caseName: result.caseName || result.case_name || 'Unknown Case',
-          court: result.court_name || result.court || 'Court of Record',
-          citation: result.citation || 'No citation available',
-          dateFiled: result.dateFiled || result.date_filed || 'Unknown date',
-          snippet: result.snippet || '',
-          absoluteUrl: result.absolute_url || result.absolute_uri || '',
-          relevantFacts,
-          outcome
-        });
-      } catch (resultError) {
-        console.error('Error processing individual result:', resultError);
-      }
-    }
+    const data = await response.json();
+    console.log(`✅ CourtListener returned ${data.results?.length || 0} results for query: ${query}`);
     
-    return results;
+    return data.results || [];
+  } catch (error) {
+    console.error(`Error searching CourtListener for "${query}":`, error);
+    return [];
   }
+}
 
-  private extractRelevantFacts(opinionText: string, searchQuery: string): string {
-    if (!opinionText) return '';
+function deduplicateResults(results: any[]): any[] {
+  const seen = new Set<string>();
+  const unique: any[] = [];
+  
+  for (const result of results) {
+    // Create a unique key based on opinion ID, case name, or snippet
+    const key = result.id || 
+                result.caseName || 
+                result.snippet?.substring(0, 100) || 
+                JSON.stringify(result).substring(0, 100);
     
-    // Split into paragraphs and find most relevant ones
-    const paragraphs = opinionText.split(/\n\n+/);
-    const queryTerms = searchQuery.toLowerCase().split(/\W+/).filter(term => term.length > 3);
-    
-    const scoredParagraphs = paragraphs.map(paragraph => {
-      const paraLower = paragraph.toLowerCase();
-      let score = 0;
-      
-      queryTerms.forEach(term => {
-        const matches = (paraLower.match(new RegExp(term, 'g')) || []).length;
-        score += matches;
-      });
-      
-      return { paragraph, score };
-    });
-    
-    scoredParagraphs.sort((a, b) => b.score - a.score);
-    
-    // Get the best paragraph
-    if (scoredParagraphs.length > 0 && scoredParagraphs[0].score > 0) {
-      const bestParagraph = scoredParagraphs[0].paragraph;
-      return bestParagraph.length > 400 ? bestParagraph.substring(0, 397) + '...' : bestParagraph;
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(result);
     }
-    
-    return opinionText.length > 300 ? opinionText.substring(0, 297) + '...' : opinionText;
   }
-
-  private extractOutcome(opinionText: string): string {
-    if (!opinionText) return 'Outcome details not available';
-    
-    const conclusionKeywords = [
-      'therefore', 'accordingly', 'thus', 'we conclude', 'we hold',
-      'we affirm', 'we reverse', 'judgment is', 'we find', 'we rule'
-    ];
-    
-    const paragraphs = opinionText.split(/\n\n+/);
-    
-    // Look in the last few paragraphs for conclusion
-    for (let i = Math.max(0, paragraphs.length - 5); i < paragraphs.length; i++) {
-      const para = paragraphs[i].toLowerCase();
-      
-      for (const keyword of conclusionKeywords) {
-        if (para.includes(keyword)) {
-          const sentences = paragraphs[i].split(/\.\s+/);
-          for (const sentence of sentences) {
-            if (sentence.toLowerCase().includes(keyword)) {
-              return sentence.trim() + '.';
-            }
-          }
-        }
-      }
-    }
-    
-    return 'Case outcome details not available in excerpt';
-  }
-
-  private deduplicateResults(results: CourtListenerSearchResult[]): CourtListenerSearchResult[] {
-    const seen = new Set<string>();
-    const unique: CourtListenerSearchResult[] = [];
-    
-    for (const result of results) {
-      const key = `${result.caseName}_${result.citation}`.toLowerCase();
-      if (!seen.has(key)) {
-        seen.add(key);
-        unique.push(result);
-      }
-    }
-    
-    return unique;
-  }
+  
+  return unique;
 }
