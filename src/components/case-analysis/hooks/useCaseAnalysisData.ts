@@ -70,12 +70,9 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
     }
   }, [analysisData?.caseType, fetchScholarlyReferences]);
 
-  // Auto-fetch similar cases when analysis data is available
-  useEffect(() => {
-    if (analysisData?.rawContent) {
-      fetchSimilarCases();
-    }
-  }, [analysisData?.rawContent, fetchSimilarCases]);
+  // REMOVED: Auto-fetch similar cases when analysis data is available
+  // This was causing unnecessary API calls on tab switches and re-renders
+  // Similar cases will now only be fetched when analysis is explicitly generated
 
   // Load data on mount
   useEffect(() => {
