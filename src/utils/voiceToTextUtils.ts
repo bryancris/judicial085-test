@@ -1,39 +1,5 @@
 
-// Voice to text utilities using Web Speech API with proper permission handling
-
-/**
- * Request microphone permissions explicitly
- */
-const requestMicrophonePermission = async (): Promise<boolean> => {
-  try {
-    console.log("Requesting microphone permission...");
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    // Stop the stream immediately as we only needed permission
-    stream.getTracks().forEach(track => track.stop());
-    console.log("Microphone permission granted");
-    return true;
-  } catch (error: any) {
-    console.error("Microphone permission denied or unavailable:", error);
-    return false;
-  }
-};
-
-/**
- * Check if microphone permissions are available
- */
-const checkMicrophonePermissions = async (): Promise<boolean> => {
-  try {
-    // Try to get permission state if available
-    if ('permissions' in navigator) {
-      const permission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-      return permission.state === 'granted';
-    }
-    return true; // Assume available if we can't check
-  } catch (error) {
-    console.log('Permission check not available, will try direct access');
-    return true;
-  }
-};
+// Voice to text utilities using Web Speech API
 
 /**
  * Handles speech recognition using the browser's Web Speech API
@@ -53,13 +19,6 @@ export const useSpeechRecognition = () => {
     }
 
     console.log("Starting speech recognition process...");
-
-    // First, try to get microphone permission
-    const hasPermission = await requestMicrophonePermission();
-    if (!hasPermission) {
-      onErrorCallback("Microphone access is required for voice input. Please allow microphone access when prompted and try again.");
-      return { stop: () => {} };
-    }
 
     // Use the appropriate speech recognition API
     const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
