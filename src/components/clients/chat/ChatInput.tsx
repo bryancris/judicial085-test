@@ -1,11 +1,10 @@
 
-import React, { useState, useEffect, useRef } from "react";
-import { Send, Loader2, Mic, MicOff } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
-import { useSpeechRecognition } from "@/utils/voiceToTextUtils";
+import React from "react";
+import { useChatInputState } from "@/hooks/useChatInputState";
+import { useVoiceInput } from "@/hooks/useVoiceInput";
+import InterviewModeToggle from "./InterviewModeToggle";
+import TabSelector from "./TabSelector";
+import MessageTextArea from "./MessageTextArea";
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -26,135 +25,19 @@ const ChatInput = ({
   interviewMode,
   onInterviewModeChange
 }: ChatInputProps) => {
-  const [message, setMessage] = useState("");
-  const [isRecording, setIsRecording] = useState(false);
-  const [isRequestingPermission, setIsRequestingPermission] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { toast } = useToast();
-  const stopRecordingRef = useRef<{ stop: () => void } | null>(null);
-  
-  const { isSupported, startRecording } = useSpeechRecognition();
-  
-  // Update message when prefilledMessage changes
-  useEffect(() => {
-    if (prefilledMessage && prefilledMessage.trim() !== "") {
-      console.log("Setting prefilled message:", prefilledMessage);
-      setMessage(prefilledMessage);
-      
-      // Focus the textarea when prefilled message changes
-      if (textareaRef.current) {
-        textareaRef.current.focus();
-        
-        // Set cursor at the end of the text
-        const length = prefilledMessage.length;
-        textareaRef.current.setSelectionRange(length, length);
-      }
-    }
-  }, [prefilledMessage]);
+  const {
+    message,
+    setMessage,
+    textareaRef,
+    handleSendMessage,
+    handleKeyDown
+  } = useChatInputState({ prefilledMessage });
 
-  // Clean up recording on component unmount
-  useEffect(() => {
-    return () => {
-      if (stopRecordingRef.current) {
-        stopRecordingRef.current.stop();
-      }
-    };
-  }, []);
-
-  const handleSendMessage = () => {
-    if (message.trim()) {
-      onSendMessage(message);
-      setMessage("");
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
-  const toggleRecording = async () => {
-    if (isRecording) {
-      // Stop recording
-      if (stopRecordingRef.current) {
-        stopRecordingRef.current.stop();
-        stopRecordingRef.current = null;
-      }
-      setIsRecording(false);
-    } else {
-      // Start recording
-      if (!isSupported) {
-        toast({
-          title: "Voice Input Not Available",
-          description: "Your browser doesn't support voice input. Please use Chrome, Edge, or Safari for voice features.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setIsRequestingPermission(true);
-
-      try {
-        const recorder = await startRecording(
-          (text) => {
-            setMessage(text);
-          },
-          (error) => {
-            console.error("Voice recording error:", error);
-            toast({
-              title: "Voice Input Error",
-              description: error,
-              variant: "destructive",
-            });
-            setIsRecording(false);
-            setIsRequestingPermission(false);
-          },
-          () => {
-            // This callback is called only when recording actually starts
-            setIsRequestingPermission(false);
-            setIsRecording(true);
-            toast({
-              title: "Voice Input Active",
-              description: "Speak now. Your words will appear in the text field.",
-            });
-          }
-        );
-        
-        if (recorder) {
-          stopRecordingRef.current = recorder;
-        } else {
-          setIsRequestingPermission(false);
-        }
-      } catch (error: any) {
-        console.error("Failed to start voice recording:", error);
-        setIsRequestingPermission(false);
-        toast({
-          title: "Voice Input Failed",
-          description: error.message || "Unable to start voice input. Please try again.",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
-  // Vibrant colors for active tabs
-  const getTabStyle = (tab: "attorney" | "client") => {
-    if (!interviewMode) {
-      return "bg-transparent text-muted-foreground opacity-50 cursor-not-allowed";
-    }
-    
-    if (tab === activeTab) {
-      return tab === "attorney" 
-        ? "bg-[#0EA5E9] text-white" 
-        : "bg-[#8B5CF6] text-white";
-    }
-    return "bg-transparent";
-  };
-
-  // Show microphone button for both attorney and client tabs
-  const showMicButton = !isLoading;
+  const {
+    isRecording,
+    isRequestingPermission,
+    toggleRecording
+  } = useVoiceInput();
 
   // Get placeholder text based on mode
   const getPlaceholderText = () => {
@@ -180,109 +63,45 @@ const ChatInput = ({
     return activeTab === "attorney" ? "bg-[#0EA5E9] hover:bg-[#0EA5E9]/90" : "bg-[#8B5CF6] hover:bg-[#8B5CF6]/90";
   };
 
+  const handleToggleRecording = () => {
+    toggleRecording(setMessage);
+  };
+
+  const handleSend = () => {
+    handleSendMessage(onSendMessage);
+  };
+
+  const handleKeyDownEvent = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    handleKeyDown(e, onSendMessage);
+  };
+
   return (
     <div className="border-t p-3 bg-background">
-      {/* Interview Mode Toggle */}
-      <div className="flex items-center justify-between mb-3 pb-2 border-b">
-        <div className="flex items-center space-x-2">
-          <div className={`p-1 rounded-lg transition-colors ${interviewMode ? 'bg-primary/10' : ''}`}>
-            <Switch
-              id="interview-mode"
-              checked={interviewMode}
-              onCheckedChange={onInterviewModeChange}
-              className={interviewMode ? 'data-[state=checked]:bg-primary' : ''}
-            />
-          </div>
-          <label 
-            htmlFor="interview-mode" 
-            className="text-sm font-medium cursor-pointer"
-          >
-            Interview Mode
-          </label>
-        </div>
-        <div className="text-xs text-muted-foreground">
-          {interviewMode ? "Role-based input" : "Direct fact entry"}
-        </div>
-      </div>
+      <InterviewModeToggle 
+        interviewMode={interviewMode}
+        onInterviewModeChange={onInterviewModeChange}
+      />
 
-      {/* Tab Buttons - only show in Interview Mode */}
-      {interviewMode && (
-        <div className="flex items-center mb-2">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className={`transition-colors ${getTabStyle("attorney")}`}
-            onClick={() => onTabChange("attorney")}
-            disabled={!interviewMode}
-          >
-            <span className="flex items-center gap-1">
-              Attorney
-            </span>
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            className={`transition-colors ${getTabStyle("client")}`}
-            onClick={() => onTabChange("client")}
-            disabled={!interviewMode}
-          >
-            <span className="flex items-center gap-1">
-              Client
-            </span>
-          </Button>
-        </div>
-      )}
+      <TabSelector 
+        activeTab={activeTab}
+        onTabChange={onTabChange}
+        interviewMode={interviewMode}
+      />
 
-      <div className="flex">
-        <Textarea
-          ref={textareaRef}
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={getPlaceholderText()}
-          className={`min-h-[80px] resize-none flex-grow ${isRecording ? 'border-red-500 border-2' : ''}`}
-          disabled={isLoading}
-        />
-        <div className="ml-2 flex flex-col gap-2 justify-end">
-          {showMicButton && (
-            <Button
-              variant={isRecording ? "destructive" : "outline"}
-              size="icon"
-              onClick={toggleRecording}
-              title={
-                isRequestingPermission 
-                  ? "Requesting permission..." 
-                  : isRecording 
-                    ? "Stop voice input" 
-                    : "Start voice input"
-              }
-              type="button"
-              className={isRecording ? "" : "bg-[#0EA5E9] hover:bg-[#0EA5E9]/80 text-white"}
-              disabled={isRequestingPermission}
-            >
-              {isRequestingPermission ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : isRecording ? (
-                <MicOff className="h-4 w-4" />
-              ) : (
-                <Mic className="h-4 w-4" />
-              )}
-            </Button>
-          )}
-          <Button 
-            onClick={handleSendMessage}
-            disabled={isLoading || !message.trim()}
-            className={getSendButtonColor()}
-          >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-1" />
-            ) : (
-              <Send className="h-4 w-4 mr-1" />
-            )}
-            {getSendButtonText()}
-          </Button>
-        </div>
-      </div>
+      <MessageTextArea
+        message={message}
+        onMessageChange={setMessage}
+        onKeyDown={handleKeyDownEvent}
+        onSendMessage={handleSend}
+        isLoading={isLoading}
+        isRecording={isRecording}
+        isRequestingPermission={isRequestingPermission}
+        onToggleRecording={handleToggleRecording}
+        placeholder={getPlaceholderText()}
+        sendButtonText={getSendButtonText()}
+        sendButtonColor={getSendButtonColor()}
+        textareaRef={textareaRef}
+      />
     </div>
   );
 };
