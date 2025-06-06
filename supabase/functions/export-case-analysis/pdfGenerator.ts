@@ -45,17 +45,12 @@ function createPDFFormData(html: string): URLSearchParams {
   // HTML content - using correct parameter name for HTML-to-PDF API
   formData.append('html', html)
   
-  // Page settings
+  // Only use basic, well-documented parameters
   formData.append('page_format', 'A4')
   formData.append('margin_top', '1in')
   formData.append('margin_bottom', '1in')
   formData.append('margin_left', '1in')
   formData.append('margin_right', '1in')
-  
-  // Output settings
-  formData.append('no_print_header_footer', 'true')
-  formData.append('use_print_media', 'true')
-  formData.append('title', 'Case Analysis Report')
   
   return formData
 }
