@@ -6,7 +6,7 @@ import { ChatMessageProps } from "@/components/clients/chat/ChatMessage";
 export const saveMessage = async (
   clientId: string,
   content: string,
-  role: "attorney" | "client",
+  role: "attorney" | "client" | "facts",
   timestamp: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
