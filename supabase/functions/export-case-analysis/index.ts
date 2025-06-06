@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // =============================================================================
@@ -457,17 +456,16 @@ async function generatePDF(data: CaseAnalysisData): Promise<Uint8Array> {
   console.log('Generated HTML length:', html.length)
   console.log('HTML preview (first 500 chars):', html.substring(0, 500))
   
-  const requestBody = createPDFRequestBody(html)
-  console.log('PDFCrowd request parameters:', JSON.stringify(requestBody, null, 2))
+  const formData = createPDFFormData(html)
+  console.log('PDFCrowd form data parameters:', Object.fromEntries(formData.entries()))
   
   try {
-    const response = await fetch('https://api.pdfcrowd.com/convert/24.04/', {
+    const response = await fetch('https://api.pdfcrowd.com/html/convert/pdf/', {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${btoa(`${pdfcrowdUsername}:${pdfcrowdApiKey}`)}`,
-        'Content-Type': 'application/json',
       },
-      body: JSON.stringify(requestBody),
+      body: formData,
     })
 
     return await handlePDFResponse(response)
@@ -478,25 +476,25 @@ async function generatePDF(data: CaseAnalysisData): Promise<Uint8Array> {
   }
 }
 
-function createPDFRequestBody(html: string) {
-  return {
-    html: html, // Changed from source_html to html
-    output_format: 'pdf',
-    page_format: 'A4',
-    margin_top: '1in',
-    margin_bottom: '1in',
-    margin_left: '1in',
-    margin_right: '1in',
-    print_page_range: '-',
-    no_print_header_footer: true,
-    disable_javascript: false,
-    disable_image_loading: false,
-    disable_remote_fonts: false,
-    use_print_media: true,
-    no_background: false,
-    disable_smart_shrinking: false,
-    title: 'Case Analysis Report'
-  }
+function createPDFFormData(html: string): URLSearchParams {
+  const formData = new URLSearchParams()
+  
+  // HTML content
+  formData.append('html', html)
+  
+  // Page settings
+  formData.append('page_format', 'A4')
+  formData.append('margin_top', '1in')
+  formData.append('margin_bottom', '1in')
+  formData.append('margin_left', '1in')
+  formData.append('margin_right', '1in')
+  
+  // Output settings
+  formData.append('no_print_header_footer', 'true')
+  formData.append('use_print_media', 'true')
+  formData.append('title', 'Case Analysis Report')
+  
+  return formData
 }
 
 async function handlePDFResponse(response: Response): Promise<Uint8Array> {
