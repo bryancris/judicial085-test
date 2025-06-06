@@ -1,3 +1,4 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
@@ -209,12 +210,12 @@ async function collectCaseData(supabase: any, clientId: string, caseId?: string)
 }
 
 async function generatePDF(data: CaseAnalysisData): Promise<Uint8Array> {
-  const pdfShiftApiKey = Deno.env.get('PDFSHIFT_API_KEY')
+  const pdfcrowdApiKey = Deno.env.get('PDFCROWD_API_KEY')
   
-  console.log('PDFShift API Key check:', pdfShiftApiKey ? 'Present' : 'Missing')
+  console.log('PDFCrowd API Key check:', pdfcrowdApiKey ? 'Present' : 'Missing')
   
-  if (!pdfShiftApiKey) {
-    throw new Error('PDFShift API key not configured')
+  if (!pdfcrowdApiKey) {
+    throw new Error('PDFCrowd API key not configured')
   }
 
   const html = generateHTMLContent(data)
@@ -222,44 +223,56 @@ async function generatePDF(data: CaseAnalysisData): Promise<Uint8Array> {
   console.log('Generated HTML length:', html.length)
   console.log('HTML preview (first 500 chars):', html.substring(0, 500))
   
-  // Simplified PDFShift request for debugging
+  // PDFCrowd request parameters
   const requestBody = {
-    source: html,
-    landscape: false,
-    format: 'A4',
-    margin: '1in'
+    source_html: html,
+    output_format: 'pdf',
+    page_format: 'A4',
+    margin_top: '1in',
+    margin_bottom: '1in',
+    margin_left: '1in',
+    margin_right: '1in',
+    print_page_range: '-',
+    no_print_header_footer: true,
+    disable_javascript: false,
+    disable_image_loading: false,
+    disable_remote_fonts: false,
+    use_print_media: true,
+    no_background: false,
+    disable_smart_shrinking: false,
+    title: 'Case Analysis Report'
   }
 
-  console.log('Simplified PDFShift request:', JSON.stringify(requestBody, null, 2))
+  console.log('PDFCrowd request parameters:', JSON.stringify(requestBody, null, 2))
   
   try {
-    const response = await fetch('https://api.pdfshift.io/v3/convert/pdf', {
+    const response = await fetch('https://api.pdfcrowd.com/convert/24.04/', {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${btoa(`api:${pdfShiftApiKey}`)}`,
+        'Authorization': `Basic ${btoa(`${pdfcrowdApiKey}:${pdfcrowdApiKey}`)}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestBody),
     })
 
-    console.log('PDFShift response status:', response.status)
-    console.log('PDFShift response headers:', Object.fromEntries(response.headers.entries()))
+    console.log('PDFCrowd response status:', response.status)
+    console.log('PDFCrowd response headers:', Object.fromEntries(response.headers.entries()))
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('PDFShift error response:', errorText)
+      console.error('PDFCrowd error response:', errorText)
       
       let detailedError = 'PDF generation failed'
       try {
         const errorJson = JSON.parse(errorText)
-        console.error('PDFShift error details:', errorJson)
-        if (errorJson.errors) {
-          detailedError = `PDF generation failed: ${JSON.stringify(errorJson.errors)}`
+        console.error('PDFCrowd error details:', errorJson)
+        if (errorJson.message) {
+          detailedError = `PDF generation failed: ${errorJson.message}`
         } else if (errorJson.error) {
           detailedError = `PDF generation failed: ${errorJson.error}`
         }
       } catch (parseError) {
-        console.error('Could not parse PDFShift error:', parseError)
+        console.error('Could not parse PDFCrowd error:', parseError)
         detailedError = `PDF generation failed: HTTP ${response.status} - ${errorText}`
       }
       
@@ -267,16 +280,16 @@ async function generatePDF(data: CaseAnalysisData): Promise<Uint8Array> {
     }
 
     const pdfBuffer = await response.arrayBuffer()
-    console.log('PDF generated successfully, size:', pdfBuffer.byteLength)
+    console.log('PDF generated successfully with PDFCrowd, size:', pdfBuffer.byteLength)
     
     if (pdfBuffer.byteLength === 0) {
-      throw new Error('Received empty PDF from PDFShift')
+      throw new Error('Received empty PDF from PDFCrowd')
     }
     
     return new Uint8Array(pdfBuffer)
 
   } catch (networkError) {
-    console.error('Network error calling PDFShift:', networkError)
+    console.error('Network error calling PDFCrowd:', networkError)
     throw new Error(`PDF generation failed: Network error - ${networkError.message}`)
   }
 }
