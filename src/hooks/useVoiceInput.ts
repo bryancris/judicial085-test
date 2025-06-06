@@ -20,7 +20,7 @@ export const useVoiceInput = () => {
     };
   }, []);
 
-  const toggleRecording = (onTextUpdate: (text: string) => void) => {
+  const toggleRecording = async (onTextUpdate: (text: string) => void) => {
     if (isRecording) {
       // Stop recording
       if (stopRecordingRef.current) {
@@ -41,36 +41,46 @@ export const useVoiceInput = () => {
 
       setIsRequestingPermission(true);
 
-      // startRecording is NOT async - don't await it
-      const recorder = startRecording(
-        (text) => {
-          onTextUpdate(text);
-        },
-        (error) => {
-          console.error("Voice recording error:", error);
-          toast({
-            title: "Voice Input Error",
-            description: error,
-            variant: "destructive",
-          });
-          setIsRecording(false);
+      try {
+        // startRecording IS async - await it properly
+        const recorder = await startRecording(
+          (text) => {
+            onTextUpdate(text);
+          },
+          (error) => {
+            console.error("Voice recording error:", error);
+            toast({
+              title: "Voice Input Error",
+              description: error,
+              variant: "destructive",
+            });
+            setIsRecording(false);
+            setIsRequestingPermission(false);
+          },
+          () => {
+            // This callback is called only when recording actually starts
+            setIsRequestingPermission(false);
+            setIsRecording(true);
+            toast({
+              title: "Voice Input Active",
+              description: "Speak now. Your words will appear in the text field.",
+            });
+          }
+        );
+        
+        if (recorder) {
+          stopRecordingRef.current = recorder;
+        } else {
           setIsRequestingPermission(false);
-        },
-        () => {
-          // This callback is called only when recording actually starts
-          setIsRequestingPermission(false);
-          setIsRecording(true);
-          toast({
-            title: "Voice Input Active",
-            description: "Speak now. Your words will appear in the text field.",
-          });
         }
-      );
-      
-      if (recorder) {
-        stopRecordingRef.current = recorder;
-      } else {
+      } catch (error: any) {
+        console.error("Failed to start voice recording:", error);
         setIsRequestingPermission(false);
+        toast({
+          title: "Voice Input Failed",
+          description: error.message || "Unable to start voice input. Please try again.",
+          variant: "destructive",
+        });
       }
     }
   };
