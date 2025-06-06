@@ -49,7 +49,7 @@ export const getClientMessages = async (
     const formattedMessages: ChatMessageProps[] = data.map(msg => ({
       content: msg.content,
       timestamp: msg.timestamp,
-      role: msg.role as "attorney" | "client"
+      role: msg.role as "attorney" | "client" | "facts"
     }));
 
     return { messages: formattedMessages };

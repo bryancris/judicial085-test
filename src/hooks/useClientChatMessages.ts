@@ -32,7 +32,7 @@ export const useClientChatMessages = (
       const newMessage: ChatMessageProps = {
         content: message,
         timestamp,
-        role: messageRole as "attorney" | "client"
+        role: messageRole
       };
 
       // Add user message to chat
