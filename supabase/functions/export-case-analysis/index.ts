@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // =============================================================================
@@ -441,11 +440,15 @@ async function fetchConversationMessages(supabase: any, clientId: string, caseId
 
 async function generatePDF(data: CaseAnalysisData): Promise<Uint8Array> {
   const pdfcrowdApiKey = Deno.env.get('PDFCROWD_API_KEY')
+  const pdfcrowdUsername = Deno.env.get('PDFCROWD_USERNAME')
   
-  console.log('PDFCrowd API Key check:', pdfcrowdApiKey ? 'Present' : 'Missing')
+  console.log('PDFCrowd credentials check:', {
+    username: pdfcrowdUsername ? 'Present' : 'Missing',
+    apiKey: pdfcrowdApiKey ? 'Present' : 'Missing'
+  })
   
-  if (!pdfcrowdApiKey) {
-    throw new Error('PDFCrowd API key not configured')
+  if (!pdfcrowdApiKey || !pdfcrowdUsername) {
+    throw new Error('PDFCrowd credentials not configured')
   }
 
   const html = generateHTMLContent(data)
@@ -460,7 +463,7 @@ async function generatePDF(data: CaseAnalysisData): Promise<Uint8Array> {
     const response = await fetch('https://api.pdfcrowd.com/convert/24.04/', {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${btoa(`${pdfcrowdApiKey}:${pdfcrowdApiKey}`)}`,
+        'Authorization': `Basic ${btoa(`${pdfcrowdUsername}:${pdfcrowdApiKey}`)}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestBody),
