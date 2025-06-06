@@ -22,10 +22,10 @@ export const buildCompleteContext = (
     console.error('Error fetching client data:', clientError);
     contextText += "\nWARNING: Unable to fetch client details for this conversation.";
   } else if (clientData) {
-    // Add prominent client identification as the FIRST thing in the context
-    contextText += `\n\nYou are discussing the case of CLIENT: ${clientData.first_name} ${clientData.last_name}.\n`;
-    contextText += `THIS IS ${clientData.first_name} ${clientData.last_name}'s CASE.\n`;
-    contextText += `Every response MUST begin with addressing ${clientData.first_name} ${clientData.last_name} by name.`;
+    // Add prominent client identification for the attorney's reference
+    contextText += `\n\nYou are assisting with the case of CLIENT: ${clientData.first_name} ${clientData.last_name}.\n`;
+    contextText += `You are speaking TO the attorney/paralegal ABOUT their client ${clientData.first_name} ${clientData.last_name}.\n`;
+    contextText += `Always reference the client in third person as "your client ${clientData.first_name}" or "the client ${clientData.first_name} ${clientData.last_name}".`;
     
     const { clientSection, caseTypesSection, caseDetailsSection } = buildClientSection(clientData);
     
@@ -66,9 +66,9 @@ export const buildCompleteContext = (
   // Add specific instructions for the AI
   contextText += buildInstructionsSection();
   
-  // Add final explicit directive to reference the client's information in EVERY response
+  // Add final explicit directive to maintain professional attorney-assistant relationship
   if (clientData) {
-    contextText += `\n\nCRITICAL REMINDER: You MUST address ${clientData.first_name} ${clientData.last_name} by name in EVERY response and reference their specific case details. Every response must start with the client's name.`;
+    contextText += `\n\nCRITICAL REMINDER: You are assisting the attorney/paralegal with ${clientData.first_name} ${clientData.last_name}'s case. Reference the client in third person and stick to factual legal analysis without emotional characterizations.`;
   }
   
   // Log a sample of the context for debugging
