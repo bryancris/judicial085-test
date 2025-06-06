@@ -28,6 +28,7 @@ const ChatInput = ({
 }: ChatInputProps) => {
   const [message, setMessage] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const [isRequestingPermission, setIsRequestingPermission] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
   const stopRecordingRef = useRef<{ stop: () => void } | null>(null);
@@ -86,12 +87,14 @@ const ChatInput = ({
       // Start recording
       if (!isSupported) {
         toast({
-          title: "Speech Recognition Not Supported",
-          description: "Your browser doesn't support speech recognition. Try using Chrome, Edge, or Safari.",
+          title: "Voice Input Not Available",
+          description: "Your browser doesn't support voice input. Please use Chrome, Edge, or Safari for voice features.",
           variant: "destructive",
         });
         return;
       }
+
+      setIsRequestingPermission(true);
 
       try {
         const recorder = await startRecording(
@@ -99,30 +102,37 @@ const ChatInput = ({
             setMessage(text);
           },
           (error) => {
+            console.error("Voice recording error:", error);
             toast({
-              title: "Recording Error",
+              title: "Voice Input Error",
               description: error,
               variant: "destructive",
             });
             setIsRecording(false);
+            setIsRequestingPermission(false);
           },
           () => {
             // This callback is called only when recording actually starts
+            setIsRequestingPermission(false);
+            setIsRecording(true);
             toast({
-              title: "Recording Started",
-              description: "Speak now. The text will appear in the input field.",
+              title: "Voice Input Active",
+              description: "Speak now. Your words will appear in the text field.",
             });
           }
         );
         
         if (recorder) {
-          setIsRecording(true);
           stopRecordingRef.current = recorder;
+        } else {
+          setIsRequestingPermission(false);
         }
       } catch (error: any) {
+        console.error("Failed to start voice recording:", error);
+        setIsRequestingPermission(false);
         toast({
-          title: "Failed to Start Recording",
-          description: error.message || "Unable to start speech recognition",
+          title: "Voice Input Failed",
+          description: error.message || "Unable to start voice input. Please try again.",
           variant: "destructive",
         });
       }
@@ -239,11 +249,20 @@ const ChatInput = ({
               variant={isRecording ? "destructive" : "outline"}
               size="icon"
               onClick={toggleRecording}
-              title={isRecording ? "Stop recording" : "Start voice input"}
+              title={
+                isRequestingPermission 
+                  ? "Requesting permission..." 
+                  : isRecording 
+                    ? "Stop voice input" 
+                    : "Start voice input"
+              }
               type="button"
               className={isRecording ? "" : "bg-[#0EA5E9] hover:bg-[#0EA5E9]/80 text-white"}
+              disabled={isRequestingPermission}
             >
-              {isRecording ? (
+              {isRequestingPermission ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : isRecording ? (
                 <MicOff className="h-4 w-4" />
               ) : (
                 <Mic className="h-4 w-4" />
