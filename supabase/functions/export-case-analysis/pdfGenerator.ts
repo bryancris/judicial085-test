@@ -1,4 +1,3 @@
-
 import type { CaseAnalysisData } from './types.ts';
 import { generateHTMLContent } from './htmlTemplateGenerator.ts';
 
@@ -24,11 +23,10 @@ export async function generatePDF(data: CaseAnalysisData): Promise<Uint8Array> {
   console.log('PDFCrowd form data parameters:', Object.fromEntries(formData.entries()))
   
   try {
-    const response = await fetch('https://api.pdfcrowd.com/convert/24.04/', {
+    const response = await fetch('https://api.pdfcrowd.com/html/convert/pdf/', {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${btoa(`${pdfcrowdUsername}:${pdfcrowdApiKey}`)}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${btoa(`${pdfcrowdUsername}:${pdfcrowdApiKey}`)}`
       },
       body: formData,
     })
@@ -44,8 +42,8 @@ export async function generatePDF(data: CaseAnalysisData): Promise<Uint8Array> {
 function createPDFFormData(html: string): URLSearchParams {
   const formData = new URLSearchParams()
   
-  // HTML content - using correct parameter name for v24.04 API
-  formData.append('source_html', html)
+  // HTML content - using correct parameter name for HTML-to-PDF API
+  formData.append('html', html)
   
   // Page settings
   formData.append('page_format', 'A4')
