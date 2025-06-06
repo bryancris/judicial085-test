@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Send, Loader2, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useSpeechRecognition } from "@/utils/voiceToTextUtils";
 
@@ -12,6 +13,8 @@ interface ChatInputProps {
   activeTab: "attorney" | "client";
   onTabChange: (tab: "attorney" | "client") => void;
   prefilledMessage?: string;
+  interviewMode: boolean;
+  onInterviewModeChange: (enabled: boolean) => void;
 }
 
 const ChatInput = ({ 
@@ -19,7 +22,9 @@ const ChatInput = ({
   isLoading, 
   activeTab, 
   onTabChange,
-  prefilledMessage = "" 
+  prefilledMessage = "",
+  interviewMode,
+  onInterviewModeChange
 }: ChatInputProps) => {
   const [message, setMessage] = useState("");
   const [isRecording, setIsRecording] = useState(false);
@@ -126,6 +131,10 @@ const ChatInput = ({
 
   // Vibrant colors for active tabs
   const getTabStyle = (tab: "attorney" | "client") => {
+    if (!interviewMode) {
+      return "bg-transparent text-muted-foreground opacity-50 cursor-not-allowed";
+    }
+    
     if (tab === activeTab) {
       return tab === "attorney" 
         ? "bg-[#0EA5E9] text-white" 
@@ -137,37 +146,87 @@ const ChatInput = ({
   // Show microphone button for both attorney and client tabs
   const showMicButton = !isLoading;
 
+  // Get placeholder text based on mode
+  const getPlaceholderText = () => {
+    if (!interviewMode) {
+      return "Enter case facts and information...";
+    }
+    return `Enter ${activeTab === "attorney" ? "attorney's question" : "client's response"}...`;
+  };
+
+  // Get send button text based on mode
+  const getSendButtonText = () => {
+    if (!interviewMode) {
+      return "Analyze";
+    }
+    return `Send as ${activeTab === "attorney" ? "Attorney" : "Client"}`;
+  };
+
+  // Get send button color based on mode
+  const getSendButtonColor = () => {
+    if (!interviewMode) {
+      return "bg-[#059669] hover:bg-[#047857]"; // Green for analyze
+    }
+    return activeTab === "attorney" ? "bg-[#0EA5E9] hover:bg-[#0EA5E9]/90" : "bg-[#8B5CF6] hover:bg-[#8B5CF6]/90";
+  };
+
   return (
     <div className="border-t p-3 bg-background">
-      <div className="flex items-center mb-2">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className={`transition-colors ${getTabStyle("attorney")}`}
-          onClick={() => onTabChange("attorney")}
-        >
-          <span className="flex items-center gap-1">
-            Attorney
-          </span>
-        </Button>
-        <Button 
-          variant="ghost" 
-          size="sm"
-          className={`transition-colors ${getTabStyle("client")}`}
-          onClick={() => onTabChange("client")}
-        >
-          <span className="flex items-center gap-1">
-            Client
-          </span>
-        </Button>
+      {/* Interview Mode Toggle */}
+      <div className="flex items-center justify-between mb-3 pb-2 border-b">
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="interview-mode"
+            checked={interviewMode}
+            onCheckedChange={onInterviewModeChange}
+          />
+          <label 
+            htmlFor="interview-mode" 
+            className="text-sm font-medium cursor-pointer"
+          >
+            Interview Mode
+          </label>
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {interviewMode ? "Role-based input" : "Direct fact entry"}
+        </div>
       </div>
+
+      {/* Tab Buttons - only show in Interview Mode */}
+      {interviewMode && (
+        <div className="flex items-center mb-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className={`transition-colors ${getTabStyle("attorney")}`}
+            onClick={() => onTabChange("attorney")}
+            disabled={!interviewMode}
+          >
+            <span className="flex items-center gap-1">
+              Attorney
+            </span>
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            className={`transition-colors ${getTabStyle("client")}`}
+            onClick={() => onTabChange("client")}
+            disabled={!interviewMode}
+          >
+            <span className="flex items-center gap-1">
+              Client
+            </span>
+          </Button>
+        </div>
+      )}
+
       <div className="flex">
         <Textarea
           ref={textareaRef}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={`Enter ${activeTab === "attorney" ? "attorney's question" : "client's response"}...`}
+          placeholder={getPlaceholderText()}
           className={`min-h-[80px] resize-none flex-grow ${isRecording ? 'border-red-500 border-2' : ''}`}
           disabled={isLoading}
         />
@@ -191,14 +250,14 @@ const ChatInput = ({
           <Button 
             onClick={handleSendMessage}
             disabled={isLoading || !message.trim()}
-            className={activeTab === "attorney" ? "bg-[#0EA5E9] hover:bg-[#0EA5E9]/90" : "bg-[#8B5CF6] hover:bg-[#8B5CF6]/90"}
+            className={getSendButtonColor()}
           >
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin mr-1" />
             ) : (
               <Send className="h-4 w-4 mr-1" />
             )}
-            Send as {activeTab === "attorney" ? "Attorney" : "Client"}
+            {getSendButtonText()}
           </Button>
         </div>
       </div>

@@ -24,7 +24,9 @@ const ClientIntakeChat: React.FC<ClientIntakeChatProps> = ({ clientId, clientNam
     prefilledMessage,
     handleSendMessage,
     handleFollowUpQuestionClick,
-    formatTimestamp
+    formatTimestamp,
+    interviewMode,
+    setInterviewMode
   } = useClientChat(clientId);
 
   if (isLoadingHistory) {
@@ -64,7 +66,9 @@ const ClientIntakeChat: React.FC<ClientIntakeChatProps> = ({ clientId, clientNam
       <div className="flex flex-col border rounded-lg overflow-hidden">
         <div className="bg-primary text-primary-foreground p-3">
           <div>
-            <h3 className="font-medium">Attorney / Client Input</h3>
+            <h3 className="font-medium">
+              {interviewMode ? "Attorney / Client Input" : "Case Facts Input"}
+            </h3>
             <div className="text-xs opacity-80">{formatTimestamp()}</div>
           </div>
         </div>
@@ -80,6 +84,8 @@ const ClientIntakeChat: React.FC<ClientIntakeChatProps> = ({ clientId, clientNam
           activeTab={activeTab}
           onTabChange={setActiveTab}
           prefilledMessage={prefilledMessage}
+          interviewMode={interviewMode}
+          onInterviewModeChange={setInterviewMode}
         />
       </div>
 

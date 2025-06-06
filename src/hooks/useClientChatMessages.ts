@@ -13,6 +13,7 @@ export const useClientChatMessages = (
   const [isLoading, setIsLoading] = useState(false);
   const [prefilledMessage, setPrefilledMessage] = useState("");
   const [activeTab, setActiveTab] = useState<"attorney" | "client">("attorney");
+  const [interviewMode, setInterviewMode] = useState(true);
   const { toast } = useToast();
 
   const formatTimestamp = (): string => {
@@ -24,17 +25,21 @@ export const useClientChatMessages = (
     if (message.trim()) {
       setIsLoading(true);
       const timestamp = formatTimestamp();
+      
+      // Determine the role based on Interview Mode
+      const messageRole = interviewMode ? currentActiveTab : "facts";
+      
       const newMessage: ChatMessageProps = {
         content: message,
         timestamp,
-        role: currentActiveTab
+        role: messageRole as "attorney" | "client"
       };
 
       // Add user message to chat
       setMessages(prev => [...prev, newMessage]);
       
       // Save message to database
-      const { success, error } = await saveMessage(clientId, message, currentActiveTab, timestamp);
+      const { success, error } = await saveMessage(clientId, message, messageRole, timestamp);
       
       if (!success) {
         toast({
@@ -45,18 +50,20 @@ export const useClientChatMessages = (
       }
       
       try {
-        // Only generate legal analysis after client responds (not when attorney asks questions)
         const updatedMessages = [...messages, newMessage];
         
-        // Check if this was a client message, and if so, generate an analysis
-        if (currentActiveTab === "client") {
-          await generateAnalysis(updatedMessages);
-          
-          // After client responds, switch back to attorney tab
-          setActiveTab("attorney");
+        if (interviewMode) {
+          // Interview Mode: Only generate analysis after client responds
+          if (currentActiveTab === "client") {
+            await generateAnalysis(updatedMessages);
+            setActiveTab("attorney");
+          } else {
+            setActiveTab("client");
+          }
         } else {
-          // After attorney sends message, switch to client tab
-          setActiveTab("client");
+          // Facts Mode: Always generate analysis immediately
+          await generateAnalysis(updatedMessages);
+          // Don't change tabs in facts mode
         }
       } catch (err: any) {
         console.error("Error processing message:", err);
@@ -75,7 +82,9 @@ export const useClientChatMessages = (
     console.log("Follow-up question clicked in hook:", question);
     setPrefilledMessage(question);
     // When a follow-up question is clicked, we should switch to attorney tab
-    setActiveTab("attorney");
+    if (interviewMode) {
+      setActiveTab("attorney");
+    }
   };
 
   return {
@@ -86,6 +95,8 @@ export const useClientChatMessages = (
     handleFollowUpQuestionClick,
     formatTimestamp,
     activeTab,
-    setActiveTab
+    setActiveTab,
+    interviewMode,
+    setInterviewMode
   };
 };
