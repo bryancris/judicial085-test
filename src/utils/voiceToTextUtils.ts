@@ -69,21 +69,7 @@ export const useSpeechRecognition = () => {
       
       switch (event.error) {
         case 'not-allowed':
-          // Check if we can access microphone to determine real cause
-          navigator.mediaDevices.getUserMedia({ audio: true })
-            .then(stream => {
-              // Permission is granted, so this is not a permission issue
-              stream.getTracks().forEach(track => track.stop());
-              if (!hasStarted) {
-                onErrorCallback("Speech recognition service is not available. This might be due to browser security policies or service limitations. Try refreshing the page or using a different browser.");
-              } else {
-                onErrorCallback("Speech recognition was blocked by the browser. This can happen due to security policies or if the service is temporarily unavailable.");
-              }
-            })
-            .catch(() => {
-              // Actually a permission issue
-              onErrorCallback("Microphone access was denied. Please refresh the page and allow microphone access when prompted.");
-            });
+          onErrorCallback("Speech recognition access was denied. Please refresh the page and try again.");
           break;
         case 'no-speech':
           onErrorCallback("No speech detected. Please speak clearly and try again.");
