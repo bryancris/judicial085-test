@@ -1,3 +1,4 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // =============================================================================
@@ -479,7 +480,7 @@ async function generatePDF(data: CaseAnalysisData): Promise<Uint8Array> {
 
 function createPDFRequestBody(html: string) {
   return {
-    source_html: html,
+    html: html, // Changed from source_html to html
     output_format: 'pdf',
     page_format: 'A4',
     margin_top: '1in',
