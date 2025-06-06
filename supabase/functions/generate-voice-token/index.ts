@@ -129,10 +129,10 @@ const buildCompleteContext = (clientData: any, clientError: any, analysisData: a
     console.error('Error fetching client data:', clientError);
     contextText += "\nWARNING: Unable to fetch client details for this conversation.";
   } else if (clientData) {
-    // Add prominent client identification as the FIRST thing in the context
-    contextText += `\n\nYou are discussing the case of CLIENT: ${clientData.first_name} ${clientData.last_name}.\n`;
-    contextText += `THIS IS ${clientData.first_name} ${clientData.last_name}'s CASE.\n`;
-    contextText += `Every response MUST begin with addressing ${clientData.first_name} ${clientData.last_name} by name.`;
+    // Add prominent client identification for the attorney's reference
+    contextText += `\n\nYou are assisting the attorney/paralegal with the case of CLIENT: ${clientData.first_name} ${clientData.last_name}.\n`;
+    contextText += `You are speaking TO the attorney/paralegal ABOUT their client ${clientData.first_name} ${clientData.last_name}.\n`;
+    contextText += `Always reference the client in third person as "your client ${clientData.first_name}" or "the client ${clientData.first_name} ${clientData.last_name}".`;
     
     // Add case types if available
     if (clientData.case_types && clientData.case_types.length > 0) {
@@ -186,19 +186,20 @@ const buildCompleteContext = (clientData: any, clientError: any, analysisData: a
   
   // Add specific instructions for the AI
   contextText += `\n\n## INSTRUCTIONS
-1. You are discussing THIS SPECIFIC CASE with the attorney. Always acknowledge and reference the case details in your responses.
-2. Directly reference the client's name, case type, and key facts in your responses to show you are aware of the context.
-3. Provide thoughtful legal analysis based on the case details provided above.
-4. When citing legal principles, be as specific as possible to the laws in the client's jurisdiction.
-5. If you're unsure about any details, make it clear rather than making assumptions.
-6. Maintain consistent advice between conversations to avoid contradicting earlier guidance.
-7. Your goal is to help the attorney develop case strategy and prepare for proceedings.
-8. IMPORTANT: Always base your responses on the case information provided, not general legal knowledge.
-9. MANDATORY: Begin every response by addressing the client by name.`;
+1. You are assisting the ATTORNEY/PARALEGAL with case strategy and analysis. You are NOT speaking directly to the client.
+2. Reference the client in third person: "your client [Name]" or "the client [Name]" - never address the client directly.
+3. Provide factual legal analysis based on the case details provided above.
+4. Stick to facts from case records and evidence - avoid emotional language or conjecture like "unfortunate incident."
+5. When citing legal principles, be as specific as possible to the laws in the client's jurisdiction.
+6. If you're unsure about any details, make it clear rather than making assumptions.
+7. Maintain consistent advice between conversations to avoid contradicting earlier guidance.
+8. Your goal is to help the attorney develop case strategy and prepare for proceedings.
+9. IMPORTANT: Always base your responses on the case information provided, not general legal knowledge.
+10. Use professional legal terminology and maintain an objective, factual tone throughout.`;
   
   // Add final explicit directive
   if (clientData) {
-    contextText += `\n\nCRITICAL REMINDER: You MUST address ${clientData.first_name} ${clientData.last_name} by name in EVERY response and reference their specific case details. Every response must start with the client's name.`;
+    contextText += `\n\nCRITICAL REMINDER: You are assisting the attorney/paralegal with ${clientData.first_name} ${clientData.last_name}'s case. Reference the client in third person and stick to factual legal analysis without emotional characterizations.`;
   }
   
   console.log("Sample of context being sent to OpenAI (first 500 chars):");
@@ -214,7 +215,7 @@ serve(async (req) => {
   }
 
   try {
-    const { clientId } = await req.json();
+    const { clientId, voice = 'alloy' } = await req.json();
     
     if (!clientId) {
       return new Response("Client ID required", { 
@@ -228,7 +229,7 @@ serve(async (req) => {
       throw new Error('OpenAI API key not configured');
     }
 
-    console.log("Creating OpenAI ephemeral session for client:", clientId);
+    console.log("Creating OpenAI ephemeral session for client:", clientId, "with voice:", voice);
 
     // Fetch all case context data
     const { supabaseAdmin } = getSupabaseClients();
@@ -249,7 +250,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "gpt-4o-realtime-preview-2024-12-17",
-        voice: "alloy",
+        voice: voice,
         instructions: contextInstructions,
         input_audio_format: "pcm16",
         output_audio_format: "pcm16",
@@ -289,7 +290,7 @@ serve(async (req) => {
     }
 
     const sessionData = await sessionResponse.json();
-    console.log("OpenAI session created successfully with case context");
+    console.log("OpenAI session created successfully with case context and voice:", voice);
 
     if (!sessionData.client_secret?.value) {
       throw new Error("No ephemeral token received from OpenAI");

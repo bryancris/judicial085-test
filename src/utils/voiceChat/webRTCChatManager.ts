@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { WebRTCAudioRecorder } from './webRTCAudioRecorder';
 import { encodeAudioForAPI } from '@/utils/voiceChat';
@@ -22,14 +23,14 @@ export class WebRTCChatManager {
     this.sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  async init(clientId: string) {
+  async init(clientId: string, selectedVoice: string = 'alloy') {
     try {
-      console.log("Initializing WebRTC chat for client:", clientId);
+      console.log("Initializing WebRTC chat for client:", clientId, "with voice:", selectedVoice);
       this.clientId = clientId;
 
-      // Get ephemeral token from our Supabase Edge Function
+      // Get ephemeral token from our Supabase Edge Function with selected voice
       const { data: tokenData, error } = await supabase.functions.invoke("generate-voice-token", {
-        body: { clientId }
+        body: { clientId, voice: selectedVoice }
       });
 
       if (error) {

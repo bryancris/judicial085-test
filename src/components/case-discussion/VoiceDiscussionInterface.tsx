@@ -6,6 +6,7 @@ import VoiceConnectionStatus from './VoiceConnectionStatus';
 import VoiceControlButton from './VoiceControlButton';
 import VoiceTranscriptPreview from './VoiceTranscriptPreview';
 import VoiceAudioControls from './VoiceAudioControls';
+import VoiceSelectionDropdown from './VoiceSelectionDropdown';
 
 interface VoiceDiscussionInterfaceProps {
   clientId: string;
@@ -24,10 +25,12 @@ const VoiceDiscussionInterface: React.FC<VoiceDiscussionInterfaceProps> = ({
     isSpeaking,
     isAISpeaking,
     audioEnabled,
+    selectedVoice,
     currentTranscript,
     connectToVoiceChat,
     disconnectFromVoiceChat,
-    toggleAudio
+    toggleAudio,
+    setSelectedVoice
   } = useVoiceChat({
     clientId,
     onTranscriptUpdate,
@@ -47,26 +50,34 @@ const VoiceDiscussionInterface: React.FC<VoiceDiscussionInterfaceProps> = ({
           </div>
         </div>
 
-        <div className="flex flex-col items-center gap-4">
-          <VoiceConnectionStatus
-            isConnected={isConnected}
-            isRecording={isRecording}
-            isSpeaking={isSpeaking}
-            isAISpeaking={isAISpeaking}
+        <div className="flex flex-col gap-4">
+          <VoiceSelectionDropdown
+            selectedVoice={selectedVoice}
+            onVoiceChange={setSelectedVoice}
+            disabled={isConnected}
           />
 
-          <VoiceControlButton
-            isConnected={isConnected}
-            onConnect={connectToVoiceChat}
-            onDisconnect={disconnectFromVoiceChat}
-          />
+          <div className="flex flex-col items-center gap-4">
+            <VoiceConnectionStatus
+              isConnected={isConnected}
+              isRecording={isRecording}
+              isSpeaking={isSpeaking}
+              isAISpeaking={isAISpeaking}
+            />
 
-          <VoiceTranscriptPreview currentTranscript={currentTranscript} />
+            <VoiceControlButton
+              isConnected={isConnected}
+              onConnect={connectToVoiceChat}
+              onDisconnect={disconnectFromVoiceChat}
+            />
 
-          <p className="text-xs text-center text-gray-500 max-w-md">
-            Click "Start Voice Chat" to begin a voice conversation with the AI assistant. 
-            The AI has full access to this client's case information and can help with legal analysis and strategy.
-          </p>
+            <VoiceTranscriptPreview currentTranscript={currentTranscript} />
+
+            <p className="text-xs text-center text-gray-500 max-w-md">
+              Click "Start Voice Chat" to begin a voice conversation with the AI assistant. 
+              The AI has full access to this client's case information and can help with legal analysis and strategy.
+            </p>
+          </div>
         </div>
       </CardContent>
     </Card>

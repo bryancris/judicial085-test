@@ -18,6 +18,10 @@ export const useVoiceChat = ({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isAISpeaking, setIsAISpeaking] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(true);
+  const [selectedVoice, setSelectedVoice] = useState(() => {
+    // Load voice preference from localStorage
+    return localStorage.getItem('preferredVoice') || 'alloy';
+  });
   
   const webRTCManagerRef = useRef<WebRTCChatManager | null>(null);
   const audioPlaybackManagerRef = useRef<AudioPlaybackManager | null>(null);
@@ -25,6 +29,11 @@ export const useVoiceChat = ({
   
   // Add transcript saving functionality
   const { saveTranscript } = useVoiceTranscripts(clientId);
+
+  // Save voice preference when it changes
+  useEffect(() => {
+    localStorage.setItem('preferredVoice', selectedVoice);
+  }, [selectedVoice]);
 
   // Initialize audio playback manager
   useEffect(() => {
@@ -55,7 +64,7 @@ export const useVoiceChat = ({
 
   const connectToVoiceChat = async () => {
     try {
-      console.log("Starting WebRTC voice chat connection...");
+      console.log("Starting WebRTC voice chat connection with voice:", selectedVoice);
 
       webRTCManagerRef.current = new WebRTCChatManager(
         async (data) => {
@@ -84,14 +93,14 @@ export const useVoiceChat = ({
         saveTranscript
       );
 
-      await webRTCManagerRef.current.init(clientId);
+      await webRTCManagerRef.current.init(clientId, selectedVoice);
       
       setIsConnected(true);
       onConnectionChange(true);
 
       toast({
         title: "Connected",
-        description: "Voice chat is now active via WebRTC",
+        description: `Voice chat is now active with ${selectedVoice} voice`,
       });
 
     } catch (error) {
@@ -127,9 +136,11 @@ export const useVoiceChat = ({
     isSpeaking,
     isAISpeaking,
     audioEnabled,
+    selectedVoice,
     currentTranscript: messageHandlerRef.current?.getCurrentTranscript() || '',
     connectToVoiceChat,
     disconnectFromVoiceChat,
-    toggleAudio
+    toggleAudio,
+    setSelectedVoice
   };
 };

@@ -11,6 +11,7 @@ export interface VoiceChatState {
   isSpeaking: boolean;
   isAISpeaking: boolean;
   audioEnabled: boolean;
+  selectedVoice: string;
   currentTranscript: string;
 }
 
