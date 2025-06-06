@@ -28,7 +28,7 @@ export const saveLegalAnalysis = async (
   }
 };
 
-// Get legal analyses for a client
+// Get the most recent legal analysis for a client (Client Intake only shows the latest)
 export const getClientLegalAnalyses = async (
   clientId: string
 ): Promise<{ analyses: AnalysisItem[]; error?: string }> => {
@@ -37,7 +37,8 @@ export const getClientLegalAnalyses = async (
       .from("legal_analyses")
       .select("*")
       .eq("client_id", clientId)
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: false })
+      .limit(1);
 
     if (error) {
       console.error("Error fetching legal analyses:", error);
