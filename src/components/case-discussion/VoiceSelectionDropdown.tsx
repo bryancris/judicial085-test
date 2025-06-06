@@ -11,11 +11,13 @@ interface VoiceSelectionDropdownProps {
 
 const AVAILABLE_VOICES = [
   { value: 'alloy', label: 'Alloy (Neutral)' },
+  { value: 'ash', label: 'Ash (Male)' },
+  { value: 'ballad', label: 'Ballad (Female)' },
+  { value: 'coral', label: 'Coral (Female)' },
   { value: 'echo', label: 'Echo (Male)' },
-  { value: 'fable', label: 'Fable (British Male)' },
-  { value: 'onyx', label: 'Onyx (Deep Male)' },
-  { value: 'nova', label: 'Nova (Female)' },
-  { value: 'shimmer', label: 'Shimmer (Soft Female)' }
+  { value: 'sage', label: 'Sage (Female)' },
+  { value: 'shimmer', label: 'Shimmer (Female)' },
+  { value: 'verse', label: 'Verse (Male)' }
 ];
 
 const VoiceSelectionDropdown: React.FC<VoiceSelectionDropdownProps> = ({

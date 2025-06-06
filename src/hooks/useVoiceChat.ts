@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { WebRTCChatManager } from '@/utils/voiceChat/webRTCChatManager';
@@ -18,10 +17,15 @@ export const useVoiceChat = ({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isAISpeaking, setIsAISpeaking] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(true);
-  const [selectedVoice, setSelectedVoice] = useState(() => {
-    // Load voice preference from localStorage
-    return localStorage.getItem('preferredVoice') || 'alloy';
-  });
+  
+  // Validate saved voice preference against supported voices
+  const getSavedVoice = () => {
+    const savedVoice = localStorage.getItem('preferredVoice');
+    const supportedVoices = ['alloy', 'ash', 'ballad', 'coral', 'echo', 'sage', 'shimmer', 'verse'];
+    return savedVoice && supportedVoices.includes(savedVoice) ? savedVoice : 'alloy';
+  };
+  
+  const [selectedVoice, setSelectedVoice] = useState(getSavedVoice);
   
   const webRTCManagerRef = useRef<WebRTCChatManager | null>(null);
   const audioPlaybackManagerRef = useRef<AudioPlaybackManager | null>(null);
