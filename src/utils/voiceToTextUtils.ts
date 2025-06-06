@@ -1,4 +1,5 @@
 
+
 // Voice to text utilities using Web Speech API
 
 /**
@@ -68,11 +69,21 @@ export const useSpeechRecognition = () => {
       
       switch (event.error) {
         case 'not-allowed':
-          if (!hasStarted) {
-            onErrorCallback("Microphone access was denied. Please refresh the page and allow microphone access when prompted.");
-          } else {
-            onErrorCallback("Microphone access was revoked. Please refresh the page to use voice input again.");
-          }
+          // Check if we can access microphone to determine real cause
+          navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+              // Permission is granted, so this is not a permission issue
+              stream.getTracks().forEach(track => track.stop());
+              if (!hasStarted) {
+                onErrorCallback("Speech recognition service is not available. This might be due to browser security policies or service limitations. Try refreshing the page or using a different browser.");
+              } else {
+                onErrorCallback("Speech recognition was blocked by the browser. This can happen due to security policies or if the service is temporarily unavailable.");
+              }
+            })
+            .catch(() => {
+              // Actually a permission issue
+              onErrorCallback("Microphone access was denied. Please refresh the page and allow microphone access when prompted.");
+            });
           break;
         case 'no-speech':
           onErrorCallback("No speech detected. Please speak clearly and try again.");
@@ -87,10 +98,10 @@ export const useSpeechRecognition = () => {
           console.log("Speech recognition was stopped");
           break;
         case 'service-not-allowed':
-          onErrorCallback("Speech recognition service is not available. Please try again later.");
+          onErrorCallback("Speech recognition service is not available. Please try again later or use a different browser.");
           break;
         default:
-          onErrorCallback(`Voice input error: ${event.error}. Please try again.`);
+          onErrorCallback(`Voice input error: ${event.error}. Please try again or refresh the page.`);
       }
     };
     
@@ -106,7 +117,7 @@ export const useSpeechRecognition = () => {
       recognition.start();
     } catch (error: any) {
       console.error("Error starting recognition:", error);
-      onErrorCallback(`Failed to start voice input: ${error.message}. Please try again.`);
+      onErrorCallback(`Failed to start voice input: ${error.message}. Please try refreshing the page.`);
       return { stop: () => {} };
     }
     
@@ -128,3 +139,4 @@ export const useSpeechRecognition = () => {
     startRecording
   };
 };
+
