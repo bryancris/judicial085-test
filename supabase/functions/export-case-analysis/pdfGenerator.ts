@@ -23,7 +23,8 @@ export async function generatePDF(data: CaseAnalysisData): Promise<Uint8Array> {
   console.log('PDFCrowd form data parameters:', Object.fromEntries(formData.entries()))
   
   try {
-    const response = await fetch('https://api.pdfcrowd.com/html/convert/pdf/', {
+    // Use correct PDFCrowd API v2 endpoint
+    const response = await fetch('https://api.pdfcrowd.com/convert/24.04/', {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${btoa(`${pdfcrowdUsername}:${pdfcrowdApiKey}`)}`
@@ -42,10 +43,10 @@ export async function generatePDF(data: CaseAnalysisData): Promise<Uint8Array> {
 function createPDFFormData(html: string): URLSearchParams {
   const formData = new URLSearchParams()
   
-  // HTML content - using correct parameter name for HTML-to-PDF API
-  formData.append('html', html)
+  // Use correct parameter name for API v2
+  formData.append('source_html', html)
   
-  // Only use basic, well-documented parameters
+  // Basic page settings for API v2
   formData.append('page_format', 'A4')
   formData.append('margin_top', '1in')
   formData.append('margin_bottom', '1in')
