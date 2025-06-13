@@ -25,7 +25,7 @@ export const useAnalysisGeneration = (clientId?: string, caseId?: string) => {
     setIsGeneratingAnalysis(true);
 
     try {
-      console.log("Starting real-time analysis generation for client:", clientId);
+      console.log("Starting real-time analysis generation for client:", clientId, "case:", caseId);
       
       // Get messages from the database instead of using chat hook
       const { supabase } = await import("@/integrations/supabase/client");
@@ -42,6 +42,8 @@ export const useAnalysisGeneration = (clientId?: string, caseId?: string) => {
         role: msg.role as "attorney" | "client"
       }));
 
+      console.log("Found messages for analysis:", messages.length);
+
       const result = await generateLegalAnalysis(clientId, messages, caseId);
       
       if (result.error) {
@@ -56,8 +58,15 @@ export const useAnalysisGeneration = (clientId?: string, caseId?: string) => {
 
       console.log("✅ Analysis generation completed successfully");
       
+      // Show success message
+      toast({
+        title: "Analysis Complete",
+        description: "Legal analysis has been generated successfully.",
+      });
+
       // Refresh analysis data first
       if (onAnalysisComplete) {
+        console.log("Refreshing analysis data...");
         await onAnalysisComplete();
         console.log("✅ Analysis data refreshed");
       }
@@ -80,16 +89,11 @@ export const useAnalysisGeneration = (clientId?: string, caseId?: string) => {
         }, 1500);
       }
 
-      toast({
-        title: "Analysis Complete",
-        description: "Legal analysis has been generated successfully. Similar cases and scholarly references search initiated automatically.",
-      });
-
     } catch (error: any) {
       console.error("Unexpected error during analysis generation:", error);
       toast({
         title: "Unexpected Error",
-        description: "An unexpected error occurred during analysis generation",
+        description: "An unexpected error occurred during analysis generation: " + error.message,
         variant: "destructive",
       });
     } finally {

@@ -28,6 +28,8 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
   // Use caseId from props or from context
   const caseId = propCaseId || currentCase?.id;
 
+  console.log("CaseAnalysisContainer: Rendering with", { clientId, caseId, refreshTrigger });
+
   // Get all analysis-related data and handlers
   const {
     analysisData,
@@ -60,34 +62,44 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
   // Refresh analysis when trigger changes (from Case Discussion)
   useEffect(() => {
     if (refreshTrigger && refreshTrigger > 0) {
-      console.log("Refreshing analysis due to external trigger:", refreshTrigger);
+      console.log("CaseAnalysisContainer: Refreshing analysis due to external trigger:", refreshTrigger);
       fetchAnalysisData();
     }
   }, [refreshTrigger, fetchAnalysisData]);
 
   // UPDATED: Wrapper to pass fetchAnalysisData, fetchSimilarCases, and fetchScholarlyReferences to generation function
-  const handleGenerateAnalysis = () => {
-    generateRealTimeAnalysis(
-      async () => {
-        await fetchAnalysisData();
-      },
-      fetchSimilarCases, // This will now automatically save to database
-      fetchScholarlyReferences // This will now automatically save to database
-    );
+  const handleGenerateAnalysis = async () => {
+    console.log("CaseAnalysisContainer: Starting analysis generation...");
+    try {
+      await generateRealTimeAnalysis(
+        async () => {
+          console.log("CaseAnalysisContainer: Analysis complete - refreshing data");
+          await fetchAnalysisData();
+        },
+        fetchSimilarCases, // This will now automatically save to database
+        fetchScholarlyReferences // This will now automatically save to database
+      );
+      console.log("CaseAnalysisContainer: Analysis generation completed");
+    } catch (error) {
+      console.error("CaseAnalysisContainer: Analysis generation failed:", error);
+    }
   };
 
   // Handle error state
   if (analysisError) {
+    console.log("CaseAnalysisContainer: Showing error state:", analysisError);
     return <CaseAnalysisErrorState error={analysisError} onRefresh={fetchAnalysisData} />;
   }
 
   // Handle loading state
   if (isAnalysisLoading && !analysisData) {
+    console.log("CaseAnalysisContainer: Showing loading skeleton");
     return <CaseAnalysisLoadingSkeleton />;
   }
 
   // Handle case where there is no analysis data yet
   if (!analysisData) {
+    console.log("CaseAnalysisContainer: No analysis data - showing empty state");
     return (
       <EmptyAnalysisState 
         clientName={clientName}
@@ -107,6 +119,8 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
 
   // Combine loading states for proper button feedback
   const isCombinedLoading = isAnalysisLoading || isGeneratingAnalysis;
+
+  console.log("CaseAnalysisContainer: Rendering main content with analysis data");
 
   return (
     <div className="container mx-auto py-8">

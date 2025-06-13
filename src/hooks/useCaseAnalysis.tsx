@@ -25,17 +25,32 @@ export const useCaseAnalysis = (clientId?: string, caseId?: string) => {
   // Load data on initial render
   useEffect(() => {
     if (clientId) {
+      console.log("useCaseAnalysis: Loading analysis data for client:", clientId, "case:", caseId);
       fetchAnalysisData();
     }
-  }, [clientId, caseId]);
+  }, [clientId, caseId, fetchAnalysisData]);
 
   // Create a wrapper function that matches the expected interface
-  const generateNewAnalysis = () => {
-    generateRealTimeAnalysis(fetchAnalysisData);
+  const generateNewAnalysis = async () => {
+    console.log("useCaseAnalysis: Generating new analysis...");
+    await generateRealTimeAnalysis(
+      async () => {
+        console.log("useCaseAnalysis: Analysis complete callback - refetching data");
+        await fetchAnalysisData();
+      }
+    );
   };
 
   // Combine loading states
   const combinedIsLoading = isLoading || isGeneratingAnalysis;
+
+  console.log("useCaseAnalysis state:", {
+    hasAnalysisData: !!analysisData,
+    isLoading: combinedIsLoading,
+    error,
+    clientId,
+    caseId
+  });
 
   // Provide a unified API that matches the original hook
   return {
