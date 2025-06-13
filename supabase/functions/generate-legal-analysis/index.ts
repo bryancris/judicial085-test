@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { searchRelevantLaw } from "./services/lawSearchService.ts";
@@ -33,6 +32,37 @@ serve(async (req) => {
       );
     }
 
+    // Extract user ID from the authorization header
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      console.error('No authorization header found');
+      return new Response(
+        JSON.stringify({ error: "Authentication required" }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Create Supabase client to get user info
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.38.0");
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Get user from JWT token
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    
+    if (userError || !user) {
+      console.error('Failed to get user from token:', userError);
+      return new Response(
+        JSON.stringify({ error: "Invalid authentication token" }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = user.id;
+    console.log(`Authenticated user ID: ${userId}`);
+
     // Log the request details for debugging
     console.log(`Generating legal analysis for client: ${clientId}${caseId ? `, case: ${caseId}` : ''}`);
     console.log(`Conversation length: ${conversation?.length || 0}`);
@@ -49,11 +79,6 @@ serve(async (req) => {
     if (!hasProvidedConversation) {
       console.log("No conversation provided, fetching client messages from database");
       try {
-        const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.38.0");
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
         // First try to get case-specific messages if caseId is provided
         let messageQuery = supabase
           .from("client_messages")
@@ -287,17 +312,12 @@ serve(async (req) => {
       console.log(`Legal analysis generated successfully from ${analysisSource} with research integration`);
     }
 
-    // Save the analysis to the database with proper case association
+    // Save the analysis to the database with proper user association
     try {
-      const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.38.0");
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
       // Get the current timestamp
       const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-      // Save the analysis with the correct case association
+      // Save the analysis with the correct user ID from authentication
       const analysisData = {
         client_id: clientId,
         case_id: caseId || null, // Important: Use the provided case ID or null for client-level
@@ -305,7 +325,7 @@ serve(async (req) => {
         case_type: detectedCaseType,
         law_references: knowledgeBaseLawReferences,
         timestamp: timestamp,
-        user_id: clientId // Using clientId as user_id for now
+        user_id: userId // Use the authenticated user's ID instead of clientId
       };
 
       console.log("Saving analysis to database with data:", {
@@ -313,7 +333,8 @@ serve(async (req) => {
         case_id: analysisData.case_id,
         case_type: analysisData.case_type,
         has_content: !!analysisData.content,
-        content_length: analysisData.content.length
+        content_length: analysisData.content.length,
+        user_id: analysisData.user_id
       });
 
       const { data: savedAnalysis, error: saveError } = await supabase
