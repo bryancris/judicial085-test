@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { searchRelevantLaw } from "./services/lawSearchService.ts";
@@ -216,6 +217,52 @@ serve(async (req) => {
       const sourceNote = `*Analysis generated from ${analysisSource}${clientDocuments.length > 0 ? ` (${clientDocuments.length} document${clientDocuments.length > 1 ? 's' : ''}: ${clientDocuments.map(doc => doc.title).join(', ')})` : ''}${researchUpdates && researchUpdates.length > 0 ? ` with ${researchUpdates.length} research update(s) integrated` : ''}*\n\n`;
       analysis = sourceNote + analysis;
       console.log(`Legal analysis generated successfully from ${analysisSource} with research integration`);
+    }
+
+    // IMPORTANT FIX: Save the analysis to the database with proper case association
+    try {
+      const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.38.0");
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+      // Get the current timestamp
+      const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      // Save the analysis with the correct case association
+      const analysisData = {
+        client_id: clientId,
+        case_id: caseId || null, // Important: Use the provided case ID or null for client-level
+        content: analysis,
+        case_type: detectedCaseType,
+        law_references: knowledgeBaseLawReferences,
+        timestamp: timestamp,
+        user_id: clientId // Using clientId as user_id for now
+      };
+
+      console.log("Saving analysis to database with data:", {
+        client_id: analysisData.client_id,
+        case_id: analysisData.case_id,
+        case_type: analysisData.case_type,
+        has_content: !!analysisData.content,
+        content_length: analysisData.content.length
+      });
+
+      const { data: savedAnalysis, error: saveError } = await supabase
+        .from('legal_analyses')
+        .insert([analysisData])
+        .select()
+        .single();
+
+      if (saveError) {
+        console.error('Error saving analysis to database:', saveError);
+        // Don't fail the entire request, just log the error
+      } else {
+        console.log('Analysis saved successfully to database with ID:', savedAnalysis.id);
+      }
+    } catch (dbError) {
+      console.error('Database operation failed:', dbError);
+      // Don't fail the entire request, just log the error
     }
 
     // Return enhanced knowledge base law references with direct PDF URLs

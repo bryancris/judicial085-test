@@ -15,6 +15,8 @@ export const generateLegalAnalysis = async (
   error?: string 
 }> => {
   try {
+    console.log("Calling generate-legal-analysis with:", { clientId, caseId, conversationLength: conversation.length });
+    
     const { data, error } = await invokeFunction<{ 
       analysis: string; 
       lawReferences?: any[];
@@ -26,8 +28,15 @@ export const generateLegalAnalysis = async (
     );
 
     if (error) {
+      console.error("Analysis generation API error:", error);
       return { analysis: "", error };
     }
+
+    console.log("Analysis generation successful, response:", { 
+      hasAnalysis: !!data?.analysis,
+      analysisLength: data?.analysis?.length || 0,
+      lawReferencesCount: data?.lawReferences?.length || 0
+    });
 
     return { 
       analysis: data?.analysis || "",

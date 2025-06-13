@@ -29,10 +29,21 @@ export const useAnalysisGeneration = (clientId?: string, caseId?: string) => {
       
       // Get messages from the database instead of using chat hook
       const { supabase } = await import("@/integrations/supabase/client");
-      const { data: dbMessages } = await supabase
+      
+      // Build query for messages - if caseId is provided, filter by it
+      let messageQuery = supabase
         .from("client_messages")
         .select("*")
-        .eq("client_id", clientId)
+        .eq("client_id", clientId);
+
+      // Apply case filtering if caseId is provided
+      if (caseId) {
+        messageQuery = messageQuery.eq("case_id", caseId);
+      } else {
+        messageQuery = messageQuery.is("case_id", null);
+      }
+
+      const { data: dbMessages } = await messageQuery
         .order("created_at", { ascending: true });
 
       // Transform database messages to ChatMessageProps format
@@ -42,7 +53,7 @@ export const useAnalysisGeneration = (clientId?: string, caseId?: string) => {
         role: msg.role as "attorney" | "client"
       }));
 
-      console.log("Found messages for analysis:", messages.length);
+      console.log("Found messages for analysis:", messages.length, "for case:", caseId || "client-level");
 
       const result = await generateLegalAnalysis(clientId, messages, caseId);
       
@@ -61,7 +72,7 @@ export const useAnalysisGeneration = (clientId?: string, caseId?: string) => {
       // Show success message
       toast({
         title: "Analysis Complete",
-        description: "Legal analysis has been generated successfully.",
+        description: `Legal analysis has been generated successfully${caseId ? ' for this case' : ''}.`,
       });
 
       // Refresh analysis data first

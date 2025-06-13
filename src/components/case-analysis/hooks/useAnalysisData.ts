@@ -17,35 +17,55 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
     setAnalysisError(null);
     
     try {
+      console.log(`Fetching analysis data for client: ${clientId}${caseId ? `, case: ${caseId}` : ''}`);
+      
       // First, clean up any duplicate analyses for this client
       const cleanupResult = await cleanupDuplicateAnalyses(clientId);
       if (cleanupResult.duplicatesRemoved > 0) {
         console.log(`Cleaned up ${cleanupResult.duplicatesRemoved} duplicate analyses for client ${clientId}`);
       }
 
-      // Fetch the latest legal analysis with proper case filtering
-      let query = supabase
-        .from("legal_analyses")
-        .select("*")
-        .eq("client_id", clientId);
+      let analyses = null;
 
-      // Apply case filtering properly
+      // If case ID is provided, ONLY look for case-specific analysis
       if (caseId) {
-        query = query.eq("case_id", caseId);
+        console.log(`Looking for case-specific analysis for case: ${caseId}`);
+        const { data: caseAnalyses, error: caseError } = await supabase
+          .from("legal_analyses")
+          .select("*")
+          .eq("client_id", clientId)
+          .eq("case_id", caseId)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (caseError) {
+          throw new Error(`Failed to fetch case-specific analysis: ${caseError.message}`);
+        }
+
+        analyses = caseAnalyses;
+        console.log(`Found ${analyses?.length || 0} case-specific analysis records`);
       } else {
-        query = query.is("case_id", null);
-      }
+        // If no case ID, look for client-level analysis (case_id IS NULL)
+        console.log(`Looking for client-level analysis (no case specified)`);
+        const { data: clientAnalyses, error: clientError } = await supabase
+          .from("legal_analyses")
+          .select("*")
+          .eq("client_id", clientId)
+          .is("case_id", null)
+          .order("created_at", { ascending: false })
+          .limit(1);
 
-      const { data: analyses, error: analysisError } = await query
-        .order("created_at", { ascending: false })
-        .limit(1);
+        if (clientError) {
+          throw new Error(`Failed to fetch client-level analysis: ${clientError.message}`);
+        }
 
-      if (analysisError) {
-        throw new Error(`Failed to fetch analysis: ${analysisError.message}`);
+        analyses = clientAnalyses;
+        console.log(`Found ${analyses?.length || 0} client-level analysis records`);
       }
 
       if (analyses && analyses.length > 0) {
         const analysis = analyses[0];
+        console.log(`Using analysis: ID=${analysis.id}, case_id=${analysis.case_id}, created_at=${analysis.created_at}`);
         
         // Extract legal citations from the analysis content and map to knowledge base
         const extractedCitations = extractLegalCitations(analysis.content);
@@ -85,7 +105,9 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
         };
 
         setAnalysisData(transformedData);
+        console.log("Analysis data set successfully");
       } else {
+        console.log(`No analysis found for the specified criteria`);
         setAnalysisData(null);
       }
       
