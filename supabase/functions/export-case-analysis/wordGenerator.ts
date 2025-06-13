@@ -1,4 +1,3 @@
-
 import type { CaseAnalysisData } from './types.ts';
 
 export async function generateWord(data: CaseAnalysisData): Promise<Uint8Array> {
@@ -338,7 +337,7 @@ function processAnalysisContent(content: string, docxElements: any) {
       }
       
       // Process inline formatting (bold text)
-      const textRuns = processInlineFormatting(line)
+      const textRuns = processInlineFormatting(line, docxElements)
       paragraphs.push(
         new Paragraph({
           children: textRuns,
@@ -356,7 +355,8 @@ function processAnalysisContent(content: string, docxElements: any) {
   return paragraphs
 }
 
-function processInlineFormatting(text: string) {
+function processInlineFormatting(text: string, docxElements: any) {
+  const { TextRun } = docxElements
   const runs = []
   let currentIndex = 0
   
@@ -369,12 +369,12 @@ function processInlineFormatting(text: string) {
     if (match.index > currentIndex) {
       const beforeText = text.substring(currentIndex, match.index)
       if (beforeText) {
-        runs.push(new (globalThis as any).TextRun({ text: beforeText }))
+        runs.push(new TextRun({ text: beforeText }))
       }
     }
     
     // Add bold text
-    runs.push(new (globalThis as any).TextRun({ text: match[1], bold: true }))
+    runs.push(new TextRun({ text: match[1], bold: true }))
     currentIndex = match.index + match[0].length
   }
   
@@ -382,13 +382,13 @@ function processInlineFormatting(text: string) {
   if (currentIndex < text.length) {
     const remainingText = text.substring(currentIndex)
     if (remainingText) {
-      runs.push(new (globalThis as any).TextRun({ text: remainingText }))
+      runs.push(new TextRun({ text: remainingText }))
     }
   }
   
   // If no formatting found, return simple text run
   if (runs.length === 0) {
-    runs.push(new (globalThis as any).TextRun({ text }))
+    runs.push(new TextRun({ text }))
   }
   
   return runs
@@ -401,7 +401,7 @@ function createFormattedList(items: string[], docxElements: any) {
     new Paragraph({
       children: [
         new TextRun({ text: `${index + 1}. `, bold: true }),
-        ...processInlineFormatting(item)
+        ...processInlineFormatting(item, docxElements)
       ],
       spacing: { after: 100 },
       indent: { left: 360 } // Indent list items
