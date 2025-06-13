@@ -38,9 +38,77 @@ serve(async (req) => {
     console.log(`Conversation length: ${conversation?.length || 0}`);
     console.log(`Research updates to integrate: ${researchUpdates?.length || 0}`);
 
-    // Determine if we have a conversation or should use documents
-    const hasConversation = conversation && conversation.length > 0;
-    console.log(`Has conversation: ${hasConversation}`);
+    // Check if we have a conversation provided
+    const hasProvidedConversation = conversation && conversation.length > 0;
+    console.log(`Has provided conversation: ${hasProvidedConversation}`);
+
+    // Initialize conversation data
+    let conversationMessages = conversation || [];
+
+    // If no conversation provided or empty, try to fetch client messages
+    if (!hasProvidedConversation) {
+      console.log("No conversation provided, fetching client messages from database");
+      try {
+        const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.38.0");
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+        // First try to get case-specific messages if caseId is provided
+        let messageQuery = supabase
+          .from("client_messages")
+          .select("*")
+          .eq("client_id", clientId);
+
+        if (caseId) {
+          console.log(`Trying to fetch case-specific messages for case: ${caseId}`);
+          messageQuery = messageQuery.eq("case_id", caseId);
+        } else {
+          console.log(`Fetching client-level messages (case_id IS NULL)`);
+          messageQuery = messageQuery.is("case_id", null);
+        }
+
+        const { data: dbMessages, error: messageError } = await messageQuery
+          .order("created_at", { ascending: true });
+
+        if (messageError) {
+          console.error("Error fetching messages:", messageError);
+        } else if (dbMessages && dbMessages.length > 0) {
+          console.log(`Found ${dbMessages.length} messages in database`);
+          conversationMessages = dbMessages.map(msg => ({
+            content: msg.content,
+            timestamp: msg.timestamp,
+            role: msg.role
+          }));
+        } else if (caseId) {
+          // If no case-specific messages found, fallback to client-level messages
+          console.log("No case-specific messages found, falling back to client-level messages");
+          const { data: clientMessages, error: clientError } = await supabase
+            .from("client_messages")
+            .select("*")
+            .eq("client_id", clientId)
+            .is("case_id", null)
+            .order("created_at", { ascending: true });
+
+          if (clientError) {
+            console.error("Error fetching client messages:", clientError);
+          } else if (clientMessages && clientMessages.length > 0) {
+            console.log(`Found ${clientMessages.length} client-level messages for fallback`);
+            conversationMessages = clientMessages.map(msg => ({
+              content: msg.content,
+              timestamp: msg.timestamp,
+              role: msg.role
+            }));
+          }
+        }
+      } catch (dbError) {
+        console.error("Database error when fetching messages:", dbError);
+      }
+    }
+
+    // Determine if we have a conversation after fetching
+    const hasConversation = conversationMessages && conversationMessages.length > 0;
+    console.log(`Final conversation status: ${hasConversation}, length: ${conversationMessages?.length || 0}`);
 
     // Fetch client-specific documents (filtered by case if provided)
     let clientDocuments = [];
@@ -64,8 +132,8 @@ serve(async (req) => {
     let analysisSource = "";
     
     if (hasConversation) {
-      legalContext = extractLegalTopics(conversation);
-      analysisSource = "client conversation";
+      legalContext = extractLegalTopics(conversationMessages);
+      analysisSource = caseId && !hasProvidedConversation ? "client conversation (used for case analysis)" : "client conversation";
     } else {
       // Extract legal topics from document content
       const documentText = clientDocuments.map(doc => doc.content).join(" ");
@@ -118,7 +186,7 @@ serve(async (req) => {
     // Format the content for the API request
     let userContent = "";
     if (hasConversation) {
-      const formattedConversation = conversation.map(msg => ({
+      const formattedConversation = conversationMessages.map(msg => ({
         role: "user", 
         content: `${msg.role.toUpperCase()}: ${msg.content}`
       }));
@@ -219,7 +287,7 @@ serve(async (req) => {
       console.log(`Legal analysis generated successfully from ${analysisSource} with research integration`);
     }
 
-    // IMPORTANT FIX: Save the analysis to the database with proper case association
+    // Save the analysis to the database with proper case association
     try {
       const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.38.0");
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;

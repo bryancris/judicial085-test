@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { generateLegalAnalysis } from "@/utils/api/analysisApiService";
 import { useToast } from "@/hooks/use-toast";
-import { ChatMessageProps } from "@/components/clients/chat/ChatMessage";
 
 export const useAnalysisGeneration = (clientId?: string, caseId?: string) => {
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
@@ -27,35 +26,13 @@ export const useAnalysisGeneration = (clientId?: string, caseId?: string) => {
     try {
       console.log("Starting real-time analysis generation for client:", clientId, "case:", caseId);
       
-      // Get messages from the database instead of using chat hook
-      const { supabase } = await import("@/integrations/supabase/client");
-      
-      // Build query for messages - if caseId is provided, filter by it
-      let messageQuery = supabase
-        .from("client_messages")
-        .select("*")
-        .eq("client_id", clientId);
+      // Don't fetch messages here - let the edge function handle the fallback logic
+      // Just pass an empty conversation array and let the backend fetch what it needs
+      const emptyConversation = [];
 
-      // Apply case filtering if caseId is provided
-      if (caseId) {
-        messageQuery = messageQuery.eq("case_id", caseId);
-      } else {
-        messageQuery = messageQuery.is("case_id", null);
-      }
+      console.log("Sending empty conversation to edge function - it will handle message fetching");
 
-      const { data: dbMessages } = await messageQuery
-        .order("created_at", { ascending: true });
-
-      // Transform database messages to ChatMessageProps format
-      const messages: ChatMessageProps[] = (dbMessages || []).map(msg => ({
-        content: msg.content,
-        timestamp: msg.timestamp,
-        role: msg.role as "attorney" | "client"
-      }));
-
-      console.log("Found messages for analysis:", messages.length, "for case:", caseId || "client-level");
-
-      const result = await generateLegalAnalysis(clientId, messages, caseId);
+      const result = await generateLegalAnalysis(clientId, emptyConversation, caseId);
       
       if (result.error) {
         console.error("Analysis generation failed:", result.error);
