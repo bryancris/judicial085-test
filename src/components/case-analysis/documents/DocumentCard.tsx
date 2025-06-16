@@ -87,12 +87,14 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
             )}
           </div>
           <Button
-            variant="ghost"
-            size="icon"
+            variant="destructive"
+            size="sm"
             onClick={() => onDeleteDocument(document.id)}
             disabled={isProcessing}
+            className="bg-red-600 hover:bg-red-700 text-white"
           >
-            <Trash2 className="h-4 w-4 text-destructive-foreground" />
+            <Trash2 className="h-4 w-4 mr-1" />
+            Delete
           </Button>
         </div>
         
