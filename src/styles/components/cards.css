@@ -1,7 +1,7 @@
 
 /* Glass card effect for both light and dark mode */
 .card-highlight {
-  @apply border border-gray-200/30 dark:border-white/10 
+  @apply border border-gray-300 dark:border-white/10 
     bg-white/90 dark:bg-gray-800/60 
     backdrop-filter backdrop-blur-lg
     shadow-lg dark:shadow-lg
@@ -17,13 +17,13 @@
 
 .glass-card {
   @apply bg-white/80 dark:bg-gray-800/70 
-    backdrop-blur-md border border-gray-200/50 
+    backdrop-blur-md border border-gray-300 
     dark:border-white/20 shadow-lg rounded-xl;
 }
 
 .dark-card {
   @apply bg-white/90 dark:bg-gray-800/90 
-    backdrop-blur-md border border-gray-200/50 
+    backdrop-blur-md border border-gray-300 
     dark:border-gray-700/50 dark:hover:border-gray-600
     shadow-md hover:shadow-lg rounded-xl
     transition-all duration-300;

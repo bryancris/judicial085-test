@@ -8,11 +8,21 @@
   @apply bg-gray-100 dark:bg-gray-800 
     text-left py-2 px-3 
     font-medium text-gray-700 dark:text-gray-300
-    border border-gray-300 dark:border-gray-700;
+    border border-gray-400 dark:border-gray-700;
 }
 
 .legal-table td {
   @apply py-2 px-3 
-    border border-gray-300 dark:border-gray-700
+    border border-gray-400 dark:border-gray-700
     text-gray-800 dark:text-gray-200;
+}
+
+/* Enhanced table borders for better visibility */
+.table-container table {
+  @apply border-gray-400 dark:border-gray-700;
+}
+
+.table-container th,
+.table-container td {
+  @apply border-gray-400 dark:border-gray-700;
 }
