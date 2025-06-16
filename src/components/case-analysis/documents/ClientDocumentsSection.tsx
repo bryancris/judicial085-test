@@ -2,8 +2,9 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { DocumentWithContent } from "@/types/knowledge";
-import { Loader2, PlusCircle, BookText } from "lucide-react";
+import { Loader2, PlusCircle, BookText, Trash2 } from "lucide-react";
 import DocumentUploadDialog from "@/components/clients/DocumentUploadDialog";
+import DocumentCleanupDialog from "@/components/clients/DocumentCleanupDialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Case } from "@/types/case";
 import { supabase } from '@/integrations/supabase/client';
@@ -42,6 +43,7 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
   onRefreshDocuments
 }) => {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<DocumentWithContent | null>(null);
   const [documentContent, setDocumentContent] = useState<string>('');
   const [loadingContent, setLoadingContent] = useState(false);
@@ -122,6 +124,16 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
     }
   };
 
+  const handleCleanupComplete = () => {
+    console.log("Document cleanup complete, triggering refresh...");
+    if (onRefreshDocuments) {
+      onRefreshDocuments();
+    }
+  };
+
+  // Show cleanup button if there are documents and we're in full view
+  const shouldShowCleanup = fullView && documents.length > 1;
+
   return (
     <>
       <div className="space-y-4">
@@ -149,7 +161,21 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
           isProcessing={isProcessing}
         />
 
-        <div className="flex justify-end mt-4">
+        <div className="flex justify-between items-center mt-4">
+          <div className="flex gap-2">
+            {shouldShowCleanup && (
+              <Button
+                variant="outline"
+                onClick={() => setCleanupDialogOpen(true)}
+                className="flex items-center gap-2"
+                disabled={isProcessing}
+              >
+                <Trash2 className="h-4 w-4" />
+                Clean Up Documents
+              </Button>
+            )}
+          </div>
+          
           <Button
             onClick={() => setUploadDialogOpen(true)}
             className="flex items-center gap-2"
@@ -177,6 +203,13 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
           cases={cases}
           allowCaseSelection={allowCaseSelection}
           onUploadSuccess={handleUploadSuccess}
+        />
+
+        <DocumentCleanupDialog
+          clientId={clientId}
+          isOpen={cleanupDialogOpen}
+          onOpenChange={setCleanupDialogOpen}
+          onCleanupComplete={handleCleanupComplete}
         />
 
         <DocumentPreviewDialog

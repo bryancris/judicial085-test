@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { DocumentWithContent } from "@/types/knowledge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Trash2, ExternalLink } from "lucide-react";
+import { FileText, Trash2, ExternalLink, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +24,8 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
   onToggleAnalysis,
   isProcessing
 }) => {
+  const [isDeleting, setIsDeleting] = React.useState(false);
+
   const getDocumentPreview = (document: DocumentWithContent): string => {
     if (document.contents.length > 0 && document.contents[0].content) {
       return document.contents[0].content;
@@ -37,11 +38,26 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
     onToggleAnalysis(document.id, checked);
   };
 
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await onDeleteDocument(document.id);
+    } catch (error) {
+      console.error("Error deleting document:", error);
+    } finally {
+      // Keep the deleting state for a moment to show feedback
+      setTimeout(() => setIsDeleting(false), 1000);
+    }
+  };
+
   // Ensure we have a boolean value for the switch
   const isIncludedInAnalysis = Boolean(document.include_in_analysis);
 
   return (
-    <Card className="col-span-1 overflow-hidden">
+    <Card className={cn(
+      "col-span-1 overflow-hidden transition-all duration-200",
+      isDeleting && "opacity-50 scale-95"
+    )}>
       <CardHeader className="pb-2">
         <CardTitle className="text-md font-medium truncate">
           {document.title || "Untitled Document"}
@@ -71,6 +87,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
               variant="secondary" 
               size="sm"
               onClick={() => onDocumentOpen(document)}
+              disabled={isDeleting}
             >
               <FileText className="h-4 w-4 mr-1" />
               View Data
@@ -80,6 +97,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
                 variant="outline" 
                 size="sm"
                 onClick={() => onPdfOpen(document.url!)}
+                disabled={isDeleting}
               >
                 <ExternalLink className="h-4 w-4 mr-1" />
                 View PDF
@@ -89,12 +107,21 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
           <Button
             variant="destructive"
             size="sm"
-            onClick={() => onDeleteDocument(document.id)}
-            disabled={isProcessing}
-            className="bg-red-600 hover:bg-red-700 text-white"
+            onClick={handleDelete}
+            disabled={isProcessing || isDeleting}
+            className="bg-red-600 hover:bg-red-700 text-white min-w-[80px]"
           >
-            <Trash2 className="h-4 w-4 mr-1" />
-            Delete
+            {isDeleting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              <>
+                <Trash2 className="h-4 w-4 mr-1" />
+                Delete
+              </>
+            )}
           </Button>
         </div>
         
@@ -106,7 +133,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
             id={`analysis-${document.id}`}
             checked={isIncludedInAnalysis}
             onCheckedChange={handleToggleAnalysis}
-            disabled={isProcessing}
+            disabled={isProcessing || isDeleting}
             className={cn(
               "data-[state=checked]:bg-green-500",
               "focus-visible:ring-green-600"
