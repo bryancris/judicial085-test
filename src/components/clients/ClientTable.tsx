@@ -12,7 +12,7 @@ interface ClientTableProps {
 
 const ClientTable = ({ clients, handleViewClient }: ClientTableProps) => {
   return (
-    <div className="border rounded-md overflow-hidden">
+    <div className="table-container border rounded-md overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>

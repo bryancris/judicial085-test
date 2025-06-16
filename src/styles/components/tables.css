@@ -17,12 +17,73 @@
     text-gray-800 dark:text-gray-200;
 }
 
-/* Enhanced table borders for better visibility */
+/* Enhanced data table styling for better visibility */
+.data-table {
+  @apply w-full border-collapse;
+  border: 1px solid hsl(220, 13%, 60%);
+}
+
+.dark .data-table {
+  border-color: hsl(217.2, 32.6%, 25%);
+}
+
+.data-table th {
+  @apply h-12 px-4 text-left align-middle font-medium text-muted-foreground;
+  border: 1px solid hsl(220, 13%, 60%);
+  border-bottom: 2px solid hsl(220, 13%, 55%);
+}
+
+.dark .data-table th {
+  border-color: hsl(217.2, 32.6%, 25%);
+  border-bottom-color: hsl(217.2, 32.6%, 30%);
+}
+
+.data-table td {
+  @apply p-4 align-middle;
+  border: 1px solid hsl(220, 13%, 60%);
+}
+
+.dark .data-table td {
+  border-color: hsl(217.2, 32.6%, 25%);
+}
+
+.data-table tr {
+  @apply transition-colors hover:bg-muted/50;
+  border-bottom: 1px solid hsl(220, 13%, 60%);
+}
+
+.dark .data-table tr {
+  border-bottom-color: hsl(217.2, 32.6%, 25%);
+}
+
+.data-table tr:last-child {
+  border-bottom: 0;
+}
+
+/* Enhanced table container borders */
+.table-container {
+  @apply border rounded-md overflow-hidden;
+  border-color: hsl(220, 13%, 60%);
+}
+
+.dark .table-container {
+  border-color: hsl(217.2, 32.6%, 25%);
+}
+
 .table-container table {
-  @apply border-gray-400 dark:border-gray-700;
+  border-color: hsl(220, 13%, 60%);
+}
+
+.dark .table-container table {
+  border-color: hsl(217.2, 32.6%, 25%);
 }
 
 .table-container th,
 .table-container td {
-  @apply border-gray-400 dark:border-gray-700;
+  border-color: hsl(220, 13%, 60%);
+}
+
+.dark .table-container th,
+.dark .table-container td {
+  border-color: hsl(217.2, 32.6%, 25%);
 }
