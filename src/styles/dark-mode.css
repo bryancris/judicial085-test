@@ -35,3 +35,16 @@
 .dark .border-gray-300 {
   @apply border-gray-600;
 }
+
+/* Enhanced input styling for dark mode */
+.dark input[type="email"],
+.dark input[type="password"],
+.dark input[type="text"] {
+  @apply bg-gray-800 border-gray-600 text-gray-100;
+}
+
+.dark input[type="email"]:focus,
+.dark input[type="password"]:focus,
+.dark input[type="text"]:focus {
+  @apply border-gray-500 ring-gray-500;
+}

@@ -3,7 +3,7 @@ import React from 'react';
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Mail, LogIn, UserPlus } from "lucide-react";
+import { Mail, LogIn, UserPlus, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
@@ -42,11 +42,11 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isLogin, isLoading, onSubmit
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <div className="flex items-center border rounded-md focus-within:ring-2 focus-within:ring-ring">
-                  <Mail className="ml-3 h-4 w-4 text-muted-foreground" />
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input 
                     placeholder="name@example.com" 
-                    className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0" 
+                    className="pl-10" 
                     {...field} 
                   />
                 </div>
@@ -62,7 +62,15 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isLogin, isLoading, onSubmit
             <FormItem>
               <FormLabel>Password</FormLabel>
               <FormControl>
-                <Input type="password" placeholder="••••••" {...field} />
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    type="password" 
+                    placeholder="••••••" 
+                    className="pl-10"
+                    {...field} 
+                  />
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
