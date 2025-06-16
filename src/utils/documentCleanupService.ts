@@ -1,23 +1,24 @@
 import { supabase } from "@/integrations/supabase/client";
 
-// Clean up duplicate "Test 1" documents for a specific client
-export const cleanupTestDocuments = async (clientId: string): Promise<{
+// Enhanced cleanup function that handles all test documents more aggressively
+export const massDeleteTestDocuments = async (clientId: string): Promise<{
   success: boolean;
   deletedCount: number;
   error?: string;
 }> => {
   try {
-    console.log(`Starting cleanup of test documents for client: ${clientId}`);
+    console.log(`Starting mass deletion of ALL test documents for client: ${clientId}`);
     
-    // Fetch all documents with title "Test 1" for the client
+    // Use a more comprehensive query to find test documents
     const { data: testDocs, error: fetchError } = await supabase
       .from("document_metadata")
       .select("id, title, created_at")
       .eq("client_id", clientId)
-      .eq("title", "Test 1")
+      .or("title.ilike.%test%,title.ilike.%Test%,title.eq.Test 1")
       .order("created_at", { ascending: false });
 
     if (fetchError) {
+      console.error("Error fetching test documents:", fetchError);
       return { success: false, deletedCount: 0, error: fetchError.message };
     }
 
@@ -28,36 +29,112 @@ export const cleanupTestDocuments = async (clientId: string): Promise<{
 
     console.log(`Found ${testDocs.length} test documents to delete`);
     
-    // Delete all test documents
     const documentIds = testDocs.map(doc => doc.id);
     
-    // Delete document chunks first (if any)
-    const { error: chunksError } = await supabase
-      .from("document_chunks")
-      .delete()
-      .in("document_id", documentIds);
+    // Delete in batches to avoid timeout
+    const batchSize = 50;
+    let totalDeleted = 0;
+    
+    for (let i = 0; i < documentIds.length; i += batchSize) {
+      const batch = documentIds.slice(i, i + batchSize);
+      
+      // Delete document chunks first
+      const { error: chunksError } = await supabase
+        .from("document_chunks")
+        .delete()
+        .in("document_id", batch);
 
-    if (chunksError) {
-      console.error("Error deleting document chunks:", chunksError);
+      if (chunksError) {
+        console.error("Error deleting document chunks:", chunksError);
+      }
+
+      // Delete document metadata
+      const { error: deleteError } = await supabase
+        .from("document_metadata")
+        .delete()
+        .in("id", batch);
+
+      if (deleteError) {
+        console.error("Error deleting document metadata:", deleteError);
+        return { success: false, deletedCount: totalDeleted, error: deleteError.message };
+      }
+      
+      totalDeleted += batch.length;
+      console.log(`Deleted batch of ${batch.length} documents. Total: ${totalDeleted}`);
     }
 
-    // Delete document metadata
-    const { error: deleteError } = await supabase
-      .from("document_metadata")
-      .delete()
-      .in("id", documentIds);
-
-    if (deleteError) {
-      return { success: false, deletedCount: 0, error: deleteError.message };
-    }
-
-    console.log(`Successfully deleted ${testDocs.length} test documents for client ${clientId}`);
-    return { success: true, deletedCount: testDocs.length };
+    console.log(`Successfully deleted ${totalDeleted} test documents for client ${clientId}`);
+    return { success: true, deletedCount: totalDeleted };
 
   } catch (error: any) {
-    console.error("Error in cleanupTestDocuments:", error);
+    console.error("Error in massDeleteTestDocuments:", error);
     return { success: false, deletedCount: 0, error: error.message };
   }
+};
+
+// Enhanced validation function to prevent test document creation
+export const validateDocumentTitle = (title: string): { valid: boolean; error?: string } => {
+  const normalizedTitle = title.trim().toLowerCase();
+  
+  // Block various test document patterns
+  const testPatterns = [
+    'test',
+    'test 1',
+    'test1',
+    'testing',
+    'demo',
+    'sample',
+    'example'
+  ];
+  
+  for (const pattern of testPatterns) {
+    if (normalizedTitle === pattern || normalizedTitle.startsWith(pattern + ' ')) {
+      return {
+        valid: false,
+        error: `Document title "${title}" appears to be a test document. Please use a meaningful document title.`
+      };
+    }
+  }
+  
+  return { valid: true };
+};
+
+// Monitor for new test documents being created
+export const monitorTestDocuments = async (clientId: string): Promise<{
+  testDocumentCount: number;
+  recentTestDocs: any[];
+}> => {
+  try {
+    const { data: recentDocs, error } = await supabase
+      .from("document_metadata")
+      .select("id, title, created_at")
+      .eq("client_id", clientId)
+      .or("title.ilike.%test%,title.ilike.%Test%,title.eq.Test 1")
+      .gte("created_at", new Date(Date.now() - 5 * 60 * 1000).toISOString()) // Last 5 minutes
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error monitoring test documents:", error);
+      return { testDocumentCount: 0, recentTestDocs: [] };
+    }
+
+    return {
+      testDocumentCount: recentDocs?.length || 0,
+      recentTestDocs: recentDocs || []
+    };
+  } catch (error) {
+    console.error("Error in monitorTestDocuments:", error);
+    return { testDocumentCount: 0, recentTestDocs: [] };
+  }
+};
+
+// Clean up duplicate "Test 1" documents for a specific client
+export const cleanupTestDocuments = async (clientId: string): Promise<{
+  success: boolean;
+  deletedCount: number;
+  error?: string;
+}> => {
+  return massDeleteTestDocuments(clientId);
 };
 
 // Clean up all duplicate documents (not just test ones) for a client

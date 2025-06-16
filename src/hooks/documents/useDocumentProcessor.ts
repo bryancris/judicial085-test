@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { processPdfDocument } from "@/utils/pdfUtils";
 import { chunkDocument } from "@/utils/documents/documentUtils";
+import { validateDocumentTitle } from "@/utils/documentCleanupService";
 
 export const useDocumentProcessor = (
   clientId: string | undefined,
@@ -22,6 +23,17 @@ export const useDocumentProcessor = (
     if (!clientId) {
       console.error("Cannot process document: No client ID provided");
       return { success: false, error: "No client ID provided" };
+    }
+    
+    // Validate document title to prevent test documents
+    const validation = validateDocumentTitle(title);
+    if (!validation.valid) {
+      toast({
+        title: "Document creation blocked",
+        description: validation.error,
+        variant: "destructive",
+      });
+      return { success: false, error: validation.error };
     }
     
     setIsProcessing(true);

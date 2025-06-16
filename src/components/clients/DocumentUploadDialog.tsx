@@ -1,12 +1,15 @@
+
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Loader2, FilePlus, FileText, BookOpenCheck } from "lucide-react";
+import { Loader2, FilePlus, FileText, BookOpenCheck, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import CaseSelector from "@/components/clients/cases/CaseSelector";
 import { Case } from "@/types/case";
 import { processPdfDocument } from "@/utils/pdfUtils";
+import { validateDocumentTitle } from "@/utils/documentCleanupService";
 import DocumentTitleInput from "@/components/clients/documents/DocumentTitleInput";
 import DocumentContentTabs from "@/components/clients/documents/DocumentContentTabs";
 import DocumentScopeAlert from "@/components/clients/documents/DocumentScopeAlert";
@@ -21,7 +24,7 @@ interface DocumentUploadDialogProps {
   caseName?: string;
   cases?: Case[];
   allowCaseSelection?: boolean;
-  onUploadSuccess?: () => void; // Add callback for successful uploads
+  onUploadSuccess?: () => void;
 }
 
 const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
@@ -42,7 +45,19 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
   const [uploadMethod, setUploadMethod] = useState<"text" | "pdf">("text");
   const [selectedCaseId, setSelectedCaseId] = useState<string | undefined>(caseId);
   const [isProcessingPdf, setIsProcessingPdf] = useState(false);
+  const [titleValidation, setTitleValidation] = useState<{ valid: boolean; error?: string }>({ valid: true });
   const { toast } = useToast();
+
+  const handleTitleChange = (newTitle: string) => {
+    setDocumentTitle(newTitle);
+    
+    if (newTitle.trim()) {
+      const validation = validateDocumentTitle(newTitle);
+      setTitleValidation(validation);
+    } else {
+      setTitleValidation({ valid: true });
+    }
+  };
 
   const handleDocumentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +79,17 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
       } else {
         finalTitle = "Untitled Document";
       }
+    }
+    
+    // Validate title before proceeding
+    const validation = validateDocumentTitle(finalTitle);
+    if (!validation.valid) {
+      toast({
+        title: "Invalid Document Title",
+        description: validation.error,
+        variant: "destructive",
+      });
+      return;
     }
     
     if (uploadMethod === "text" && !documentContent.trim()) {
@@ -106,7 +132,6 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
           resetForm();
           onClose();
           
-          // Trigger refresh callback after successful PDF upload
           if (onUploadSuccess) {
             onUploadSuccess();
           }
@@ -116,7 +141,6 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
       } else {
         const result = await onUpload(finalTitle, documentContent);
         
-        // Trigger refresh callback after successful text upload
         if (result && result.success !== false) {
           if (onUploadSuccess) {
             onUploadSuccess();
@@ -143,6 +167,7 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
     setSelectedFile(null);
     setUploadMethod("text");
     setSelectedCaseId(caseId);
+    setTitleValidation({ valid: true });
   };
 
   const handleFileSelected = (file: File) => {
@@ -201,12 +226,22 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
             />
           )}
 
-          <DocumentTitleInput
-            value={documentTitle}
-            onChange={setDocumentTitle}
-            uploadMethod={uploadMethod}
-            disabled={isCurrentlyProcessing}
-          />
+          <div className="space-y-2">
+            <DocumentTitleInput
+              value={documentTitle}
+              onChange={handleTitleChange}
+              uploadMethod={uploadMethod}
+              disabled={isCurrentlyProcessing}
+            />
+            {!titleValidation.valid && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  {titleValidation.error}
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
           
           <DocumentContentTabs
             uploadMethod={uploadMethod}
@@ -220,7 +255,7 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
           <div className="flex justify-end">
             <Button 
               type="submit" 
-              disabled={isCurrentlyProcessing}
+              disabled={isCurrentlyProcessing || !titleValidation.valid}
               className="flex items-center gap-1"
             >
               {isCurrentlyProcessing ? (
