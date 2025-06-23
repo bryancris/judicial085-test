@@ -48,8 +48,8 @@ serve(async (req) => {
       });
     }
 
-    // Check if user is super admin
-    const { data: userRole, error: roleError } = await supabaseAnon
+    // Check if user is super admin using service role client to bypass RLS
+    const { data: userRole, error: roleError } = await supabaseServiceRole
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
@@ -57,6 +57,7 @@ serve(async (req) => {
       .single();
 
     if (roleError || !userRole) {
+      console.log('Role check failed:', roleError);
       return new Response(JSON.stringify({ error: 'Access denied. Super admin role required.' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
