@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Navigate } from "react-router-dom";
 import NavBar from "@/components/NavBar";
@@ -15,7 +14,7 @@ import CreateUserDialog from "@/components/admin/CreateUserDialog";
 import { Button } from "@/components/ui/button";
 
 const Admin = () => {
-  const { session, loading: authLoading } = useAuthState();
+  const { session, isLoading: authLoading } = useAuthState();
   const [createUserOpen, setCreateUserOpen] = useState(false);
 
   // Check if user is super admin
