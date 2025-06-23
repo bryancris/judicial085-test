@@ -6,7 +6,10 @@ import { corsHeaders } from './corsUtils.ts';
 import { validateRequest, downloadPdf } from './handlers/requestHandler.ts';
 import { createSuccessResponse, createErrorResponse } from './handlers/responseHandler.ts';
 import { handleProcessingError } from './handlers/errorHandler.ts';
-import { processPdfDocument } from './processors/pdfProcessor.ts';
+import { processDocument } from './services/unifiedDocumentProcessor.ts';
+import { chunkDocumentAdvanced } from './utils/chunkingUtils.ts';
+import { generateEmbeddings } from './services/embeddingService.ts';
+import { updateDocumentStatus } from './services/documentStatusService.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -25,7 +28,7 @@ serve(async (req) => {
   let documentId: string | null = null;
   
   try {
-    console.log('🚀 === WORKING PDF PROCESSING SYSTEM v8.0 ===');
+    console.log('🚀 === UNIFIED DOCUMENT PROCESSING SYSTEM v9.0 ===');
     
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error('Missing required Supabase environment variables');
@@ -42,20 +45,55 @@ serve(async (req) => {
     const validatedRequest = validateRequest(requestBody);
     documentId = validatedRequest.documentId;
     
-    console.log(`📄 Starting WORKING PDF processing: ${validatedRequest.fileName} for client: ${validatedRequest.clientId}`);
+    console.log(`📄 Starting unified document processing: ${validatedRequest.fileName} for client: ${validatedRequest.clientId}`);
 
-    const pdfData = await downloadPdf(validatedRequest.fileUrl);
+    // Mark document as processing
+    await updateDocumentStatus(supabase, documentId, 'processing', validatedRequest.fileUrl);
 
-    const { extractionResult, chunks } = await processPdfDocument(
-      pdfData,
-      validatedRequest.documentId,
+    // Download the file
+    const fileData = await downloadPdf(validatedRequest.fileUrl);
+    console.log(`✅ File downloaded successfully: ${fileData.length} bytes`);
+
+    // Use unified document processor for all file types
+    console.log('🔍 === STARTING UNIFIED DOCUMENT EXTRACTION ===');
+    const extractionResult = await processDocument(
+      fileData,
+      validatedRequest.fileName,
+      undefined // Let the processor detect MIME type from filename
+    );
+
+    console.log(`✅ Unified extraction completed: {
+  method: "${extractionResult.method}",
+  textLength: ${extractionResult.text.length},
+  quality: ${extractionResult.quality},
+  confidence: ${extractionResult.confidence},
+  pageCount: ${extractionResult.pageCount},
+  fileType: ${extractionResult.fileType},
+  processingNotes: '${extractionResult.processingNotes}'
+}`);
+
+    // Enhanced document chunking
+    console.log('📂 === STARTING DOCUMENT CHUNKING ===');
+    const chunks = chunkDocumentAdvanced(extractionResult.text);
+    console.log(`✅ Chunking completed: ${chunks.length} chunks created`);
+
+    // Generate embeddings for chunks
+    console.log('🧠 === STARTING EMBEDDING GENERATION ===');
+    await generateEmbeddings(
+      chunks,
+      documentId,
       validatedRequest.clientId,
       validatedRequest.caseId,
-      validatedRequest.fileName,
-      validatedRequest.fileUrl,
       supabase,
-      openaiApiKey || ''
+      openaiApiKey
     );
+
+    console.log('Advanced processing completed with embeddings for search functionality');
+
+    // Mark document as completed and preserve URL
+    await updateDocumentStatus(supabase, documentId, 'completed', validatedRequest.fileUrl);
+
+    console.log('🎉 === UNIFIED DOCUMENT PROCESSING COMPLETED SUCCESSFULLY ===');
 
     return createSuccessResponse(
       validatedRequest.documentId,

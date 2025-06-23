@@ -24,7 +24,7 @@ export async function processDocument(
 ): Promise<DocumentExtractionResult> {
   console.log('🚀 === STARTING UNIFIED DOCUMENT PROCESSING ===');
   console.log(`File: ${fileName}, Size: ${fileData.length} bytes (${Math.round(fileData.length / 1024)}KB)`);
-  console.log(`MIME Type: ${mimeType || 'unknown'}`);
+  console.log(`MIME Type: ${mimeType || 'auto-detect from filename'}`);
   
   const fileType = detectFileType(fileName, mimeType, fileData);
   console.log(`Detected file type: ${fileType}`);
@@ -32,16 +32,19 @@ export async function processDocument(
   try {
     switch (fileType) {
       case 'pdf':
+        console.log('🔄 Routing to PDF processor...');
         return await processPdfDocument(fileData, fileName);
       
       case 'docx':
+        console.log('🔄 Routing to Word document processor...');
         return await processWordDocument(fileData, fileName);
       
       case 'txt':
+        console.log('🔄 Routing to text processor...');
         return await processTextDocument(fileData, fileName);
       
       default:
-        throw new Error(`Unsupported file type: ${fileType}`);
+        throw new Error(`Unsupported file type: ${fileType}. Supported types: PDF, DOCX, TXT`);
     }
     
   } catch (error) {
