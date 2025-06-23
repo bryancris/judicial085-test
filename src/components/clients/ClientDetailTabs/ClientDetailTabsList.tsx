@@ -34,12 +34,12 @@ const ClientDetailTabsList: React.FC = () => {
           <span className="sm:hidden">Discussion</span>
         </TabsTrigger>
         <TabsTrigger 
-          value="contracts" 
-          className={`flex items-center gap-2 ${tabColors["contracts"]} ${tabHoverColors["contracts"]} data-[state=active]:${tabColors["contracts"]} data-[state=active]:opacity-100`}
+          value="documents" 
+          className={`flex items-center gap-2 ${tabColors["documents"]} ${tabHoverColors["documents"]} data-[state=active]:${tabColors["documents"]} data-[state=active]:opacity-100`}
         >
-          <Scale className="h-4 w-4" />
-          <span className="hidden sm:inline">Contracts</span>
-          <span className="sm:hidden">Contracts</span>
+          <Upload className="h-4 w-4" />
+          <span className="hidden sm:inline">Document Hub</span>
+          <span className="sm:hidden">Hub</span>
         </TabsTrigger>
       </TabsList>
 
@@ -54,12 +54,12 @@ const ClientDetailTabsList: React.FC = () => {
           <span className="sm:hidden">Discovery</span>
         </TabsTrigger>
         <TabsTrigger 
-          value="documents" 
-          className={`flex items-center gap-2 ${tabColors["documents"]} ${tabHoverColors["documents"]} data-[state=active]:${tabColors["documents"]} data-[state=active]:opacity-100`}
+          value="contracts" 
+          className={`flex items-center gap-2 ${tabColors["contracts"]} ${tabHoverColors["contracts"]} data-[state=active]:${tabColors["contracts"]} data-[state=active]:opacity-100`}
         >
-          <Upload className="h-4 w-4" />
-          <span className="hidden sm:inline">Document Hub</span>
-          <span className="sm:hidden">Hub</span>
+          <Scale className="h-4 w-4" />
+          <span className="hidden sm:inline">Contracts</span>
+          <span className="sm:hidden">Contracts</span>
         </TabsTrigger>
         <TabsTrigger 
           value="knowledge" 
