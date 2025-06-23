@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -66,7 +67,12 @@ const CreateFirmDialog: React.FC<CreateFirmDialogProps> = ({
       const { error } = await supabase
         .from('law_firms')
         .insert({
-          ...data,
+          name: data.name,
+          address: data.address || null,
+          city: data.city || null,
+          state: data.state || null,
+          zip_code: data.zip_code || null,
+          phone: data.phone || null,
           email: data.email || null,
           website: data.website || null,
         });
