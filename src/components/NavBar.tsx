@@ -25,7 +25,6 @@ const NavBar: React.FC = () => {
         .from('user_roles')
         .select('role')
         .eq('user_id', session.user.id)
-        .eq('role', 'super_admin')
         .single();
       
       if (error) {
@@ -37,6 +36,8 @@ const NavBar: React.FC = () => {
     },
     enabled: !!session?.user?.id,
   });
+
+  const isSuperAdmin = userRole?.role === 'super_admin';
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
@@ -81,9 +82,11 @@ const NavBar: React.FC = () => {
           {session && (
             <>
               <Link to="/clients" className="font-medium hover:text-brand-burgundy dark:text-gray-200 dark:hover:text-brand-gold transition-colors">Clients</Link>
-              <Link to="/knowledge" className="font-medium hover:text-brand-burgundy dark:text-gray-200 dark:hover:text-brand-gold transition-colors">Knowledge</Link>
-              {userRole && (
-                <Link to="/admin" className="font-medium hover:text-brand-burgundy dark:text-gray-200 dark:hover:text-brand-gold transition-colors">Admin</Link>
+              {isSuperAdmin && (
+                <>
+                  <Link to="/knowledge" className="font-medium hover:text-brand-burgundy dark:text-gray-200 dark:hover:text-brand-gold transition-colors">Knowledge</Link>
+                  <Link to="/admin" className="font-medium hover:text-brand-burgundy dark:text-gray-200 dark:hover:text-brand-gold transition-colors">Admin</Link>
+                </>
               )}
             </>
           )}
