@@ -7,12 +7,36 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAuthState } from "@/hooks/useAuthState";
+import { useQuery } from "@tanstack/react-query";
 
 const NavBar: React.FC = () => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { session } = useAuthState();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Check if user is super admin
+  const { data: userRole } = useQuery({
+    queryKey: ['userRole', session?.user?.id],
+    queryFn: async () => {
+      if (!session?.user?.id) return null;
+      
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .eq('role', 'super_admin')
+        .single();
+      
+      if (error) {
+        console.error('Error checking user role:', error);
+        return null;
+      }
+      
+      return data;
+    },
+    enabled: !!session?.user?.id,
+  });
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
@@ -58,6 +82,9 @@ const NavBar: React.FC = () => {
             <>
               <Link to="/clients" className="font-medium hover:text-brand-burgundy dark:text-gray-200 dark:hover:text-brand-gold transition-colors">Clients</Link>
               <Link to="/knowledge" className="font-medium hover:text-brand-burgundy dark:text-gray-200 dark:hover:text-brand-gold transition-colors">Knowledge</Link>
+              {userRole && (
+                <Link to="/admin" className="font-medium hover:text-brand-burgundy dark:text-gray-200 dark:hover:text-brand-gold transition-colors">Admin</Link>
+              )}
             </>
           )}
         </nav>
