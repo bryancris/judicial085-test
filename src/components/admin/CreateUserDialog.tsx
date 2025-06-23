@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -84,58 +83,29 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
 
   const createUser = useMutation({
     mutationFn: async (data: UserFormData) => {
-      // Create the user account
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: data.email,
-        password: data.password,
-        email_confirm: true,
-        user_metadata: {
-          first_name: data.first_name,
-          last_name: data.last_name,
-        }
+      console.log('Calling create-user function with data:', data);
+      
+      const { data: result, error } = await supabase.functions.invoke('create-user', {
+        body: data,
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error("Failed to create user");
+      if (error) {
+        console.error('Function invocation error:', error);
+        throw new Error(error.message || 'Failed to call create-user function');
+      }
 
-      // Update the user's profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: authData.user.id,
-          first_name: data.first_name,
-          last_name: data.last_name,
-          email: data.email,
-          phone: data.phone || null,
-        });
+      if (result?.error) {
+        console.error('Function returned error:', result.error);
+        throw new Error(result.error);
+      }
 
-      if (profileError) throw profileError;
-
-      // Assign role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: authData.user.id,
-          role: data.role,
-        });
-
-      if (roleError) throw roleError;
-
-      // Associate with firm
-      const { error: firmError } = await supabase
-        .from('firm_users')
-        .insert({
-          user_id: authData.user.id,
-          firm_id: data.firm_id,
-          is_active: true,
-        });
-
-      if (firmError) throw firmError;
-
-      return authData.user;
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
+      queryClient.invalidateQueries({ queryKey: ['adminProfiles'] });
+      queryClient.invalidateQueries({ queryKey: ['adminUserRoles'] });
+      queryClient.invalidateQueries({ queryKey: ['adminFirmUsers'] });
       toast({
         title: "Success",
         description: "User account created successfully",
@@ -144,6 +114,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       onOpenChange(false);
     },
     onError: (error) => {
+      console.error('Create user mutation error:', error);
       toast({
         title: "Error",
         description: `Failed to create user: ${error.message}`,
@@ -153,6 +124,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
   });
 
   const onSubmit = (data: UserFormData) => {
+    console.log('Form submitted with data:', data);
     createUser.mutate(data);
   };
 
