@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import NavBar from '@/components/NavBar';
 import { BookOpen, AlertCircle, Loader2, Database, Book, Scale } from 'lucide-react';
@@ -62,7 +61,8 @@ const Knowledge = () => {
   console.log("Knowledge page rendering with", {
     docsCount: documents.length,
     loading,
-    initialFetchAttempted
+    initialFetchAttempted,
+    message: "Now showing only public Texas law documents, no client documents"
   });
 
   return (
@@ -85,16 +85,17 @@ const Knowledge = () => {
           </div>
         </div>
         
-        <p className="text-lg mb-6">Access legal references, precedents, resources, and scholarly articles.</p>
+        <p className="text-lg mb-6">Access Texas legal references, precedents, and resources. Client documents are segregated to client-specific areas.</p>
         
         {debugMode && (
           <Alert className="mb-6 bg-gray-100">
             <Database className="h-4 w-4" />
             <AlertDescription>
-              <div>Documents: {documents.length}</div>
+              <div>Public Documents: {documents.length}</div>
               <div>Loading: {loading ? "True" : "False"}</div>
               <div>Auth: {session ? "Authenticated" : "Not Authenticated"}</div>
               <div>Initial Fetch: {initialFetchAttempted ? "Done" : "Pending"}</div>
+              <div>Filter: Only showing documents where client_id IS NULL and case_id IS NULL</div>
             </AlertDescription>
           </Alert>
         )}
