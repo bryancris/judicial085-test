@@ -9,10 +9,45 @@ import { User, UserPlus } from 'lucide-react';
 import ClientForm from '@/components/clients/ClientForm';
 import ClientList from '@/components/clients/ClientList';
 import { useDocumentAuth } from '@/hooks/useDocumentAuth';
+import { useQuery } from '@tanstack/react-query';
 
 const Clients = () => {
   const { session, loading } = useDocumentAuth();
   const [activeTab, setActiveTab] = useState("view-clients");
+
+  // Fetch user's firm information
+  const { data: firmInfo } = useQuery({
+    queryKey: ['userFirm', session?.user?.id],
+    queryFn: async () => {
+      if (!session?.user?.id) return null;
+      
+      const { data: firmUser, error: firmUserError } = await supabase
+        .from('firm_users')
+        .select('firm_id')
+        .eq('user_id', session.user.id)
+        .eq('is_active', true)
+        .single();
+      
+      if (firmUserError || !firmUser) {
+        console.error('Error fetching user firm:', firmUserError);
+        return null;
+      }
+      
+      const { data: firm, error: firmError } = await supabase
+        .from('law_firms')
+        .select('name')
+        .eq('id', firmUser.firm_id)
+        .single();
+      
+      if (firmError) {
+        console.error('Error fetching firm details:', firmError);
+        return null;
+      }
+      
+      return firm;
+    },
+    enabled: !!session?.user?.id,
+  });
 
   // If not authenticated, redirect to auth page
   if (!loading && !session) {
@@ -28,7 +63,14 @@ const Clients = () => {
     <div className="min-h-screen flex flex-col">
       <NavBar />
       <main className="flex-grow container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">Clients</h1>
+        <h1 className="text-3xl font-bold mb-6">
+          {firmInfo?.name && (
+            <span className="text-brand-burgundy dark:text-brand-gold mr-3">
+              {firmInfo.name}
+            </span>
+          )}
+          Clients
+        </h1>
         <p className="text-lg mb-4">Manage your legal clients and cases here.</p>
         
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
