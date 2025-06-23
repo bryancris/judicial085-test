@@ -206,6 +206,7 @@ export type Database = {
           city: string | null
           created_at: string
           email: string
+          firm_id: string | null
           first_name: string
           id: string
           last_name: string
@@ -225,6 +226,7 @@ export type Database = {
           city?: string | null
           created_at?: string
           email: string
+          firm_id?: string | null
           first_name: string
           id?: string
           last_name: string
@@ -244,6 +246,7 @@ export type Database = {
           city?: string | null
           created_at?: string
           email?: string
+          firm_id?: string | null
           first_name?: string
           id?: string
           last_name?: string
@@ -254,7 +257,15 @@ export type Database = {
           user_id?: string
           zip_code?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clients_firm_id_fkey"
+            columns: ["firm_id"]
+            isOneToOne: false
+            referencedRelation: "law_firms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contract_reviews: {
         Row: {
@@ -623,6 +634,86 @@ export type Database = {
         }
         Relationships: []
       }
+      firm_users: {
+        Row: {
+          created_at: string
+          firm_id: string
+          id: string
+          is_active: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          firm_id: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          firm_id?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "firm_users_firm_id_fkey"
+            columns: ["firm_id"]
+            isOneToOne: false
+            referencedRelation: "law_firms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      law_firms: {
+        Row: {
+          address: string | null
+          city: string | null
+          created_at: string
+          email: string | null
+          id: string
+          is_active: boolean
+          name: string
+          phone: string | null
+          state: string | null
+          updated_at: string
+          website: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          phone?: string | null
+          state?: string | null
+          updated_at?: string
+          website?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          phone?: string | null
+          state?: string | null
+          updated_at?: string
+          website?: string | null
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
       legal_analyses: {
         Row: {
           case_id: string | null
@@ -692,6 +783,36 @@ export type Database = {
           id?: number
           message?: Json
           session_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id: string
+          last_name?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          phone?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -770,6 +891,27 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       voice_transcripts: {
         Row: {
           client_id: string
@@ -841,6 +983,10 @@ export type Database = {
           case_title: string
         }[]
       }
+      get_user_firm_id: {
+        Args: { _user_id: string }
+        Returns: string
+      }
       halfvec_avg: {
         Args: { "": number[] }
         Returns: unknown
@@ -856,6 +1002,13 @@ export type Database = {
       halfvec_typmod_in: {
         Args: { "": unknown[] }
         Returns: number
+      }
+      has_role: {
+        Args: {
+          _user_id: string
+          _role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: boolean
       }
       hnsw_bit_support: {
         Args: { "": unknown }
@@ -1006,7 +1159,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "super_admin" | "firm_admin" | "attorney" | "paralegal"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1121,6 +1274,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["super_admin", "firm_admin", "attorney", "paralegal"],
+    },
   },
 } as const
