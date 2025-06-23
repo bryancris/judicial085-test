@@ -58,8 +58,8 @@ const ClientDetailTabsList: React.FC = () => {
           className={`flex items-center gap-2 ${tabColors["documents"]} ${tabHoverColors["documents"]} data-[state=active]:${tabColors["documents"]} data-[state=active]:opacity-100`}
         >
           <Upload className="h-4 w-4" />
-          <span className="hidden sm:inline">Upload Documents</span>
-          <span className="sm:hidden">Upload</span>
+          <span className="hidden sm:inline">Document Hub</span>
+          <span className="sm:hidden">Hub</span>
         </TabsTrigger>
         <TabsTrigger 
           value="knowledge" 
