@@ -78,9 +78,15 @@ const UsersManagement = () => {
       <CardContent>
         <div className="space-y-4">
           {users?.map((user) => {
-            const userRole = user.user_roles?.[0]?.role;
-            const firmAssociation = user.firm_users?.[0];
-            const firmName = firmAssociation?.law_firms?.name;
+            const userRole = Array.isArray(user.user_roles) && user.user_roles.length > 0 
+              ? user.user_roles[0]?.role 
+              : null;
+            const firmAssociation = Array.isArray(user.firm_users) && user.firm_users.length > 0 
+              ? user.firm_users[0] 
+              : null;
+            const firmName = firmAssociation && typeof firmAssociation === 'object' && 'law_firms' in firmAssociation 
+              ? (firmAssociation.law_firms as any)?.name 
+              : null;
             
             return (
               <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
@@ -101,7 +107,7 @@ const UsersManagement = () => {
                         {userRole.replace('_', ' ')}
                       </Badge>
                     )}
-                    {firmAssociation && (
+                    {firmAssociation && typeof firmAssociation === 'object' && 'is_active' in firmAssociation && (
                       <Badge variant={firmAssociation.is_active ? "default" : "secondary"}>
                         {firmAssociation.is_active ? "Active" : "Inactive"}
                       </Badge>
@@ -125,13 +131,13 @@ const UsersManagement = () => {
                 </div>
                 
                 <div className="flex gap-2">
-                  {firmAssociation && userRole !== 'super_admin' && (
+                  {firmAssociation && typeof firmAssociation === 'object' && 'is_active' in firmAssociation && userRole !== 'super_admin' && (
                     <Button
                       variant={firmAssociation.is_active ? "destructive" : "default"}
                       size="sm"
                       onClick={() => toggleUserStatus.mutate({ 
                         userId: user.id, 
-                        isActive: firmAssociation.is_active 
+                        isActive: firmAssociation.is_active as boolean
                       })}
                       disabled={toggleUserStatus.isPending}
                     >
