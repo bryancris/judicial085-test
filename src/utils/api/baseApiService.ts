@@ -34,7 +34,11 @@ export const deleteClientDocument = async (
     // Use POST method instead of DELETE to avoid CORS issues
     const { data, error } = await supabase.functions.invoke('delete-client-document', {
       method: 'POST',
-      body: { documentId, clientId }
+      body: { 
+        operation: 'delete',
+        documentId, 
+        clientId 
+      }
     });
     
     if (error) {
