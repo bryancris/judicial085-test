@@ -30,16 +30,23 @@ export const useDocuments = () => {
   } = useKnowledgeBaseDocuments(PAGE_SIZE);
   
   // Search functionality
-  const { searchResults, performSearch, clearSearchResults } = useDocumentSearch();
+  const { 
+    searchTerm: searchTermFromHook, 
+    setSearchTerm: setSearchTermFromHook, 
+    isSearching: isSearchingFromHook, 
+    handleSearch: handleSearchFromHook, 
+    clearSearch: clearSearchFromHook, 
+    filteredDocuments 
+  } = useDocumentSearch(documents, fetchKnowledgeBaseDocuments);
   
   // Pagination
   const { 
-    currentPage, 
+    page, 
     hasMore, 
     isLoadingMore, 
     loadMore: paginationLoadMore,
     resetPagination 
-  } = useDocumentPagination(fetchKnowledgeBaseDocuments);
+  } = useDocumentPagination();
 
   // Initial fetch
   useEffect(() => {
@@ -58,19 +65,19 @@ export const useDocuments = () => {
     
     setIsSearching(true);
     try {
-      await performSearch(searchTerm);
+      await handleSearchFromHook({ preventDefault: () => {} } as React.FormEvent);
     } catch (error) {
       console.error('Search error:', error);
     } finally {
       setIsSearching(false);
     }
-  }, [searchTerm, performSearch]);
+  }, [searchTerm, handleSearchFromHook]);
 
   const clearSearch = useCallback(() => {
     setSearchTerm('');
-    clearSearchResults();
+    clearSearchFromHook();
     resetPagination();
-  }, [clearSearchResults, resetPagination]);
+  }, [clearSearchFromHook, resetPagination]);
 
   // Delete document functionality
   const deleteDocument = useCallback(async (documentId: string) => {
@@ -96,7 +103,6 @@ export const useDocuments = () => {
       // Remove from local state
       if (isMounted.current) {
         setDocuments(prev => prev.filter(doc => doc.id !== documentId));
-        clearSearchResults();
       }
 
       toast({
@@ -116,21 +122,21 @@ export const useDocuments = () => {
       
       return { success: false, error: error.message };
     }
-  }, [isMounted, setDocuments, clearSearchResults, toast]);
+  }, [isMounted, setDocuments, toast]);
 
   // Load more documents
   const loadMore = useCallback(() => {
     if (!isLoadingMore && hasMore) {
-      paginationLoadMore();
+      paginationLoadMore(fetchKnowledgeBaseDocuments);
     }
-  }, [isLoadingMore, hasMore, paginationLoadMore]);
+  }, [isLoadingMore, hasMore, paginationLoadMore, fetchKnowledgeBaseDocuments]);
 
   // Determine which documents to display
-  const displayDocuments = searchTerm.trim() ? searchResults : documents;
+  const displayDocuments = searchTerm.trim() ? filteredDocuments : documents;
 
   console.log("useDocuments hook state:", {
     documentsCount: documents.length,
-    searchResultsCount: searchResults.length,
+    filteredDocumentsCount: filteredDocuments.length,
     displayDocumentsCount: displayDocuments.length,
     loading,
     hasError,
