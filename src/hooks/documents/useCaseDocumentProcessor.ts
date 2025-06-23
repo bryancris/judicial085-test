@@ -2,7 +2,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { generateEmbeddings } from "@/utils/pdfUtils";
+import { generateEmbeddings, processPdfDocument } from "@/utils/pdfUtils";
 import { chunkDocument } from "@/utils/documents/documentUtils";
 
 export const useCaseDocumentProcessor = (
@@ -16,7 +16,8 @@ export const useCaseDocumentProcessor = (
   const processDocument = useCallback(async (
     title: string, 
     content: string, 
-    metadata: any = {}
+    metadata: any = {},
+    file?: File
   ) => {
     if (!clientId || !caseId) {
       console.error("Cannot process document: No client ID or case ID provided");
@@ -26,6 +27,29 @@ export const useCaseDocumentProcessor = (
     setIsProcessing(true);
     
     try {
+      // If it's a PDF or Word file, use the PDF processing pipeline (which supports both)
+      if (file && (file.type === 'application/pdf' || 
+                   file.type.includes('wordprocessingml') || 
+                   file.name.toLowerCase().endsWith('.docx'))) {
+        console.log("Processing file:", file.name, "Type:", file.type);
+        
+        const result = await processPdfDocument(file, title, clientId, caseId);
+        
+        if (result.success) {
+          const fileType = file.type === 'application/pdf' ? 'PDF' : 'Word document';
+          toast({
+            title: `${fileType} processed successfully`,
+            description: `Your ${fileType.toLowerCase()} has been uploaded and vectorized for search.`,
+          });
+          
+          // Refresh the document list
+          onRefresh();
+          return result;
+        } else {
+          throw new Error(result.error || `Failed to process ${file.type === 'application/pdf' ? 'PDF' : 'Word document'}`);
+        }
+      }
+      
       // Generate a unique ID for the document
       const documentId = crypto.randomUUID();
       

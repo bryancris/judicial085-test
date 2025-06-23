@@ -42,9 +42,9 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
   const [documentTitle, setDocumentTitle] = useState("");
   const [documentContent, setDocumentContent] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [uploadMethod, setUploadMethod] = useState<"text" | "pdf">("text");
+  const [uploadMethod, setUploadMethod] = useState<"text" | "pdf" | "docx">("text");
   const [selectedCaseId, setSelectedCaseId] = useState<string | undefined>(caseId);
-  const [isProcessingPdf, setIsProcessingPdf] = useState(false);
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
   const [titleValidation, setTitleValidation] = useState<{ valid: boolean; error?: string }>({ valid: true });
   const { toast } = useToast();
 
@@ -74,7 +74,7 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
     let finalTitle = documentTitle.trim();
     
     if (!finalTitle) {
-      if (uploadMethod === "pdf" && selectedFile) {
+      if ((uploadMethod === "pdf" || uploadMethod === "docx") && selectedFile) {
         finalTitle = selectedFile.name.replace(/\.[^/.]+$/, "");
       } else {
         finalTitle = "Untitled Document";
@@ -101,20 +101,20 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
       return;
     }
     
-    if (uploadMethod === "pdf" && !selectedFile) {
+    if ((uploadMethod === "pdf" || uploadMethod === "docx") && !selectedFile) {
       toast({
         title: "File required",
-        description: "Please select a PDF file to upload.",
+        description: `Please select a ${uploadMethod === "pdf" ? "PDF" : "Word"} file to upload.`,
         variant: "destructive",
       });
       return;
     }
     
     try {
-      if (uploadMethod === "pdf" && selectedFile) {
-        setIsProcessingPdf(true);
+      if ((uploadMethod === "pdf" || uploadMethod === "docx") && selectedFile) {
+        setIsProcessingFile(true);
         
-        console.log(`Processing PDF with clientId: ${clientId}, selectedCaseId: ${selectedCaseId}`);
+        console.log(`Processing ${uploadMethod.toUpperCase()} with clientId: ${clientId}, selectedCaseId: ${selectedCaseId}`);
         
         const result = await processPdfDocument(
           selectedFile, 
@@ -125,8 +125,8 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
         
         if (result.success) {
           toast({
-            title: "PDF processed successfully",
-            description: "Your PDF has been uploaded and vectorized for search.",
+            title: `${uploadMethod.toUpperCase()} processed successfully`,
+            description: `Your ${uploadMethod === "pdf" ? "PDF" : "Word document"} has been uploaded and vectorized for search.`,
           });
           
           resetForm();
@@ -136,7 +136,7 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
             onUploadSuccess();
           }
         } else {
-          throw new Error(result.error || "Failed to process PDF");
+          throw new Error(result.error || `Failed to process ${uploadMethod.toUpperCase()}`);
         }
       } else {
         const result = await onUpload(finalTitle, documentContent);
@@ -157,7 +157,7 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
         variant: "destructive",
       });
     } finally {
-      setIsProcessingPdf(false);
+      setIsProcessingFile(false);
     }
   };
 
@@ -174,7 +174,16 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
     setSelectedFile(file);
   };
 
-  const isCurrentlyProcessing = isProcessing || isProcessingPdf;
+  const isCurrentlyProcessing = isProcessing || isProcessingFile;
+
+  const getUploadButtonText = () => {
+    if (isCurrentlyProcessing) {
+      if (uploadMethod === "pdf") return "Processing PDF...";
+      if (uploadMethod === "docx") return "Processing Word Document...";
+      return "Processing...";
+    }
+    return selectedCaseId ? "Upload Case Document" : "Upload Client Document";
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -261,12 +270,12 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
               {isCurrentlyProcessing ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" /> 
-                  {uploadMethod === "pdf" ? "Processing PDF..." : "Processing..."}
+                  {getUploadButtonText()}
                 </>
               ) : (
                 <>
                   <FilePlus className="h-4 w-4 mr-2" />
-                  {selectedCaseId ? "Upload Case Document" : "Upload Client Document"}
+                  {getUploadButtonText()}
                 </>
               )}
             </Button>

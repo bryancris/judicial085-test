@@ -39,24 +39,27 @@ export const useDocumentProcessor = (
     setIsProcessing(true);
     
     try {
-      // If it's a PDF file, use the PDF processing pipeline
-      if (file && file.type === 'application/pdf') {
-        console.log("Processing PDF file:", file.name);
+      // If it's a PDF or Word file, use the PDF processing pipeline (which supports both)
+      if (file && (file.type === 'application/pdf' || 
+                   file.type.includes('wordprocessingml') || 
+                   file.name.toLowerCase().endsWith('.docx'))) {
+        console.log("Processing file:", file.name, "Type:", file.type);
         
         const caseId = scope !== "client-level" && scope !== "all" ? scope : undefined;
         const result = await processPdfDocument(file, title, clientId, caseId);
         
         if (result.success) {
+          const fileType = file.type === 'application/pdf' ? 'PDF' : 'Word document';
           toast({
-            title: "PDF processed successfully",
-            description: "Your PDF has been uploaded and vectorized for search.",
+            title: `${fileType} processed successfully`,
+            description: `Your ${fileType.toLowerCase()} has been uploaded and vectorized for search.`,
           });
           
           // Refresh the document list
           onRefresh();
           return result;
         } else {
-          throw new Error(result.error || "Failed to process PDF");
+          throw new Error(result.error || `Failed to process ${file.type === 'application/pdf' ? 'PDF' : 'Word document'}`);
         }
       }
       

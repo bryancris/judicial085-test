@@ -15,7 +15,7 @@ interface FileUploadInputProps {
 const FileUploadInput: React.FC<FileUploadInputProps> = ({
   onFileSelected,
   isProcessing = false,
-  accept = "application/pdf"
+  accept = "application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx"
 }) => {
   const [dragActive, setDragActive] = useState<boolean>(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -36,13 +36,16 @@ const FileUploadInput: React.FC<FileUploadInputProps> = ({
   const validateFile = (file: File): boolean => {
     setFileError(null);
     
-    // Check file type
-    if (!file.type.includes('pdf')) {
-      setFileError('Only PDF files are supported');
+    // Check file type - support both PDF and Word documents
+    const isPdf = file.type.includes('pdf');
+    const isDocx = file.type.includes('wordprocessingml') || file.name.toLowerCase().endsWith('.docx');
+    
+    if (!isPdf && !isDocx) {
+      setFileError('Only PDF and Word (.docx) files are supported');
       toast({
         variant: "destructive",
         title: "Invalid file type",
-        description: "Only PDF files are supported",
+        description: "Only PDF and Word (.docx) files are supported",
       });
       return false;
     }
@@ -95,6 +98,18 @@ const FileUploadInput: React.FC<FileUploadInputProps> = ({
     if (inputRef.current) inputRef.current.value = '';
   };
 
+  // Determine file type for display
+  const getFileTypeText = () => {
+    if (accept.includes('pdf') && accept.includes('wordprocessingml')) {
+      return 'PDF or Word document';
+    } else if (accept.includes('pdf')) {
+      return 'PDF file';
+    } else if (accept.includes('wordprocessingml')) {
+      return 'Word document';
+    }
+    return 'file';
+  };
+
   return (
     <div className="w-full">
       <Input
@@ -145,7 +160,7 @@ const FileUploadInput: React.FC<FileUploadInputProps> = ({
           <div className="flex flex-col items-center justify-center py-4">
             <FileUp className="h-10 w-10 text-gray-400 mb-2" />
             <p className="text-gray-600">
-              Drag & drop a PDF file here, or click to select
+              Drag & drop a {getFileTypeText()} here, or click to select
             </p>
             <p className="text-gray-500 text-sm mt-1">
               Maximum file size: 10MB

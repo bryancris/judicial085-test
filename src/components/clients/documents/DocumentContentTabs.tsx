@@ -8,8 +8,8 @@ import { AlertCircle } from "lucide-react";
 import FileUploadInput from "@/components/clients/chat/FileUploadInput";
 
 interface DocumentContentTabsProps {
-  uploadMethod: "text" | "pdf";
-  onMethodChange: (method: "text" | "pdf") => void;
+  uploadMethod: "text" | "pdf" | "docx";
+  onMethodChange: (method: "text" | "pdf" | "docx") => void;
   documentContent: string;
   onContentChange: (content: string) => void;
   onFileSelected: (file: File) => void;
@@ -27,12 +27,13 @@ const DocumentContentTabs: React.FC<DocumentContentTabsProps> = ({
   return (
     <Tabs 
       value={uploadMethod} 
-      onValueChange={(value) => onMethodChange(value as "text" | "pdf")} 
+      onValueChange={(value) => onMethodChange(value as "text" | "pdf" | "docx")} 
       className="w-full"
     >
-      <TabsList className="grid w-full grid-cols-2">
+      <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="text">Text Input</TabsTrigger>
         <TabsTrigger value="pdf">PDF Upload</TabsTrigger>
+        <TabsTrigger value="docx">Word Upload</TabsTrigger>
       </TabsList>
       
       <TabsContent value="text" className="mt-4">
@@ -64,6 +65,27 @@ const DocumentContentTabs: React.FC<DocumentContentTabsProps> = ({
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
                 Your PDF will be processed, text extracted, and vectorized for AI search and analysis.
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
+      </TabsContent>
+
+      <TabsContent value="docx" className="mt-4">
+        <div>
+          <Label>Upload Word Document</Label>
+          <div className="mt-2">
+            <FileUploadInput 
+              onFileSelected={onFileSelected} 
+              isProcessing={disabled}
+              accept="application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx"
+            />
+          </div>
+          {uploadMethod === "docx" && (
+            <Alert className="mt-2">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Your Word document will be processed, text extracted, and vectorized for AI search and analysis.
               </AlertDescription>
             </Alert>
           )}
