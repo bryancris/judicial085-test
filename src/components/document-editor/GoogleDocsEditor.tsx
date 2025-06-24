@@ -22,6 +22,7 @@ import {
   Share
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
 
 interface GoogleDocsEditorProps {
   clientId: string;
@@ -35,6 +36,7 @@ const GoogleDocsEditor: React.FC<GoogleDocsEditorProps> = ({ clientId, onSave })
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [showPlaceholder, setShowPlaceholder] = useState(true);
   const editorRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   // Auto-save functionality
   useEffect(() => {
@@ -59,6 +61,126 @@ const GoogleDocsEditor: React.FC<GoogleDocsEditorProps> = ({ clientId, onSave })
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handlePrint = () => {
+    // Check if document has content
+    if (!documentContent.trim() && documentTitle === "Untitled document") {
+      toast({
+        title: "Nothing to print",
+        description: "Please add some content to the document before printing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast({
+        title: "Print blocked",
+        description: "Please allow pop-ups for this site to enable printing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Generate print-friendly HTML
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${documentTitle}</title>
+          <style>
+            @media print {
+              @page {
+                margin: 1in;
+                size: letter;
+              }
+              
+              body {
+                font-family: Arial, sans-serif;
+                font-size: 11pt;
+                line-height: 1.6;
+                color: black;
+                background: white;
+              }
+              
+              .document-title {
+                font-size: 16pt;
+                font-weight: bold;
+                margin-bottom: 24px;
+                text-align: center;
+                border-bottom: 2px solid #333;
+                padding-bottom: 12px;
+              }
+              
+              .document-content {
+                font-size: 11pt;
+                line-height: 1.6;
+              }
+              
+              .document-content h1 { font-size: 14pt; margin: 18px 0 12px 0; }
+              .document-content h2 { font-size: 13pt; margin: 16px 0 10px 0; }
+              .document-content h3 { font-size: 12pt; margin: 14px 0 8px 0; }
+              .document-content p { margin: 6px 0; }
+              .document-content ul, .document-content ol { margin: 6px 0; padding-left: 24px; }
+              .document-content li { margin: 3px 0; }
+              
+              /* Force page breaks */
+              .page-break { page-break-before: always; }
+              
+              /* Prevent orphans and widows */
+              p, li { orphans: 2; widows: 2; }
+              h1, h2, h3 { page-break-after: avoid; }
+            }
+            
+            @media screen {
+              body {
+                font-family: Arial, sans-serif;
+                max-width: 8.5in;
+                margin: 0 auto;
+                padding: 1in;
+                background: white;
+              }
+              
+              .document-title {
+                font-size: 24px;
+                font-weight: bold;
+                margin-bottom: 24px;
+                text-align: center;
+                border-bottom: 2px solid #333;
+                padding-bottom: 12px;
+              }
+              
+              .document-content {
+                font-size: 16px;
+                line-height: 1.6;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="document-title">${documentTitle}</div>
+          <div class="document-content">${documentContent || '<p><em>No content to print</em></p>'}</div>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    
+    // Wait for content to load, then print
+    printWindow.onload = () => {
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    };
+
+    toast({
+      title: "Printing...",
+      description: "Your document is being prepared for printing.",
+    });
   };
 
   const formatText = (command: string, value?: string) => {
@@ -109,7 +231,7 @@ const GoogleDocsEditor: React.FC<GoogleDocsEditorProps> = ({ clientId, onSave })
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={handlePrint}>
               <Printer className="h-4 w-4" />
             </Button>
             <Button variant="ghost" size="sm">
