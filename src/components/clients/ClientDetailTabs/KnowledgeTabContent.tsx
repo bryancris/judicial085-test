@@ -44,8 +44,8 @@ const KnowledgeTabContent: React.FC<KnowledgeTabContentProps> = ({ clientId }) =
           throw new Error(result.error || "Failed to save document");
         }
         
-        // Store the document ID for future updates
-        if (result.documentId) {
+        // Store the document ID for future updates - only if result was successful and has documentId
+        if (result.success && 'documentId' in result && result.documentId) {
           setCurrentDocumentId(result.documentId);
         }
         
