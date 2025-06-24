@@ -10,35 +10,61 @@ import DocumentEditor from './DocumentEditor';
 interface GoogleDocsEditorProps {
   clientId: string;
   onSave?: (title: string, content: string) => Promise<void>;
+  documentId?: string; // Optional document ID for existing documents
+  initialTitle?: string; // Optional initial title
+  initialContent?: string; // Optional initial content
 }
 
-const GoogleDocsEditor: React.FC<GoogleDocsEditorProps> = ({ clientId, onSave }) => {
-  const [documentTitle, setDocumentTitle] = useState("Untitled document");
-  const [documentContent, setDocumentContent] = useState("");
+const GoogleDocsEditor: React.FC<GoogleDocsEditorProps> = ({ 
+  clientId, 
+  onSave,
+  documentId: initialDocumentId,
+  initialTitle = "Untitled document",
+  initialContent = ""
+}) => {
+  const [documentTitle, setDocumentTitle] = useState(initialTitle);
+  const [documentContent, setDocumentContent] = useState(initialContent);
+  const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(initialDocumentId || null);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [showPlaceholder, setShowPlaceholder] = useState(true);
+  const [showPlaceholder, setShowPlaceholder] = useState(initialContent.trim() === '');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  // Auto-save functionality
+  // Set initial content in editor if provided
+  useEffect(() => {
+    if (editorRef.current && initialContent) {
+      editorRef.current.innerHTML = initialContent;
+      setDocumentContent(initialContent);
+      setShowPlaceholder(initialContent.trim() === '');
+    }
+  }, [initialContent]);
+
+  // Auto-save functionality - only if there are unsaved changes and actual content
   useEffect(() => {
     const autoSaveInterval = setInterval(() => {
-      if (documentContent.trim() || documentTitle !== "Untitled document") {
+      if (hasUnsavedChanges && (documentContent.trim() || documentTitle !== "Untitled document")) {
         handleSave();
       }
     }, 30000); // Auto-save every 30 seconds
 
     return () => clearInterval(autoSaveInterval);
-  }, [documentContent, documentTitle]);
+  }, [documentContent, documentTitle, hasUnsavedChanges]);
 
   const handleSave = async () => {
     if (!onSave) return;
+    
+    // Don't save if there's no meaningful content
+    if (!documentContent.trim() && documentTitle === "Untitled document") {
+      return;
+    }
     
     setIsSaving(true);
     try {
       await onSave(documentTitle, documentContent);
       setLastSaved(new Date());
+      setHasUnsavedChanges(false);
     } catch (error) {
       console.error("Error saving document:", error);
     } finally {
@@ -90,6 +116,7 @@ const GoogleDocsEditor: React.FC<GoogleDocsEditorProps> = ({ clientId, onSave })
     document.execCommand(command, false, value);
     if (editorRef.current) {
       setDocumentContent(editorRef.current.innerHTML);
+      setHasUnsavedChanges(true);
     }
   };
 
@@ -98,7 +125,13 @@ const GoogleDocsEditor: React.FC<GoogleDocsEditorProps> = ({ clientId, onSave })
       const content = editorRef.current.innerHTML;
       setDocumentContent(content);
       setShowPlaceholder(content.trim() === '' || content === '<br>');
+      setHasUnsavedChanges(true);
     }
+  };
+
+  const handleTitleChange = (newTitle: string) => {
+    setDocumentTitle(newTitle);
+    setHasUnsavedChanges(true);
   };
 
   const handleFocus = () => {
@@ -119,7 +152,7 @@ const GoogleDocsEditor: React.FC<GoogleDocsEditorProps> = ({ clientId, onSave })
       <div className="h-full flex flex-col bg-gray-50">
         <DocumentHeader
           documentTitle={documentTitle}
-          setDocumentTitle={setDocumentTitle}
+          setDocumentTitle={handleTitleChange}
           isSaving={isSaving}
           lastSaved={lastSaved}
           onPrint={handlePrint}
