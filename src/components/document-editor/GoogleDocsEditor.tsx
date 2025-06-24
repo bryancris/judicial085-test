@@ -63,12 +63,24 @@ const GoogleDocsEditor: React.FC<GoogleDocsEditorProps> = ({ clientId, onSave })
     // Update the document content state
     setDocumentContent(currentContent);
 
+    // Ensure the print styles are applied
+    const printTitle = document.querySelector('.print-document-title');
+    const printContent = document.querySelector('.print-document-content');
+    
+    if (printTitle) {
+      printTitle.textContent = documentTitle;
+    }
+    
+    if (printContent && editorRef.current) {
+      printContent.innerHTML = editorRef.current.innerHTML;
+    }
+
     toast({
       title: "Printing...",
       description: "Opening print dialog...",
     });
 
-    // Call the browser's print function directly
+    // Small delay to ensure content is updated
     setTimeout(() => {
       window.print();
     }, 100);
@@ -118,13 +130,14 @@ const GoogleDocsEditor: React.FC<GoogleDocsEditorProps> = ({ clientId, onSave })
           <DocumentToolbar onFormatText={formatText} />
         </div>
 
-        {/* Print-only title */}
-        <div className="hidden print-show">
+        {/* Print-only content - positioned to be captured by print styles */}
+        <div className="print-show" style={{ display: 'none' }}>
           <div className="print-document-title">{documentTitle}</div>
+          <div className="print-document-content" dangerouslySetInnerHTML={{ __html: documentContent }}></div>
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex">
+        <div className="flex-1 flex print-hide">
           <DocumentSidebar />
           <DocumentEditor
             editorRef={editorRef}
