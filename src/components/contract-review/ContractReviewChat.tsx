@@ -47,23 +47,23 @@ const ContractReviewChat: React.FC<ContractReviewChatProps> = ({ clientId, clien
     try {
       const result = await processDocument(title, content, { schema: 'contract_document' }, file);
       
-      if (result.success) {
-        // Send the contract content to AI for analysis
-        const message = file 
-          ? `Please review this contract file "${title}" for any legal issues under Texas law.`
-          : `Please review this contract for any legal issues under Texas law: ${content}`;
-        
-        handleSendMessage(message);
-        
-        toast({
-          title: "Contract Submitted",
-          description: "Your contract has been uploaded and is being analyzed under Texas law.",
-        });
-        
-        return result;
-      } else {
+      if (!result.success) {
         throw new Error(result.error || "Failed to process contract");
       }
+      
+      // Send the contract content to AI for analysis
+      const message = file 
+        ? `Please review this contract file "${title}" for any legal issues under Texas law.`
+        : `Please review this contract for any legal issues under Texas law: ${content}`;
+      
+      handleSendMessage(message);
+      
+      toast({
+        title: "Contract Submitted",
+        description: "Your contract has been uploaded and is being analyzed under Texas law.",
+      });
+      
+      return result;
     } catch (error: any) {
       console.error("Error processing contract:", error);
       toast({

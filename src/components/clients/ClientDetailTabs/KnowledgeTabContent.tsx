@@ -45,7 +45,7 @@ const KnowledgeTabContent: React.FC<KnowledgeTabContentProps> = ({ clientId }) =
         }
         
         // Store the document ID for future updates - only if result was successful and has documentId
-        if (result.success && 'documentId' in result && result.documentId) {
+        if ('documentId' in result && result.documentId) {
           setCurrentDocumentId(result.documentId);
         }
         
