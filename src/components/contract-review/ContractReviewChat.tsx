@@ -3,10 +3,11 @@ import React, { useState } from "react";
 import { useContractReviewChat } from "@/hooks/useContractReviewChat";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FilePlus, UploadCloud } from "lucide-react";
+import { FilePlus, UploadCloud, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ContractReviewChatInput from "./ContractReviewChatInput";
 import ContractReviewChatView from "./ContractReviewChatView";
+import ContractDraftForm from "./ContractDraftForm";
 import { Textarea } from "@/components/ui/textarea";
 
 interface ContractReviewChatProps {
@@ -25,13 +26,18 @@ const ContractReviewChat: React.FC<ContractReviewChatProps> = ({ clientId, clien
   
   const { toast } = useToast();
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [contractText, setContractText] = useState("");
 
-  const handleAddContract = () => {
+  const handleCreateContract = () => {
+    setCreateDialogOpen(true);
+  };
+
+  const handleUploadContract = () => {
     setUploadDialogOpen(true);
   };
   
-  const handleUploadContract = () => {
+  const handleSubmitUpload = () => {
     if (!contractText.trim()) {
       toast({
         title: "Empty Contract",
@@ -49,6 +55,17 @@ const ContractReviewChat: React.FC<ContractReviewChatProps> = ({ clientId, clien
     toast({
       title: "Contract Submitted",
       description: "Your contract is being analyzed under Texas law.",
+    });
+  };
+
+  const handleContractDraftSubmit = (contractData: any) => {
+    const message = `Please create a ${contractData.contractType} contract with the following details: ${JSON.stringify(contractData)}`;
+    handleSendMessage(message);
+    setCreateDialogOpen(false);
+    
+    toast({
+      title: "Contract Draft Requested",
+      description: "Your contract is being generated based on your specifications.",
     });
   };
 
@@ -79,15 +96,26 @@ const ContractReviewChat: React.FC<ContractReviewChatProps> = ({ clientId, clien
             <h3 className="font-medium">Texas Contract Review</h3>
             <div className="text-xs opacity-80">{formatTimestamp()}</div>
           </div>
-          <Button 
-            onClick={handleAddContract} 
-            size="sm" 
-            variant="secondary" 
-            className="bg-white text-[#4CAF50] font-medium hover:bg-gray-100"
-          >
-            <FilePlus className="h-4 w-4 mr-2" />
-            Add Contract
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleCreateContract} 
+              size="sm" 
+              variant="secondary" 
+              className="bg-white text-[#4CAF50] font-medium hover:bg-gray-100"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Create
+            </Button>
+            <Button 
+              onClick={handleUploadContract} 
+              size="sm" 
+              variant="secondary" 
+              className="bg-white text-[#4CAF50] font-medium hover:bg-gray-100"
+            >
+              <FilePlus className="h-4 w-4 mr-2" />
+              Upload
+            </Button>
+          </div>
         </div>
         
         <ContractReviewChatView 
@@ -100,6 +128,20 @@ const ContractReviewChat: React.FC<ContractReviewChatProps> = ({ clientId, clien
           isLoading={isLoading}
         />
       </div>
+      
+      {/* Contract Create Dialog */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create Contract</DialogTitle>
+            <DialogDescription>
+              Fill out the form below to generate a custom contract tailored to your needs.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <ContractDraftForm onSubmit={handleContractDraftSubmit} />
+        </DialogContent>
+      </Dialog>
       
       {/* Contract Upload Dialog */}
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
@@ -125,7 +167,7 @@ const ContractReviewChat: React.FC<ContractReviewChatProps> = ({ clientId, clien
                 Cancel
               </Button>
               <Button 
-                onClick={handleUploadContract} 
+                onClick={handleSubmitUpload} 
                 className="bg-[#4CAF50] hover:bg-[#3d8b40]"
               >
                 <UploadCloud className="h-4 w-4 mr-2" />
