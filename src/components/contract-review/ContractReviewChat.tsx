@@ -3,12 +3,13 @@ import React, { useState } from "react";
 import { useContractReviewChat } from "@/hooks/useContractReviewChat";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FilePlus, UploadCloud, FileText } from "lucide-react";
+import { FilePlus, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useDocumentProcessor } from "@/hooks/documents/useDocumentProcessor";
 import ContractReviewChatInput from "./ContractReviewChatInput";
 import ContractReviewChatView from "./ContractReviewChatView";
 import ContractDraftForm from "./ContractDraftForm";
-import { Textarea } from "@/components/ui/textarea";
+import DocumentUploadDialog from "@/components/clients/DocumentUploadDialog";
 
 interface ContractReviewChatProps {
   clientId: string;
@@ -27,7 +28,12 @@ const ContractReviewChat: React.FC<ContractReviewChatProps> = ({ clientId, clien
   const { toast } = useToast();
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [contractText, setContractText] = useState("");
+  
+  const { processDocument, isProcessing } = useDocumentProcessor(
+    clientId,
+    "client-level",
+    () => {} // Empty refresh function since we don't need to refresh a list here
+  );
 
   const handleCreateContract = () => {
     setCreateDialogOpen(true);
@@ -36,26 +42,37 @@ const ContractReviewChat: React.FC<ContractReviewChatProps> = ({ clientId, clien
   const handleUploadContract = () => {
     setUploadDialogOpen(true);
   };
-  
-  const handleSubmitUpload = () => {
-    if (!contractText.trim()) {
+
+  const handleContractUpload = async (title: string, content: string, file?: File) => {
+    try {
+      const result = await processDocument(title, content, { schema: 'contract_document' }, file);
+      
+      if (result.success) {
+        // Send the contract content to AI for analysis
+        const message = file 
+          ? `Please review this contract file "${title}" for any legal issues under Texas law.`
+          : `Please review this contract for any legal issues under Texas law: ${content}`;
+        
+        handleSendMessage(message);
+        
+        toast({
+          title: "Contract Submitted",
+          description: "Your contract has been uploaded and is being analyzed under Texas law.",
+        });
+        
+        return result;
+      } else {
+        throw new Error(result.error || "Failed to process contract");
+      }
+    } catch (error: any) {
+      console.error("Error processing contract:", error);
       toast({
-        title: "Empty Contract",
-        description: "Please enter contract text to review.",
-        variant: "destructive"
+        title: "Contract Upload Failed",
+        description: error.message || "An error occurred while processing the contract.",
+        variant: "destructive",
       });
-      return;
+      throw error;
     }
-    
-    const message = `Please review this contract for any legal issues: ${contractText}`;
-    handleSendMessage(message);
-    setUploadDialogOpen(false);
-    setContractText("");
-    
-    toast({
-      title: "Contract Submitted",
-      description: "Your contract is being analyzed under Texas law.",
-    });
   };
 
   const handleContractDraftSubmit = (contractData: any) => {
@@ -143,40 +160,16 @@ const ContractReviewChat: React.FC<ContractReviewChatProps> = ({ clientId, clien
         </DialogContent>
       </Dialog>
       
-      {/* Contract Upload Dialog */}
-      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Upload Contract for Texas Law Review</DialogTitle>
-            <DialogDescription>
-              Paste your contract text below for analysis according to Texas law standards.
-              Our AI will check for issues with choice of law, security interests, liquidated damages, and more.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <Textarea 
-              placeholder="Paste contract text here..."
-              className="min-h-[300px] font-mono text-sm"
-              value={contractText}
-              onChange={(e) => setContractText(e.target.value)}
-            />
-            
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setUploadDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleSubmitUpload} 
-                className="bg-[#4CAF50] hover:bg-[#3d8b40]"
-              >
-                <UploadCloud className="h-4 w-4 mr-2" />
-                Submit for Analysis
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Contract Upload Dialog - Now using DocumentUploadDialog */}
+      <DocumentUploadDialog
+        isOpen={uploadDialogOpen}
+        onClose={() => setUploadDialogOpen(false)}
+        onUpload={handleContractUpload}
+        isProcessing={isProcessing}
+        clientId={clientId}
+        allowCaseSelection={false}
+        onUploadSuccess={() => setUploadDialogOpen(false)}
+      />
     </div>
   );
 };
