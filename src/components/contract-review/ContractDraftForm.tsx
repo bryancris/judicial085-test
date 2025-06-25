@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +21,7 @@ const ContractDraftForm: React.FC<ContractDraftFormProps> = ({ onSubmit }) => {
     party1DefinedName: "",
     party2Name: "",
     party2DefinedName: "",
-    governingLaw: "",
+    governingLaw: "Texas",
     jurisdiction: "",
     factsGuidance: "",
     whoToFavor: "neutral",
@@ -189,37 +188,29 @@ const ContractDraftForm: React.FC<ContractDraftFormProps> = ({ onSubmit }) => {
           </CardContent>
         </Card>
 
-        {/* Governing Law */}
+        {/* State and Jurisdiction */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="governingLaw" className="text-sm font-medium">
-              Governing Law (Country)
+              State
             </Label>
-            <Select value={formData.governingLaw} onValueChange={(value) => handleInputChange('governingLaw', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select country" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="United States">United States</SelectItem>
-                <SelectItem value="Canada">Canada</SelectItem>
-                <SelectItem value="United Kingdom">United Kingdom</SelectItem>
-                <SelectItem value="Australia">Australia</SelectItem>
-                <SelectItem value="Germany">Germany</SelectItem>
-                <SelectItem value="France">France</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </SelectContent>
-            </Select>
+            <Input
+              id="governingLaw"
+              value="Texas"
+              readOnly
+              className="bg-gray-50"
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="jurisdiction" className="text-sm font-medium">
-              Jurisdiction (State/Province)
+              Jurisdiction (County/City)
             </Label>
             <Input
               id="jurisdiction"
               value={formData.jurisdiction}
               onChange={(e) => handleInputChange('jurisdiction', e.target.value)}
-              placeholder="e.g., Texas, California, New York"
+              placeholder="e.g., Harris County, Dallas, Austin"
             />
           </div>
         </div>
