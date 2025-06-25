@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useContractReviewChat } from "@/hooks/useContractReviewChat";
 import { Button } from "@/components/ui/button";
@@ -48,7 +47,8 @@ const ContractReviewChat: React.FC<ContractReviewChatProps> = ({ clientId, clien
       const result = await processDocument(title, content, { schema: 'contract_document' }, file);
       
       if (!result.success) {
-        throw new Error(result.error || "Failed to process contract");
+        const errorMessage = 'error' in result ? result.error : "Failed to process contract";
+        throw new Error(errorMessage);
       }
       
       // Send the contract content to AI for analysis

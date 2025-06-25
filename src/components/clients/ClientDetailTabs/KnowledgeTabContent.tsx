@@ -27,7 +27,8 @@ const KnowledgeTabContent: React.FC<KnowledgeTabContentProps> = ({ clientId }) =
         });
         
         if (!result.success) {
-          throw new Error(result.error || "Failed to update document");
+          const errorMessage = 'error' in result ? result.error : "Failed to update document";
+          throw new Error(errorMessage);
         }
         
         toast({
@@ -41,7 +42,8 @@ const KnowledgeTabContent: React.FC<KnowledgeTabContentProps> = ({ clientId }) =
         });
         
         if (!result.success) {
-          throw new Error(result.error || "Failed to save document");
+          const errorMessage = 'error' in result ? result.error : "Failed to save document";
+          throw new Error(errorMessage);
         }
         
         // Store the document ID for future updates - only if result was successful and has documentId
