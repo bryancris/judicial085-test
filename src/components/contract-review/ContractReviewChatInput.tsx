@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from "react";
-import { SendHorizonal, Mic, MicOff, Upload } from "lucide-react";
+import { SendHorizonal, Mic, MicOff } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
 import { Button } from "@/components/ui/button";
 import { useSpeechRecognition } from "@/utils/voiceToTextUtils";
@@ -108,20 +108,13 @@ const ContractReviewChatInput: React.FC<ContractReviewChatInputProps> = ({
     }
   };
 
-  const handleUploadContract = () => {
-    toast({
-      title: "Feature Coming Soon",
-      description: "Contract upload functionality will be implemented soon.",
-    });
-  };
-
   return (
     <div className="border-t p-3 bg-background">
       <div className="flex gap-2 items-end">
         <TextareaAutosize
           ref={textareaRef}
           className={`flex-grow resize-none border rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-foreground bg-card ${isRecording ? 'border-red-500 border-2' : ''}`}
-          placeholder="Ask about the contract..."
+          placeholder="Ask about contracts or request contract analysis..."
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -130,16 +123,6 @@ const ContractReviewChatInput: React.FC<ContractReviewChatInputProps> = ({
           style={{ color: "currentColor" }}
         />
         <div className="flex flex-col gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleUploadContract}
-            title="Upload contract"
-            type="button"
-            className="bg-green-500 hover:bg-green-600 text-white"
-          >
-            <Upload className="h-4 w-4" />
-          </Button>
           <Button
             variant={isRecording ? "destructive" : "outline"}
             size="icon"
@@ -166,7 +149,7 @@ const ContractReviewChatInput: React.FC<ContractReviewChatInputProps> = ({
         </div>
       </div>
       <div className="text-xs text-muted-foreground mt-2">
-        Shift + Enter for new line • Click microphone to use voice input • Upload contracts for review
+        Shift + Enter for new line • Click microphone to use voice input • Use "Select Documents" to choose documents for review
       </div>
     </div>
   );

@@ -1,18 +1,19 @@
+
 import React, { useState } from "react";
 import { useContractReviewChat } from "@/hooks/useContractReviewChat";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FilePlus, FileText } from "lucide-react";
+import { FileText, Files } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useDocumentProcessor } from "@/hooks/documents/useDocumentProcessor";
 import ContractReviewChatInput from "./ContractReviewChatInput";
 import ContractReviewChatView from "./ContractReviewChatView";
 import ContractDraftForm from "./ContractDraftForm";
-import DocumentUploadDialog from "@/components/clients/DocumentUploadDialog";
+import DocumentSelector from "./DocumentSelector";
+import { DocumentWithContent } from "@/types/knowledge";
 
 interface ContractReviewChatProps {
   clientId: string;
-  clientName?: string; // Added clientName as optional prop
+  clientName?: string;
 }
 
 const ContractReviewChat: React.FC<ContractReviewChatProps> = ({ clientId, clientName }) => {
@@ -25,53 +26,50 @@ const ContractReviewChat: React.FC<ContractReviewChatProps> = ({ clientId, clien
   } = useContractReviewChat(clientId);
   
   const { toast } = useToast();
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [documentSelectorOpen, setDocumentSelectorOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  
-  const { processDocument, isProcessing } = useDocumentProcessor(
-    clientId,
-    "client-level",
-    () => {} // Empty refresh function since we don't need to refresh a list here
-  );
 
   const handleCreateContract = () => {
     setCreateDialogOpen(true);
   };
 
-  const handleUploadContract = () => {
-    setUploadDialogOpen(true);
+  const handleSelectDocuments = () => {
+    setDocumentSelectorOpen(true);
   };
 
-  const handleContractUpload = async (title: string, content: string, file?: File) => {
+  const handleDocumentSelection = async (document: DocumentWithContent) => {
     try {
-      const result = await processDocument(title, content, { schema: 'contract_document' }, file);
+      // Get document content from chunks/contents
+      let documentContent = "";
       
-      if (!result.success) {
-        const errorMessage = 'error' in result ? result.error : "Failed to process contract";
-        throw new Error(errorMessage);
+      if (document.contents && document.contents.length > 0) {
+        // Combine content from all sections
+        documentContent = document.contents
+          .map(content => content.content)
+          .join("\n\n");
       }
-      
-      // Send the contract content to AI for analysis
-      const message = file 
-        ? `Please review this contract file "${title}" for any legal issues under Texas law.`
-        : `Please review this contract for any legal issues under Texas law: ${content}`;
+
+      if (!documentContent.trim()) {
+        throw new Error("Selected document has no content available for review.");
+      }
+
+      // Send the document content to AI for analysis
+      const message = `Please review this document "${document.title}" for any legal issues under Texas law. Document content: ${documentContent}`;
       
       handleSendMessage(message);
       
       toast({
-        title: "Contract Submitted",
-        description: "Your contract has been uploaded and is being analyzed under Texas law.",
+        title: "Document Selected",
+        description: `"${document.title}" has been submitted for contract review analysis.`,
       });
       
-      return result;
     } catch (error: any) {
-      console.error("Error processing contract:", error);
+      console.error("Error processing selected document:", error);
       toast({
-        title: "Contract Upload Failed",
-        description: error.message || "An error occurred while processing the contract.",
+        title: "Document Selection Failed",
+        description: error.message || "An error occurred while processing the selected document.",
         variant: "destructive",
       });
-      throw error;
     }
   };
 
@@ -124,13 +122,13 @@ const ContractReviewChat: React.FC<ContractReviewChatProps> = ({ clientId, clien
               Create
             </Button>
             <Button 
-              onClick={handleUploadContract} 
+              onClick={handleSelectDocuments} 
               size="sm" 
               variant="secondary" 
               className="bg-white text-[#4CAF50] font-medium hover:bg-gray-100"
             >
-              <FilePlus className="h-4 w-4 mr-2" />
-              Upload
+              <Files className="h-4 w-4 mr-2" />
+              Select Documents
             </Button>
           </div>
         </div>
@@ -160,15 +158,12 @@ const ContractReviewChat: React.FC<ContractReviewChatProps> = ({ clientId, clien
         </DialogContent>
       </Dialog>
       
-      {/* Contract Upload Dialog - Now using DocumentUploadDialog */}
-      <DocumentUploadDialog
-        isOpen={uploadDialogOpen}
-        onClose={() => setUploadDialogOpen(false)}
-        onUpload={handleContractUpload}
-        isProcessing={isProcessing}
+      {/* Document Selection Dialog */}
+      <DocumentSelector
+        isOpen={documentSelectorOpen}
+        onClose={() => setDocumentSelectorOpen(false)}
+        onSelectDocument={handleDocumentSelection}
         clientId={clientId}
-        allowCaseSelection={false}
-        onUploadSuccess={() => setUploadDialogOpen(false)}
       />
     </div>
   );
