@@ -8,7 +8,7 @@ import { createSuccessResponse, createErrorResponse } from './handlers/responseH
 import { handleProcessingError } from './handlers/errorHandler.ts';
 import { processDocument } from './services/unifiedDocumentProcessor.ts';
 import { chunkDocumentAdvanced } from './utils/chunkingUtils.ts';
-import { generateEmbeddings } from './services/embeddingService.ts';
+import { generateAndStoreEmbeddings } from './services/embeddingService.ts';
 import { updateDocumentStatus } from './services/documentStatusService.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -28,10 +28,10 @@ serve(async (req) => {
   let documentId: string | null = null;
   
   try {
-    console.log('🚀 === UNIFIED DOCUMENT PROCESSING SYSTEM v9.0 ===');
+    console.log('🚀 === UNIFIED DOCUMENT PROCESSING SYSTEM v9.1 ===');
     
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Missing required Supabase environment variables');
+    if (!supabaseUrl || !supabaseServiceKey || !openaiApiKey) {
+      throw new Error('Missing required environment variables');
     }
     
     const requestBody = await req.json();
@@ -77,18 +77,26 @@ serve(async (req) => {
     const chunks = chunkDocumentAdvanced(extractionResult.text);
     console.log(`✅ Chunking completed: ${chunks.length} chunks created`);
 
-    // Generate embeddings for chunks
+    // Generate embeddings for chunks using the correct function
     console.log('🧠 === STARTING EMBEDDING GENERATION ===');
-    await generateEmbeddings(
+    await generateAndStoreEmbeddings(
       chunks,
       documentId,
       validatedRequest.clientId,
       validatedRequest.caseId,
       supabase,
-      openaiApiKey
+      openaiApiKey,
+      {
+        fileName: validatedRequest.fileName,
+        fileUrl: validatedRequest.fileUrl,
+        extractionMethod: extractionResult.method,
+        quality: extractionResult.quality,
+        confidence: extractionResult.confidence,
+        pageCount: extractionResult.pageCount
+      }
     );
 
-    console.log('Advanced processing completed with embeddings for search functionality');
+    console.log('✅ Advanced processing completed with embeddings for search functionality');
 
     // Mark document as completed and preserve URL
     await updateDocumentStatus(supabase, documentId, 'completed', validatedRequest.fileUrl);
@@ -103,6 +111,7 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
+    console.error('❌ Processing pipeline failed:', error);
     await handleProcessingError(error, documentId, supabase);
     return createErrorResponse(error, documentId);
   }
