@@ -13,7 +13,7 @@ import { updateDocumentStatus } from './services/documentStatusService.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const openaiApiKey = Deno.env.get('OPENAI_API_KEY')!;
+const geminiApiKey = Deno.env.get('GEMINI_API_KEY')!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -28,9 +28,9 @@ serve(async (req) => {
   let documentId: string | null = null;
   
   try {
-    console.log('🚀 === UNIFIED DOCUMENT PROCESSING SYSTEM v9.1 ===');
+    console.log('🚀 === GEMINI-POWERED DOCUMENT PROCESSING SYSTEM v10.0 ===');
     
-    if (!supabaseUrl || !supabaseServiceKey || !openaiApiKey) {
+    if (!supabaseUrl || !supabaseServiceKey || !geminiApiKey) {
       throw new Error('Missing required environment variables');
     }
     
@@ -77,15 +77,16 @@ serve(async (req) => {
     const chunks = chunkDocumentAdvanced(extractionResult.text);
     console.log(`✅ Chunking completed: ${chunks.length} chunks created`);
 
-    // Generate embeddings for chunks using the correct function
-    console.log('🧠 === STARTING EMBEDDING GENERATION ===');
+    // Note: Keep OpenAI embeddings for now (hybrid approach)
+    // Gemini doesn't have competitive embedding models yet
+    console.log('🧠 === STARTING EMBEDDING GENERATION (OpenAI) ===');
     await generateAndStoreEmbeddings(
       chunks,
       documentId,
       validatedRequest.clientId,
       validatedRequest.caseId,
       supabase,
-      openaiApiKey,
+      Deno.env.get('OPENAI_API_KEY')!, // Keep OpenAI for embeddings
       {
         fileName: validatedRequest.fileName,
         fileUrl: validatedRequest.fileUrl,
