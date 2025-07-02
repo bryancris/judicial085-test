@@ -160,9 +160,9 @@ async function makeGeminiRequest(
       // Enhanced wait logic with special handling for rate limits
       let waitTime;
       if (lastError instanceof GeminiError && lastError.statusCode === 429) {
-        // Rate limit error - use longer backoff
-        waitTime = Math.min(5000 * Math.pow(2, attempt - 1), 60000); // 5s, 10s, 20s, up to 60s
-        console.log(`⏳ Rate limit hit, waiting ${waitTime}ms before retry ${attempt + 1}/${config.retries}`);
+        // Rate limit error - use much longer backoff for Gemini's strict limits
+        waitTime = Math.min(10000 * Math.pow(2, attempt - 1), 120000); // 10s, 20s, 40s, up to 2 minutes
+        console.log(`⏳ Gemini rate limit hit, waiting ${waitTime}ms before retry ${attempt + 1}/${config.retries}`);
       } else {
         // Regular exponential backoff for other errors
         waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
