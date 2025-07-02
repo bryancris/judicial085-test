@@ -19,6 +19,7 @@ export const getEnvVars = () => {
   // Log environment status for debugging (without leaking keys)
   console.log("Environment variables status check:");
   console.log(`OPENAI_API_KEY available: ${vars.OPENAI_API_KEY ? 'Yes' : 'No'}`);
+  console.log(`GEMINI_API_KEY available: ${vars.GEMINI_API_KEY ? 'Yes' : 'No'}`);
   console.log(`SUPABASE_URL available: ${vars.SUPABASE_URL ? 'Yes' : 'No'}`);
   console.log(`SUPABASE_ANON_KEY available: ${vars.SUPABASE_ANON_KEY ? 'Yes' : 'No'}`);
   console.log(`SUPABASE_SERVICE_ROLE_KEY available: ${vars.SUPABASE_SERVICE_ROLE_KEY ? 'Yes' : 'No'}`);

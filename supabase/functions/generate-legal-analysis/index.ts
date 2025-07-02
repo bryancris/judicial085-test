@@ -262,6 +262,7 @@ serve(async (req) => {
       const geminiResponse = await generateLegalAnalysis(
         userContent,
         systemPrompt,
+        geminiApiKey,
         {
           temperature: 0.3, // Lower temperature for consistent legal analysis
           maxTokens: 8192   // Increased for comprehensive analysis

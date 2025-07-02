@@ -50,13 +50,13 @@ export class GeminiError extends Error {
  */
 async function makeGeminiRequest(
   prompt: string,
+  apiKey: string,
   options: GeminiRequestOptions = {}
 ): Promise<GeminiResponse> {
   const config = { ...DEFAULT_CONFIG, ...options };
-  const apiKey = Deno.env.get('GEMINI_API_KEY');
 
   if (!apiKey) {
-    throw new GeminiError('GEMINI_API_KEY environment variable is not set');
+    throw new GeminiError('GEMINI_API_KEY is not provided');
   }
 
   const url = `${config.baseUrl}/${config.model}:generateContent?key=${apiKey}`;
@@ -181,9 +181,10 @@ async function makeGeminiRequest(
  */
 export async function generateCompletion(
   prompt: string,
+  apiKey: string,
   options: GeminiRequestOptions = {}
 ): Promise<string> {
-  const response = await makeGeminiRequest(prompt, options);
+  const response = await makeGeminiRequest(prompt, apiKey, options);
   return response.text;
 }
 
@@ -193,9 +194,10 @@ export async function generateCompletion(
 export async function generateLegalAnalysis(
   prompt: string,
   systemPrompt: string,
+  apiKey: string,
   options: Omit<GeminiRequestOptions, 'systemPrompt'> = {}
 ): Promise<GeminiResponse> {
-  return makeGeminiRequest(prompt, {
+  return makeGeminiRequest(prompt, apiKey, {
     model: 'gemini-1.5-pro-latest',
     temperature: 0.3, // Lower temperature for more consistent legal analysis
     maxTokens: 8192,
@@ -212,12 +214,13 @@ export async function generateContractReview(
   documentContent: string,
   reviewPrompt: string,
   systemPrompt: string,
+  apiKey: string,
   options: Omit<GeminiRequestOptions, 'systemPrompt'> = {}
 ): Promise<GeminiResponse> {
   // Combine document content with review prompt
   const fullPrompt = `Document to review:\n\n${documentContent}\n\n${reviewPrompt}`;
   
-  return makeGeminiRequest(fullPrompt, {
+  return makeGeminiRequest(fullPrompt, apiKey, {
     model: 'gemini-1.5-pro-latest',
     temperature: 0.2, // Very low temperature for contract review consistency
     maxTokens: 8192,
@@ -234,11 +237,12 @@ export async function generateCaseDiscussion(
   conversationHistory: string,
   newMessage: string,
   systemPrompt: string,
+  apiKey: string,
   options: Omit<GeminiRequestOptions, 'systemPrompt'> = {}
 ): Promise<GeminiResponse> {
   const fullPrompt = `Conversation History:\n${conversationHistory}\n\nNew Message: ${newMessage}`;
   
-  return makeGeminiRequest(fullPrompt, {
+  return makeGeminiRequest(fullPrompt, apiKey, {
     model: 'gemini-1.5-pro-latest',
     temperature: 0.4,
     maxTokens: 4096,
@@ -255,13 +259,13 @@ export async function processDocumentWithVision(
   documentData: string, // Base64 encoded document
   mimeType: string,
   analysisPrompt: string,
+  apiKey: string,
   options: GeminiRequestOptions = {}
 ): Promise<GeminiResponse> {
   const config = { ...DEFAULT_CONFIG, ...options };
-  const apiKey = Deno.env.get('GEMINI_API_KEY');
 
   if (!apiKey) {
-    throw new GeminiError('GEMINI_API_KEY environment variable is not set');
+    throw new GeminiError('GEMINI_API_KEY is not provided');
   }
 
   const url = `${config.baseUrl}/gemini-1.5-pro-latest:generateContent?key=${apiKey}`;
@@ -340,9 +344,9 @@ export async function processDocumentWithVision(
 /**
  * Health check for Gemini API connectivity
  */
-export async function checkGeminiHealth(): Promise<boolean> {
+export async function checkGeminiHealth(apiKey: string): Promise<boolean> {
   try {
-    await generateCompletion('Test connection', { 
+    await generateCompletion('Test connection', apiKey, { 
       maxTokens: 10,
       retries: 1 
     });
