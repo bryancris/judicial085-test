@@ -20,11 +20,13 @@ export const useClientChatAnalysis = (
     // Check if we have conversation messages
     const hasAttorneyMessages = currentMessages.some(msg => msg.role === "attorney");
     const hasClientMessages = currentMessages.some(msg => msg.role === "client");
+    const hasFactsMessages = currentMessages.some(msg => msg.role === "facts");
     const hasConversation = hasAttorneyMessages && hasClientMessages;
+    const hasFactsInput = hasFactsMessages;
     
-    // If we don't allow document-only analysis and there's no full conversation, skip
-    if (!allowDocumentOnly && !hasConversation) {
-      return; // Don't generate analysis until we have both sides of the conversation
+    // If we don't allow document-only analysis and there's no full conversation or facts input, skip
+    if (!allowDocumentOnly && !hasConversation && !hasFactsInput) {
+      return; // Don't generate analysis until we have conversation or facts
     }
     
     // If we allow document-only analysis but have no conversation, we'll proceed with empty messages
@@ -44,7 +46,7 @@ export const useClientChatAnalysis = (
         console.log("Documents used in analysis:", docsUsed);
         
         // Notify user that documents were used in analysis
-        const analysisType = hasConversation ? "conversation and documents" : "documents";
+        const analysisType = hasConversation ? "conversation and documents" : hasFactsInput ? "facts and documents" : "documents";
         toast({
           title: "Documents Used in Analysis",
           description: `${docsUsed.length} client document${docsUsed.length > 1 ? 's were' : ' was'} used in generating this analysis from ${analysisType}.`,
