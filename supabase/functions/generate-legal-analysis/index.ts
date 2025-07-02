@@ -22,6 +22,8 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Force redeployment to pick up updated environment variables
+
   try {
     const { clientId, conversation, caseId, researchUpdates } = await req.json();
 
