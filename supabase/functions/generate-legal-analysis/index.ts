@@ -252,6 +252,9 @@ serve(async (req) => {
     console.log(`🚀 Sending request to Gemini with ${analysisSource} context and ${researchUpdates?.length || 0} research updates`);
     console.log(`📊 Context size: ${userContent.length} characters, System prompt: ${systemPrompt.length} characters`);
 
+    // Initialize analysis variable outside try block
+    let analysis = '';
+
     try {
       // Use Gemini's 2M token context to process entire case files without chunking
       const geminiResponse = await generateLegalAnalysis(
@@ -263,20 +266,48 @@ serve(async (req) => {
         }
       );
 
-    // Extract the analysis from Gemini response
-    let analysis = geminiResponse.text || '';
-    
-    // Log token usage for cost tracking
-    if (geminiResponse.usage) {
-      console.log('📈 Gemini Usage:', geminiResponse.usage);
-      console.log('💰 Estimated cost:', 
-        `$${((geminiResponse.usage.totalTokens / 1000000) * 1.25).toFixed(4)}`);
-    }
+      // Extract the analysis from Gemini response
+      analysis = geminiResponse.text || '';
+      
+      // Log token usage for cost tracking
+      if (geminiResponse.usage) {
+        console.log('📈 Gemini Usage:', geminiResponse.usage);
+        console.log('💰 Estimated cost:', 
+          `$${((geminiResponse.usage.totalTokens / 1000000) * 1.25).toFixed(4)}`);
+      }
+
+      console.log('✅ Successfully generated analysis from Gemini');
 
     } catch (error) {
       console.error('❌ Gemini API error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.statusCode,
+        response: error.response
+      });
+      
+      // Handle specific error types with user-friendly messages
+      let errorMessage = 'Failed to generate legal analysis';
+      
+      if (error.message && error.message.includes('429')) {
+        errorMessage = 'API rate limit exceeded. Please wait a few minutes and try again.';
+      } else if (error.message && error.message.includes('401')) {
+        errorMessage = 'API authentication failed. Please check your Gemini API key configuration.';
+      } else if (error.message && error.message.includes('quota')) {
+        errorMessage = 'API quota exceeded. Please check your Gemini API usage limits.';
+      }
+      
       return new Response(
-        JSON.stringify({ error: error.message || 'Failed to generate legal analysis with Gemini' }),
+        JSON.stringify({ error: errorMessage }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Ensure we have analysis content before proceeding
+    if (!analysis || analysis.trim().length === 0) {
+      console.error('❌ No analysis content generated');
+      return new Response(
+        JSON.stringify({ error: 'No analysis content was generated. Please try again.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

@@ -100,11 +100,22 @@ async function makeGeminiRequest(
 
       if (!response.ok) {
         const errorData = await response.text();
-        throw new GeminiError(
+        const error = new GeminiError(
           `Gemini API error: ${response.status} ${response.statusText}`,
           response.status,
           errorData
         );
+        
+        // Log detailed error information
+        console.error(`❌ Gemini API Error (${response.status}):`, {
+          status: response.status,
+          statusText: response.statusText,
+          errorData: errorData.substring(0, 500), // Limit log size
+          attempt: attempt,
+          maxRetries: config.retries
+        });
+        
+        throw error;
       }
 
       const data = await response.json();
@@ -146,8 +157,18 @@ async function makeGeminiRequest(
       // If this is the last attempt, don't wait
       if (attempt === config.retries) break;
 
-      // Wait before retry (exponential backoff)
-      const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+      // Enhanced wait logic with special handling for rate limits
+      let waitTime;
+      if (lastError instanceof GeminiError && lastError.statusCode === 429) {
+        // Rate limit error - use longer backoff
+        waitTime = Math.min(5000 * Math.pow(2, attempt - 1), 60000); // 5s, 10s, 20s, up to 60s
+        console.log(`⏳ Rate limit hit, waiting ${waitTime}ms before retry ${attempt + 1}/${config.retries}`);
+      } else {
+        // Regular exponential backoff for other errors
+        waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+        console.log(`⏳ Waiting ${waitTime}ms before retry ${attempt + 1}/${config.retries}`);
+      }
+      
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
   }
