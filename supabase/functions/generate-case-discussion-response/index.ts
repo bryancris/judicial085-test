@@ -11,7 +11,7 @@ import {
   saveCaseDiscussion 
 } from "./clientDataService.ts";
 import { buildCompleteContext } from "./contextBuilders/index.ts";
-import { formatMessages, generateOpenAiResponse } from "./openAiService.ts";
+import { generateGeminiCaseDiscussion } from "./geminiService.ts";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -76,11 +76,10 @@ serve(async (req) => {
     console.log(`Context text length: ${contextText.length} characters`);
     console.log('First 200 characters of context:', contextText.substring(0, 200));
 
-    // Format messages for OpenAI
-    const messages = formatMessages(contextText, previousMessages, message);
+    console.log(`Generating case discussion response with Gemini for client: ${clientId}`);
 
-    // Generate AI response
-    const aiResponse = await generateOpenAiResponse(messages);
+    // Generate AI response using Gemini's 2M context window
+    const aiResponse = await generateGeminiCaseDiscussion(contextText, previousMessages, message);
 
     // Format timestamp for consistency
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
