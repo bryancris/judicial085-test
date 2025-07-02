@@ -7,8 +7,9 @@ import { buildSystemPrompt } from "./prompts/systemPromptBuilder.ts";
 import { extractLegalCitations } from "./services/citationExtractionService.ts";
 import { mapCitationsToKnowledgeBase } from "./services/knowledgeBaseMappingService.ts";
 import { generateStrengthsWeaknesses } from "./services/strengthsWeaknessesGenerator.ts";
+import { generateLegalAnalysis } from "../shared/geminiService.ts";
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,10 +25,10 @@ serve(async (req) => {
   try {
     const { clientId, conversation, caseId, researchUpdates } = await req.json();
 
-    if (!openAIApiKey) {
-      console.error('OpenAI API key is not configured');
+    if (!geminiApiKey) {
+      console.error('Gemini API key is not configured');
       return new Response(
-        JSON.stringify({ error: "OpenAI API key is not configured" }),
+        JSON.stringify({ error: "Gemini API key is not configured" }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -208,17 +209,26 @@ serve(async (req) => {
       researchUpdates // Pass research updates to system prompt
     );
 
-    // Format the content for the API request
+    // Format the content for Gemini's 2M context window - include ALL available information
     let userContent = "";
+    
     if (hasConversation) {
       const formattedConversation = conversationMessages.map(msg => ({
         role: "user", 
         content: `${msg.role.toUpperCase()}: ${msg.content}`
       }));
-      userContent = "Here is the attorney-client conversation for analysis:\n\n" + formattedConversation.map(msg => msg.content).join("\n\n");
+      userContent = "ATTORNEY-CLIENT CONVERSATION FOR ANALYSIS:\n\n" + formattedConversation.map(msg => msg.content).join("\n\n");
+      
+      // If we have both conversation AND documents, include both (leveraging 2M context)
+      if (clientDocuments.length > 0) {
+        userContent += "\n\nRELATED CLIENT DOCUMENTS:\n\n";
+        userContent += clientDocuments.map((doc, index) => 
+          `DOCUMENT ${index + 1}: ${doc.title}\n${doc.content}`
+        ).join('\n\n');
+      }
     } else {
-      userContent = `Here are the client documents for analysis:\n\n${clientDocuments.map((doc, index) => 
-        `DOCUMENT ${index + 1}: ${doc.title}\n${doc.content}`
+      userContent = `CLIENT DOCUMENTS FOR COMPREHENSIVE ANALYSIS:\n\n${clientDocuments.map((doc, index) => 
+        `DOCUMENT ${index + 1}: ${doc.title}\nFull Content:\n${doc.content}`
       ).join('\n\n')}`;
     }
 
@@ -239,34 +249,37 @@ serve(async (req) => {
       { role: "user", content: userContent }
     ];
 
-    console.log(`Sending request to OpenAI with ${analysisSource} context and ${researchUpdates?.length || 0} research updates`);
+    console.log(`🚀 Sending request to Gemini with ${analysisSource} context and ${researchUpdates?.length || 0} research updates`);
+    console.log(`📊 Context size: ${userContent.length} characters, System prompt: ${systemPrompt.length} characters`);
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages,
-        temperature: 0.5,
-        max_tokens: 2000,
-      }),
-    });
+    try {
+      // Use Gemini's 2M token context to process entire case files without chunking
+      const geminiResponse = await generateLegalAnalysis(
+        userContent,
+        systemPrompt,
+        {
+          temperature: 0.3, // Lower temperature for consistent legal analysis
+          maxTokens: 8192   // Increased for comprehensive analysis
+        }
+      );
 
-    const data = await response.json();
+    // Extract the analysis from Gemini response
+    let analysis = geminiResponse.text || '';
+    
+    // Log token usage for cost tracking
+    if (geminiResponse.usage) {
+      console.log('📈 Gemini Usage:', geminiResponse.usage);
+      console.log('💰 Estimated cost:', 
+        `$${((geminiResponse.usage.totalTokens / 1000000) * 1.25).toFixed(4)}`);
+    }
 
-    if (!response.ok) {
-      console.error('OpenAI API error:', data);
+    } catch (error) {
+      console.error('❌ Gemini API error:', error);
       return new Response(
-        JSON.stringify({ error: data.error?.message || 'Failed to generate legal analysis' }),
+        JSON.stringify({ error: error.message || 'Failed to generate legal analysis with Gemini' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    // Extract and verify the analysis
-    let analysis = data.choices[0]?.message?.content || '';
     
     // Enhanced citation extraction and mapping with debugging
     console.log("Starting enhanced citation extraction from analysis...");

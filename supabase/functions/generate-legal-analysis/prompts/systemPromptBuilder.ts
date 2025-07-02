@@ -7,10 +7,9 @@ export function buildSystemPrompt(
   detectedCaseType: string,
   researchUpdates?: any[]
 ): string {
-  // Create base system prompt
+  // Create base system prompt optimized for Gemini's 2M context window
   let systemPrompt = `
-You are a legal expert assistant for attorneys in Texas. Based on the ${analysisSource} provided, 
-generate a concise legal analysis with the following sections:
+You are an expert Texas attorney and legal analyst. Using Gemini's extensive context window, analyze ALL provided information comprehensively. Based on the ${analysisSource} provided, generate a thorough legal analysis with the following sections:
 
 1. **RELEVANT TEXAS LAW:** Identify and briefly explain Texas laws, statutes, or precedents that apply to this case.
    - When citing Texas statutes, use the format: "Texas Civil Practice and Remedies Code § 75.001" or similar standard legal citation format
