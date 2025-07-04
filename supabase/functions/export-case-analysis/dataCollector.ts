@@ -1,5 +1,11 @@
 
 import type { CaseAnalysisData } from './types.ts';
+import { 
+  extractAnalysisSections, 
+  extractStrengthsWeaknesses, 
+  calculatePredictionPercentages,
+  detectCaseType 
+} from './analysisParsingUtils.ts';
 
 export async function collectCaseData(supabase: any, clientId: string, caseId?: string): Promise<CaseAnalysisData> {
   console.log('Collecting case data for:', { clientId, caseId })
@@ -12,6 +18,27 @@ export async function collectCaseData(supabase: any, clientId: string, caseId?: 
 
   // Get legal analysis
   const analysisData = await fetchAnalysisData(supabase, clientId, caseId)
+
+  // Parse analysis content if available
+  let parsedAnalysis = null
+  if (analysisData?.content) {
+    const caseType = detectCaseType(analysisData.content)
+    const analysisSections = extractAnalysisSections(analysisData.content)
+    const strengthsWeaknesses = extractStrengthsWeaknesses(analysisData.content, caseType)
+    const outcomePercentages = calculatePredictionPercentages(analysisData.content, strengthsWeaknesses, caseType)
+    
+    parsedAnalysis = {
+      relevantLaw: analysisSections.relevantLaw,
+      preliminaryAnalysis: analysisSections.preliminaryAnalysis,
+      potentialIssues: analysisSections.potentialIssues,
+      followUpQuestions: analysisSections.followUpQuestions,
+      strengths: strengthsWeaknesses.strengths,
+      weaknesses: strengthsWeaknesses.weaknesses,
+      outcomeDefense: outcomePercentages.defense,
+      outcomeProsecution: outcomePercentages.prosecution,
+      caseType: caseType
+    }
+  }
 
   // Get similar cases if analysis exists
   const similarCases = analysisData ? await fetchSimilarCases(supabase, analysisData.id) : []
@@ -43,6 +70,7 @@ export async function collectCaseData(supabase: any, clientId: string, caseId?: 
     client,
     case: caseData,
     analysis: analysisData,
+    parsedAnalysis,
     similarCases,
     scholarlyReferences,
     notes,

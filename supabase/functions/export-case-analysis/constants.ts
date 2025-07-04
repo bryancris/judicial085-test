@@ -183,6 +183,113 @@ export const CSS_STYLES = `
     page-break-before: always;
   }
   
+  .outcome-prediction {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+  }
+  
+  .prediction-item {
+    display: flex;
+    justify-content: space-between;
+    margin: 10px 0;
+  }
+  
+  .prediction-label {
+    font-weight: bold;
+    color: #2c3e50;
+  }
+  
+  .prediction-value {
+    color: #3498db;
+    font-weight: bold;
+  }
+  
+  .prediction-bar {
+    height: 20px;
+    background: #ecf0f1;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 15px;
+  }
+  
+  .prediction-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #27ae60, #f39c12);
+    transition: width 0.3s ease;
+  }
+  
+  .strengths-weaknesses {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  
+  .strengths, .weaknesses {
+    background: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+  }
+  
+  .strengths h3 {
+    color: #27ae60;
+    margin-top: 0;
+  }
+  
+  .weaknesses h3 {
+    color: #e74c3c;
+    margin-top: 0;
+  }
+  
+  .strengths ul, .weaknesses ul {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .strengths li {
+    padding: 5px 0;
+    border-left: 3px solid #27ae60;
+    padding-left: 10px;
+    margin: 5px 0;
+  }
+  
+  .weaknesses li {
+    padding: 5px 0;
+    border-left: 3px solid #e74c3c;
+    padding-left: 10px;
+    margin: 5px 0;
+  }
+  
+  .analysis-subsection {
+    margin: 20px 0;
+    padding: 15px;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+  }
+  
+  .analysis-summary {
+    background: #e8f4f8;
+    padding: 15px;
+    border-radius: 8px;
+    font-style: italic;
+    color: #2c3e50;
+  }
+  
+  .follow-up-questions {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+  }
+  
+  .follow-up-questions li {
+    margin: 10px 0;
+    padding: 5px 0;
+  }
+  
   @media print {
     body { margin: 0; padding: 20px; }
     .page-break { page-break-before: always; }

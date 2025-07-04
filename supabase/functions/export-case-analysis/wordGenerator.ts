@@ -119,14 +119,23 @@ function createWordDocumentContent(data: CaseAnalysisData, docxElements: any) {
     
     createClientInfoTable(data.client, docxElements),
     
-    // Case Information (if exists)
-    ...(data.case ? createCaseInfoSection(data.case, docxElements) : []),
-    
-    // Legal Analysis (if exists)
-    ...(data.analysis ? createFormattedAnalysisSection(data.analysis, docxElements) : []),
-    
-    // Similar Cases (if exist)
-    ...(data.similarCases.length > 0 ? createSimilarCasesSection(data.similarCases, docxElements) : []),
+        // Case Information (if exists)
+        ...(data.case ? createCaseInfoSection(data.case, docxElements) : []),
+        
+        // Legal Analysis (if exists)
+        ...(data.analysis ? createFormattedAnalysisSection(data.analysis, data.parsedAnalysis, docxElements) : []),
+        
+        // Outcome Prediction (if parsed analysis exists)
+        ...(data.parsedAnalysis ? createOutcomePredictionSection(data.parsedAnalysis, docxElements) : []),
+        
+        // Strengths & Weaknesses (if parsed analysis exists)
+        ...(data.parsedAnalysis ? createStrengthsWeaknessesSection(data.parsedAnalysis, docxElements) : []),
+        
+        // Follow-up Questions (if exist)
+        ...(data.parsedAnalysis?.followUpQuestions.length > 0 ? createFollowUpQuestionsSection(data.parsedAnalysis.followUpQuestions, docxElements) : []),
+        
+        // Similar Cases (if exist)
+        ...(data.similarCases.length > 0 ? createSimilarCasesSection(data.similarCases, docxElements) : []),
     
     // Scholarly References (if exist)
     ...(data.scholarlyReferences.length > 0 ? createScholarlyReferencesSection(data.scholarlyReferences, docxElements) : []),
@@ -252,7 +261,7 @@ function createCaseInfoSection(caseData: any, docxElements: any) {
   ]
 }
 
-function createFormattedAnalysisSection(analysis: any, docxElements: any) {
+function createFormattedAnalysisSection(analysis: any, parsedAnalysis: any, docxElements: any) {
   const { Paragraph, TextRun, HeadingLevel } = docxElements
   
   const content = [
@@ -275,12 +284,110 @@ function createFormattedAnalysisSection(analysis: any, docxElements: any) {
     )
   }
   
-  // Process the analysis content with markdown formatting
-  const analysisContent = analysis.content || 'No analysis content available.'
-  const formattedParagraphs = processAnalysisContent(analysisContent, docxElements)
-  content.push(...formattedParagraphs)
+  if (parsedAnalysis) {
+    content.push(
+      new Paragraph({
+        children: [new TextRun({ text: "Analysis Summary: This analysis identifies key legal issues, evaluates case strengths and weaknesses, and provides strategic recommendations.", italic: true })],
+        spacing: { after: 200 }
+      })
+    )
+  } else {
+    const analysisContent = analysis.content || 'No analysis content available.'
+    const formattedParagraphs = processAnalysisContent(analysisContent, docxElements)
+    content.push(...formattedParagraphs)
+  }
   
   return content
+}
+
+function createOutcomePredictionSection(parsedAnalysis: any, docxElements: any) {
+  const { Paragraph, TextRun, HeadingLevel } = docxElements
+  
+  return [
+    new Paragraph({
+      text: "Case Outcome Prediction",
+      heading: HeadingLevel.HEADING_1,
+      spacing: { before: 400 }
+    }),
+    new Paragraph({
+      children: [
+        new TextRun({ text: "Favorable Outcome Likelihood: ", bold: true }),
+        new TextRun(`${parsedAnalysis.outcomeDefense}%`)
+      ],
+      spacing: { after: 100 }
+    }),
+    new Paragraph({
+      children: [
+        new TextRun({ text: "Unfavorable Outcome Likelihood: ", bold: true }),
+        new TextRun(`${parsedAnalysis.outcomeProsecution}%`)
+      ],
+      spacing: { after: 200 }
+    })
+  ]
+}
+
+function createStrengthsWeaknessesSection(parsedAnalysis: any, docxElements: any) {
+  const { Paragraph, TextRun, HeadingLevel } = docxElements
+  
+  return [
+    new Paragraph({
+      text: "Case Strengths & Weaknesses",
+      heading: HeadingLevel.HEADING_1,
+      spacing: { before: 400 }
+    }),
+    new Paragraph({
+      text: "Case Strengths",
+      heading: HeadingLevel.HEADING_2,
+      spacing: { before: 200 }
+    }),
+    ...parsedAnalysis.strengths.map((strength: string) => 
+      new Paragraph({
+        children: [
+          new TextRun({ text: "• ", color: "27ae60" }),
+          new TextRun(strength)
+        ],
+        spacing: { after: 100 },
+        indent: { left: 360 }
+      })
+    ),
+    new Paragraph({
+      text: "Case Weaknesses",
+      heading: HeadingLevel.HEADING_2,
+      spacing: { before: 200 }
+    }),
+    ...parsedAnalysis.weaknesses.map((weakness: string) => 
+      new Paragraph({
+        children: [
+          new TextRun({ text: "• ", color: "e74c3c" }),
+          new TextRun(weakness)
+        ],
+        spacing: { after: 100 },
+        indent: { left: 360 }
+      })
+    )
+  ]
+}
+
+function createFollowUpQuestionsSection(followUpQuestions: string[], docxElements: any) {
+  const { Paragraph, TextRun, HeadingLevel } = docxElements
+  
+  return [
+    new Paragraph({
+      text: "Recommended Follow-up Questions",
+      heading: HeadingLevel.HEADING_1,
+      spacing: { before: 400 }
+    }),
+    ...followUpQuestions.map((question: string, index: number) => 
+      new Paragraph({
+        children: [
+          new TextRun({ text: `${index + 1}. `, bold: true }),
+          new TextRun(question)
+        ],
+        spacing: { after: 120 },
+        indent: { left: 360 }
+      })
+    )
+  ]
 }
 
 function processAnalysisContent(content: string, docxElements: any) {

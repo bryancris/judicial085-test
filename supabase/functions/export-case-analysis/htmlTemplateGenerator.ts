@@ -15,7 +15,11 @@ export function generateHTMLContent(data: CaseAnalysisData): string {
         ${generateHeaderSection()}
         ${generateClientInfoSection(data.client)}
         ${data.case ? generateCaseInfoSection(data.case) : ''}
-        ${data.analysis ? generateAnalysisSection(data.analysis) : ''}
+        ${data.analysis ? generateAnalysisSection(data.analysis, data.parsedAnalysis) : ''}
+        ${data.parsedAnalysis ? generateOutcomePredictionSection(data.parsedAnalysis) : ''}
+        ${data.parsedAnalysis ? generateStrengthsWeaknessesSection(data.parsedAnalysis) : ''}
+        ${data.parsedAnalysis ? generateDetailedAnalysisSection(data.parsedAnalysis) : ''}
+        ${data.parsedAnalysis?.followUpQuestions.length > 0 ? generateFollowUpQuestionsSection(data.parsedAnalysis.followUpQuestions) : ''}
         ${data.similarCases.length > 0 ? generateSimilarCasesSection(data.similarCases) : ''}
         ${data.scholarlyReferences.length > 0 ? generateScholarlyReferencesSection(data.scholarlyReferences) : ''}
         ${data.notes.length > 0 ? generateNotesSection(data.notes) : ''}
@@ -87,15 +91,24 @@ function generateCaseInfoSection(caseData: any): string {
   `
 }
 
-function generateAnalysisSection(analysis: any): string {
+function generateAnalysisSection(analysis: any, parsedAnalysis: any): string {
   return `
-    <h2>Legal Analysis</h2>
-    <div class="info-row">
-      <span class="info-label">Case Type:</span>
-      <span class="info-value">${analysis.case_type || 'N/A'}</span>
+    <div class="info-section">
+      <h2>Legal Analysis</h2>
+      ${analysis.case_type && analysis.case_type !== 'general' ? `
+      <div class="info-row">
+        <span class="info-label">Case Type:</span>
+        <span class="info-value">${analysis.case_type === 'consumer-protection' ? 'Consumer Protection' : analysis.case_type}</span>
+      </div>
+      ` : ''}
+      ${parsedAnalysis ? `
+        <h3>Summary</h3>
+        <div class="analysis-summary">This analysis identifies key legal issues, evaluates case strengths and weaknesses, and provides strategic recommendations.</div>
+      ` : `
+        <h3>Analysis Content</h3>
+        <div class="analysis-content">${analysis.content || 'No analysis content available.'}</div>
+      `}
     </div>
-    <h3>Analysis Content:</h3>
-    <div class="analysis-content">${analysis.content || 'No analysis content available.'}</div>
   `
 }
 
@@ -156,6 +169,83 @@ function generateFooterSection(): string {
   return `
     <div class="footer">
       <p>Generated on ${new Date().toLocaleDateString()} | Confidential Attorney Work Product</p>
+    </div>
+  `
+}
+
+function generateOutcomePredictionSection(parsedAnalysis: any): string {
+  return `
+    <div class="info-section">
+      <h2>Case Outcome Prediction</h2>
+      <div class="outcome-prediction">
+        <div class="prediction-item">
+          <span class="prediction-label">Favorable Outcome Likelihood:</span>
+          <span class="prediction-value">${parsedAnalysis.outcomeDefense}%</span>
+        </div>
+        <div class="prediction-item">
+          <span class="prediction-label">Unfavorable Outcome Likelihood:</span>
+          <span class="prediction-value">${parsedAnalysis.outcomeProsecution}%</span>
+        </div>
+        <div class="prediction-bar">
+          <div class="prediction-bar-fill" style="width: ${parsedAnalysis.outcomeDefense}%"></div>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function generateStrengthsWeaknessesSection(parsedAnalysis: any): string {
+  return `
+    <div class="info-section">
+      <h2>Case Strengths & Weaknesses</h2>
+      <div class="strengths-weaknesses">
+        <div class="strengths">
+          <h3>Case Strengths</h3>
+          <ul>
+            ${parsedAnalysis.strengths.map((strength: string) => `<li>${strength}</li>`).join('')}
+          </ul>
+        </div>
+        <div class="weaknesses">
+          <h3>Case Weaknesses</h3>
+          <ul>
+            ${parsedAnalysis.weaknesses.map((weakness: string) => `<li>${weakness}</li>`).join('')}
+          </ul>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function generateDetailedAnalysisSection(parsedAnalysis: any): string {
+  return `
+    <div class="info-section">
+      <h2>Detailed Legal Analysis</h2>
+      
+      <div class="analysis-subsection">
+        <h3>Relevant Texas Law</h3>
+        <div class="analysis-content">${parsedAnalysis.relevantLaw}</div>
+      </div>
+      
+      <div class="analysis-subsection">
+        <h3>Preliminary Analysis</h3>
+        <div class="analysis-content">${parsedAnalysis.preliminaryAnalysis}</div>
+      </div>
+      
+      <div class="analysis-subsection">
+        <h3>Potential Legal Issues</h3>
+        <div class="analysis-content">${parsedAnalysis.potentialIssues}</div>
+      </div>
+    </div>
+  `
+}
+
+function generateFollowUpQuestionsSection(followUpQuestions: string[]): string {
+  return `
+    <div class="info-section">
+      <h2>Recommended Follow-up Questions</h2>
+      <ol class="follow-up-questions">
+        ${followUpQuestions.map((question: string) => `<li>${question}</li>`).join('')}
+      </ol>
     </div>
   `
 }
