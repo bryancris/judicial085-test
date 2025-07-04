@@ -1,10 +1,10 @@
 
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Scale, ExternalLink, Building, Gavel } from "lucide-react";
+import { Scale, ExternalLink, Gavel } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { Button } from "@/components/ui/button";
 import CaseOutcomePrediction from "./CaseOutcomePrediction";
 
@@ -37,7 +37,7 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
   analysisFound = true,
   fallbackUsed = false
 }) => {
-  const [activeTab, setActiveTab] = useState<"firm" | "court">("firm");
+  
   
   // Calculate outcome prediction based on similar cases
   const calculateOutcome = () => {
@@ -57,8 +57,7 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
 
   const outcome = calculateOutcome();
   
-  // Separate cases by source
-  const firmCases = similarCases.filter(c => c.source === "internal");
+  // Only show court cases
   const courtCases = similarCases.filter(c => c.source === "courtlistener");
   
   if (isLoading) {
@@ -150,15 +149,15 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
       <Card className="mb-6 shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-xl font-semibold flex items-center justify-between">
-            <div className="flex items-center">
-              <Scale className="h-5 w-5 mr-2 text-blue-500" />
-              Similar Cases
-              {caseType && caseType !== "general" && (
-                <Badge variant="outline" className="ml-2">
-                  {caseType.replace("-", " ")}
-                </Badge>
-              )}
-            </div>
+          <div className="flex items-center">
+            <Scale className="h-5 w-5 mr-2 text-blue-500" />
+            Court Opinions ({courtCases.length})
+            {caseType && caseType !== "general" && (
+              <Badge variant="outline" className="ml-2">
+                {caseType.replace("-", " ")}
+              </Badge>
+            )}
+          </div>
             
             {fallbackUsed && (
               <Badge variant="secondary">
@@ -168,46 +167,20 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "firm" | "court")}>
-            <TabsList className="mb-4">
-              <TabsTrigger value="firm">
-                Firm Cases ({firmCases.length})
-              </TabsTrigger>
-              <TabsTrigger value="court">
-                Court Opinions ({courtCases.length})
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="firm" className="space-y-4">
-              {firmCases.length > 0 ? (
-                firmCases
-                  .sort((a, b) => b.similarity - a.similarity)
-                  .map((caseItem, index) => (
-                    <SimilarCaseCard key={index} similarCase={caseItem} />
-                  ))
-              ) : (
-                <div className="text-center py-8">
-                  <Building className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                  <p className="text-gray-500">No firm cases found</p>
-                </div>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="court" className="space-y-4">
-              {courtCases.length > 0 ? (
-                courtCases
-                  .sort((a, b) => b.similarity - a.similarity)
-                  .map((caseItem, index) => (
-                    <SimilarCaseCard key={index} similarCase={caseItem} />
-                  ))
-              ) : (
-                <div className="text-center py-8">
-                  <Gavel className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                  <p className="text-gray-500">No court opinions found</p>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+          <div className="space-y-4">
+            {courtCases.length > 0 ? (
+              courtCases
+                .sort((a, b) => b.similarity - a.similarity)
+                .map((caseItem, index) => (
+                  <SimilarCaseCard key={index} similarCase={caseItem} />
+                ))
+            ) : (
+              <div className="text-center py-8">
+                <Gavel className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                <p className="text-gray-500">No court opinions found</p>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </>
