@@ -151,12 +151,15 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
           <CardTitle className="text-xl font-semibold flex items-center justify-between">
           <div className="flex items-center">
             <Scale className="h-5 w-5 mr-2 text-blue-500" />
-            Court Opinions ({courtCases.length})
+            Similar Cases
             {caseType && caseType !== "general" && (
               <Badge variant="outline" className="ml-2">
                 {caseType.replace("-", " ")}
               </Badge>
             )}
+            <Badge variant="secondary" className="ml-2">
+              {courtCases.length} Court Opinions
+            </Badge>
           </div>
             
             {fallbackUsed && (
