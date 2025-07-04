@@ -26,7 +26,7 @@ export const useSimilarCasesData = (clientId: string) => {
   const [isLoadingFromDb, setIsLoadingFromDb] = useState(false);
   const { toast } = useToast();
 
-  // Load similar cases from database for a specific legal analysis
+  // Load similar cases from database for a specific legal analysis with fallback
   const loadSimilarCasesFromDb = useCallback(async (legalAnalysisId: string) => {
     if (!clientId || !legalAnalysisId) return;
     
@@ -38,16 +38,17 @@ export const useSimilarCasesData = (clientId: string) => {
       
       if (result.error) {
         console.error("Error loading similar cases from DB:", result.error);
+        setSimilarCases([]);
+        setAnalysisFound(true);
+        setFallbackUsed(false);
       } else if (result.similarCases.length > 0) {
         console.log("✅ Loaded saved similar cases:", result.similarCases.length);
         setSimilarCases(result.similarCases);
         setAnalysisFound(result.metadata?.analysisFound !== false);
         setFallbackUsed(result.metadata?.fallbackUsed || false);
         
-        toast({
-          title: "Similar Cases Loaded",
-          description: `Loaded ${result.similarCases.length} previously found similar cases.`,
-        });
+        // Don't show toast for silent loading to avoid spam
+        console.log(`Loaded ${result.similarCases.length} similar cases from database`);
       } else {
         // No saved similar cases found
         setSimilarCases([]);
@@ -56,10 +57,13 @@ export const useSimilarCasesData = (clientId: string) => {
       }
     } catch (err: any) {
       console.error("Exception loading similar cases from DB:", err);
+      setSimilarCases([]);
+      setAnalysisFound(true);
+      setFallbackUsed(false);
     } finally {
       setIsLoadingFromDb(false);
     }
-  }, [clientId, toast]);
+  }, [clientId]);
 
   // Fetch new similar cases from API and save to database
   const fetchSimilarCases = useCallback(async (legalAnalysisId?: string) => {
@@ -85,20 +89,44 @@ export const useSimilarCasesData = (clientId: string) => {
         setAnalysisFound(result.analysisFound !== false);
         setFallbackUsed(result.fallbackUsed || false);
         
-        // Save to database if we have a legal analysis ID
-        if (legalAnalysisId && result.similarCases.length > 0) {
-          const metadata = {
-            fallbackUsed: result.fallbackUsed,
-            analysisFound: result.analysisFound,
-            searchStrategy: result.searchStrategy,
-            caseType: result.caseType
+        // Always try to save to database with the current analysis ID
+        if (result.similarCases.length > 0) {
+          // Get the most recent analysis ID for this client to ensure we save to the right place
+          const getCurrentAnalysisId = async () => {
+            try {
+              const { supabase } = await import("@/integrations/supabase/client");
+              let query = supabase
+                .from("legal_analyses")
+                .select("id")
+                .eq("client_id", clientId);
+
+              const { data } = await query
+                .order("created_at", { ascending: false })
+                .limit(1);
+
+              return data && data.length > 0 ? data[0].id : null;
+            } catch (error) {
+              console.error("Error fetching current analysis ID:", error);
+              return null;
+            }
           };
+
+          const currentAnalysisId = legalAnalysisId || await getCurrentAnalysisId();
           
-          const saveResult = await saveSimilarCases(clientId, legalAnalysisId, result.similarCases, metadata);
-          if (saveResult.success) {
-            console.log("✅ Similar cases saved to database");
-          } else {
-            console.error("Failed to save similar cases:", saveResult.error);
+          if (currentAnalysisId) {
+            const metadata = {
+              fallbackUsed: result.fallbackUsed,
+              analysisFound: result.analysisFound,
+              searchStrategy: result.searchStrategy,
+              caseType: result.caseType
+            };
+            
+            const saveResult = await saveSimilarCases(clientId, currentAnalysisId, result.similarCases, metadata);
+            if (saveResult.success) {
+              console.log("✅ Similar cases saved to database");
+            } else {
+              console.error("Failed to save similar cases:", saveResult.error);
+            }
           }
         }
         

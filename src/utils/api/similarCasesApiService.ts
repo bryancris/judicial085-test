@@ -80,7 +80,7 @@ export const saveSimilarCases = async (
   }
 };
 
-// Load similar cases from database
+// Load similar cases from database with fallback to most recent
 export const loadSimilarCases = async (
   clientId: string,
   legalAnalysisId: string
@@ -97,6 +97,7 @@ export const loadSimilarCases = async (
   try {
     console.log("Loading similar cases from database:", { clientId, legalAnalysisId });
     
+    // First, try to load similar cases for the specific analysis ID
     const { data, error } = await supabase
       .from("similar_cases")
       .select("*")
@@ -110,27 +111,57 @@ export const loadSimilarCases = async (
       return { similarCases: [], error: error.message };
     }
 
-    if (!data || data.length === 0) {
-      console.log("No saved similar cases found");
+    if (data && data.length > 0) {
+      const record = data[0];
+      const similarCases = Array.isArray(record.case_data) 
+        ? (record.case_data as unknown as SimilarCase[])
+        : [];
+      
+      const metadata = typeof record.search_metadata === 'object' && record.search_metadata !== null
+        ? (record.search_metadata as any)
+        : {};
+      
+      console.log("✅ Loaded similar cases from database for specific analysis:", similarCases.length);
+      
+      return { 
+        similarCases,
+        metadata
+      };
+    }
+
+    // If no similar cases found for the specific analysis, try to load the most recent ones for this client
+    console.log("No similar cases for specific analysis, trying to load most recent for client");
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from("similar_cases")
+      .select("*")
+      .eq("client_id", clientId)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (fallbackError) {
+      console.error("Error loading fallback similar cases:", fallbackError);
+      return { similarCases: [], error: fallbackError.message };
+    }
+
+    if (!fallbackData || fallbackData.length === 0) {
+      console.log("No saved similar cases found at all");
       return { similarCases: [] };
     }
 
-    const record = data[0];
-    
-    // Safely parse the JSON data back to SimilarCase[]
-    const similarCases = Array.isArray(record.case_data) 
-      ? (record.case_data as unknown as SimilarCase[])
+    const fallbackRecord = fallbackData[0];
+    const fallbackSimilarCases = Array.isArray(fallbackRecord.case_data) 
+      ? (fallbackRecord.case_data as unknown as SimilarCase[])
       : [];
     
-    const metadata = typeof record.search_metadata === 'object' && record.search_metadata !== null
-      ? (record.search_metadata as any)
+    const fallbackMetadata = typeof fallbackRecord.search_metadata === 'object' && fallbackRecord.search_metadata !== null
+      ? (fallbackRecord.search_metadata as any)
       : {};
     
-    console.log("✅ Loaded similar cases from database:", similarCases.length);
+    console.log("✅ Loaded fallback similar cases from database:", fallbackSimilarCases.length);
     
     return { 
-      similarCases,
-      metadata
+      similarCases: fallbackSimilarCases,
+      metadata: fallbackMetadata
     };
   } catch (err: any) {
     console.error("Exception loading similar cases:", err);
