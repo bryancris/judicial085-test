@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 // Upload PDF file to Supabase Storage
@@ -38,7 +37,7 @@ export const uploadPdfToStorage = async (file: File, clientId: string, caseId?: 
   }
 };
 
-// Process PDF document using server-side edge function
+// Process PDF document using server-side edge function with OCR fallback
 export const processPdfDocument = async (
   file: File, 
   title: string, 
@@ -48,7 +47,7 @@ export const processPdfDocument = async (
   let documentId: string | null = null;
   
   try {
-    console.log(`Starting server-side PDF processing for file: ${file.name}, client: ${clientId}, case: ${caseId || 'none'}`);
+    console.log(`Starting server-side PDF processing with OCR fallback for file: ${file.name}, client: ${clientId}, case: ${caseId || 'none'}`);
     
     // Generate a unique ID for the document
     documentId = crypto.randomUUID();
@@ -77,8 +76,8 @@ export const processPdfDocument = async (
     
     console.log(`Document metadata created with ID: ${documentId}, status: processing, URL: ${pdfUrl}, include_in_analysis: false`);
     
-    // Step 3: Call server-side processing edge function
-    console.log('Calling server-side PDF processing function...');
+    // Step 3: Call server-side processing edge function (now with OCR fallback)
+    console.log('Calling server-side PDF processing function with OCR fallback...');
     const { data, error: functionError } = await supabase.functions.invoke('process-pdf-document', {
       body: {
         documentId,
@@ -96,6 +95,11 @@ export const processPdfDocument = async (
     
     if (!data || !data.success) {
       throw new Error(data?.error || 'Server-side processing failed');
+    }
+    
+    // Check if OCR was used and provide appropriate feedback
+    if (data.extractionResult?.isScanned) {
+      console.log(`Document was processed using OCR for scanned content. Confidence: ${(data.extractionResult.confidence * 100).toFixed(1)}%`);
     }
     
     console.log(`Server-side PDF processing completed successfully for document: ${documentId}`);

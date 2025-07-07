@@ -28,7 +28,7 @@ serve(async (req) => {
   let documentId: string | null = null;
   
   try {
-    console.log('🚀 === GEMINI-POWERED DOCUMENT PROCESSING SYSTEM v10.0 ===');
+    console.log('🚀 === DOCUMENT PROCESSING SYSTEM WITH OCR FALLBACK v11.0 ===');
     
     if (!supabaseUrl || !supabaseServiceKey || !geminiApiKey) {
       throw new Error('Missing required environment variables');
@@ -45,7 +45,7 @@ serve(async (req) => {
     const validatedRequest = validateRequest(requestBody);
     documentId = validatedRequest.documentId;
     
-    console.log(`📄 Starting unified document processing: ${validatedRequest.fileName} for client: ${validatedRequest.clientId}`);
+    console.log(`📄 Starting document processing: ${validatedRequest.fileName} for client: ${validatedRequest.clientId}`);
 
     // Mark document as processing
     await updateDocumentStatus(supabase, documentId, 'processing', validatedRequest.fileUrl);
@@ -54,23 +54,29 @@ serve(async (req) => {
     const fileData = await downloadPdf(validatedRequest.fileUrl);
     console.log(`✅ File downloaded successfully: ${fileData.length} bytes`);
 
-    // Use unified document processor for all file types
-    console.log('🔍 === STARTING UNIFIED DOCUMENT EXTRACTION ===');
+    // Use unified document processor with OCR fallback
+    console.log('🔍 === STARTING UNIFIED DOCUMENT EXTRACTION WITH OCR FALLBACK ===');
     const extractionResult = await processDocument(
       fileData,
       validatedRequest.fileName,
       undefined // Let the processor detect MIME type from filename
     );
 
-    console.log(`✅ Unified extraction completed: {
+    console.log(`✅ Document extraction completed: {
   method: "${extractionResult.method}",
   textLength: ${extractionResult.text.length},
   quality: ${extractionResult.quality},
   confidence: ${extractionResult.confidence},
   pageCount: ${extractionResult.pageCount},
   fileType: ${extractionResult.fileType},
+  isScanned: ${extractionResult.isScanned || false},
   processingNotes: '${extractionResult.processingNotes}'
 }`);
+
+    // Provide user feedback about OCR processing
+    if (extractionResult.isScanned) {
+      console.log('📷 Document was processed using OCR for scanned content');
+    }
 
     // Enhanced document chunking
     console.log('📂 === STARTING DOCUMENT CHUNKING ===');
@@ -86,23 +92,24 @@ serve(async (req) => {
       validatedRequest.clientId,
       validatedRequest.caseId,
       supabase,
-      Deno.env.get('OPENAI_API_KEY')!, // Keep OpenAI for embeddings
+      Deno.env.get('OPENAI_API_KEY')!,
       {
         fileName: validatedRequest.fileName,
         fileUrl: validatedRequest.fileUrl,
         extractionMethod: extractionResult.method,
         quality: extractionResult.quality,
         confidence: extractionResult.confidence,
-        pageCount: extractionResult.pageCount
+        pageCount: extractionResult.pageCount,
+        isScanned: extractionResult.isScanned || false
       }
     );
 
-    console.log('✅ Advanced processing completed with embeddings for search functionality');
+    console.log('✅ Document processing completed with embeddings for search functionality');
 
     // Mark document as completed and preserve URL
     await updateDocumentStatus(supabase, documentId, 'completed', validatedRequest.fileUrl);
 
-    console.log('🎉 === UNIFIED DOCUMENT PROCESSING COMPLETED SUCCESSFULLY ===');
+    console.log('🎉 === DOCUMENT PROCESSING WITH OCR FALLBACK COMPLETED SUCCESSFULLY ===');
 
     return createSuccessResponse(
       validatedRequest.documentId,
