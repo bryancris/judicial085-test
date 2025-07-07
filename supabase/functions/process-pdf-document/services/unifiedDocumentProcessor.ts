@@ -44,9 +44,9 @@ async function processPdfWithOcrFallback(
 ): Promise<DocumentExtractionResult> {
   console.log('📄 Starting simplified PDF processing with better fallbacks...');
   
+  // Step 1: Try direct PDF text extraction (multiple methods)
+  console.log('🔍 Attempting direct PDF text extraction...');
   try {
-    // Step 1: Try direct PDF text extraction (multiple methods)
-    console.log('🔍 Attempting direct PDF text extraction...');
     const directResult = await processPdfDocument(pdfData, fileName);
     
     // Use much more lenient success criteria
@@ -54,24 +54,32 @@ async function processPdfWithOcrFallback(
       console.log('✅ Direct PDF extraction successful');
       return directResult;
     }
-    
-    console.log('📝 Direct extraction minimal, trying enhanced methods...');
-    
-    // Step 2: Try enhanced PDF text extraction
+    console.log('📝 Direct extraction minimal, proceeding to enhanced methods...');
+  } catch (directError) {
+    console.log('⚠️ Direct extraction failed:', directError.message, '- proceeding to enhanced methods...');
+  }
+  
+  // Step 2: Try enhanced PDF text extraction
+  console.log('🔧 Attempting enhanced PDF text extraction...');
+  try {
     const enhancedResult = await tryEnhancedPdfExtraction(pdfData, fileName);
     if (enhancedResult.text.length > 10) {
       console.log('✅ Enhanced PDF extraction successful');
       return enhancedResult;
     }
-    
-    // Step 3: Only use OCR for truly problematic documents
-    console.log('🖼️ Document appears to be scanned or problematic, using OCR as last resort...');
+    console.log('📝 Enhanced extraction minimal, proceeding to OCR...');
+  } catch (enhancedError) {
+    console.log('⚠️ Enhanced extraction failed:', enhancedError.message, '- proceeding to OCR...');
+  }
+  
+  // Step 3: Use OCR for scanned documents
+  console.log('🖼️ Document appears to be scanned, using OCR processing...');
+  try {
     return await processScannedPdfWithOcr(pdfData, fileName);
-    
-  } catch (error) {
-    console.error('❌ PDF processing failed:', error);
-    // Return a useful placeholder instead of failing completely
-    return createDocumentPlaceholder(pdfData, fileName, 'pdf', `Processing error: ${error.message}`);
+  } catch (ocrError) {
+    console.error('❌ OCR processing failed:', ocrError.message);
+    // Only use placeholder as absolute last resort
+    return createDocumentPlaceholder(pdfData, fileName, 'pdf', `All processing methods failed. Last error: ${ocrError.message}`);
   }
 }
 
@@ -138,20 +146,20 @@ async function tryEnhancedPdfExtraction(
     
     console.log(`Enhanced extraction: ${libraryResult.text.length} chars, validation: ${validation.isValid}`);
     
-    // Be more lenient with validation
-    if (libraryResult.text.length > 10 || validation.isValid) {
+    // Be much more lenient - accept any text that was extracted
+    if (libraryResult.text.length > 5) {
       return {
         text: libraryResult.text,
         method: 'enhanced-pdf-extraction',
-        quality: Math.max(validation.quality, 0.4), // Boost quality for any extracted text
-        confidence: validation.isValid ? 0.7 : 0.5,
+        quality: Math.max(validation.quality, 0.5), // Higher boost for any extracted text
+        confidence: validation.isValid ? 0.8 : 0.6, // Higher confidence
         pageCount: libraryResult.pageCount,
         fileType: 'pdf',
         processingNotes: `Enhanced extraction: ${libraryResult.text.length} characters from ${libraryResult.pageCount} pages`
       };
     }
     
-    throw new Error('Enhanced extraction yielded insufficient content');
+    throw new Error('Enhanced extraction yielded no readable content');
     
   } catch (error) {
     console.error('❌ Enhanced PDF extraction failed:', error);

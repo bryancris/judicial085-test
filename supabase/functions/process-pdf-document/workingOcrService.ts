@@ -41,20 +41,18 @@ export async function extractTextWithWorkingOCR(pdfData: Uint8Array): Promise<{
   }
 }
 
-// ENHANCED metadata detection - same as real extractor but for OCR
+// Much less aggressive metadata detection for OCR
 function isMetadataContent(text: string): boolean {
   if (!text || text.length < 10) return false;
   
-  // FIRST: Check for legal content
+  // FIRST: Greatly expanded legal content check - accept ANY legal document content
   const legalTerms = [
-    'REQUEST FOR PRODUCTION',
-    'DISCOVERY',
-    'INTERROGATORY',
-    'DEFENDANT',
-    'PLAINTIFF',
-    'COURT',
-    'CASE NO',
-    'MOTION'
+    'REQUEST FOR PRODUCTION', 'DISCOVERY', 'INTERROGATORY', 'DEFENDANT', 'PLAINTIFF',
+    'COURT', 'CASE NO', 'MOTION', 'LEASE', 'LEASING', 'TENANT', 'LANDLORD',
+    'AGREEMENT', 'CONTRACT', 'GUIDELINES', 'POLICY', 'NOTICE', 'DEMAND',
+    'ATTORNEY', 'LAW', 'LEGAL', 'PETITION', 'COMPLAINT', 'ANSWER',
+    'PROPERTY', 'PREMISES', 'RENT', 'RENTAL', 'RULES', 'REGULATIONS',
+    'TERMS', 'CONDITIONS', 'LIABILITY', 'DAMAGES', 'VIOLATION'
   ];
   
   const hasLegalContent = legalTerms.some(term => 
@@ -62,50 +60,39 @@ function isMetadataContent(text: string): boolean {
   );
   
   if (hasLegalContent) {
-    console.log('✅ OCR: Legal content detected, NOT metadata');
+    console.log(`✅ OCR: Legal content detected (${legalTerms.find(term => text.toUpperCase().includes(term))}), NOT metadata`);
     return false;
   }
   
-  // Enhanced patterns to catch garbage
-  const metadataPatterns = [
-    /^PDF\s+[A-Z]{2,3}\s+[A-Z]{2,3}/i,          // "PDF XWX JP HU..." pattern
-    /^[A-Z]{2,4}(\s+[A-Z]{2,4}){8,}/,            // Multiple short uppercase abbreviations (increased threshold)
-    /^[A-Za-z]{1,3}\^\w/,                        // Patterns like "Fh^f"
-    /rdf:|xml:|dc:/i,                            // RDF/XML namespace prefixes
-    /begin=|end=/,                               // PDF structure markers
-    /Core\s+rdf/i,                               // PDF metadata structures
-    /Producer\s+PDF/i,                           // PDF producer info
-    /W5M0MpCehiHzreSzNTczkc9d/i,                // Specific metadata IDs
-    /xmlns|xmp:|adobe/i,                         // XML/Adobe metadata
-    /PDFlib\+PDI/i,                              // PDF library markers
-    /^[^\w\s]*[A-Za-z]{1,4}\^[^\w\s]*\w/,       // Encoded metadata patterns
-    /alt\s+rdf:li/i,                             // RDF list items
-    /^[\s\w\^\~\<\>]{20,}begin=/i                // Mixed garbage with begin markers
+  // Much more aggressive check - only reject truly obvious garbage
+  const obviousGarbagePatterns = [
+    /^PDF\s+XWX/i,                              // Known garbage pattern
+    /^[A-Z]{2,4}(\s+[A-Z]{2,4}){15,}/,         // Many short uppercase abbreviations (increased threshold)
+    /W5M0MpCehiHzreSzNTczkc9d/i,               // Specific metadata IDs
+    /xmlns.*rdf.*adobe/i,                       // Clear XML/Adobe metadata
+    /^[^\w\s]*[A-Za-z]{1,2}\^[^\w\s]*$/        // Encoded patterns with no readable content
   ];
   
-  const hasMetadataPattern = metadataPatterns.some(pattern => pattern.test(text));
+  const hasObviousGarbage = obviousGarbagePatterns.some(pattern => pattern.test(text));
   
-  if (hasMetadataPattern) {
-    console.log('❌ OCR detected PDF metadata content, rejecting');
+  if (hasObviousGarbage) {
+    console.log('❌ OCR detected obvious garbage/metadata, rejecting');
     return true;
   }
   
-  // LESS AGGRESSIVE: Check for compression artifacts
+  // Much more lenient compression artifact check
   const words = text.split(/\s+/).filter(word => word.length > 0);
-  const shortWords = words.filter(word => word.length <= 3).length;
+  const shortWords = words.filter(word => word.length <= 2).length; // Only count very short words
   const abbreviationRatio = words.length > 0 ? shortWords / words.length : 0;
   
-  if (abbreviationRatio > 0.85) { // Increased threshold
-    console.log('❌ OCR detected high abbreviation ratio, likely compression artifacts');
+  // Only reject if almost all content is tiny abbreviations
+  if (abbreviationRatio > 0.95 && words.length > 20) {
+    console.log('❌ OCR detected extreme abbreviation ratio, likely compression artifacts');
     return true;
   }
   
-  // Check for specific garbage patterns
-  if (text.includes("PDF XWX") || /^[A-Z\s]{30,}$/.test(text.trim())) {
-    console.log('❌ OCR detected PDF compression artifacts');
-    return true;
-  }
-  
+  // Accept almost everything else
+  console.log('✅ OCR content passed lenient validation');
   return false;
 }
 
@@ -203,17 +190,35 @@ This document is now part of your legal case management system and available for
   };
 }
 
-// Much more lenient OCR validation 
+// Much more lenient OCR validation using improved metadata detection
 export function validateOCRResult(text: string, confidence: number): {
   isValid: boolean;
   quality: number;
   needsManualReview: boolean;
 } {
   // Accept almost any readable text from OCR
-  const hasReadableContent = text.length > 10 && (text.match(/[a-zA-Z]/) !== null);
+  const hasReadableContent = text.length > 5 && (text.match(/[a-zA-Z]/) !== null);
   
-  // Check for legal content and boost acceptance
-  const legalTerms = ['REQUEST', 'DISCOVERY', 'COURT', 'CASE', 'DEFENDANT', 'PLAINTIFF', 'ATTORNEY', 'LAW'];
+  // Use the improved metadata detection function
+  const isMetadata = isMetadataContent(text);
+  
+  if (isMetadata) {
+    console.log('❌ OCR validation: Content identified as metadata, rejecting');
+    return {
+      isValid: false,
+      quality: 0,
+      needsManualReview: true
+    };
+  }
+  
+  // Greatly expanded legal content check with boost
+  const legalTerms = [
+    'REQUEST', 'DISCOVERY', 'COURT', 'CASE', 'DEFENDANT', 'PLAINTIFF', 'ATTORNEY', 'LAW',
+    'LEASE', 'LEASING', 'TENANT', 'LANDLORD', 'AGREEMENT', 'CONTRACT', 'GUIDELINES', 
+    'POLICY', 'NOTICE', 'DEMAND', 'PROPERTY', 'PREMISES', 'RENT', 'RENTAL', 'RULES', 
+    'REGULATIONS', 'TERMS', 'CONDITIONS', 'LIABILITY', 'DAMAGES', 'VIOLATION'
+  ];
+  
   const hasLegalContent = legalTerms.some(term => 
     text.toUpperCase().includes(term)
   );
@@ -222,29 +227,17 @@ export function validateOCRResult(text: string, confidence: number): {
     console.log('✅ OCR validation: Legal content detected, accepting with high quality');
     return {
       isValid: true,
-      quality: Math.max(confidence, 0.7),
+      quality: Math.max(confidence, 0.8), // Higher boost for legal content
       needsManualReview: false
     };
   }
   
-  // Only reject truly garbage content
-  const hasObviousGarbage = text.includes("PDF XWX") || /^[A-Z\s]{50,}$/.test(text.trim());
+  // Accept almost everything else that has basic readability
+  const isValid = hasReadableContent && confidence > 0.01; // Extremely low threshold
+  const quality = Math.max(confidence, 0.5); // Boost quality for any extracted text
+  const needsManualReview = confidence < 0.2; // Lower threshold for manual review
   
-  if (hasObviousGarbage) {
-    console.log('❌ OCR validation: Obvious garbage detected');
-    return {
-      isValid: false,
-      quality: 0,
-      needsManualReview: true
-    };
-  }
-  
-  // Accept most other content with basic readability
-  const isValid = hasReadableContent && confidence > 0.05; // Very low threshold
-  const quality = Math.max(confidence, 0.4); // Boost quality for any extracted text
-  const needsManualReview = confidence < 0.3;
-  
-  console.log(`Lenient OCR validation: isValid=${isValid}, quality=${quality.toFixed(2)}, text length=${text.length}`);
+  console.log(`Very lenient OCR validation: isValid=${isValid}, quality=${quality.toFixed(2)}, text length=${text.length}, confidence=${confidence.toFixed(2)}`);
   
   return {
     isValid,
