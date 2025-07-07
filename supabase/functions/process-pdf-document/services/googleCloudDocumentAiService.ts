@@ -22,9 +22,9 @@ export async function extractTextWithGoogleDocumentAI(pdfData: Uint8Array): Prom
     // Convert PDF to base64
     const base64Pdf = btoa(String.fromCharCode(...pdfData));
     
-    // Google Cloud Document AI API call
+    // Google Cloud Document AI API call - using the proper Document AI endpoint
     const response = await fetch(
-      `https://documentai.googleapis.com/v1/projects/${googleCloudProjectId}/locations/us/processors/ocr/batchProcess`,
+      `https://documentai.googleapis.com/v1/projects/${googleCloudProjectId}/locations/us/processors/general/process`,
       {
         method: 'POST',
         headers: {
@@ -32,21 +32,13 @@ export async function extractTextWithGoogleDocumentAI(pdfData: Uint8Array): Prom
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          requests: [{
-            inputDocuments: {
-              gcsDocuments: {
-                documents: [{
-                  gcsUri: `data:application/pdf;base64,${base64Pdf}`,
-                  mimeType: 'application/pdf'
-                }]
-              }
-            },
-            documentOutputConfig: {
-              gcsOutputConfig: {
-                gcsUri: 'gs://temp-bucket/output'
-              }
-            }
-          }]
+          rawDocument: {
+            content: base64Pdf,
+            mimeType: 'application/pdf'
+          },
+          documentType: 'general',
+          automlParams: {},
+          fieldMask: 'text,pages.pageNumber'
         })
       }
     );

@@ -85,10 +85,21 @@ export async function processDocumentWithMultiStageOcr(
       // Preprocess image for OCR
       const preprocessed = await preprocessImageForOCR(processedImage);
       
-      // Extract text with OpenAI Vision
-      const pageResult = await extractTextWithOpenAIVision(new Uint8Array()); // Pass empty for individual image processing
+      // Create a single-image PDF from the processed image for OpenAI Vision
+      // Convert base64 image back to bytes for processing
+      const imageResponse = await fetch(processedImage);
+      const imageArrayBuffer = await imageResponse.arrayBuffer();
+      const imageBytes = new Uint8Array(imageArrayBuffer);
+      
+      console.log(`🖼️ Processing image ${i + 1} (${imageBytes.length} bytes) with OpenAI Vision...`);
+      
+      // Extract text with OpenAI Vision using actual image data
+      const pageResult = await extractTextWithOpenAIVision(imageBytes);
       if (pageResult.text && pageResult.text.trim().length > 0) {
         extractedTexts.push(pageResult.text.trim());
+        console.log(`✅ Page ${i + 1} Vision extraction: ${pageResult.text.length} characters`);
+      } else {
+        console.log(`⚠️ Page ${i + 1} Vision extraction returned no text`);
       }
     }
     
@@ -126,9 +137,17 @@ export async function processDocumentWithMultiStageOcr(
       const extractedTexts: string[] = [];
       
       for (let i = 0; i < samplePages.length; i++) {
-        const pageResult = await extractTextWithOpenAIVision(new Uint8Array());
+        console.log(`🎨 Processing PDF.js rendered page ${i + 1} with OpenAI Vision...`);
+        
+        // Convert PDF.js rendered image to bytes for OpenAI Vision
+        const imageResponse = await fetch(samplePages[i]);
+        const imageArrayBuffer = await imageResponse.arrayBuffer();
+        const imageBytes = new Uint8Array(imageArrayBuffer);
+        
+        const pageResult = await extractTextWithOpenAIVision(imageBytes);
         if (pageResult.text && pageResult.text.trim().length > 0) {
           extractedTexts.push(pageResult.text.trim());
+          console.log(`✅ PDF.js page ${i + 1}: ${pageResult.text.length} characters extracted`);
         }
       }
       

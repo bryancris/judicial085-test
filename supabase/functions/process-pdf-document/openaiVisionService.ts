@@ -37,10 +37,11 @@ export async function extractTextWithOpenAIVision(pdfData: Uint8Array): Promise<
       const { images, pageCount } = await convertPdfToImages(pdfData);
       
       if (images.length === 0) {
-        throw new Error('No images generated from PDF');
+        console.error('❌ No images generated from PDF conversion');
+        throw new Error('No images generated from PDF - check PDFShift API configuration');
       }
       
-      console.log(`✅ PDF converted to ${images.length} images`);
+      console.log(`✅ PDF converted to ${images.length} images for Vision processing`);
       
       // STEP 2: Process each image with Vision API
       const extractedTexts: string[] = [];
