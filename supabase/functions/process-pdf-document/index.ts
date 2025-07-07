@@ -72,6 +72,16 @@ serve(async (req) => {
   processingNotes: '${extractionResult.processingNotes}'
 }`);
 
+    // DEBUG: Check if we're getting actual OCR content vs placeholder
+    if (extractionResult.text.includes('DOCUMENT PROCESSING REPORT') || 
+        extractionResult.text.includes('SCANNED DOCUMENT - OCR PROCESSING ATTEMPTED')) {
+      console.log('⚠️ === OCR FALLBACK DETECTED - INVESTIGATING ===');
+      console.log(`Processing method: ${extractionResult.method}`);
+      console.log(`Is scanned: ${extractionResult.isScanned}`);
+      console.log(`Processing notes: ${extractionResult.processingNotes}`);
+      console.log(`Text preview: "${extractionResult.text.substring(0, 300)}..."`);
+    }
+
     // Provide clear user feedback about processing method used
     if (extractionResult.isScanned) {
       console.log('📷 Document was processed using OCR for scanned content');

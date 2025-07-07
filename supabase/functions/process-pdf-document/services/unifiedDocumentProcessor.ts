@@ -159,12 +159,13 @@ function isLikelyScannedDocument(result: DocumentExtractionResult, pdfData: Uint
   const fileSizeKB = pdfData.length / 1024;
   const isLargeFile = fileSizeKB > 200; // Larger than typical text-only PDFs
   
-  console.log(`Scanned document detection:
-    - Text/Size ratio: ${textToSizeRatio.toFixed(6)} (threshold: 0.005)
-    - Quality: ${result.quality.toFixed(3)} (threshold: 0.2)
-    - Confidence: ${result.confidence.toFixed(3)} (threshold: 0.3)
-    - Text length: ${result.text.length} (threshold: 50)
-    - File size: ${fileSizeKB.toFixed(1)}KB (threshold: 200KB)`);
+  console.log(`=== SCANNED DOCUMENT DETECTION DEBUG ===`);
+  console.log(`File size: ${fileSizeKB.toFixed(1)}KB`);
+  console.log(`Text length: ${result.text.length} characters`);
+  console.log(`Text/Size ratio: ${textToSizeRatio.toFixed(6)} (threshold: 0.005)`);
+  console.log(`Quality: ${result.quality.toFixed(3)} (threshold: 0.2)`);
+  console.log(`Confidence: ${result.confidence.toFixed(3)} (threshold: 0.3)`);
+  console.log(`Text sample: "${result.text.substring(0, 100)}..."`);
   
   // Document is likely scanned if multiple indicators are present
   const indicators = [
@@ -174,8 +175,14 @@ function isLikelyScannedDocument(result: DocumentExtractionResult, pdfData: Uint
     hasMinimalText
   ].filter(Boolean).length;
   
+  console.log(`Indicators present: ${indicators}/4`);
+  console.log(`- Low text ratio: ${hasLowTextRatio}`);
+  console.log(`- Low quality: ${hasLowQuality}`);
+  console.log(`- Low confidence: ${hasLowConfidence}`);
+  console.log(`- Minimal text: ${hasMinimalText}`);
+  
   const isLikelyScanned = indicators >= 2; // At least 2 indicators
-  console.log(`Scanned document likelihood: ${indicators}/4 indicators present. Result: ${isLikelyScanned ? 'SCANNED' : 'NOT SCANNED'}`);
+  console.log(`=== FINAL DECISION: ${isLikelyScanned ? 'SCANNED' : 'NOT SCANNED'} ===`);
   
   return isLikelyScanned;
 }

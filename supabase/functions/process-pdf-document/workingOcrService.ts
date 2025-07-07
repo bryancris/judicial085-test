@@ -10,25 +10,33 @@ export async function extractTextWithWorkingOCR(pdfData: Uint8Array): Promise<{
   try {
     // Use OpenAI Vision API for real OCR processing
     console.log('📄 Calling OpenAI Vision API for OCR extraction...');
+    console.log(`PDF data size: ${pdfData.length} bytes`);
+    
     const visionResult = await extractTextWithOpenAIVision(pdfData);
     
     console.log(`✅ Vision API extraction completed: ${visionResult.text.length} characters, confidence: ${visionResult.confidence}`);
+    console.log(`Vision API text sample: "${visionResult.text.substring(0, 200)}..."`);
     
     // Validate the OCR result
     const validation = validateOCRResult(visionResult.text, visionResult.confidence);
+    console.log(`OCR validation result: valid=${validation.isValid}, quality=${validation.quality}, needsReview=${validation.needsManualReview}`);
     
     if (validation.isValid) {
+      console.log('✅ OCR result passed validation, returning extracted text');
       return {
         text: visionResult.text,
         confidence: validation.quality
       };
     } else {
       console.log('⚠️ OCR result failed validation, creating fallback...');
+      console.log(`Validation failure reasons: quality too low, contains metadata, or other issues`);
       return createMinimalFallback(pdfData, 'OCR validation failed - extracted content appears to be metadata or corrupted');
     }
     
   } catch (error) {
-    console.error('❌ OCR processing failed:', error);
+    console.error('❌ OCR processing failed with error:', error);
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
     return createMinimalFallback(pdfData, `OCR failed: ${error.message}`);
   }
 }
