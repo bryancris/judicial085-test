@@ -90,7 +90,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
               disabled={isDeleting}
             >
               <FileText className="h-4 w-4 mr-1" />
-              View Data
+              Preview
             </Button>
             {document.url && (
               <Button 
