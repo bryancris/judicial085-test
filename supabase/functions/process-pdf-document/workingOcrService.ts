@@ -1,25 +1,35 @@
-// Working OCR Service for Scanned Documents - REAL EXTRACTION with ENHANCED VALIDATION
+// Real OCR Service for Scanned Documents using OpenAI Vision API
+import { extractTextWithOpenAIVision } from './openaiVisionService.ts';
+
 export async function extractTextWithWorkingOCR(pdfData: Uint8Array): Promise<{
   text: string;
   confidence: number;
 }> {
-  console.log('🔍 Starting working OCR extraction with enhanced validation...');
+  console.log('🔍 Starting real OCR extraction using OpenAI Vision API...');
   
   try {
-    // First determine if this is actually a scanned document
-    const isScanned = analyzeIfScanned(pdfData);
-    console.log(`Document is scanned: ${isScanned}`);
+    // Use OpenAI Vision API for real OCR processing
+    console.log('📄 Calling OpenAI Vision API for OCR extraction...');
+    const visionResult = await extractTextWithOpenAIVision(pdfData);
     
-    if (isScanned) {
-      return await processScannedDocument(pdfData);
+    console.log(`✅ Vision API extraction completed: ${visionResult.text.length} characters, confidence: ${visionResult.confidence}`);
+    
+    // Validate the OCR result
+    const validation = validateOCRResult(visionResult.text, visionResult.confidence);
+    
+    if (validation.isValid) {
+      return {
+        text: visionResult.text,
+        confidence: validation.quality
+      };
     } else {
-      // Try to extract any remaining text from the PDF directly
-      return await extractRemainingText(pdfData);
+      console.log('⚠️ OCR result failed validation, creating fallback...');
+      return createMinimalFallback(pdfData, 'OCR validation failed - extracted content appears to be metadata or corrupted');
     }
     
   } catch (error) {
     console.error('❌ OCR processing failed:', error);
-    return createMinimalFallback(pdfData, error.message);
+    return createMinimalFallback(pdfData, `OCR failed: ${error.message}`);
   }
 }
 
@@ -91,141 +101,93 @@ function isMetadataContent(text: string): boolean {
   return false;
 }
 
-// Analyze if document is actually scanned
-function analyzeIfScanned(pdfData: Uint8Array): boolean {
-  const decoder = new TextDecoder('latin1');
-  const pdfString = decoder.decode(pdfData);
-  
-  // Look for image objects vs text objects
-  const imageObjects = pdfString.match(/\/Type\s*\/XObject\s*\/Subtype\s*\/Image/gi);
-  const imageCount = imageObjects ? imageObjects.length : 0;
-  
-  const textObjects = pdfString.match(/BT\s*[\s\S]*?\s*ET/gi);
-  const textCount = textObjects ? textObjects.length : 0;
-  
-  // Look for compression filters that indicate scanned content
-  const hasImageCompression = pdfString.includes('/DCTDecode') || 
-                               pdfString.includes('/CCITTFaxDecode') ||
-                               pdfString.includes('/JBIG2Decode');
-  
-  console.log(`Analysis: ${imageCount} images, ${textCount} text objects, compression: ${hasImageCompression}`);
-  
-  // Document is likely scanned if it has many images and few text objects
-  return (imageCount > 0 && textCount < 3) || hasImageCompression;
-}
-
-// Process scanned document - TRY TO EXTRACT REAL CONTENT
-async function processScannedDocument(pdfData: Uint8Array): Promise<{
+// Enhanced OCR processing for large documents
+export async function processLargeDocument(pdfData: Uint8Array, maxPages: number = 50): Promise<{
   text: string;
   confidence: number;
+  pageCount?: number;
+  processingNotes?: string;
 }> {
-  console.log('📄 Processing scanned document - attempting real extraction...');
+  console.log(`🔍 Processing large document with max ${maxPages} pages...`);
   
-  const decoder = new TextDecoder('latin1');
-  const pdfString = decoder.decode(pdfData);
-  
-  // Try to find any embedded text even in scanned documents
-  const extractedText = [];
-  
-  // Look for any text patterns that might be embedded - AVOID metadata
-  const textPatterns = [
-    /\(([^)]{5,})\)\s*Tj/gi,                // Text show operators with meaningful content
-    /REQUEST\s+FOR\s+PRODUCTION/gi,
-    /DISCOVERY/gi,
-    /INTERROGATORY/gi,
-    /Case\s+No/gi,
-    /DEFENDANT/gi,
-    /PLAINTIFF/gi
-  ];
-  
-  for (const pattern of textPatterns) {
-    const matches = pdfString.match(pattern);
-    if (matches) {
-      const validMatches = matches.filter(match => {
-        const cleanMatch = match.replace(/[()]/g, '').trim();
-        return !isMetadataContent(cleanMatch) && cleanMatch.length > 3;
-      });
-      extractedText.push(...validMatches.slice(0, 10));
-    }
-  }
-  
-  if (extractedText.length > 0) {
-    const realText = extractedText.join(' ').replace(/[()]/g, '').trim();
+  try {
+    // Check document size and estimate page count
+    const estimatedPages = Math.ceil(pdfData.length / 50000); // Rough estimate: 50KB per page
+    console.log(`Estimated pages: ${estimatedPages}`);
     
-    // Final check to ensure it's not metadata
-    if (!isMetadataContent(realText)) {
-      console.log(`Found embedded text in scanned document: "${realText.substring(0, 100)}..."`);
-      
+    if (estimatedPages <= maxPages) {
+      // Process all pages normally
+      const result = await extractTextWithOpenAIVision(pdfData);
       return {
-        text: `SCANNED DOCUMENT WITH EXTRACTED CONTENT:\n\n${realText}\n\nNote: This is a scanned document. Some content may require manual review for complete accuracy.`,
-        confidence: 0.6
+        text: result.text,
+        confidence: result.confidence,
+        pageCount: result.pageCount,
+        processingNotes: `Processed all ${result.pageCount || estimatedPages} pages`
       };
+    } else {
+      // For very large documents, process a sample of pages
+      console.log(`⚠️ Large document detected (${estimatedPages} estimated pages). Processing sample...`);
+      
+      try {
+        // Try to process first portion of the document
+        const sampleSize = Math.min(pdfData.length * 0.3, 2 * 1024 * 1024); // 30% or 2MB max
+        const sampleData = pdfData.slice(0, sampleSize);
+        
+        const result = await extractTextWithOpenAIVision(sampleData);
+        
+        return {
+          text: result.text + `\n\n[Note: This is a large document (${estimatedPages}+ pages). Only a sample was processed via OCR. Upload smaller sections for complete extraction.]`,
+          confidence: result.confidence * 0.7, // Reduce confidence for partial processing
+          pageCount: estimatedPages,
+          processingNotes: `Large document: Processed sample of estimated ${estimatedPages} pages`
+        };
+        
+      } catch (sampleError) {
+        console.error('❌ Sample processing failed:', sampleError);
+        return createMinimalFallback(pdfData, `Large document processing failed: ${sampleError.message}`);
+      }
     }
-  }
-  
-  // If no embedded text found, return minimal analysis
-  return createMinimalFallback(pdfData, 'Scanned document with no extractable embedded text');
-}
-
-// Extract any remaining text from PDF
-async function extractRemainingText(pdfData: Uint8Array): Promise<{
-  text: string;
-  confidence: number;
-}> {
-  console.log('📄 Extracting remaining text from PDF...');
-  
-  const decoder = new TextDecoder('latin1');
-  const pdfString = decoder.decode(pdfData);
-  
-  // Look for any text that might have been missed
-  const remainingText = [];
-  
-  // Extract any visible text - AVOID metadata
-  const visibleTextPattern = /\(([^)]{4,})\)\s*Tj/gi;
-  let match;
-  while ((match = visibleTextPattern.exec(pdfString)) !== null) {
-    const text = match[1].trim();
-    if (text.length > 3 && /[a-zA-Z]/.test(text) && !isMetadataContent(text)) {
-      remainingText.push(text);
-    }
-  }
-  
-  if (remainingText.length > 0) {
-    const combinedText = remainingText.join(' ');
-    console.log(`Found remaining text: "${combinedText.substring(0, 100)}..."`);
     
-    return {
-      text: combinedText,
-      confidence: 0.5
-    };
+  } catch (error) {
+    console.error('❌ Large document processing failed:', error);
+    return createMinimalFallback(pdfData, `Large document processing error: ${error.message}`);
   }
-  
-  return createMinimalFallback(pdfData, 'No additional text found');
 }
 
-// Create minimal fallback - NO FAKE CONTENT
+// Create minimal fallback with enhanced information
 function createMinimalFallback(pdfData: Uint8Array, reason: string): {
   text: string;
   confidence: number;
 } {
   const size = pdfData.length;
   const sizeKB = Math.round(size / 1024);
+  const sizeMB = (size / (1024 * 1024)).toFixed(1);
   const currentDate = new Date().toISOString().split('T')[0];
+  const estimatedPages = Math.ceil(size / 50000);
   
-  const fallbackText = `DOCUMENT PROCESSING REPORT
-Date: ${currentDate}
-File Size: ${sizeKB}KB
-Processing Note: ${reason}
+  const fallbackText = `SCANNED DOCUMENT - OCR PROCESSING ATTEMPTED
+Date Processed: ${currentDate}
+File Size: ${sizeKB}KB (${sizeMB}MB)
+Estimated Pages: ${estimatedPages}
+Processing Method: OpenAI Vision OCR
+Processing Status: ${reason}
 
-DOCUMENT STATUS:
-This document has been uploaded and stored successfully but requires manual review for complete text extraction.
+DOCUMENT INFORMATION:
+This appears to be a scanned PDF document that was processed using advanced OCR technology.
 
-NEXT STEPS:
+PROCESSING NOTES:
+- Document has been uploaded and stored successfully
+- OCR extraction was attempted but encountered limitations
+- File is available for manual review and download
+- Document can be referenced in AI legal discussions
+
+RECOMMENDED ACTIONS:
 1. Review the original document manually for critical content
-2. Use this document in AI case discussions for context
-3. Extract key information manually as needed
+2. Consider splitting large documents into smaller sections for better OCR results  
+3. Ensure document quality is sufficient for OCR processing
+4. Use this document in legal AI conversations for case analysis
 
-The document is available for legal analysis and case management workflows.`;
+This document is now part of your legal case management system and available for analysis.`;
 
   return {
     text: fallbackText,

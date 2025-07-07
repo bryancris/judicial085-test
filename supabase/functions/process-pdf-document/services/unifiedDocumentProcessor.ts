@@ -1,7 +1,7 @@
 // Unified Document Processor with OCR fallback for scanned documents
 
 import { processPdfDocument } from '../processors/pdfDocumentProcessor.ts';
-import { extractTextWithWorkingOCR } from '../workingOcrService.ts';
+import { extractTextWithWorkingOCR, processLargeDocument } from '../workingOcrService.ts';
 import { convertPdfToImages } from '../pdfToImageService.ts';
 
 export interface DocumentExtractionResult {
@@ -87,28 +87,46 @@ async function processScannedPdfWithOcr(
   pdfData: Uint8Array, 
   fileName: string
 ): Promise<DocumentExtractionResult> {
-  console.log('🔍 Processing scanned PDF with OCR...');
+  console.log('🔍 Processing scanned PDF with enhanced OCR...');
   
   try {
-    // Use the existing working OCR service
-    const ocrResult = await extractTextWithWorkingOCR(pdfData);
+    // Check document size and use appropriate processing method
+    const sizeKB = pdfData.length / 1024;
+    const sizeMB = sizeKB / 1024;
     
-    console.log(`✅ OCR extraction completed: ${ocrResult.text.length} characters`);
+    console.log(`📊 Document size: ${sizeKB.toFixed(1)}KB (${sizeMB.toFixed(1)}MB)`);
+    
+    let ocrResult;
+    
+    // For very large documents, use the large document processor
+    if (sizeMB > 10) { // Documents larger than 10MB
+      console.log('📄 Using large document processor for sizeable PDF...');
+      ocrResult = await processLargeDocument(pdfData, 100); // Allow up to 100 pages
+    } else {
+      // Use standard OCR processing
+      console.log('📄 Using standard OCR processor...');
+      ocrResult = await extractTextWithWorkingOCR(pdfData);
+    }
+    
+    console.log(`✅ OCR extraction completed: ${ocrResult.text.length} characters, confidence: ${ocrResult.confidence}`);
+    
+    const processingNotes = ocrResult.processingNotes || 
+      `Real OCR extraction from scanned document. Confidence: ${(ocrResult.confidence * 100).toFixed(1)}%. ${sizeMB > 5 ? 'Large document processed.' : ''}`;
     
     return {
       text: ocrResult.text,
-      method: 'ocr-extraction',
-      quality: Math.min(ocrResult.confidence, 0.8), // OCR typically has lower quality
+      method: 'enhanced-ocr-extraction',
+      quality: Math.min(ocrResult.confidence, 0.85), // Higher quality for real OCR
       confidence: ocrResult.confidence,
-      pageCount: Math.max(1, Math.ceil(pdfData.length / 50000)), // Rough estimate
+      pageCount: ocrResult.pageCount || Math.max(1, Math.ceil(pdfData.length / 50000)),
       fileType: 'pdf',
-      processingNotes: `OCR extraction from scanned document. Confidence: ${(ocrResult.confidence * 100).toFixed(1)}%. Manual review recommended for accuracy.`,
+      processingNotes: processingNotes,
       isScanned: true
     };
     
   } catch (error) {
-    console.error('❌ OCR processing failed:', error);
-    throw new Error(`OCR processing failed: ${error.message}`);
+    console.error('❌ Enhanced OCR processing failed:', error);
+    throw new Error(`Enhanced OCR processing failed: ${error.message}`);
   }
 }
 
