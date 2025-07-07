@@ -79,3 +79,28 @@ export async function updateDocumentProcessingNotes(
     throw error;
   }
 }
+
+export async function cleanupFailedDocument(
+  supabase: any,
+  documentId: string
+): Promise<void> {
+  try {
+    console.log(`🧹 Cleaning up failed document processing for ${documentId}`);
+    
+    // Remove any partial document chunks that may have been created
+    const { error: chunksError } = await supabase
+      .from('document_chunks')
+      .delete()
+      .eq('document_id', documentId);
+    
+    if (chunksError) {
+      console.warn(`Warning: Could not clean up chunks for ${documentId}:`, chunksError);
+    } else {
+      console.log(`✅ Cleaned up partial chunks for document ${documentId}`);
+    }
+    
+  } catch (error) {
+    console.error(`❌ Error during cleanup for ${documentId}:`, error);
+    // Don't throw - cleanup is best effort
+  }
+}

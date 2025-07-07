@@ -28,7 +28,7 @@ serve(async (req) => {
   let documentId: string | null = null;
   
   try {
-    console.log('🚀 === DOCUMENT PROCESSING SYSTEM WITH OCR FALLBACK v11.0 ===');
+    console.log('🚀 === DOCUMENT PROCESSING SYSTEM WITH OCR FALLBACK v12.0 ===');
     
     if (!supabaseUrl || !supabaseServiceKey || !geminiApiKey) {
       throw new Error('Missing required environment variables');
@@ -54,16 +54,15 @@ serve(async (req) => {
     const fileData = await downloadPdf(validatedRequest.fileUrl);
     console.log(`✅ File downloaded successfully: ${fileData.length} bytes`);
 
-    // Use unified document processor with OCR fallback
-    console.log('🔍 === STARTING UNIFIED DOCUMENT EXTRACTION WITH OCR FALLBACK ===');
+    // Use unified document processor with automatic OCR fallback for scanned documents
+    console.log('🔍 === STARTING UNIFIED DOCUMENT PROCESSING WITH AUTOMATIC OCR FALLBACK ===');
     const extractionResult = await processDocument(
       fileData,
       validatedRequest.fileName,
       undefined // Let the processor detect MIME type from filename
     );
 
-    console.log(`✅ Document extraction completed: {
-  method: "${extractionResult.method}",
+    console.log(`✅ Document extraction completed using ${extractionResult.method}: {
   textLength: ${extractionResult.text.length},
   quality: ${extractionResult.quality},
   confidence: ${extractionResult.confidence},
@@ -73,9 +72,18 @@ serve(async (req) => {
   processingNotes: '${extractionResult.processingNotes}'
 }`);
 
-    // Provide user feedback about OCR processing
+    // Provide clear user feedback about processing method used
     if (extractionResult.isScanned) {
       console.log('📷 Document was processed using OCR for scanned content');
+      await updateDocumentStatus(
+        supabase, 
+        documentId, 
+        'processing', 
+        validatedRequest.fileUrl, 
+        `OCR processing completed. ${extractionResult.processingNotes}`
+      );
+    } else {
+      console.log('📄 Document processed using standard text extraction');
     }
 
     // Enhanced document chunking
@@ -107,9 +115,13 @@ serve(async (req) => {
     console.log('✅ Document processing completed with embeddings for search functionality');
 
     // Mark document as completed and preserve URL
-    await updateDocumentStatus(supabase, documentId, 'completed', validatedRequest.fileUrl);
+    const finalProcessingNotes = extractionResult.isScanned 
+      ? `Successfully processed scanned document using OCR. ${extractionResult.processingNotes}`
+      : `Successfully processed document using standard extraction. ${extractionResult.processingNotes}`;
+    
+    await updateDocumentStatus(supabase, documentId, 'completed', validatedRequest.fileUrl, finalProcessingNotes);
 
-    console.log('🎉 === DOCUMENT PROCESSING WITH OCR FALLBACK COMPLETED SUCCESSFULLY ===');
+    console.log('🎉 === DOCUMENT PROCESSING WITH AUTOMATIC OCR FALLBACK COMPLETED SUCCESSFULLY ===');
 
     return createSuccessResponse(
       validatedRequest.documentId,
