@@ -50,8 +50,8 @@ async function convertPdfWithPdfShift(pdfData: Uint8Array, apiKey: string): Prom
       body: JSON.stringify({
         source: `data:application/pdf;base64,${base64Pdf}`,
         format: 'png',
-        quality: 95,
-        resolution: 150 // Good balance between quality and size for OCR
+        quality: 100,
+        resolution: 300 // Higher DPI for better OCR quality
       })
     });
     

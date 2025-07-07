@@ -17,6 +17,15 @@ export async function extractTextWithWorkingOCR(pdfData: Uint8Array): Promise<{
     console.log(`✅ Vision API extraction completed: ${visionResult.text.length} characters, confidence: ${visionResult.confidence}`);
     console.log(`Vision API text sample: "${visionResult.text.substring(0, 200)}..."`);
     
+    // Check for corruption before validation
+    const corruptionCheck = detectTextCorruption(visionResult.text);
+    console.log(`OCR corruption check: isCorrupted=${corruptionCheck.isCorrupted}, reason=${corruptionCheck.reason}`);
+    
+    if (corruptionCheck.isCorrupted) {
+      console.log('⚠️ OCR result appears corrupted, trying with different settings...');
+      return createMinimalFallback(pdfData, `OCR corruption detected: ${corruptionCheck.reason}`);
+    }
+    
     // Validate the OCR result
     const validation = validateOCRResult(visionResult.text, visionResult.confidence);
     console.log(`OCR validation result: valid=${validation.isValid}, quality=${validation.quality}, needsReview=${validation.needsManualReview}`);
@@ -39,6 +48,52 @@ export async function extractTextWithWorkingOCR(pdfData: Uint8Array): Promise<{
     console.error('Error stack:', error.stack);
     return createMinimalFallback(pdfData, `OCR failed: ${error.message}`);
   }
+}
+
+// Detect OCR corruption patterns (garbled text, excessive symbols)
+function detectTextCorruption(text: string): {
+  isCorrupted: boolean;
+  reason: string;
+} {
+  if (!text || text.length < 10) {
+    return { isCorrupted: true, reason: 'Text too short' };
+  }
+  
+  // Check for excessive symbols/special characters
+  const symbolCount = (text.match(/[^a-zA-Z0-9\s.,;:!?()\-]/g) || []).length;
+  const symbolRatio = symbolCount / text.length;
+  
+  if (symbolRatio > 0.4) {
+    console.log(`❌ Excessive symbols detected: ${(symbolRatio * 100).toFixed(1)}% symbols`);
+    return { isCorrupted: true, reason: `Excessive symbols (${(symbolRatio * 100).toFixed(1)}%)` };
+  }
+  
+  // Check for random character sequences (like "l l l l l l l")
+  const repeatedSingleChars = text.match(/(\b\w\s){5,}/g);
+  if (repeatedSingleChars && repeatedSingleChars.length > 0) {
+    console.log('❌ Repeated single character pattern detected');
+    return { isCorrupted: true, reason: 'Repeated single character patterns' };
+  }
+  
+  // Check for garbled sequences (too many non-word characters in sequence)
+  const garbledSequences = text.match(/[^\w\s]{4,}/g);
+  if (garbledSequences && garbledSequences.length > 2) {
+    console.log('❌ Multiple garbled character sequences detected');
+    return { isCorrupted: true, reason: 'Multiple garbled sequences' };
+  }
+  
+  // Check for reasonable word structure
+  const words = text.split(/\s+/).filter(word => word.length > 0);
+  const validWords = words.filter(word => /^[a-zA-Z]+$/.test(word) && word.length >= 2);
+  const validWordRatio = validWords.length / words.length;
+  
+  if (validWordRatio < 0.3 && words.length > 10) {
+    console.log(`❌ Too few valid words: ${(validWordRatio * 100).toFixed(1)}% valid words`);
+    return { isCorrupted: true, reason: `Low valid word ratio (${(validWordRatio * 100).toFixed(1)}%)` };
+  }
+  
+  console.log('✅ OCR text appears to be valid (passed corruption checks)');
+  return { isCorrupted: false, reason: 'Text appears valid' };
 }
 
 // Much less aggressive metadata detection for OCR
