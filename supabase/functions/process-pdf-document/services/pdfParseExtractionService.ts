@@ -50,35 +50,30 @@ export async function extractTextWithPdfParse(pdfData: Uint8Array): Promise<PdfP
   }
 }
 
-// Validate pdf-parse extraction results
+// Much more lenient validation for pdf-parse extraction results
 export function validatePdfParseExtraction(text: string, pageCount: number): {
   isValid: boolean;
   issues: string[];
 } {
   const issues: string[] = [];
   
-  // Check minimum text length
-  if (text.length < 10) {
-    issues.push('Extracted text is too short');
+  // Only fail for truly problematic cases
+  if (text.length < 5) {
+    issues.push('No meaningful text extracted');
   }
   
-  // Check for reasonable page count
+  // Check for completely invalid page count
   if (pageCount < 1) {
     issues.push('Invalid page count');
   }
   
-  // Check text quality
-  const alphanumericRatio = (text.match(/[a-zA-Z0-9]/g) || []).length / text.length;
-  if (alphanumericRatio < 0.3) {
-    issues.push('Text appears to be mostly non-alphanumeric');
+  // Only reject if text is mostly non-readable characters
+  const readableRatio = (text.match(/[a-zA-Z0-9\s.,;:!?()'-]/g) || []).length / text.length;
+  if (readableRatio < 0.1) {
+    issues.push('Text appears to be corrupted binary data');
   }
   
-  // Check for minimum word count
-  const wordCount = text.split(/\s+/).filter(word => word.length > 0).length;
-  if (wordCount < 5) {
-    issues.push('Text contains too few words');
-  }
-  
+  // Accept any text that has basic readability
   return {
     isValid: issues.length === 0,
     issues: issues

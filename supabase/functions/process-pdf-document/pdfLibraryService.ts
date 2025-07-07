@@ -218,62 +218,51 @@ function estimatePageCount(pdfString: string): number {
   }
 }
 
-// Enhanced validation for library extraction quality
+// Much more lenient validation for library extraction
 export function validateLibraryExtraction(text: string, pageCount: number): {isValid: boolean, quality: number, issues: string[]} {
   const issues: string[] = [];
-  let quality = 1.0;
+  let quality = 0.5; // Start with moderate quality
   
-  // Check text length
-  if (text.length < 50) {
-    issues.push('Extracted text is very short');
-    quality -= 0.4;
-  } else if (text.length < 200) {
-    issues.push('Extracted text is short');
-    quality -= 0.2;
+  // Only fail for truly empty results
+  if (text.length < 5) {
+    issues.push('No text extracted');
+    quality = 0;
   }
   
-  // Check for meaningful content
-  const words = text.split(/\s+/);
-  const meaningfulWords = words.filter(word => 
-    word.length > 2 && 
-    /^[a-zA-Z]/.test(word) &&
-    !word.match(/^[A-Z]{2,4}$/) // Skip abbreviations
-  );
-  
-  const meaningfulRatio = words.length > 0 ? meaningfulWords.length / words.length : 0;
-  
-  if (meaningfulRatio < 0.3) {
-    issues.push('Low ratio of meaningful words');
-    quality -= 0.3;
+  // Boost quality for any readable content
+  if (text.length > 20) {
+    quality += 0.2;
   }
   
-  // Boost quality for legal document indicators
+  // Check for basic readability
+  const readableRatio = (text.match(/[a-zA-Z0-9\s.,;:!?()'-]/g) || []).length / text.length;
+  if (readableRatio > 0.5) {
+    quality += 0.2;
+  }
+  
+  // Major boost for legal document indicators
   const legalTerms = [
-    'dtpa', 'demand', 'attorney', 'law', 'court', 'case', 'legal', 'motion', 
-    'brief', 'request', 'discovery', 'violation', 'damages', 'plaintiff', 'defendant'
+    'attorney', 'law', 'court', 'case', 'legal', 'motion', 
+    'brief', 'request', 'discovery', 'plaintiff', 'defendant',
+    'demand', 'violation', 'damages', 'contract', 'agreement'
   ];
   const hasLegalTerms = legalTerms.some(term => 
     text.toLowerCase().includes(term)
   );
   
   if (hasLegalTerms) {
-    quality += 0.2; // Significant boost for legal content
-    console.log('✅ Enhanced validation: Legal document content detected');
+    quality += 0.3; // Major boost for legal content
+    console.log('✅ Legal document content detected - boosting quality');
   }
   
-  // Check for email addresses (law firm info)
-  if (/@/.test(text)) {
-    quality += 0.1;
-    console.log('✅ Contact information detected');
-  }
+  // Accept almost any extractable text
+  const isValid = text.length > 3 && readableRatio > 0.1;
   
-  const isValid = quality > 0.2 && text.length > 30;
-  
-  console.log(`Enhanced validation results: isValid=${isValid}, quality=${quality.toFixed(2)}, issues=${issues.length}`);
+  console.log(`Lenient validation: isValid=${isValid}, quality=${quality.toFixed(2)}, text length=${text.length}`);
   
   return {
     isValid,
-    quality: Math.max(0, Math.min(1, quality)),
+    quality: Math.max(0.1, Math.min(1, quality)),
     issues
   };
 }

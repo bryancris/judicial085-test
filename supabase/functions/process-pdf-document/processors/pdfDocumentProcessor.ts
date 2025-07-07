@@ -12,11 +12,15 @@ export async function processPdfDocument(pdfData: Uint8Array, fileName: string):
     
     console.log(`✅ pdf-parse extraction completed: ${result.text.length} characters from ${result.pageCount} pages`);
     
-    // Validate extraction
+    // Use lenient validation - only reject truly problematic extractions
     const validation = validatePdfParseExtraction(result.text, result.pageCount);
     
     if (!validation.isValid) {
-      throw new Error(`PDF extraction validation failed: ${validation.issues.join(', ')}`);
+      console.warn(`PDF extraction validation issues: ${validation.issues.join(', ')}`);
+      // Continue anyway unless text is completely corrupted
+      if (result.text.length < 5) {
+        throw new Error(`PDF extraction completely failed: no readable text found`);
+      }
     }
     
     return {

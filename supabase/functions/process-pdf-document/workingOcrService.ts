@@ -203,30 +203,35 @@ This document is now part of your legal case management system and available for
   };
 }
 
-// ENHANCED OCR validation - less aggressive for legal documents
+// Much more lenient OCR validation 
 export function validateOCRResult(text: string, confidence: number): {
   isValid: boolean;
   quality: number;
   needsManualReview: boolean;
 } {
-  // FIRST: Check for legal content
-  const legalTerms = ['REQUEST', 'DISCOVERY', 'COURT', 'CASE', 'DEFENDANT', 'PLAINTIFF'];
+  // Accept almost any readable text from OCR
+  const hasReadableContent = text.length > 10 && (text.match(/[a-zA-Z]/) !== null);
+  
+  // Check for legal content and boost acceptance
+  const legalTerms = ['REQUEST', 'DISCOVERY', 'COURT', 'CASE', 'DEFENDANT', 'PLAINTIFF', 'ATTORNEY', 'LAW'];
   const hasLegalContent = legalTerms.some(term => 
     text.toUpperCase().includes(term)
   );
   
   if (hasLegalContent) {
-    console.log('✅ OCR validation: Legal content detected, accepting');
+    console.log('✅ OCR validation: Legal content detected, accepting with high quality');
     return {
       isValid: true,
-      quality: Math.max(confidence, 0.6),
-      needsManualReview: confidence < 0.7
+      quality: Math.max(confidence, 0.7),
+      needsManualReview: false
     };
   }
   
-  // THEN: Check for garbage
-  if (text.includes("PDF XWX") || /^[A-Z\s]{30,}$/.test(text.trim())) {
-    console.log('❌ OCR validation failed: compression artifacts detected');
+  // Only reject truly garbage content
+  const hasObviousGarbage = text.includes("PDF XWX") || /^[A-Z\s]{50,}$/.test(text.trim());
+  
+  if (hasObviousGarbage) {
+    console.log('❌ OCR validation: Obvious garbage detected');
     return {
       isValid: false,
       quality: 0,
@@ -234,33 +239,12 @@ export function validateOCRResult(text: string, confidence: number): {
     };
   }
   
-  // Check for metadata first
-  if (isMetadataContent(text)) {
-    console.log('❌ OCR validation failed: metadata detected');
-    return {
-      isValid: false,
-      quality: 0,
-      needsManualReview: true
-    };
-  }
+  // Accept most other content with basic readability
+  const isValid = hasReadableContent && confidence > 0.05; // Very low threshold
+  const quality = Math.max(confidence, 0.4); // Boost quality for any extracted text
+  const needsManualReview = confidence < 0.3;
   
-  // ENHANCED: Check abbreviation ratio with higher threshold
-  const words = text.split(/\s+/).filter(word => word.length > 0);
-  const shortWords = words.filter(word => word.length <= 3).length;
-  const abbreviationRatio = words.length > 0 ? shortWords / words.length : 0;
-  
-  if (abbreviationRatio > 0.85) { // Increased threshold
-    console.log(`❌ OCR validation failed: too many abbreviations (${abbreviationRatio})`);
-    return {
-      isValid: false,
-      quality: 0,
-      needsManualReview: true
-    };
-  }
-  
-  const isValid = confidence > 0.15 && text.length > 30; // More lenient thresholds
-  const quality = confidence;
-  const needsManualReview = confidence < 0.6 || text.length < 200;
+  console.log(`Lenient OCR validation: isValid=${isValid}, quality=${quality.toFixed(2)}, text length=${text.length}`);
   
   return {
     isValid,

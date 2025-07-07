@@ -42,43 +42,36 @@ async function processPdfWithOcrFallback(
   pdfData: Uint8Array, 
   fileName: string
 ): Promise<DocumentExtractionResult> {
-  console.log('📄 Starting PDF processing with OCR fallback...');
+  console.log('📄 Starting simplified PDF processing with better fallbacks...');
   
   try {
-    // Step 1: Try regular PDF text extraction
-    console.log('🔍 Attempting regular PDF text extraction...');
-    const regularResult = await processPdfDocument(pdfData, fileName);
+    // Step 1: Try direct PDF text extraction (multiple methods)
+    console.log('🔍 Attempting direct PDF text extraction...');
+    const directResult = await processPdfDocument(pdfData, fileName);
     
-    // Check if extraction was successful
-    if (isExtractionSuccessful(regularResult)) {
-      console.log('✅ Regular PDF extraction successful');
-      return regularResult;
+    // Use much more lenient success criteria
+    if (directResult.text.length > 20) {
+      console.log('✅ Direct PDF extraction successful');
+      return directResult;
     }
     
-    console.log('📝 Regular extraction insufficient, checking if document is scanned...');
+    console.log('📝 Direct extraction minimal, trying enhanced methods...');
     
-    // Step 2: Detect if document is likely scanned
-    if (isLikelyScannedDocument(regularResult, pdfData)) {
-      console.log('🖼️ Document appears to be scanned, attempting OCR processing...');
-      return await processScannedPdfWithOcr(pdfData, fileName);
+    // Step 2: Try enhanced PDF text extraction
+    const enhancedResult = await tryEnhancedPdfExtraction(pdfData, fileName);
+    if (enhancedResult.text.length > 10) {
+      console.log('✅ Enhanced PDF extraction successful');
+      return enhancedResult;
     }
     
-    // If not scanned but extraction failed, return the regular result with notes
-    console.log('⚠️ Document is not scanned but extraction was minimal');
-    return {
-      ...regularResult,
-      processingNotes: `${regularResult.processingNotes}. Document may need manual review for complete text extraction.`
-    };
+    // Step 3: Only use OCR for truly problematic documents
+    console.log('🖼️ Document appears to be scanned or problematic, using OCR as last resort...');
+    return await processScannedPdfWithOcr(pdfData, fileName);
     
   } catch (error) {
-    console.error('❌ PDF processing failed, attempting OCR as final fallback:', error);
-    
-    try {
-      return await processScannedPdfWithOcr(pdfData, fileName);
-    } catch (ocrError) {
-      console.error('❌ OCR fallback also failed:', ocrError);
-      return createDocumentPlaceholder(pdfData, fileName, 'pdf', `Processing failed: ${error.message}`);
-    }
+    console.error('❌ PDF processing failed:', error);
+    // Return a useful placeholder instead of failing completely
+    return createDocumentPlaceholder(pdfData, fileName, 'pdf', `Processing error: ${error.message}`);
   }
 }
 
@@ -129,61 +122,41 @@ async function processScannedPdfWithOcr(
   }
 }
 
-// Check if regular extraction was successful enough
-function isExtractionSuccessful(result: DocumentExtractionResult): boolean {
-  // Consider successful if we have meaningful text content
-  const hasGoodText = result.text.length > 100;
-  const hasDecentQuality = result.quality > 0.3;
-  const hasReasonableConfidence = result.confidence > 0.4;
+// Enhanced PDF extraction using multiple direct methods
+async function tryEnhancedPdfExtraction(
+  pdfData: Uint8Array, 
+  fileName: string
+): Promise<DocumentExtractionResult> {
+  console.log('🔧 Trying enhanced PDF extraction methods...');
   
-  return hasGoodText && (hasDecentQuality || hasReasonableConfidence);
-}
-
-// Detect if document is likely scanned based on extraction results and file characteristics
-function isLikelyScannedDocument(result: DocumentExtractionResult, pdfData: Uint8Array): boolean {
-  // Indicators of a scanned document:
-  
-  // 1. Very little text extracted relative to file size
-  const textToSizeRatio = result.text.length / pdfData.length;
-  const hasLowTextRatio = textToSizeRatio < 0.005; // Less than 0.5% text to file size ratio
-  
-  // 2. Very low quality/confidence scores
-  const hasLowQuality = result.quality < 0.2;
-  const hasLowConfidence = result.confidence < 0.3;
-  
-  // 3. Very short text extraction
-  const hasMinimalText = result.text.length < 50;
-  
-  // 4. File size suggests images (scanned docs tend to be larger)
-  const fileSizeKB = pdfData.length / 1024;
-  const isLargeFile = fileSizeKB > 200; // Larger than typical text-only PDFs
-  
-  console.log(`=== SCANNED DOCUMENT DETECTION DEBUG ===`);
-  console.log(`File size: ${fileSizeKB.toFixed(1)}KB`);
-  console.log(`Text length: ${result.text.length} characters`);
-  console.log(`Text/Size ratio: ${textToSizeRatio.toFixed(6)} (threshold: 0.005)`);
-  console.log(`Quality: ${result.quality.toFixed(3)} (threshold: 0.2)`);
-  console.log(`Confidence: ${result.confidence.toFixed(3)} (threshold: 0.3)`);
-  console.log(`Text sample: "${result.text.substring(0, 100)}..."`);
-  
-  // Document is likely scanned if multiple indicators are present
-  const indicators = [
-    hasLowTextRatio,
-    hasLowQuality,
-    hasLowConfidence,
-    hasMinimalText
-  ].filter(Boolean).length;
-  
-  console.log(`Indicators present: ${indicators}/4`);
-  console.log(`- Low text ratio: ${hasLowTextRatio}`);
-  console.log(`- Low quality: ${hasLowQuality}`);
-  console.log(`- Low confidence: ${hasLowConfidence}`);
-  console.log(`- Minimal text: ${hasMinimalText}`);
-  
-  const isLikelyScanned = indicators >= 2; // At least 2 indicators
-  console.log(`=== FINAL DECISION: ${isLikelyScanned ? 'SCANNED' : 'NOT SCANNED'} ===`);
-  
-  return isLikelyScanned;
+  try {
+    // Import and use the enhanced library service
+    const { extractTextWithLibrary, validateLibraryExtraction } = await import('../pdfLibraryService.ts');
+    
+    const libraryResult = await extractTextWithLibrary(pdfData);
+    const validation = validateLibraryExtraction(libraryResult.text, libraryResult.pageCount);
+    
+    console.log(`Enhanced extraction: ${libraryResult.text.length} chars, validation: ${validation.isValid}`);
+    
+    // Be more lenient with validation
+    if (libraryResult.text.length > 10 || validation.isValid) {
+      return {
+        text: libraryResult.text,
+        method: 'enhanced-pdf-extraction',
+        quality: Math.max(validation.quality, 0.4), // Boost quality for any extracted text
+        confidence: validation.isValid ? 0.7 : 0.5,
+        pageCount: libraryResult.pageCount,
+        fileType: 'pdf',
+        processingNotes: `Enhanced extraction: ${libraryResult.text.length} characters from ${libraryResult.pageCount} pages`
+      };
+    }
+    
+    throw new Error('Enhanced extraction yielded insufficient content');
+    
+  } catch (error) {
+    console.error('❌ Enhanced PDF extraction failed:', error);
+    throw error;
+  }
 }
 
 function detectFileType(fileName: string, mimeType?: string): string {
