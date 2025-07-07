@@ -1,23 +1,26 @@
 
-// PDF to Image conversion service using pdf2pic or similar approach
+// Real PDF to Image conversion service using PDFShift API
 // This converts PDF pages to images that can be processed by OpenAI Vision
 
 export async function convertPdfToImages(pdfData: Uint8Array): Promise<{
   images: string[]; // Array of base64 image data URLs
   pageCount: number;
 }> {
-  console.log('🖼️ Starting PDF to image conversion...');
+  console.log('🖼️ Starting real PDF to image conversion using PDFShift API...');
   console.log(`📊 PDF data size: ${pdfData.length} bytes`);
   
+  const pdfShiftApiKey = Deno.env.get('PDFSHIFT_API_KEY');
+  
+  if (!pdfShiftApiKey) {
+    console.error('❌ PDFShift API key not found');
+    throw new Error('PDFShift API key is required for PDF to image conversion');
+  }
+  
   try {
-    // For now, we'll use a different approach since we don't have pdf2pic in Deno
-    // We'll implement a canvas-based PDF rendering using PDF.js concepts
+    // Convert PDF to images using PDFShift API
+    const images = await convertPdfWithPdfShift(pdfData, pdfShiftApiKey);
     
-    // Import PDF.js for server-side rendering (this is a simplified approach)
-    // In a real implementation, you'd use pdf-lib or similar
-    const images = await renderPdfPagesToImages(pdfData);
-    
-    console.log(`✅ Successfully converted PDF to ${images.length} images`);
+    console.log(`✅ Successfully converted PDF to ${images.length} images using PDFShift`);
     return {
       images,
       pageCount: images.length
@@ -29,32 +32,45 @@ export async function convertPdfToImages(pdfData: Uint8Array): Promise<{
   }
 }
 
-// Simplified PDF page rendering - in practice you'd use a proper PDF renderer
-async function renderPdfPagesToImages(pdfData: Uint8Array): Promise<string[]> {
-  // This is a placeholder implementation
-  // In reality, you'd use pdf-lib, pdf2pic, or similar library
-  
-  console.log('📄 Rendering PDF pages to images...');
+// Real PDF conversion using PDFShift API
+async function convertPdfWithPdfShift(pdfData: Uint8Array, apiKey: string): Promise<string[]> {
+  console.log('📄 Converting PDF pages to images using PDFShift API...');
   
   try {
-    // For the MVP, we'll create a single placeholder image
-    // representing the PDF content and fall back to native parsing
-    const placeholderImage = createPlaceholderImage(pdfData.length);
+    // Convert PDF data to base64 for API
+    const base64Pdf = btoa(String.fromCharCode(...pdfData));
     
-    return [placeholderImage];
+    // PDFShift API call to convert PDF to images
+    const response = await fetch('https://api.pdfshift.io/v3/convert/images', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${btoa(`api:${apiKey}`)}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        source: `data:application/pdf;base64,${base64Pdf}`,
+        format: 'png',
+        quality: 95,
+        resolution: 150 // Good balance between quality and size for OCR
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('PDFShift API error:', errorText);
+      throw new Error(`PDFShift API error: ${response.status} - ${errorText}`);
+    }
+    
+    const result = await response.json();
+    console.log(`✅ PDFShift conversion successful, got ${result.images?.length || 0} images`);
+    
+    // Return the base64 image data URLs
+    return result.images || [];
     
   } catch (error) {
-    console.error('❌ Failed to render PDF pages:', error);
+    console.error('❌ Failed to convert PDF with PDFShift:', error);
     throw error;
   }
-}
-
-// Create a placeholder image for testing
-function createPlaceholderImage(pdfSize: number): string {
-  // Create a simple base64 encoded 1x1 pixel PNG as placeholder
-  // This is temporary - in production you'd render actual PDF pages
-  const base64Png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
-  return `data:image/png;base64,${base64Png}`;
 }
 
 // Alternative: Use Canvas API to render text as image (for testing)

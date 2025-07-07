@@ -1,8 +1,7 @@
-// Unified Document Processor with OCR fallback for scanned documents
+// Unified Document Processor with real OCR fallback for scanned documents
 
 import { processPdfDocument } from '../processors/pdfDocumentProcessor.ts';
 import { extractTextWithWorkingOCR, processLargeDocument } from '../workingOcrService.ts';
-import { convertPdfToImages } from '../pdfToImageService.ts';
 
 export interface DocumentExtractionResult {
   text: string;
