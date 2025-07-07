@@ -87,46 +87,51 @@ async function processScannedPdfWithOcr(
   pdfData: Uint8Array, 
   fileName: string
 ): Promise<DocumentExtractionResult> {
-  console.log('🔍 Processing scanned PDF with enhanced OCR...');
+  console.log('🔍 Processing scanned PDF with multi-stage OCR pipeline...');
   
   try {
-    // Check document size and use appropriate processing method
-    const sizeKB = pdfData.length / 1024;
-    const sizeMB = sizeKB / 1024;
+    // Use the new multi-stage OCR pipeline
+    const { processDocumentWithMultiStageOcr } = await import('./multiStageOcrPipeline.ts');
     
-    console.log(`📊 Document size: ${sizeKB.toFixed(1)}KB (${sizeMB.toFixed(1)}MB)`);
+    const ocrResult = await processDocumentWithMultiStageOcr(pdfData, fileName);
     
-    let ocrResult;
-    
-    // For very large documents, use the large document processor
-    if (sizeMB > 10) { // Documents larger than 10MB
-      console.log('📄 Using large document processor for sizeable PDF...');
-      ocrResult = await processLargeDocument(pdfData, 100); // Allow up to 100 pages
-    } else {
-      // Use standard OCR processing
-      console.log('📄 Using standard OCR processor...');
-      ocrResult = await extractTextWithWorkingOCR(pdfData);
-    }
-    
-    console.log(`✅ OCR extraction completed: ${ocrResult.text.length} characters, confidence: ${ocrResult.confidence}`);
-    
-    const processingNotes = ocrResult.processingNotes || 
-      `Real OCR extraction from scanned document. Confidence: ${(ocrResult.confidence * 100).toFixed(1)}%. ${sizeMB > 5 ? 'Large document processed.' : ''}`;
+    console.log(`✅ Multi-stage OCR completed using ${ocrResult.method} (Stage ${ocrResult.stage})`);
+    console.log(`Result: ${ocrResult.text.length} characters, confidence: ${ocrResult.confidence.toFixed(2)}, time: ${ocrResult.processingTime}ms`);
     
     return {
       text: ocrResult.text,
-      method: 'enhanced-ocr-extraction',
-      quality: Math.min(ocrResult.confidence, 0.85), // Higher quality for real OCR
+      method: ocrResult.method,
+      quality: Math.min(ocrResult.confidence, 0.95),
       confidence: ocrResult.confidence,
       pageCount: ocrResult.pageCount || Math.max(1, Math.ceil(pdfData.length / 50000)),
       fileType: 'pdf',
-      processingNotes: processingNotes,
+      processingNotes: `Multi-stage OCR: ${ocrResult.processingNotes}. Processing time: ${ocrResult.processingTime}ms`,
       isScanned: true
     };
     
   } catch (error) {
-    console.error('❌ Enhanced OCR processing failed:', error);
-    throw new Error(`Enhanced OCR processing failed: ${error.message}`);
+    console.error('❌ Multi-stage OCR processing failed:', error);
+    console.log('🔄 Falling back to legacy OCR method...');
+    
+    // Fallback to original method if multi-stage fails
+    try {
+      const { extractTextWithWorkingOCR } = await import('../workingOcrService.ts');
+      const legacyResult = await extractTextWithWorkingOCR(pdfData);
+      
+      return {
+        text: legacyResult.text,
+        method: 'legacy-ocr-fallback',
+        quality: Math.min(legacyResult.confidence, 0.7),
+        confidence: legacyResult.confidence,
+        pageCount: Math.max(1, Math.ceil(pdfData.length / 50000)),
+        fileType: 'pdf',
+        processingNotes: `Legacy OCR fallback: ${legacyResult.text.length} characters. Multi-stage failed: ${error.message}`,
+        isScanned: true
+      };
+    } catch (fallbackError) {
+      console.error('❌ Legacy OCR fallback also failed:', fallbackError);
+      throw new Error(`All OCR methods failed: ${error.message}`);
+    }
   }
 }
 
