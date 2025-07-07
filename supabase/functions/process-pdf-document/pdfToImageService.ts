@@ -41,7 +41,8 @@ async function convertPdfWithPdfShift(pdfData: Uint8Array, apiKey: string): Prom
     const base64Pdf = btoa(String.fromCharCode(...pdfData));
     
     // PDFShift API call to convert PDF to images
-    const response = await fetch('https://api.pdfshift.io/v3/convert/images', {
+    console.log('🚀 Making PDFShift API call...');
+    const response = await fetch('https://api.pdfshift.io/v3/convert/pdf', {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${btoa(`api:${apiKey}`)}`,
@@ -51,7 +52,8 @@ async function convertPdfWithPdfShift(pdfData: Uint8Array, apiKey: string): Prom
         source: `data:application/pdf;base64,${base64Pdf}`,
         format: 'png',
         quality: 100,
-        resolution: 300 // Higher DPI for better OCR quality
+        resolution: 300, // Higher DPI for better OCR quality
+        output: 'images'
       })
     });
     

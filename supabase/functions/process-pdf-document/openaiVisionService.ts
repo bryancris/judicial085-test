@@ -52,6 +52,9 @@ export async function extractTextWithOpenAIVision(pdfData: Uint8Array): Promise<
         if (pageText && pageText.trim().length > 0) {
           extractedTexts.push(pageText.trim());
           console.log(`✅ Page ${i + 1} extracted: ${pageText.length} characters`);
+          console.log(`Page ${i + 1} sample: "${pageText.substring(0, 100)}..."`);
+        } else {
+          console.log(`⚠️ Page ${i + 1} extracted no readable text`);
         }
       }
       
