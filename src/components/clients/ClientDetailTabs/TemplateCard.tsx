@@ -9,7 +9,8 @@ import {
   Trash2, 
   Calendar,
   FileText,
-  MoreVertical
+  MoreVertical,
+  Edit
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -36,9 +37,10 @@ interface Template {
 interface TemplateCardProps {
   template: Template;
   onUpdate: () => void;
+  onEdit?: (template: Template) => void;
 }
 
-const TemplateCard: React.FC<TemplateCardProps> = ({ template, onUpdate }) => {
+const TemplateCard: React.FC<TemplateCardProps> = ({ template, onUpdate, onEdit }) => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -134,6 +136,12 @@ const TemplateCard: React.FC<TemplateCardProps> = ({ template, onUpdate }) => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              {onEdit && (
+                <DropdownMenuItem onClick={() => onEdit(template)} disabled={loading}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Template
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={handleDownload} disabled={loading}>
                 <Download className="h-4 w-4 mr-2" />
                 Download

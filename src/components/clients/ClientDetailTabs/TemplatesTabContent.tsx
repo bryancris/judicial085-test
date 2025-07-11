@@ -2,10 +2,26 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Layout, Search, Upload } from "lucide-react";
+import { Layout, Search, Upload, ArrowLeft } from "lucide-react";
 import TemplateUpload from "./TemplateUpload";
 import TemplateCard from "./TemplateCard";
+import GoogleDocsEditor from "@/components/document-editor/GoogleDocsEditor";
 import { useTemplates } from "@/hooks/useTemplates";
+import mammoth from "mammoth";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+
+interface Template {
+  id: string;
+  name: string;
+  description?: string;
+  category: string;
+  file_path: string;
+  file_name: string;
+  file_size?: number;
+  created_at: string;
+  updated_at: string;
+}
 
 interface TemplatesTabContentProps {
   clientId: string;
@@ -14,12 +30,145 @@ interface TemplatesTabContentProps {
 const TemplatesTabContent: React.FC<TemplatesTabContentProps> = ({ clientId }) => {
   const [showUpload, setShowUpload] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
+  const [templateContent, setTemplateContent] = useState("");
   const { templates, loading, refetch } = useTemplates();
+  const { toast } = useToast();
 
   const filteredTemplates = templates?.filter(template =>
     template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     template.description?.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
+
+  const handleEditTemplate = async (template: Template) => {
+    try {
+      // Download the template file from storage
+      const { data, error } = await supabase.storage
+        .from('templates')
+        .download(template.file_path);
+
+      if (error) throw error;
+
+      // Convert Word document to HTML using mammoth
+      const arrayBuffer = await data.arrayBuffer();
+      const result = await mammoth.convertToHtml({ arrayBuffer });
+      
+      setTemplateContent(result.value);
+      setEditingTemplate(template);
+    } catch (error) {
+      console.error('Error loading template for editing:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load template for editing. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSaveTemplate = async (title: string, content: string) => {
+    if (!editingTemplate) return;
+
+    try {
+      // Convert HTML content back to a Word document format
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <title>${title}</title>
+            <style>
+              body { font-family: Calibri, sans-serif; font-size: 11pt; line-height: 1.15; margin: 1in; }
+              p { margin: 0 0 8pt 0; }
+              h1, h2, h3, h4, h5, h6 { margin: 0 0 8pt 0; }
+            </style>
+          </head>
+          <body>
+            ${content}
+          </body>
+        </html>
+      `;
+
+      // Create a blob with the HTML content
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const file = new File([blob], `${editingTemplate.file_name}`, { type: 'text/html' });
+
+      // Upload the updated template
+      const filePath = `${Date.now()}_${editingTemplate.file_name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('templates')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Update the template record with new file path and updated name
+      const { error: updateError } = await supabase
+        .from('templates')
+        .update({
+          name: title,
+          file_path: filePath,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', editingTemplate.id);
+
+      if (updateError) throw updateError;
+
+      // Remove the old file
+      await supabase.storage
+        .from('templates')
+        .remove([editingTemplate.file_path]);
+
+      toast({
+        title: "Success",
+        description: "Template updated successfully.",
+      });
+
+      // Reset editing state and refresh templates
+      setEditingTemplate(null);
+      setTemplateContent("");
+      refetch();
+    } catch (error) {
+      console.error('Error saving template:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save template. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // If editing a template, show the editor
+  if (editingTemplate) {
+    return (
+      <div className="h-full flex flex-col">
+        <div className="flex items-center gap-4 p-4 border-b bg-background">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setEditingTemplate(null);
+              setTemplateContent("");
+            }}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Templates
+          </Button>
+          <div>
+            <h2 className="text-lg font-semibold">Edit Template: {editingTemplate.name}</h2>
+            <p className="text-sm text-muted-foreground">Make changes to your template</p>
+          </div>
+        </div>
+        <div className="flex-1">
+          <GoogleDocsEditor
+            clientId={clientId}
+            onSave={handleSaveTemplate}
+            initialTitle={editingTemplate.name}
+            initialContent={templateContent}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -77,6 +226,7 @@ const TemplatesTabContent: React.FC<TemplatesTabContentProps> = ({ clientId }) =
               key={template.id} 
               template={template}
               onUpdate={refetch}
+              onEdit={handleEditTemplate}
             />
           ))}
         </div>
