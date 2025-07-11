@@ -40,7 +40,12 @@ export class MessageHandler {
 
       case 'input_audio_buffer.speech_started':
         this.setIsSpeaking(true);
-        console.log('User started speaking (WebRTC)');
+        // Interrupt AI audio when user starts speaking
+        if (this.audioPlaybackManager) {
+          this.audioPlaybackManager.interrupt();
+        }
+        this.setIsAISpeaking(false);
+        console.log('User started speaking (WebRTC) - interrupting AI audio');
         break;
 
       case 'input_audio_buffer.speech_stopped':

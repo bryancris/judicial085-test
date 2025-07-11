@@ -16,6 +16,12 @@ export class AudioPlaybackManager {
     }
   }
 
+  interrupt(): void {
+    if (this.audioQueue) {
+      this.audioQueue.interrupt();
+    }
+  }
+
   cleanup(): void {
     this.audioContext?.close();
     this.audioContext = null;

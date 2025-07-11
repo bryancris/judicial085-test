@@ -67,6 +67,7 @@ export class AudioQueue {
   private queue: Uint8Array[] = [];
   private isPlaying = false;
   private audioContext: AudioContext;
+  private currentSource: AudioBufferSourceNode | null = null;
 
   constructor(audioContext: AudioContext) {
     this.audioContext = audioContext;
@@ -77,6 +78,30 @@ export class AudioQueue {
     if (!this.isPlaying) {
       await this.playNext();
     }
+  }
+
+  stopCurrent(): void {
+    if (this.currentSource) {
+      try {
+        this.currentSource.stop();
+        this.currentSource.disconnect();
+      } catch (error) {
+        // Source might already be stopped/disconnected
+        console.log('Audio source already stopped:', error);
+      }
+      this.currentSource = null;
+    }
+    this.isPlaying = false;
+  }
+
+  clearQueue(): void {
+    this.queue = [];
+  }
+
+  interrupt(): void {
+    console.log('Interrupting audio playback');
+    this.stopCurrent();
+    this.clearQueue();
   }
 
   private async playNext() {
@@ -96,7 +121,13 @@ export class AudioQueue {
       source.buffer = audioBuffer;
       source.connect(this.audioContext.destination);
       
-      source.onended = () => this.playNext();
+      // Track current source for interruption
+      this.currentSource = source;
+      
+      source.onended = () => {
+        this.currentSource = null;
+        this.playNext();
+      };
       source.start(0);
     } catch (error) {
       console.error('Error playing audio:', error);
