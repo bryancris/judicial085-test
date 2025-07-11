@@ -196,6 +196,15 @@ const TemplateCard: React.FC<TemplateCardProps> = ({ template, onUpdate, onEdit 
               <Download className="h-4 w-4 mr-1" />
               Download
             </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleDelete}
+              disabled={loading}
+              className="text-destructive hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </CardContent>
