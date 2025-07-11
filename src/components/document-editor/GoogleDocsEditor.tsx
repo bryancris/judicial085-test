@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import PrintStyles from './PrintStyles';
 import DocumentHeader from './DocumentHeader';
 import DocumentToolbar from './DocumentToolbar';
-import DocumentSidebar from './DocumentSidebar';
+import DocumentChatSidebar from './DocumentChatSidebar';
 import DocumentEditor from './DocumentEditor';
 
 interface GoogleDocsEditorProps {
@@ -171,7 +171,18 @@ const GoogleDocsEditor: React.FC<GoogleDocsEditorProps> = ({
 
         {/* Main Content Area */}
         <div className="flex-1 flex print-hide">
-          <DocumentSidebar />
+          <DocumentChatSidebar 
+            documentTitle={documentTitle}
+            documentContent={documentContent}
+            clientId={clientId}
+            onDocumentUpdate={(content) => {
+              if (editorRef.current) {
+                editorRef.current.innerHTML = content;
+                setDocumentContent(content);
+                setHasUnsavedChanges(true);
+              }
+            }}
+          />
           <DocumentEditor
             editorRef={editorRef}
             showPlaceholder={showPlaceholder}
