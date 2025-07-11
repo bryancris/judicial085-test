@@ -9,7 +9,7 @@ export interface LegalContext {
 export function extractLegalTopics(conversation: Array<{ content: string }>): LegalContext {
   const combinedText = conversation.map(msg => msg.content).join(" ");
   
-  // Enhanced list of potential legal topics with specific focus on consumer protection and animal law
+  // Enhanced list of potential legal topics with specific focus on premises liability, consumer protection and other areas
   const legalTopics = [
     // General legal topics
     "personal injury", "premises liability", "negligence", "tort", 
@@ -20,6 +20,12 @@ export function extractLegalTopics(conversation: Array<{ content: string }>): Le
     "employment", "discrimination", "estate planning", "probate", "will", 
     "trust", "guardianship", "business formation", "LLC", "corporation",
     "insurance", "malpractice", "wrongful death", "product liability",
+    
+    // Enhanced premises liability topics
+    "slip and fall", "slip", "fall", "premises", "hazardous condition",
+    "unsafe condition", "invitee", "business premises", "duty of care",
+    "store liability", "retail", "floor", "wet", "spill", "hazard",
+    "dangerous condition", "constructive knowledge", "actual knowledge",
     
     // Enhanced consumer protection topics
     "deceptive trade practices", "DTPA", "consumer protection", 
@@ -74,6 +80,12 @@ export function detectCaseType(legalContext: LegalContext): string {
     "consumer fraud", "bait and switch", "unfair practices", "misrepresentation"
   ];
   
+  const premisesTopics = [
+    "premises liability", "slip", "fall", "premises", "negligence",
+    "unsafe condition", "hazardous condition", "invitee", "business premises",
+    "duty of care", "store", "retail", "floor", "wet", "spill", "hazard"
+  ];
+  
   const animalTopics = [
     "animal cruelty", "animal abuse", "pet", "dog", "cat", "boarding",
     "veterinary malpractice", "animal neglect", "42.092", "dogtopia"
@@ -82,6 +94,11 @@ export function detectCaseType(legalContext: LegalContext): string {
   // Convert topics to lowercase for case-insensitive comparison
   const lowerTopics = legalContext.topics.map(t => t.toLowerCase());
   const combinedText = legalContext.topics.join(" ").toLowerCase();
+  
+  // Check for premises liability cases first (highest priority for slip and fall)
+  const hasPremisesTopic = premisesTopics.some(topic => 
+    lowerTopics.includes(topic.toLowerCase()) || combinedText.includes(topic)
+  );
   
   // Check if any consumer protection topics are mentioned
   const hasConsumerTopic = consumerTopics.some(topic => 
@@ -101,6 +118,11 @@ export function detectCaseType(legalContext: LegalContext): string {
   const hasAnimalStatute = legalContext.statutes.some(statute => 
     statute.startsWith("42.09")
   );
+  
+  // Prioritize premises liability detection for slip and fall cases
+  if (hasPremisesTopic) {
+    return "premises-liability";
+  }
   
   if (hasConsumerTopic || hasDTPAStatute) {
     return "consumer-protection";
