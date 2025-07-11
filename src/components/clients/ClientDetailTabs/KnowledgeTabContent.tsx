@@ -1,6 +1,7 @@
 
 import React, { useState } from "react";
 import GoogleDocsEditor from "@/components/document-editor/GoogleDocsEditor";
+import TemplateSelector from "./TemplateSelector";
 import { useToast } from "@/hooks/use-toast";
 import { useDocumentProcessor } from "@/hooks/documents/useDocumentProcessor";
 
@@ -11,6 +12,9 @@ interface KnowledgeTabContentProps {
 const KnowledgeTabContent: React.FC<KnowledgeTabContentProps> = ({ clientId }) => {
   const { toast } = useToast();
   const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
+  const [showTemplateSelector, setShowTemplateSelector] = useState(true);
+  const [initialTitle, setInitialTitle] = useState<string>("Untitled document");
+  const [initialContent, setInitialContent] = useState<string>("");
   
   const { processDocument, updateDocument } = useDocumentProcessor(
     clientId,
@@ -67,11 +71,34 @@ const KnowledgeTabContent: React.FC<KnowledgeTabContentProps> = ({ clientId }) =
     }
   };
 
+  const handleTemplateSelect = (title: string, content: string) => {
+    setInitialTitle(title);
+    setInitialContent(content);
+    setShowTemplateSelector(false);
+  };
+
+  const handleStartBlank = () => {
+    setInitialTitle("Untitled document");
+    setInitialContent("");
+    setShowTemplateSelector(false);
+  };
+
+  if (showTemplateSelector) {
+    return (
+      <TemplateSelector
+        onTemplateSelect={handleTemplateSelect}
+        onStartBlank={handleStartBlank}
+      />
+    );
+  }
+
   return (
     <GoogleDocsEditor 
       clientId={clientId}
       onSave={handleSaveDocument}
       documentId={currentDocumentId || undefined}
+      initialTitle={initialTitle}
+      initialContent={initialContent}
     />
   );
 };
