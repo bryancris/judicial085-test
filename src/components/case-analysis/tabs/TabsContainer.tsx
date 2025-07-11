@@ -26,6 +26,7 @@ interface TabsContainerProps {
   scholarlyReferences: ScholarlyArticle[];
   isScholarlyReferencesLoading: boolean;
   onScholarSearch: (query: string) => void;
+  onScholarRefresh?: () => void;
   similarCases: SimilarCase[];
   isSimilarCasesLoading: boolean;
   analysisFound: boolean;
@@ -48,6 +49,7 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
   scholarlyReferences,
   isScholarlyReferencesLoading,
   onScholarSearch,
+  onScholarRefresh,
   similarCases,
   isSimilarCasesLoading,
   analysisFound,
@@ -64,6 +66,7 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
             scholarlyReferences={scholarlyReferences}
             isScholarlyReferencesLoading={isScholarlyReferencesLoading}
             onScholarSearch={onScholarSearch}
+            onScholarRefresh={onScholarRefresh}
             similarCases={similarCases}
             isSimilarCasesLoading={isSimilarCasesLoading}
             analysisFound={analysisFound}

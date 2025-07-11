@@ -152,6 +152,7 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
         scholarlyReferences={scholarlyReferences}
         isScholarlyReferencesLoading={isScholarlyReferencesLoading}
         onScholarSearch={handleScholarSearch}
+        onScholarRefresh={fetchScholarlyReferences}
         similarCases={similarCases}
         isSimilarCasesLoading={isSimilarCasesLoading}
         analysisFound={analysisFound}

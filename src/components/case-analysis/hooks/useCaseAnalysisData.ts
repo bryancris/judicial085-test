@@ -169,6 +169,30 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
     }
   };
 
+  // Force refresh scholarly references (clears existing and fetches new)
+  const forceRefreshScholarlyReferences = async () => {
+    if (currentAnalysisId && analysisData?.caseType) {
+      console.log("Force refreshing scholarly references for analysis:", currentAnalysisId);
+      
+      // Delete existing references from database first
+      try {
+        const { supabase } = await import("@/integrations/supabase/client");
+        await supabase
+          .from("scholarly_references")
+          .delete()
+          .eq("legal_analysis_id", currentAnalysisId);
+        
+        console.log("Deleted existing scholarly references, fetching new ones");
+        // Now fetch new ones
+        fetchScholarlyReferences(analysisData.caseType, currentAnalysisId);
+      } catch (error) {
+        console.error("Error deleting existing scholarly references:", error);
+        // Still try to fetch new ones even if delete failed
+        fetchScholarlyReferences(analysisData.caseType, currentAnalysisId);
+      }
+    }
+  };
+
   return {
     analysisData,
     isAnalysisLoading,
@@ -178,7 +202,7 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
     scholarlyReferences,
     isScholarlyReferencesLoading,
     handleScholarSearch,
-    fetchScholarlyReferences: fetchScholarlyReferencesWithPersistence,
+    fetchScholarlyReferences: forceRefreshScholarlyReferences,
     similarCases,
     isSimilarCasesLoading,
     analysisFound,

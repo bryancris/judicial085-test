@@ -251,17 +251,38 @@ export const getScholarlyReferences = async (
  * @returns String of key search terms
  */
 function extractKeyTerms(content: string, caseType: string): string {
-  // Extract case-specific terms based on case type
+  // Detect slip and fall cases from content
+  const isSlipAndFall = content.toLowerCase().includes("slip") || 
+                       content.toLowerCase().includes("fall") || 
+                       content.toLowerCase().includes("premises") ||
+                       content.toLowerCase().includes("hazard") ||
+                       content.toLowerCase().includes("unsafe condition");
+  
+  // Extract case-specific terms based on case type and content analysis
   let specializedTerms = "";
   
-  if (caseType === "consumer-protection" || caseType === "deceptive_trade") {
+  if (isSlipAndFall || caseType === "premises-liability" || caseType === "personal-injury") {
+    specializedTerms = "premises liability slip fall negligence unsafe condition hazardous condition invitee business premises duty of care";
+  } else if (caseType === "consumer-protection" || caseType === "deceptive_trade") {
     specializedTerms = "deceptive trade practices DTPA consumer protection";
-  } else if (caseType === "personal-injury") {
-    specializedTerms = "negligence damages liability personal injury";
   } else if (caseType === "real-estate" || caseType === "property-law") {
     specializedTerms = "property real estate title lease contract";
   } else if (caseType.includes("contract")) {
     specializedTerms = "contract breach agreement damages consideration";
+  } else if (caseType === "personal-injury") {
+    specializedTerms = "negligence damages liability personal injury";
+  }
+  
+  // Extract additional relevant terms from content
+  const contentTerms = [];
+  if (content.toLowerCase().includes("cvs") || content.toLowerCase().includes("retail")) {
+    contentTerms.push("retail store liability");
+  }
+  if (content.toLowerCase().includes("ice") || content.toLowerCase().includes("water")) {
+    contentTerms.push("water ice hazard");
+  }
+  if (content.toLowerCase().includes("injury") || content.toLowerCase().includes("injured")) {
+    contentTerms.push("personal injury damages");
   }
   
   // Extract statute references
@@ -273,5 +294,5 @@ function extractKeyTerms(content: string, caseType: string): string {
   const cases = caseMatches.length > 0 ? caseMatches.slice(0, 2).join(" ") : "";
   
   // Combine everything
-  return `${specializedTerms} ${statutes} ${cases}`.trim();
+  return `${specializedTerms} ${contentTerms.join(" ")} ${statutes} ${cases}`.trim();
 }

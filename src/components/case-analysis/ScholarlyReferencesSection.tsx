@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Book, ExternalLink, FileText, Search } from "lucide-react";
+import { Book, ExternalLink, FileText, Search, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScholarlyArticle } from "@/utils/api/scholarApiService";
@@ -14,13 +14,15 @@ export interface ScholarlyReferencesSectionProps {
   isLoading?: boolean;
   caseType?: string;
   onSearch?: (query: string) => void;
+  onRefresh?: () => void;
 }
 
 const ScholarlyReferencesSection: React.FC<ScholarlyReferencesSectionProps> = ({
   references,
   isLoading = false,
   caseType,
-  onSearch
+  onSearch,
+  onRefresh
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"recent" | "cited">("recent");
@@ -122,22 +124,30 @@ const ScholarlyReferencesSection: React.FC<ScholarlyReferencesSectionProps> = ({
             )}
           </div>
           
-          {onSearch && (
-            <div className="flex">
-              <Input 
-                type="text"
-                placeholder="Search legal scholarship..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={handleKeyPress}
-                className="w-64 mr-2"
-              />
-              <Button size="sm" onClick={handleSearch} disabled={!searchQuery.trim()}>
-                <Search className="h-4 w-4 mr-2" />
-                Search
+          <div className="flex gap-2">
+            {onRefresh && (
+              <Button size="sm" variant="outline" onClick={onRefresh}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
               </Button>
-            </div>
-          )}
+            )}
+            {onSearch && (
+              <div className="flex">
+                <Input 
+                  type="text"
+                  placeholder="Search legal scholarship..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleKeyPress}
+                  className="w-64 mr-2"
+                />
+                <Button size="sm" onClick={handleSearch} disabled={!searchQuery.trim()}>
+                  <Search className="h-4 w-4 mr-2" />
+                  Search
+                </Button>
+              </div>
+            )}
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent>

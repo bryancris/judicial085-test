@@ -15,6 +15,7 @@ interface AnalysisTabContentProps {
   scholarlyReferences: ScholarlyArticle[];
   isScholarlyReferencesLoading: boolean;
   onScholarSearch: (query: string) => void;
+  onScholarRefresh?: () => void;
   similarCases: SimilarCase[];
   isSimilarCasesLoading: boolean;
   analysisFound: boolean;
@@ -28,6 +29,7 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
   scholarlyReferences,
   isScholarlyReferencesLoading,
   onScholarSearch,
+  onScholarRefresh,
   similarCases,
   isSimilarCasesLoading,
   analysisFound,
@@ -71,6 +73,7 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
         isLoading={isScholarlyReferencesLoading}
         caseType={analysisData.caseType}
         onSearch={onScholarSearch}
+        onRefresh={onScholarRefresh}
       />
     </div>
   );
