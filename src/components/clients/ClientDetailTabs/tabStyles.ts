@@ -8,16 +8,16 @@ export const tabColors = {
   "contracts": "bg-[#22C55E] text-white",
   "documents": "bg-[#6B7280] text-white", // Changed to gray
   "knowledge": "bg-[#D946EF] text-white",
-  "faq": "bg-[#3B82F6] text-white",
+  "templates": "bg-[#3B82F6] text-white",
 };
 
 export const tabHoverColors = {
-  "client-intake": "hover:bg-[#0EA5E9]/90",
-  "analysis": "hover:bg-[#F97316]/90",
-  "discovery": "hover:bg-[#8B5CF6]/90",
-  "discussion": "hover:bg-[#9b87f5]/90",
-  "contracts": "hover:bg-[#22C55E]/90",
-  "documents": "hover:bg-[#6B7280]/90", // Changed to gray
-  "knowledge": "hover:bg-[#D946EF]/90",
-  "faq": "hover:bg-[#3B82F6]/90",
+  "client-intake": "hover:bg-[#0284C7]",
+  "analysis": "hover:bg-[#EA580C]",
+  "discovery": "hover:bg-[#7C3AED]",
+  "discussion": "hover:bg-[#8B7CF5]",
+  "contracts": "hover:bg-[#16A34A]",
+  "documents": "hover:bg-[#4B5563]",
+  "knowledge": "hover:bg-[#C026D3]",
+  "templates": "hover:bg-[#2563EB]",
 };

@@ -1,7 +1,7 @@
 
 import React from "react";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, BarChart3, Users, Upload, Plus, HelpCircle, Scale, FileText } from "lucide-react";
+import { MessageSquare, BarChart3, Users, Upload, Plus, Layout, Scale, FileText } from "lucide-react";
 import { tabColors, tabHoverColors } from "./tabStyles";
 
 const ClientDetailTabsList: React.FC = () => {
@@ -70,12 +70,12 @@ const ClientDetailTabsList: React.FC = () => {
           <span className="sm:hidden">Create</span>
         </TabsTrigger>
         <TabsTrigger 
-          value="faq" 
-          className={`flex items-center gap-2 ${tabColors["faq"]} ${tabHoverColors["faq"]} data-[state=active]:${tabColors["faq"]} data-[state=active]:opacity-100`}
+          value="templates" 
+          className={`flex items-center gap-2 ${tabColors["templates"]} ${tabHoverColors["templates"]} data-[state=active]:${tabColors["templates"]} data-[state=active]:opacity-100`}
         >
-          <HelpCircle className="h-4 w-4" />
-          <span className="hidden sm:inline">FAQ</span>
-          <span className="sm:hidden">FAQ</span>
+          <Layout className="h-4 w-4" />
+          <span className="hidden sm:inline">Templates</span>
+          <span className="sm:hidden">Templates</span>
         </TabsTrigger>
       </TabsList>
     </div>

@@ -8,7 +8,7 @@ import DiscoveryTabContent from "./DiscoveryTabContent";
 import ContractsTabContent from "./ContractsTabContent";
 import DocumentsTabContent from "./DocumentsTabContent";
 import KnowledgeTabContent from "./KnowledgeTabContent";
-import FaqTabContent from "./FaqTabContent";
+import TemplatesTabContent from "./TemplatesTabContent";
 import { Client } from "@/types/client";
 import { useCase } from "@/contexts/CaseContext";
 
@@ -72,8 +72,8 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
         <KnowledgeTabContent clientId={client.id} />
       </TabsContent>
 
-      <TabsContent value="faq" className="mt-6">
-        <FaqTabContent clientId={client.id} />
+      <TabsContent value="templates" className="mt-6">
+        <TemplatesTabContent clientId={client.id} />
       </TabsContent>
     </>
   );
