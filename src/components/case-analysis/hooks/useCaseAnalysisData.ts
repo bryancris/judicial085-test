@@ -25,7 +25,8 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
     isScholarlyReferencesLoading,
     fetchScholarlyReferences,
     handleScholarSearch,
-    loadScholarlyReferencesFromDb
+    loadScholarlyReferencesFromDb,
+    checkScholarlyReferencesForAnalysis
   } = useScholarlyReferencesData(clientId);
 
   // Similar cases with database persistence
@@ -107,11 +108,27 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
 
   // UPDATED: Auto-load scholarly references from database when analysis ID is available
   useEffect(() => {
-    if (currentAnalysisId) {
+    if (currentAnalysisId && analysisData?.caseType) {
       console.log("Analysis ID available, loading scholarly references from database for analysis:", currentAnalysisId);
-      loadScholarlyReferencesFromDb(currentAnalysisId);
+      
+      // First try to load from database
+      loadScholarlyReferencesFromDb(currentAnalysisId).then(() => {
+        // Check if we actually loaded any references
+        // If not, automatically fetch new ones
+        setTimeout(async () => {
+          try {
+            const hasExisting = await checkScholarlyReferencesForAnalysis(currentAnalysisId);
+            if (!hasExisting) {
+              console.log("No existing scholarly references found, fetching new ones for case type:", analysisData.caseType);
+              fetchScholarlyReferences(analysisData.caseType, currentAnalysisId);
+            }
+          } catch (error) {
+            console.error("Error checking for existing scholarly references:", error);
+          }
+        }, 100);
+      });
     }
-  }, [currentAnalysisId, loadScholarlyReferencesFromDb]);
+  }, [currentAnalysisId, analysisData?.caseType, loadScholarlyReferencesFromDb, fetchScholarlyReferences, checkScholarlyReferencesForAnalysis]);
 
   // Auto-load similar cases when analysis ID is available
   useEffect(() => {
