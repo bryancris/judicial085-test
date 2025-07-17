@@ -12,6 +12,8 @@ export const useAuthState = () => {
   const isMounted = useRef(true);
   const { toast } = useToast();
   const sessionManager = useSessionManager();
+  
+  // Only access sessionManager inside the effects, not in dependency array
 
   useEffect(() => {
     isMounted.current = true;
@@ -127,7 +129,7 @@ export const useAuthState = () => {
       isMounted.current = false;
       subscription.unsubscribe();
     };
-  }, [sessionManager, sessionManagerEnabled]); // Add proper dependencies
+  }, []); // Remove sessionManager dependency to prevent infinite loop
 
   return {
     session,
