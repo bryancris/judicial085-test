@@ -2,6 +2,7 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { 
   Bold, 
   Italic, 
@@ -14,7 +15,8 @@ import {
   ListOrdered,
   Undo,
   Redo,
-  MoreHorizontal
+  MoreHorizontal,
+  Palette
 } from "lucide-react";
 
 interface DocumentToolbarProps {
@@ -66,6 +68,32 @@ const DocumentToolbar: React.FC<DocumentToolbarProps> = ({ onFormatText }) => {
       <Button variant="ghost" size="sm" onClick={() => onFormatText('underline')}>
         <Underline className="h-4 w-4" />
       </Button>
+      
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="ghost" size="sm">
+            <Palette className="h-4 w-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-48 p-2">
+          <div className="grid grid-cols-6 gap-1">
+            {[
+              '#000000', '#dc2626', '#ea580c', '#d97706', '#65a30d', '#059669',
+              '#0891b2', '#2563eb', '#7c3aed', '#c026d3', '#e11d48', '#991b1b',
+              '#7f1d1d', '#451a03', '#365314', '#064e3b', '#164e63', '#1e3a8a',
+              '#581c87', '#86198f', '#9f1239', '#374151', '#6b7280', '#9ca3af'
+            ].map((color) => (
+              <button
+                key={color}
+                className="w-6 h-6 rounded border border-border hover:scale-110 transition-transform"
+                style={{ backgroundColor: color }}
+                onClick={() => onFormatText('foreColor', color)}
+                title={color}
+              />
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
       
       <Separator orientation="vertical" className="h-6 mx-1" />
       
