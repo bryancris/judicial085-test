@@ -17,6 +17,12 @@ export const useSessionManager = () => {
   const registerSession = useCallback(async (session: Session) => {
     if (!session?.user?.id) return null;
 
+    // Check if we already have a session for this user
+    if (currentSessionId) {
+      console.log('Session already exists, skipping registration');
+      return currentSessionId;
+    }
+
     const sessionToken = generateSessionToken();
     const userAgent = navigator.userAgent;
     
@@ -32,17 +38,18 @@ export const useSessionManager = () => {
 
       if (error) {
         console.error('Error registering session:', error);
-        return null;
+        throw error; // Re-throw to allow calling code to handle
       }
 
       setCurrentSessionId(sessionToken);
       setIsSessionValid(true);
+      console.log('Session registered successfully:', sessionToken);
       return sessionToken;
     } catch (err) {
       console.error('Unexpected error registering session:', err);
-      return null;
+      throw err; // Re-throw to allow calling code to handle
     }
-  }, [generateSessionToken]);
+  }, [generateSessionToken, currentSessionId]);
 
   // Check if current session is still valid
   const validateSession = useCallback(async (sessionToken: string) => {
@@ -104,55 +111,72 @@ export const useSessionManager = () => {
     }
   }, []);
 
-  // Set up realtime listener for session revocation
+  // Set up realtime listener for session revocation with error handling
   useEffect(() => {
     if (!currentSessionId) return;
 
-    const channel = supabase
-      .channel('session-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'user_sessions',
-          filter: `session_token=eq.${currentSessionId}`
-        },
-        (payload) => {
-          const session = payload.new as any;
-          
-          if (!session.is_active || session.revoked_at) {
-            setIsSessionValid(false);
-            toast({
-              title: "Session Terminated",
-              description: "Your account has been accessed from another location. You have been logged out for security.",
-              variant: "destructive",
-            });
-            
-            // Sign out the user
-            setTimeout(() => {
-              supabase.auth.signOut();
-            }, 2000);
+    try {
+      const channel = supabase
+        .channel('session-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'user_sessions',
+            filter: `session_token=eq.${currentSessionId}`
+          },
+          (payload) => {
+            try {
+              const session = payload.new as any;
+              
+              if (!session.is_active || session.revoked_at) {
+                setIsSessionValid(false);
+                toast({
+                  title: "Session Terminated",
+                  description: "Your account has been accessed from another location. You have been logged out for security.",
+                  variant: "destructive",
+                });
+                
+                // Sign out the user
+                setTimeout(() => {
+                  supabase.auth.signOut();
+                }, 2000);
+              }
+            } catch (error) {
+              console.error('Error handling session change:', error);
+            }
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+      return () => {
+        try {
+          supabase.removeChannel(channel);
+        } catch (error) {
+          console.error('Error removing channel:', error);
+        }
+      };
+    } catch (error) {
+      console.error('Error setting up realtime listener:', error);
+    }
   }, [currentSessionId, toast]);
 
-  // Periodic session validation
+  // Periodic session validation with error handling
   useEffect(() => {
     if (!currentSessionId || !isSessionValid) return;
 
     const interval = setInterval(async () => {
-      const isValid = await validateSession(currentSessionId);
-      if (isValid) {
-        await updateSessionActivity(currentSessionId);
+      try {
+        const isValid = await validateSession(currentSessionId);
+        if (isValid) {
+          await updateSessionActivity(currentSessionId);
+        }
+      } catch (error) {
+        console.error('Error in periodic session validation:', error);
+        // Don't crash, just log the error
       }
-    }, 30000); // Check every 30 seconds
+    }, 60000); // Increased to 60 seconds to reduce load
 
     return () => clearInterval(interval);
   }, [currentSessionId, isSessionValid, validateSession, updateSessionActivity]);
