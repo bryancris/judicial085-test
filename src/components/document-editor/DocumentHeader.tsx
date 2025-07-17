@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Printer, Share, Save } from "lucide-react";
+import { Printer, Save } from "lucide-react";
 
 interface DocumentHeaderProps {
   documentTitle: string;
@@ -43,9 +43,6 @@ const DocumentHeader: React.FC<DocumentHeaderProps> = ({
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={onPrint}>
             <Printer className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm">
-            <Share className="h-4 w-4" />
           </Button>
           <Button onClick={onSave} disabled={isSaving} size="sm">
             <Save className="h-4 w-4 mr-1" />
