@@ -35,26 +35,57 @@ const DocumentToolbar: React.FC<DocumentToolbarProps> = ({ onFormatText }) => {
         
         <Separator orientation="vertical" className="h-6 mx-1" />
         
-        <select className="border rounded px-2 py-1 text-sm bg-white">
-          <option>Normal text</option>
-          <option>Heading 1</option>
-          <option>Heading 2</option>
-          <option>Heading 3</option>
+        <select 
+          className="border rounded px-2 py-1 text-sm bg-white"
+          onChange={(e) => {
+            const value = e.target.value;
+            if (value === 'Normal text') {
+              onFormatText('formatBlock', 'div');
+            } else if (value === 'Heading 1') {
+              onFormatText('formatBlock', 'h1');
+            } else if (value === 'Heading 2') {
+              onFormatText('formatBlock', 'h2');
+            } else if (value === 'Heading 3') {
+              onFormatText('formatBlock', 'h3');
+            }
+          }}
+        >
+          <option value="Normal text">Normal text</option>
+          <option value="Heading 1">Heading 1</option>
+          <option value="Heading 2">Heading 2</option>
+          <option value="Heading 3">Heading 3</option>
         </select>
         
-        <select className="border rounded px-2 py-1 text-sm bg-white ml-2">
-          <option>Arial</option>
-          <option>Times New Roman</option>
-          <option>Calibri</option>
-          <option>Georgia</option>
+        <select 
+          className="border rounded px-2 py-1 text-sm bg-white ml-2"
+          onChange={(e) => onFormatText('fontName', e.target.value)}
+        >
+          <option value="Arial">Arial</option>
+          <option value="Times New Roman">Times New Roman</option>
+          <option value="Calibri">Calibri</option>
+          <option value="Georgia">Georgia</option>
         </select>
         
-        <select className="border rounded px-2 py-1 text-sm bg-white ml-2">
-          <option>11</option>
-          <option>12</option>
-          <option>14</option>
-          <option>16</option>
-          <option>18</option>
+        <select 
+          className="border rounded px-2 py-1 text-sm bg-white ml-2"
+          onChange={(e) => {
+            const size = e.target.value;
+            // Map pixel sizes to HTML font size values (1-7)
+            const sizeMap: { [key: string]: string } = {
+              '11': '2',
+              '12': '3', 
+              '14': '4',
+              '16': '5',
+              '18': '6'
+            };
+            onFormatText('fontSize', sizeMap[size] || '3');
+          }}
+        >
+          <option value="11">11</option>
+          <option value="12">12</option>
+          <option value="14">14</option>
+          <option value="16">16</option>
+          <option value="18">18</option>
         </select>
         
         <Separator orientation="vertical" className="h-6 mx-1" />
