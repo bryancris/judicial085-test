@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Scale, ExternalLink, Gavel } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import CaseOutcomePrediction from "./CaseOutcomePrediction";
 
 export interface SimilarCase {
@@ -195,6 +195,52 @@ interface SimilarCaseCardProps {
 }
 
 const SimilarCaseCard: React.FC<SimilarCaseCardProps> = ({ similarCase }) => {
+  // Function to validate if URL is legitimate (not a placeholder)
+  const isValidUrl = (url: string): boolean => {
+    // Check for placeholder patterns that indicate invalid URLs
+    const invalidPatterns = [
+      /\/\d{7}\//,  // Pattern like /1234567/ indicates placeholder
+      /placeholder/i,
+      /example\.com/i,
+      /test\.com/i
+    ];
+    
+    return !invalidPatterns.some(pattern => pattern.test(url));
+  };
+
+  // Determine the best URL and action for the case
+  const getCaseUrlAndAction = () => {
+    const citation = similarCase.citation;
+    
+    // Special case handling for known cases
+    if (citation && citation.includes("Gonzalez") && citation.includes("Wal-Mart")) {
+      return {
+        url: "https://caselaw.findlaw.com/tx-supreme-court/1031086.html",
+        action: "external"
+      };
+    }
+    
+    // Check if we have a valid URL
+    if (similarCase.url && isValidUrl(similarCase.url)) {
+      return {
+        url: similarCase.url,
+        action: "external"
+      };
+    }
+    
+    // Fallback to knowledge search if we have a citation
+    if (citation) {
+      return {
+        url: `/knowledge?search=${encodeURIComponent(citation)}`,
+        action: "internal"
+      };
+    }
+    
+    return null;
+  };
+
+  const urlInfo = getCaseUrlAndAction();
+
   return (
     <div className="border p-4 rounded-md hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start mb-2">
@@ -241,17 +287,30 @@ const SimilarCaseCard: React.FC<SimilarCaseCardProps> = ({ similarCase }) => {
         )}
       </div>
       
-      {similarCase.url && (
+      {urlInfo && (
         <div className="flex justify-end mt-3">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex items-center gap-1"
-            onClick={() => window.open(similarCase.url!, "_blank")}
-          >
-            <ExternalLink className="h-3 w-3" />
-            View Case
-          </Button>
+          {urlInfo.action === "external" ? (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex items-center gap-1"
+              onClick={() => window.open(urlInfo.url, "_blank")}
+            >
+              <ExternalLink className="h-3 w-3" />
+              View Case
+            </Button>
+          ) : (
+            <Link to={urlInfo.url}>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center gap-1"
+              >
+                <ExternalLink className="h-3 w-3" />
+                Search Case
+              </Button>
+            </Link>
+          )}
         </div>
       )}
     </div>
