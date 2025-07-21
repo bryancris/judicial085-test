@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Scale, ExternalLink, Gavel } from "lucide-react";
@@ -37,8 +36,6 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
   analysisFound = true,
   fallbackUsed = false
 }) => {
-  
-  
   // Calculate outcome prediction based on similar cases
   const calculateOutcome = () => {
     if (!similarCases || similarCases.length === 0) {
@@ -250,7 +247,7 @@ const SimilarCaseCard: React.FC<SimilarCaseCardProps> = ({ similarCase }) => {
             {similarCase.source === "internal" ? "Firm Case" : "Court Opinion"}
           </Badge>
           <Badge variant="outline">
-            {Math.round(similarCase.similarity * 100)}% match
+            {Math.round(similarCase.similarity)}% match
           </Badge>
         </div>
       </div>
