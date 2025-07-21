@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Scale, ExternalLink, Gavel } from "lucide-react";
@@ -192,17 +193,50 @@ interface SimilarCaseCardProps {
 }
 
 const SimilarCaseCard: React.FC<SimilarCaseCardProps> = ({ similarCase }) => {
-  // Function to validate if URL is legitimate (not a placeholder)
+  // Enhanced function to validate if URL is legitimate (not AI-generated)
   const isValidUrl = (url: string): boolean => {
     // Check for placeholder patterns that indicate invalid URLs
     const invalidPatterns = [
       /\/\d{7}\//,  // Pattern like /1234567/ indicates placeholder
       /placeholder/i,
       /example\.com/i,
-      /test\.com/i
+      /test\.com/i,
+      /\/opinions\/\d{4}\/\d{1,2}\/\d+\//,  // Suspicious CourtListener pattern with short numbers
+      /\/\d{1,3}\/$/,  // URLs ending with very short numbers
+      /\/[A-Z]\/$/,    // URLs ending with single letters
     ];
     
+    // Additional validation for CourtListener URLs
+    if (url.includes('courtlistener.com')) {
+      // Check for obviously fake docket numbers (too short or simple)
+      const docketMatch = url.match(/\/(\d+)\//);
+      if (docketMatch) {
+        const docketNumber = docketMatch[1];
+        // Real CourtListener docket numbers are typically longer
+        if (docketNumber.length < 6) {
+          return false;
+        }
+      }
+    }
+    
     return !invalidPatterns.some(pattern => pattern.test(url));
+  };
+
+  // Function to validate if citation is legitimate (not AI placeholder)
+  const isValidCitation = (citation: string): boolean => {
+    if (!citation) return false;
+    
+    // Check for obvious placeholder citations
+    const invalidCitations = [
+      /^[A-Z]$/,           // Single letters like "N", "9"
+      /^\d{1,2}$/,         // Single or double digits
+      /^U\.S\. ___$/,      // Incomplete citations
+      /placeholder/i,
+      /example/i,
+      /test/i
+    ];
+    
+    return !invalidCitations.some(pattern => pattern.test(citation.trim()));
   };
 
   // Determine the best URL and action for the case
@@ -225,10 +259,18 @@ const SimilarCaseCard: React.FC<SimilarCaseCardProps> = ({ similarCase }) => {
       };
     }
     
-    // Fallback to knowledge search if we have a citation
-    if (citation) {
+    // Fallback to knowledge search if we have a valid citation
+    if (citation && isValidCitation(citation)) {
       return {
         url: `/knowledge?search=${encodeURIComponent(citation)}`,
+        action: "internal"
+      };
+    }
+    
+    // If we have a case name but no valid URL/citation, search by case name
+    if (similarCase.clientName && similarCase.clientName !== "Unknown Case") {
+      return {
+        url: `/knowledge?search=${encodeURIComponent(similarCase.clientName)}`,
         action: "internal"
       };
     }
@@ -265,7 +307,7 @@ const SimilarCaseCard: React.FC<SimilarCaseCardProps> = ({ similarCase }) => {
           </div>
         )}
         
-        {similarCase.citation && (
+        {similarCase.citation && isValidCitation(similarCase.citation) && (
           <div>
             <span className="font-medium">Citation:</span> {similarCase.citation}
           </div>
