@@ -193,92 +193,64 @@ interface SimilarCaseCardProps {
 }
 
 const SimilarCaseCard: React.FC<SimilarCaseCardProps> = ({ similarCase }) => {
-  // Enhanced function to validate if URL is legitimate (not AI-generated)
-  const isValidUrl = (url: string): boolean => {
-    // Check for placeholder patterns that indicate invalid URLs
-    const invalidPatterns = [
-      /\/\d{7}\//,  // Pattern like /1234567/ indicates placeholder
-      /placeholder/i,
-      /example\.com/i,
-      /test\.com/i,
-      /\/opinions\/\d{4}\/\d{1,2}\/\d+\//,  // Suspicious CourtListener pattern with short numbers
-      /\/\d{1,3}\/$/,  // URLs ending with very short numbers
-      /\/[A-Z]\/$/,    // URLs ending with single letters
-    ];
+  // Much stricter URL validation - only allow known working URLs
+  const isValidWorkingUrl = (url: string): boolean => {
+    // Only allow URLs we know work or can verify
     
-    // Additional validation for CourtListener URLs
-    if (url.includes('courtlistener.com')) {
-      // Check for obviously fake docket numbers (too short or simple)
-      const docketMatch = url.match(/\/(\d+)\//);
-      if (docketMatch) {
-        const docketNumber = docketMatch[1];
-        // Real CourtListener docket numbers are typically longer
-        if (docketNumber.length < 6) {
-          return false;
-        }
-      }
+    // Allow known working URLs (like our hardcoded ones)
+    if (url.includes('caselaw.findlaw.com') || 
+        url.includes('supreme.justia.com') ||
+        url.includes('law.justia.com')) {
+      return true;
     }
     
-    return !invalidPatterns.some(pattern => pattern.test(url));
+    // For CourtListener URLs, be extremely strict
+    if (url.includes('courtlistener.com')) {
+      // Must have realistic docket pattern
+      const docketMatch = url.match(/\/(\d+)\//);
+      if (!docketMatch) return false;
+      
+      const docketNumber = docketMatch[1];
+      
+      // Reject obviously fake patterns
+      if (docketNumber.length < 7 || // Too short
+          /^[0-9]{1,3}$/.test(docketNumber) || // Just 1-3 digits
+          /^1234567/.test(docketNumber) || // Starts with obvious placeholder
+          docketNumber === '0000000') { // All zeros
+        return false;
+      }
+      
+      // Must have reasonable court abbreviation
+      if (!url.match(/\/[a-z]{2,10}\//)) {
+        return false;
+      }
+      
+      return true;
+    }
+    
+    // Reject all other URLs as potentially fake
+    return false;
   };
 
-  // Function to validate if citation is legitimate (not AI placeholder)
-  const isValidCitation = (citation: string): boolean => {
-    if (!citation) return false;
-    
-    // Check for obvious placeholder citations
-    const invalidCitations = [
-      /^[A-Z]$/,           // Single letters like "N", "9"
-      /^\d{1,2}$/,         // Single or double digits
-      /^U\.S\. ___$/,      // Incomplete citations
-      /placeholder/i,
-      /example/i,
-      /test/i
-    ];
-    
-    return !invalidCitations.some(pattern => pattern.test(citation.trim()));
-  };
-
-  // Determine the best URL and action for the case
-  const getCaseUrlAndAction = () => {
+  // Get external URL only if it's validated and working
+  const getValidExternalUrl = (): string | null => {
     const citation = similarCase.citation;
     
-    // Special case handling for known cases
+    // Special case for Gonzalez v. Wal-Mart - we know this URL works
     if (citation && citation.includes("Gonzalez") && citation.includes("Wal-Mart")) {
-      return {
-        url: "https://caselaw.findlaw.com/tx-supreme-court/1031086.html",
-        action: "external"
-      };
+      return "https://caselaw.findlaw.com/tx-supreme-court/1031086.html";
     }
     
-    // Check if we have a valid URL
-    if (similarCase.url && isValidUrl(similarCase.url)) {
-      return {
-        url: similarCase.url,
-        action: "external"
-      };
+    // Only return URL if it passes strict validation
+    if (similarCase.url && isValidWorkingUrl(similarCase.url)) {
+      return similarCase.url;
     }
     
-    // Fallback to knowledge search if we have a valid citation
-    if (citation && isValidCitation(citation)) {
-      return {
-        url: `/knowledge?search=${encodeURIComponent(citation)}`,
-        action: "internal"
-      };
-    }
-    
-    // If we have a case name but no valid URL/citation, search by case name
-    if (similarCase.clientName && similarCase.clientName !== "Unknown Case") {
-      return {
-        url: `/knowledge?search=${encodeURIComponent(similarCase.clientName)}`,
-        action: "internal"
-      };
-    }
-    
+    // No valid URL found - don't show any button
     return null;
   };
 
-  const urlInfo = getCaseUrlAndAction();
+  const validUrl = getValidExternalUrl();
 
   return (
     <div className="border p-4 rounded-md hover:shadow-md transition-shadow">
@@ -307,7 +279,7 @@ const SimilarCaseCard: React.FC<SimilarCaseCardProps> = ({ similarCase }) => {
           </div>
         )}
         
-        {similarCase.citation && isValidCitation(similarCase.citation) && (
+        {similarCase.citation && (
           <div>
             <span className="font-medium">Citation:</span> {similarCase.citation}
           </div>
@@ -326,30 +298,18 @@ const SimilarCaseCard: React.FC<SimilarCaseCardProps> = ({ similarCase }) => {
         )}
       </div>
       
-      {urlInfo && (
+      {/* Only show button if we have a validated, working external URL */}
+      {validUrl && (
         <div className="flex justify-end mt-3">
-          {urlInfo.action === "external" ? (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="flex items-center gap-1"
-              onClick={() => window.open(urlInfo.url, "_blank")}
-            >
-              <ExternalLink className="h-3 w-3" />
-              View Case
-            </Button>
-          ) : (
-            <Link to={urlInfo.url}>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex items-center gap-1"
-              >
-                <ExternalLink className="h-3 w-3" />
-                Search Case
-              </Button>
-            </Link>
-          )}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex items-center gap-1"
+            onClick={() => window.open(validUrl, "_blank")}
+          >
+            <ExternalLink className="h-3 w-3" />
+            View Case
+          </Button>
         </div>
       )}
     </div>
