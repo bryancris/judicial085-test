@@ -2,3 +2,6 @@ project_id = "ghpljdgecjmhkwkfctgy"
 
 [functions.perplexity-research]
 verify_jwt = true
+
+[functions.search-similar-cases]
+verify_jwt = true
