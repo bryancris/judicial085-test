@@ -9,6 +9,8 @@ import { processMarkdown } from "@/utils/markdownProcessor";
 import { processLawReferencesSync } from "@/utils/lawReferenceUtils";
 import ResearchFindingsButton from "./ResearchFindingsButton";
 import ResearchActions from "./ResearchActions";
+import CaseDiscussionCitations from "./CaseDiscussionCitations";
+import { useCaseDiscussionCitations } from "@/hooks/useCaseDiscussionCitations";
 
 interface CaseDiscussionMessageItemProps {
   message: CaseDiscussionMessage;
@@ -22,6 +24,9 @@ const CaseDiscussionMessageItem: React.FC<CaseDiscussionMessageItemProps> = ({
   onFindingsAdded 
 }) => {
   const isAttorney = message.role === "attorney";
+  
+  // Fetch citations for this message if it contains research
+  const { citations } = useCaseDiscussionCitations(clientId || '', message.content);
   
   // Check if message contains research results (updated for new format)
   const hasResearchSection = message.content.includes("🔍 Legal Research Analysis") || message.content.includes("## 📚 Legal Research Results");
@@ -123,6 +128,16 @@ const CaseDiscussionMessageItem: React.FC<CaseDiscussionMessageItemProps> = ({
             </div>
           )}
         </div>
+        
+        {/* Display citations for research messages */}
+        {!isAttorney && hasResearchSection && citations.length > 0 && (
+          <CaseDiscussionCitations
+            citations={citations}
+            researchType={researchType}
+            isCompact={true}
+          />
+        )}
+        
         <span className="text-xs mt-1 text-muted-foreground">{message.timestamp}</span>
       </div>
     </div>
