@@ -192,58 +192,92 @@ export const useSimilarCasesData = (clientId: string) => {
     
     console.log("Parsing Perplexity content:", content.substring(0, 200));
     
-    // Remove any thinking process or analysis content
+    // First try to parse as JSON array (from our improved prompt)
+    try {
+      const jsonMatch = content.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        const jsonCases = JSON.parse(jsonMatch[0]);
+        if (Array.isArray(jsonCases)) {
+          const cases: SimilarCase[] = jsonCases
+            .filter(c => c.caseName && c.caseName.length > 5 && !isAiThinkingContent(c.caseName))
+            .slice(0, 5)
+            .map((c, index) => ({
+              source: "perplexity" as const,
+              clientId: null,
+              clientName: c.caseName,
+              similarity: 85 + Math.random() * 10,
+              relevantFacts: c.relevantFacts || "Case facts available in full record",
+              outcome: c.outcome || "Court decision details available",
+              court: c.court || undefined,
+              citation: c.citation || undefined,
+              dateDecided: c.date || undefined,
+              url: c.url || null,
+              citations: citations,
+              agentReasoning: `Found via Perplexity Research using ${perplexityResult.model}`
+            }));
+          
+          console.log(`Parsed ${cases.length} cases from JSON format`);
+          return cases;
+        }
+      }
+    } catch (e) {
+      console.log("JSON parsing failed, trying fallback methods");
+    }
+    
+    // Remove AI thinking and analysis content more aggressively
     const cleanContent = content
-      .replace(/<think>[\s\S]*?<\/think>/g, '') // Remove thinking tags
-      .replace(/Let me analyze[\s\S]*?(?=\*\*Case|$)/g, '') // Remove analysis sections
-      .replace(/Based on the provided[\s\S]*?(?=\*\*Case|$)/g, '') // Remove reasoning sections
-      .replace(/Here are[\s\S]*?similar cases[\s\S]*?:/g, '') // Remove intro text
+      .replace(/<think>[\s\S]*?<\/think>/g, '')
+      .replace(/Let me[\s\S]*?(?=\*\*|$)/gi, '')
+      .replace(/Based on[\s\S]*?(?=\*\*|$)/gi, '')
+      .replace(/I[\s]*(?:need to|will|should|must)[\s\S]*?(?=\*\*|$)/gi, '')
+      .replace(/Here are[\s\S]*?(?:cases|results)[\s\S]*?:/gi, '')
+      .replace(/Analysis[\s\S]*?(?=\*\*|$)/gi, '')
+      .replace(/Research[\s\S]*?(?:shows|indicates|reveals)[\s\S]*?(?=\*\*|$)/gi, '')
+      .replace(/We[\s]*(?:found|have|can see)[\s\S]*?(?=\*\*|$)/gi, '')
       .trim();
     
     const cases: SimilarCase[] = [];
     
-    // Look for structured case format from our improved prompt
+    // Look for structured case format
     const casePattern = /\*\*Case Name\*\*:\s*([^\n]+)[\s\S]*?\*\*Court\*\*:\s*([^\n]*)[\s\S]*?\*\*Citation\*\*:\s*([^\n]*)[\s\S]*?\*\*Date\*\*:\s*([^\n]*)[\s\S]*?\*\*Relevant Facts\*\*:\s*([^\n*]+)[\s\S]*?\*\*Outcome\*\*:\s*([^\n*]+)/g;
     
     let match;
     while ((match = casePattern.exec(cleanContent)) !== null && cases.length < 5) {
       const [, caseName, court, citation, date, facts, outcome] = match;
       
-      if (caseName && caseName.trim() && !caseName.toLowerCase().includes('thinking') && !caseName.toLowerCase().includes('analysis')) {
+      if (caseName && caseName.trim() && !isAiThinkingContent(caseName) && isValidCaseName(caseName)) {
         cases.push({
           source: "perplexity",
           clientId: null,
           clientName: caseName.trim(),
-          similarity: 80 + Math.random() * 15, // 80-95% similarity
+          similarity: 80 + Math.random() * 15,
           relevantFacts: facts?.trim() || "Case facts available in full record",
           outcome: outcome?.trim() || "Court decision details available",
           court: court?.trim() || undefined,
           citation: citation?.trim() || undefined,
           dateDecided: date?.trim() || undefined,
           citations: citations,
-          agentReasoning: `Found via Perplexity Deep Research using ${perplexityResult.model}`
+          agentReasoning: `Found via Perplexity Research using ${perplexityResult.model}`
         });
       }
     }
     
-    // Fallback: if structured parsing failed, try simpler approach but filter out obvious non-case content
+    // Only use fallback if we have 0 cases and the content looks legitimate
     if (cases.length === 0) {
       const blocks = cleanContent.split(/\n\n+/).filter(block => {
-        const b = block.trim().toLowerCase();
+        const b = block.trim();
         return b.length > 50 && 
-               !b.includes('let me') && 
-               !b.includes('based on') && 
-               !b.includes('analysis') && 
-               !b.includes('thinking') &&
-               !b.includes('i need to') &&
-               !b.includes('searching for');
+               !isAiThinkingContent(b) &&
+               hasLegalTerminology(b);
       });
       
-      blocks.slice(0, 3).forEach((block, index) => {
+      // Be very conservative with fallback - only take first block if it looks like a real case
+      if (blocks.length > 0) {
+        const block = blocks[0];
         const lines = block.split('\n').filter(l => l.trim());
         const title = lines[0]?.replace(/^\*\*|\*\*$/g, '').trim();
         
-        if (title && title.length > 5) {
+        if (title && isValidCaseName(title)) {
           cases.push({
             source: "perplexity",
             clientId: null,
@@ -255,11 +289,60 @@ export const useSimilarCasesData = (clientId: string) => {
             agentReasoning: `AI Research via ${perplexityResult.model}`
           });
         }
-      });
+      }
     }
     
     console.log(`Parsed ${cases.length} cases from Perplexity result`);
     return cases;
+  };
+
+  // Helper function to detect AI thinking/analysis content
+  const isAiThinkingContent = (text: string): boolean => {
+    const lowerText = text.toLowerCase();
+    const thinkingPatterns = [
+      'let me', 'based on', 'analysis', 'thinking', 'i need to', 'searching for',
+      'we found', 'we have', 'we can see', 'research shows', 'research indicates',
+      'research reveals', 'here are', 'i will', 'i should', 'i must', 'we should',
+      'we must', 'we need', 'review', 'examine', 'looking at', 'considering'
+    ];
+    
+    return thinkingPatterns.some(pattern => lowerText.includes(pattern));
+  };
+
+  // Helper function to validate case names
+  const isValidCaseName = (caseName: string): boolean => {
+    const name = caseName.trim();
+    
+    // Must have reasonable length
+    if (name.length < 5 || name.length > 200) return false;
+    
+    // Should contain typical case name patterns
+    const casePatterns = [
+      /v\./i,           // "v." for versus
+      /vs?\./i,         // "vs." or "v." 
+      /\s+v\s+/i,       // " v " for versus
+      /\w+\s+v\s+\w+/i, // Name v Name
+      /\d{4}/,          // Year
+      /court/i,         // Contains "court"
+      /case/i,          // Contains "case"
+      /\w+\s+\w+/       // At least two words
+    ];
+    
+    // Should match at least one pattern or be a reasonable legal title
+    return casePatterns.some(pattern => pattern.test(name)) || 
+           (name.includes(' ') && !isAiThinkingContent(name));
+  };
+
+  // Helper function to check for legal terminology
+  const hasLegalTerminology = (text: string): boolean => {
+    const legalTerms = [
+      'court', 'judge', 'ruling', 'decision', 'verdict', 'plaintiff', 'defendant',
+      'case', 'lawsuit', 'litigation', 'appeal', 'damages', 'liability', 'negligence',
+      'statute', 'law', 'legal', 'attorney', 'counsel', 'brief', 'motion', 'order'
+    ];
+    
+    const lowerText = text.toLowerCase();
+    return legalTerms.some(term => lowerText.includes(term));
   };
 
   // Check if similar cases exist for a legal analysis

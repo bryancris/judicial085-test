@@ -65,18 +65,27 @@ serve(async (req) => {
     if (searchType === 'legal-research') {
       enhancedQuery = `Legal research: ${query}. Focus on current Texas law, recent cases, statutes, and legal precedents. Provide citations and sources.`;
     } else if (searchType === 'similar-cases') {
-      enhancedQuery = `Find similar legal cases with specific details: ${query}. 
+      enhancedQuery = `Find verified legal cases similar to: ${query}
 
-For each similar case, provide ONLY factual information in this structured format:
-**Case Name**: [Exact case name]
-**Court**: [Specific court name]
-**Citation**: [Legal citation]
-**Date**: [Decision date]
-**Relevant Facts**: [Key facts that make this case similar]
-**Outcome**: [Actual court decision/outcome]
-**URL**: [Direct link to case if available]
+Return ONLY a JSON array of cases in this exact format:
+[
+  {
+    "caseName": "Exact case name v. Defendant",
+    "court": "Specific court name",
+    "citation": "Legal citation",
+    "date": "Decision date",
+    "relevantFacts": "Key facts that make this case similar",
+    "outcome": "Actual court decision/outcome",
+    "url": "Direct link if available"
+  }
+]
 
-Do NOT include any thinking process, analysis, or reasoning. Only provide verified case information from legal databases.`;
+Requirements:
+- Maximum 5 cases
+- Only real, verified legal cases
+- No analysis, reasoning, or thinking process
+- No introductory text or explanations
+- Must be valid JSON format`;
     }
 
     if (context) {
@@ -90,11 +99,13 @@ Do NOT include any thinking process, analysis, or reasoning. Only provide verifi
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: model,
+        model: searchType === 'similar-cases' ? 'sonar-pro' : model,
         messages: [
           {
             role: 'system',
-            content: 'You are a legal research expert. Provide accurate, well-cited legal information with proper source attribution. Focus on current law and relevant precedents.'
+            content: searchType === 'similar-cases' 
+              ? 'You are a legal case database. Return only verified case information in the requested JSON format. Do not include analysis, reasoning, or explanations.'
+              : 'You are a legal research expert. Provide accurate, well-cited legal information with proper source attribution. Focus on current law and relevant precedents.'
           },
           {
             role: 'user',
