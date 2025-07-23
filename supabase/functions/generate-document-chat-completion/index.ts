@@ -1,7 +1,11 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.52.0';
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,18 +18,59 @@ serve(async (req) => {
   }
 
   try {
-    const { userMessage, documentTitle, documentContent, clientId } = await req.json();
+    const { userMessage, documentTitle, documentContent, clientId, caseId } = await req.json();
 
     // Check if this is a document creation request
     const isDocumentCreationRequest = /\b(create|write|draft|generate|make)\b.*\b(document|contract|letter|memo|brief|discovery|motion|pleading|agreement|will|trust)\b/i.test(userMessage);
 
-    // Prepare context for the AI
-    const systemPrompt = `You are an expert legal document assistant. You help users create, review, and improve legal documents. 
+    // Fetch client and case information if available
+    let clientInfo = null;
+    let caseInfo = null;
+    
+    if (clientId) {
+      const { data: client } = await supabase
+        .from('clients')
+        .select('first_name, last_name, email, phone, address, city, state, zip_code')
+        .eq('id', clientId)
+        .single();
+      clientInfo = client;
+    }
+    
+    if (caseId) {
+      const { data: caseData } = await supabase
+        .from('cases')
+        .select('case_title, case_type, case_description, case_notes, status')
+        .eq('id', caseId)
+        .single();
+      caseInfo = caseData;
+    }
 
+    // Prepare context for the AI
+    const contextInfo = `
 Current document context:
 - Title: "${documentTitle}"
 - Content: ${documentContent ? `"${documentContent}"` : "Empty document"}
-- Client ID: ${clientId}
+
+${clientInfo ? `
+Client Information:
+- Name: ${clientInfo.first_name} ${clientInfo.last_name}
+- Email: ${clientInfo.email}
+- Phone: ${clientInfo.phone}
+- Address: ${clientInfo.address ? `${clientInfo.address}, ${clientInfo.city}, ${clientInfo.state} ${clientInfo.zip_code}` : 'Not provided'}
+` : ''}
+
+${caseInfo ? `
+Case Information:
+- Case Title: ${caseInfo.case_title}
+- Case Type: ${caseInfo.case_type || 'Not specified'}
+- Case Description: ${caseInfo.case_description || 'Not provided'}
+- Case Notes: ${caseInfo.case_notes || 'None'}
+- Status: ${caseInfo.status}
+` : ''}`;
+
+    const systemPrompt = `You are an expert legal document assistant. You help users create, review, and improve legal documents. 
+
+${contextInfo}
 
 Guidelines:
 - Provide specific, actionable advice about legal documents

@@ -12,6 +12,7 @@ interface DocumentChatSidebarProps {
   documentTitle: string;
   documentContent: string;
   clientId: string;
+  caseId?: string;
   onDocumentUpdate?: (content: string) => void;
 }
 
@@ -26,6 +27,7 @@ const DocumentChatSidebar: React.FC<DocumentChatSidebarProps> = ({
   documentTitle,
   documentContent,
   clientId,
+  caseId,
   onDocumentUpdate
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -61,7 +63,8 @@ const DocumentChatSidebar: React.FC<DocumentChatSidebarProps> = ({
         content,
         documentTitle,
         documentContent,
-        clientId
+        clientId,
+        caseId
       );
 
       if (response.error) {

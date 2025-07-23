@@ -4,6 +4,7 @@ import GoogleDocsEditor from "@/components/document-editor/GoogleDocsEditor";
 import TemplateSelector from "./TemplateSelector";
 import { useToast } from "@/hooks/use-toast";
 import { useDocumentProcessor } from "@/hooks/documents/useDocumentProcessor";
+import { useCase } from "@/contexts/CaseContext";
 
 interface KnowledgeTabContentProps {
   clientId: string;
@@ -11,6 +12,7 @@ interface KnowledgeTabContentProps {
 
 const KnowledgeTabContent: React.FC<KnowledgeTabContentProps> = ({ clientId }) => {
   const { toast } = useToast();
+  const { currentCase } = useCase();
   const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
   const [showTemplateSelector, setShowTemplateSelector] = useState(true);
   const [initialTitle, setInitialTitle] = useState<string>("Untitled document");
@@ -99,6 +101,7 @@ const KnowledgeTabContent: React.FC<KnowledgeTabContentProps> = ({ clientId }) =
       documentId={currentDocumentId || undefined}
       initialTitle={initialTitle}
       initialContent={initialContent}
+      caseId={currentCase?.id}
     />
   );
 };

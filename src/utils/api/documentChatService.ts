@@ -5,14 +5,16 @@ export const generateDocumentChatCompletion = async (
   userMessage: string,
   documentTitle: string,
   documentContent: string,
-  clientId: string
+  clientId: string,
+  caseId?: string
 ): Promise<{ text: string; documentContent?: string; error?: string }> => {
   try {
     const { data, error } = await invokeFunction<{ text: string; documentContent?: string }>("generate-document-chat-completion", { 
       userMessage,
       documentTitle,
       documentContent,
-      clientId 
+      clientId,
+      caseId
     });
 
     if (error) {

@@ -13,6 +13,7 @@ interface GoogleDocsEditorProps {
   documentId?: string; // Optional document ID for existing documents
   initialTitle?: string; // Optional initial title
   initialContent?: string; // Optional initial content
+  caseId?: string; // Optional case ID for context
 }
 
 const GoogleDocsEditor: React.FC<GoogleDocsEditorProps> = ({ 
@@ -20,7 +21,8 @@ const GoogleDocsEditor: React.FC<GoogleDocsEditorProps> = ({
   onSave,
   documentId: initialDocumentId,
   initialTitle = "Untitled document",
-  initialContent = ""
+  initialContent = "",
+  caseId
 }) => {
   const [documentTitle, setDocumentTitle] = useState(initialTitle);
   const [documentContent, setDocumentContent] = useState(initialContent);
@@ -175,6 +177,7 @@ const GoogleDocsEditor: React.FC<GoogleDocsEditorProps> = ({
             documentTitle={documentTitle}
             documentContent={documentContent}
             clientId={clientId}
+            caseId={caseId}
             onDocumentUpdate={(content) => {
               if (editorRef.current) {
                 editorRef.current.innerHTML = content;
