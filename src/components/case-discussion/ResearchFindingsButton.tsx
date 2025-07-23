@@ -110,6 +110,16 @@ const ResearchFindingsButton: React.FC<ResearchFindingsButtonProps> = ({
           }
         }
         
+        // Check for research updates integration (look for similar content patterns)
+        const contentWords = content.toLowerCase().split(/\s+/).filter(word => word.length > 3);
+        const analysisWords = analysis.content.toLowerCase().split(/\s+/);
+        const matchingWords = contentWords.filter(word => analysisWords.includes(word));
+        
+        // If substantial content overlap (>60%) and key legal terms present, consider integrated
+        if (matchingWords.length >= contentWords.length * 0.6 && keyStatutes.length > 0) {
+          return true;
+        }
+        
         // Check if the exact content is already included
         if (analysis.content.includes(content.trim()) || 
             content.trim().includes(analysis.content.trim())) {

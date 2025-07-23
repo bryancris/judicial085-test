@@ -16,6 +16,30 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Function to extract research updates from existing analysis content
+function extractResearchUpdatesFromContent(content: string): any[] {
+  const researchUpdates = [];
+  const updatePattern = /\*\*RESEARCH UPDATE.*?\*\*(.*?)(?=\*\*[A-Z\s]+:\*\*|$)/gs;
+  
+  let match;
+  while ((match = updatePattern.exec(content)) !== null) {
+    const updateContent = match[1].trim();
+    
+    // Extract statutes and topics if possible
+    const statuteMatches = updateContent.match(/(?:Texas [A-Z][a-zA-Z\s&]+ Code §|§)\s*[\d\.\-A-Za-z]+/g) || [];
+    const topicMatches = updateContent.match(/\b(?:DTPA|consumer protection|deceptive practices|animal cruelty|premises liability)\b/gi) || [];
+    
+    researchUpdates.push({
+      content: updateContent,
+      statutes: statuteMatches,
+      topics: topicMatches.map(t => t.toLowerCase()),
+      section: 'relevant sections'
+    });
+  }
+  
+  return researchUpdates;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -70,6 +94,33 @@ serve(async (req) => {
     console.log(`Generating legal analysis for client: ${clientId}${caseId ? `, case: ${caseId}` : ''}`);
     console.log(`Conversation length: ${conversation?.length || 0}`);
     console.log(`Research updates to integrate: ${researchUpdates?.length || 0}`);
+
+    // Fetch existing analysis to preserve research updates
+    let existingResearchUpdates = [];
+    try {
+      let analysisQuery = supabase
+        .from('legal_analyses')
+        .select('content')
+        .eq('client_id', clientId);
+      
+      if (caseId) {
+        analysisQuery = analysisQuery.eq('case_id', caseId);
+      } else {
+        analysisQuery = analysisQuery.is('case_id', null);
+      }
+      
+      const { data: existingAnalyses, error: analysisError } = await analysisQuery
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (!analysisError && existingAnalyses?.length > 0) {
+        const existingContent = existingAnalyses[0].content;
+        existingResearchUpdates = extractResearchUpdatesFromContent(existingContent);
+        console.log(`Found ${existingResearchUpdates.length} existing research updates to preserve`);
+      }
+    } catch (error) {
+      console.log('No existing analysis found or error fetching:', error.message);
+    }
 
     // Check if we have a conversation provided
     const hasProvidedConversation = conversation && conversation.length > 0;
@@ -234,13 +285,16 @@ serve(async (req) => {
       ).join('\n\n')}`;
     }
 
+    // Combine existing and new research updates
+    const allResearchUpdates = [...existingResearchUpdates, ...(researchUpdates || [])];
+    
     // Add research updates context if available
-    if (researchUpdates && researchUpdates.length > 0) {
+    if (allResearchUpdates.length > 0) {
       userContent += "\n\nIMPORTANT: The following research updates should be integrated into the appropriate sections of your analysis:\n\n";
-      researchUpdates.forEach((update, index) => {
-        userContent += `RESEARCH UPDATE ${index + 1} (Target: ${update.section}):\n`;
-        userContent += `Statutes: ${update.statutes.join(', ')}\n`;
-        userContent += `Topics: ${update.topics.join(', ')}\n`;
+      allResearchUpdates.forEach((update, index) => {
+        userContent += `RESEARCH UPDATE ${index + 1} (Target: ${update.section || 'relevant sections'}):\n`;
+        userContent += `Statutes: ${update.statutes ? update.statutes.join(', ') : 'N/A'}\n`;
+        userContent += `Topics: ${update.topics ? update.topics.join(', ') : 'N/A'}\n`;
         userContent += `Content: ${update.content}\n\n`;
       });
       userContent += "Please integrate the specific statute details and legal information from these research updates into the relevant sections of your analysis instead of keeping them as separate updates.";
@@ -251,7 +305,7 @@ serve(async (req) => {
       { role: "user", content: userContent }
     ];
 
-    console.log(`🚀 Sending request to Gemini with ${analysisSource} context and ${researchUpdates?.length || 0} research updates`);
+    console.log(`🚀 Sending request to Gemini with ${analysisSource} context and ${allResearchUpdates.length} total research updates (${existingResearchUpdates.length} preserved + ${researchUpdates?.length || 0} new)`);
     console.log(`📊 Context size: ${userContent.length} characters, System prompt: ${systemPrompt.length} characters`);
 
     // Initialize analysis variable outside try block
@@ -354,7 +408,7 @@ serve(async (req) => {
 
     // Add note about source of analysis
     if (analysis) {
-      const sourceNote = `*Analysis generated from ${analysisSource}${clientDocuments.length > 0 ? ` (${clientDocuments.length} document${clientDocuments.length > 1 ? 's' : ''}: ${clientDocuments.map(doc => doc.title).join(', ')})` : ''}${researchUpdates && researchUpdates.length > 0 ? ` with ${researchUpdates.length} research update(s) integrated` : ''}*\n\n`;
+      const sourceNote = `*Analysis generated from ${analysisSource}${clientDocuments.length > 0 ? ` (${clientDocuments.length} document${clientDocuments.length > 1 ? 's' : ''}: ${clientDocuments.map(doc => doc.title).join(', ')})` : ''}${allResearchUpdates.length > 0 ? ` with ${allResearchUpdates.length} research update(s) integrated` : ''}*\n\n`;
       analysis = sourceNote + analysis;
       console.log(`Legal analysis generated successfully from ${analysisSource} with research integration`);
     }

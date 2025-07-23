@@ -38,24 +38,20 @@ Make sure each question:
 - Is on its own line
 
 After the last follow-up question, don't add any additional content, comments, or new sections. Generate exactly 4 follow-up questions, no more and no less.
+
+${researchUpdates && researchUpdates.length > 0 ? `
+
+CRITICAL INTEGRATION INSTRUCTIONS:
+Research updates have been provided that must be seamlessly integrated into your analysis. DO NOT create separate "Research Update" sections. Instead:
+- Incorporate relevant statutes and legal information into the **RELEVANT TEXAS LAW** section
+- Include factual details and legal implications in the **PRELIMINARY ANALYSIS** section  
+- Address any new legal issues in the **POTENTIAL LEGAL ISSUES** section
+- The content should read as a cohesive analysis, not as separate updates appended to existing content
+- Preserve the important legal details from research updates but present them as part of your comprehensive analysis
+
+IMPORTANT: Do not add "**RESEARCH UPDATE**" headers or treat these as appendices. Integrate the substantive content naturally into the appropriate sections above.` : ''}
 `;
 
-  // Add research updates integration instruction if available
-  if (researchUpdates && researchUpdates.length > 0) {
-    systemPrompt += `
-CRITICAL INSTRUCTION - RESEARCH UPDATES INTEGRATION:
-The user has provided ${researchUpdates.length} research update(s) from previous case discussions that contain detailed legal information. You MUST integrate the specific statute details, legal provisions, and analysis from these research updates into the appropriate sections of your analysis. 
-
-DO NOT create separate "Research Update" sections. Instead:
-- Take the detailed statute information from the research updates and incorporate it directly into the "RELEVANT TEXAS LAW" section
-- Use the specific legal analysis from the research updates to enhance the "PRELIMINARY ANALYSIS" section
-- Incorporate any legal issues identified in the research updates into the "POTENTIAL LEGAL ISSUES" section
-
-For example, if a research update contains detailed DTPA statute information (§ 17.46, treble damages, etc.), integrate that specific information directly into the DTPA portion of the "RELEVANT TEXAS LAW" section rather than keeping it as a separate update.
-
-The goal is to create a cohesive, comprehensive analysis that incorporates all previous research findings seamlessly into the main analysis structure.
-`;
-  }
 
   // Add client documents section if available
   if (clientDocuments.length > 0) {
