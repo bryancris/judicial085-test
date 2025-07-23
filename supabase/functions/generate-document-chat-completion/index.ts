@@ -121,14 +121,14 @@ If the user asks you to review the document, provide specific feedback on struct
 
     // Parse response for document content
     let chatText = generatedText;
-    let documentContent = null;
+    let generatedDocumentContent = null;
 
     if (generatedText.includes('DOCUMENT_CONTENT:')) {
       const parts = generatedText.split('DOCUMENT_CONTENT:');
       if (parts.length === 2) {
         const contentMatch = parts[1].match(/^([^]*?)(?:\n\n|$)/);
         if (contentMatch) {
-          documentContent = contentMatch[1].trim();
+          generatedDocumentContent = contentMatch[1].trim();
           chatText = parts[0].trim() + '\n\n' + parts[1].replace(contentMatch[1], '').trim();
           chatText = chatText.trim();
         }
@@ -137,7 +137,7 @@ If the user asks you to review the document, provide specific feedback on struct
 
     return new Response(JSON.stringify({ 
       text: chatText || generatedText,
-      documentContent: documentContent
+      documentContent: generatedDocumentContent
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
