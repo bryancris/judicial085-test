@@ -11,15 +11,19 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, CheckCircle2 } from 'lucide-react';
+import { DiscoveryCitation } from '@/types/discovery';
+import DiscoveryCitations from './DiscoveryCitations';
 
 interface DiscoveryResponseEditorCardProps {
   generatedResponse: string;
+  citations?: DiscoveryCitation[];
   onSaveResponse: (response: string) => void;
   isGenerating: boolean;
 }
 
 const DiscoveryResponseEditorCard: React.FC<DiscoveryResponseEditorCardProps> = ({
   generatedResponse,
+  citations,
   onSaveResponse,
   isGenerating,
 }) => {
@@ -65,6 +69,11 @@ const DiscoveryResponseEditorCard: React.FC<DiscoveryResponseEditorCardProps> = 
           )}
         </Button>
       </CardFooter>
+      
+      {/* Citations Section */}
+      {citations && citations.length > 0 && (
+        <DiscoveryCitations citations={citations} />
+      )}
     </Card>
   );
 };

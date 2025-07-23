@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { DiscoveryResponse } from '@/types/discovery';
 import { Button } from '@/components/ui/button';
+import DiscoveryCitations from './DiscoveryCitations';
 import {
   Card,
   CardContent,
@@ -167,6 +168,11 @@ const DiscoveryResponseEditor: React.FC<DiscoveryResponseEditorProps> = ({
           )}
         </div>
       </CardFooter>
+      
+      {/* Citations Section */}
+      {response.citations && response.citations.length > 0 && (
+        <DiscoveryCitations citations={response.citations} />
+      )}
     </Card>
   );
 };

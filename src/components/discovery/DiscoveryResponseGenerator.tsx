@@ -18,6 +18,7 @@ const DiscoveryResponseGenerator: React.FC<DiscoveryResponseGeneratorProps> = ({
   const {
     analysis,
     generatedResponse,
+    citations,
     isAnalyzing,
     isGenerating,
     analyzeRequest,
@@ -37,6 +38,7 @@ const DiscoveryResponseGenerator: React.FC<DiscoveryResponseGeneratorProps> = ({
           
           <DiscoveryResponseEditorCard
             generatedResponse={generatedResponse}
+            citations={citations}
             onSaveResponse={saveResponse}
             isGenerating={isGenerating}
           />

@@ -18,6 +18,16 @@ export interface DiscoveryResponse {
   status: 'draft' | 'review' | 'final';
   created_at: string;
   updated_at: string;
+  citations?: DiscoveryCitation[];
+}
+
+export interface DiscoveryCitation {
+  id: string;
+  type: 'external' | 'internal';
+  source: string;
+  title?: string;
+  url?: string;
+  relevance?: number;
 }
 
 export interface DiscoveryTemplate {

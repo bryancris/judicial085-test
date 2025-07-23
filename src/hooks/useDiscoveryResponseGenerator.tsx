@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { DiscoveryRequest, DiscoveryAnalysisResult } from '@/types/discovery';
+import { DiscoveryRequest, DiscoveryAnalysisResult, DiscoveryCitation } from '@/types/discovery';
 import { createDiscoveryResponse } from '@/utils/discoveryService';
 import { useToast } from '@/hooks/use-toast';
 
@@ -13,6 +13,7 @@ export function useDiscoveryResponseGenerator(
   const [isGenerating, setIsGenerating] = useState(false);
   const [analysis, setAnalysis] = useState<DiscoveryAnalysisResult | null>(null);
   const [generatedResponse, setGeneratedResponse] = useState<string>('');
+  const [citations, setCitations] = useState<DiscoveryCitation[]>([]);
   const { toast } = useToast();
 
   const analyzeRequest = async () => {
@@ -39,6 +40,7 @@ export function useDiscoveryResponseGenerator(
 
       setAnalysis(data.analysis);
       setGeneratedResponse(data.responseContent);
+      setCitations(data.citations || []);
     } catch (err: any) {
       toast({
         title: "Error",
@@ -66,6 +68,7 @@ export function useDiscoveryResponseGenerator(
         request_id: request.id,
         content: responseContent,
         status: 'draft' as const,
+        citations: citations,
       };
 
       const { response, error } = await createDiscoveryResponse(responseData);
@@ -99,6 +102,7 @@ export function useDiscoveryResponseGenerator(
   return {
     analysis,
     generatedResponse,
+    citations,
     isAnalyzing,
     isGenerating,
     analyzeRequest,

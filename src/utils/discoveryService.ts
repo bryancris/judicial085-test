@@ -130,9 +130,12 @@ export const createDiscoveryResponse = async (response: Omit<DiscoveryResponse, 
   error?: string;
 }> => {
   try {
+    // Prepare response data, excluding citations for database insert
+    const { citations, ...responseData } = response;
+    
     const { data, error } = await supabase
       .from("discovery_responses")
-      .insert(response)
+      .insert(responseData)
       .select()
       .single();
 
@@ -141,7 +144,13 @@ export const createDiscoveryResponse = async (response: Omit<DiscoveryResponse, 
       return { response: null, error: error.message };
     }
 
-    return { response: data as DiscoveryResponse };
+    // Add citations back to the response object for return
+    const responseWithCitations = {
+      ...data,
+      citations: citations || []
+    } as DiscoveryResponse;
+
+    return { response: responseWithCitations };
   } catch (err: any) {
     console.error("Error creating discovery response:", err);
     return { response: null, error: err.message };
