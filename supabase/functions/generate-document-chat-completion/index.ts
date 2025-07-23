@@ -16,12 +16,16 @@ serve(async (req) => {
   try {
     const { userMessage, documentTitle, documentContent, clientId } = await req.json();
 
+    // Check if this is a document creation request
+    const isDocumentCreationRequest = /\b(create|write|draft|generate|make)\b.*\b(document|contract|letter|memo|brief|discovery|motion|pleading|agreement|will|trust)\b/i.test(userMessage);
+
     // Prepare context for the AI
     const systemPrompt = `You are an expert legal document assistant. You help users create, review, and improve legal documents. 
 
 Current document context:
 - Title: "${documentTitle}"
 - Content: ${documentContent ? `"${documentContent}"` : "Empty document"}
+- Client ID: ${clientId}
 
 Guidelines:
 - Provide specific, actionable advice about legal documents
@@ -31,6 +35,18 @@ Guidelines:
 - For empty documents, help with structure and content generation
 - Consider legal best practices and common document standards
 - Be concise but thorough in your responses
+
+IMPORTANT: If the user is asking you to CREATE, WRITE, DRAFT, or GENERATE document content (not just advice), you must:
+1. Generate the actual document content in proper HTML format
+2. Include proper legal document structure and formatting
+3. Use appropriate legal language and clauses
+4. Start your response with "DOCUMENT_CONTENT:" followed by the complete HTML content
+5. Then provide a separate chat response explaining what you created
+
+Example format for document creation:
+DOCUMENT_CONTENT:<div><h1>Document Title</h1><p>Document content here...</p></div>
+
+I have created a [document type] for you. The document includes [brief description of what was included].
 
 If the user asks you to review the document, provide specific feedback on structure, content, legal language, and areas for improvement.`;
 
@@ -58,7 +74,26 @@ If the user asks you to review the document, provide specific feedback on struct
     const data = await response.json();
     const generatedText = data.choices[0].message.content;
 
-    return new Response(JSON.stringify({ text: generatedText }), {
+    // Parse response for document content
+    let chatText = generatedText;
+    let documentContent = null;
+
+    if (generatedText.includes('DOCUMENT_CONTENT:')) {
+      const parts = generatedText.split('DOCUMENT_CONTENT:');
+      if (parts.length === 2) {
+        const contentMatch = parts[1].match(/^([^]*?)(?:\n\n|$)/);
+        if (contentMatch) {
+          documentContent = contentMatch[1].trim();
+          chatText = parts[0].trim() + '\n\n' + parts[1].replace(contentMatch[1], '').trim();
+          chatText = chatText.trim();
+        }
+      }
+    }
+
+    return new Response(JSON.stringify({ 
+      text: chatText || generatedText,
+      documentContent: documentContent
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {

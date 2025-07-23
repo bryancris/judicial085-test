@@ -73,6 +73,15 @@ const DocumentChatSidebar: React.FC<DocumentChatSidebarProps> = ({
         return;
       }
 
+      // If document content was generated, update the document
+      if (response.documentContent && onDocumentUpdate) {
+        onDocumentUpdate(response.documentContent);
+        toast({
+          title: "Document Updated",
+          description: "I've generated the document content for you!",
+        });
+      }
+
       // Add AI response
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -95,6 +104,7 @@ const DocumentChatSidebar: React.FC<DocumentChatSidebarProps> = ({
   };
 
   const quickActions = [
+    "Create a discovery document",
     "Review this document",
     "Suggest improvements",
     "Check grammar",

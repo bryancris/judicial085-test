@@ -6,9 +6,9 @@ export const generateDocumentChatCompletion = async (
   documentTitle: string,
   documentContent: string,
   clientId: string
-): Promise<{ text: string; error?: string }> => {
+): Promise<{ text: string; documentContent?: string; error?: string }> => {
   try {
-    const { data, error } = await invokeFunction<{ text: string }>("generate-document-chat-completion", { 
+    const { data, error } = await invokeFunction<{ text: string; documentContent?: string }>("generate-document-chat-completion", { 
       userMessage,
       documentTitle,
       documentContent,
@@ -19,7 +19,10 @@ export const generateDocumentChatCompletion = async (
       return { text: "", error };
     }
 
-    return { text: data?.text || "" };
+    return { 
+      text: data?.text || "",
+      documentContent: data?.documentContent
+    };
   } catch (err: any) {
     console.error("Error generating document chat completion:", err);
     return { text: "", error: err.message };
