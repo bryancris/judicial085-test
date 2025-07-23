@@ -56,8 +56,10 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
 
   const outcome = calculateOutcome();
   
-  // Only show court cases
+  // Separate cases by source
   const courtCases = similarCases.filter(c => c.source === "courtlistener");
+  const perplexityCases = similarCases.filter(c => c.source === "perplexity");
+  const internalCases = similarCases.filter(c => c.source === "internal");
   
   if (isLoading) {
     return (
@@ -156,9 +158,21 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
                 {caseType.replace("-", " ")}
               </Badge>
             )}
-            <Badge variant="secondary" className="ml-2">
-              {courtCases.length} Court Opinions
-            </Badge>
+            {perplexityCases.length > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {perplexityCases.length} AI Research
+              </Badge>
+            )}
+            {courtCases.length > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {courtCases.length} Court Opinions
+              </Badge>
+            )}
+            {internalCases.length > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {internalCases.length} Firm Cases
+              </Badge>
+            )}
           </div>
             
             {fallbackUsed && (
@@ -170,16 +184,62 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {courtCases.length > 0 ? (
-              courtCases
-                .sort((a, b) => b.similarity - a.similarity)
-                .map((caseItem, index) => (
-                  <SimilarCaseCard key={index} similarCase={caseItem} />
-                ))
-            ) : (
+            {/* Perplexity AI Research Results */}
+            {perplexityCases.length > 0 && (
+              <div className="mb-6">
+                <h4 className="font-medium text-sm text-muted-foreground mb-3 flex items-center">
+                  <Scale className="h-4 w-4 mr-1" />
+                  AI Research Results ({perplexityCases.length})
+                </h4>
+                <div className="space-y-3">
+                  {perplexityCases
+                    .sort((a, b) => b.similarity - a.similarity)
+                    .map((caseItem, index) => (
+                      <SimilarCaseCard key={`perplexity-${index}`} similarCase={caseItem} />
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* Court Opinion Results */}
+            {courtCases.length > 0 && (
+              <div className="mb-6">
+                <h4 className="font-medium text-sm text-muted-foreground mb-3 flex items-center">
+                  <Gavel className="h-4 w-4 mr-1" />
+                  Court Opinions ({courtCases.length})
+                </h4>
+                <div className="space-y-3">
+                  {courtCases
+                    .sort((a, b) => b.similarity - a.similarity)
+                    .map((caseItem, index) => (
+                      <SimilarCaseCard key={`court-${index}`} similarCase={caseItem} />
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* Internal Firm Cases */}
+            {internalCases.length > 0 && (
+              <div className="mb-6">
+                <h4 className="font-medium text-sm text-muted-foreground mb-3 flex items-center">
+                  <Scale className="h-4 w-4 mr-1" />
+                  Firm Cases ({internalCases.length})
+                </h4>
+                <div className="space-y-3">
+                  {internalCases
+                    .sort((a, b) => b.similarity - a.similarity)
+                    .map((caseItem, index) => (
+                      <SimilarCaseCard key={`internal-${index}`} similarCase={caseItem} />
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* No results message */}
+            {similarCases.length === 0 && (
               <div className="text-center py-8">
-                <Gavel className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                <p className="text-gray-500">No court opinions found</p>
+                <Scale className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                <p className="text-gray-500">No similar cases found</p>
               </div>
             )}
           </div>
@@ -259,7 +319,8 @@ const SimilarCaseCard: React.FC<SimilarCaseCardProps> = ({ similarCase }) => {
         <h3 className="font-medium text-lg">{similarCase.clientName}</h3>
         <div className="flex items-center gap-2">
           <Badge variant={similarCase.source === "internal" ? "default" : "secondary"}>
-            {similarCase.source === "internal" ? "Firm Case" : "Court Opinion"}
+            {similarCase.source === "internal" ? "Firm Case" : 
+             similarCase.source === "perplexity" ? "AI Research" : "Court Opinion"}
           </Badge>
           <Badge variant="outline">
             {Math.round(similarCase.similarity)}% match
