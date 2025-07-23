@@ -36,7 +36,6 @@ const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
     { id: "conversation", label: "Conversation", icon: MessageCircle },
     { id: "notes", label: "Notes", icon: StickyNote },
     { id: "documents", label: "Documents", icon: Upload },
-    { id: "research", label: "Legal Research", icon: Search },
   ];
 
   return (
@@ -103,7 +102,7 @@ const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
       </div>
 
       <div className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full">
-        <div className="grid w-full grid-cols-5">
+        <div className="grid w-full grid-cols-4">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = selectedTab === tab.id;

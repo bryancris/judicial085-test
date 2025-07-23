@@ -2,7 +2,8 @@
 import React from "react";
 import { CaseDiscussionMessage } from "@/utils/caseDiscussionService";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { User, Bot } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { User, Bot, Search, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { processMarkdown } from "@/utils/markdownProcessor";
 import { processLawReferencesSync } from "@/utils/lawReferenceUtils";
@@ -20,6 +21,11 @@ const CaseDiscussionMessageItem: React.FC<CaseDiscussionMessageItemProps> = ({
   onFindingsAdded 
 }) => {
   const isAttorney = message.role === "attorney";
+  
+  // Check if message contains research results
+  const hasResearchSection = message.content.includes("## 📚 Legal Research Results");
+  const researchType = hasResearchSection ? 
+    (message.content.includes("similar court cases") || message.content.includes("Find similar court cases") ? "similar-cases" : "legal-research") : null;
   
   // Process content with markdown and law references
   const processedContent = React.useMemo(() => {
@@ -48,6 +54,25 @@ const CaseDiscussionMessageItem: React.FC<CaseDiscussionMessageItemProps> = ({
         isAttorney ? "items-end" : "items-start",
         "max-w-[80%] md:max-w-[70%]"
       )}>
+        {/* Research indicator badge */}
+        {!isAttorney && hasResearchSection && (
+          <div className="mb-2">
+            <Badge variant="secondary" className="text-xs">
+              {researchType === "similar-cases" ? (
+                <>
+                  <BookOpen className="h-3 w-3 mr-1" />
+                  Similar Cases Research
+                </>
+              ) : (
+                <>
+                  <Search className="h-3 w-3 mr-1" />
+                  Legal Research
+                </>
+              )}
+            </Badge>
+          </div>
+        )}
+        
         <div className={cn(
           "px-4 py-2 rounded-lg relative",
           isAttorney ? "bg-purple-100 text-purple-900" : "bg-blue-100 text-blue-900"

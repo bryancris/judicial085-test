@@ -5,7 +5,7 @@ import AnalysisTabContent from "./AnalysisTabContent";
 import ConversationList from "../conversation/ConversationList";
 import AttorneyNotesList from "../conversation/AttorneyNotesList";
 import ClientDocumentsSection from "../documents/ClientDocumentsSection";
-import LegalResearchTab from "../research/LegalResearchTab";
+
 import { AnalysisData } from "@/hooks/useAnalysisData";
 import { ProcessDocumentContentFunction } from "@/types/caseAnalysis";
 import { ScholarlyArticle } from "@/utils/api/scholarApiService";
@@ -112,15 +112,6 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
         </div>
       )}
 
-      {selectedTab === "research" && (
-        <div className="mt-6">
-          <LegalResearchTab
-            clientId={clientId}
-            caseId={caseId}
-            currentAnalysisId={currentAnalysisId}
-          />
-        </div>
-      )}
     </div>
   );
 };

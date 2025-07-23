@@ -12,6 +12,8 @@ import {
 } from "./clientDataService.ts";
 import { buildCompleteContext } from "./contextBuilders/index.ts";
 import { generateGeminiCaseDiscussion } from "./geminiService.ts";
+import { detectResearchNeed, formatResearchQuery } from "./researchDetection.ts";
+import { performPerplexityResearch } from "./perplexityService.ts";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -78,8 +80,78 @@ serve(async (req) => {
 
     console.log(`Generating case discussion response with Gemini for client: ${clientId}`);
 
+    // Check if the message needs research
+    const researchTrigger = detectResearchNeed(message, previousMessages);
+    console.log(`Research detection result:`, researchTrigger);
+
+    let researchResult = null;
+    let enhancedResponse = "";
+
+    // Perform research if needed
+    if (researchTrigger.needsResearch && researchTrigger.confidence >= 0.6) {
+      try {
+        console.log(`🔍 Performing ${researchTrigger.researchType} research...`);
+        const researchQuery = formatResearchQuery(
+          researchTrigger.extractedQuery, 
+          researchTrigger.researchType, 
+          clientData
+        );
+        
+        researchResult = await performPerplexityResearch(researchQuery, researchTrigger.researchType);
+        console.log(`✅ Research completed, content length: ${researchResult.content.length}`);
+
+        // Save research to database
+        try {
+          const { error: saveError } = await supabaseAdmin
+            .from('perplexity_research')
+            .insert({
+              client_id: clientId,
+              legal_analysis_id: null, // Will be linked to analysis later if needed
+              search_type: researchTrigger.researchType,
+              query: researchResult.query,
+              content: researchResult.content,
+              model: researchResult.model,
+              usage_data: researchResult.usage,
+              citations: researchResult.citations,
+              metadata: {
+                confidence: researchTrigger.confidence,
+                timestamp: new Date().toISOString()
+              }
+            });
+
+          if (saveError) {
+            console.warn('Non-critical error saving research:', saveError);
+          } else {
+            console.log('✅ Research saved to database');
+          }
+        } catch (saveErr) {
+          console.warn('Non-critical error saving research:', saveErr);
+        }
+      } catch (researchError) {
+        console.warn('Research failed, continuing with regular response:', researchError);
+      }
+    }
+
     // Generate AI response using Gemini's 2M context window
     const aiResponse = await generateGeminiCaseDiscussion(contextText, previousMessages, message);
+
+    // Enhanced response with research if available
+    if (researchResult) {
+      enhancedResponse = `${aiResponse}
+
+---
+
+## 📚 Legal Research Results
+
+${researchResult.content}
+
+**Sources and Citations:**
+${researchResult.citations.length > 0 ? researchResult.citations.map(citation => `• ${citation}`).join('\n') : '• Research completed using current legal databases'}
+
+*Research performed using ${researchResult.model}*`;
+    } else {
+      enhancedResponse = aiResponse;
+    }
 
     // Format timestamp for consistency
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -103,7 +175,7 @@ serve(async (req) => {
       supabaseAdmin, 
       clientId, 
       userId, 
-      aiResponse, 
+      enhancedResponse, 
       'ai', 
       timestamp
     );
@@ -112,11 +184,13 @@ serve(async (req) => {
       console.warn('Non-critical error saving AI response:', saveAIError);
     }
 
-    // Return response
+    // Return response with research indicators
     return new Response(
       JSON.stringify({ 
-        response: aiResponse,
-        timestamp: timestamp
+        response: enhancedResponse,
+        timestamp: timestamp,
+        hasResearch: !!researchResult,
+        researchType: researchResult ? researchTrigger.researchType : null
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
