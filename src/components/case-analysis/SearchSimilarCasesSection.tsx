@@ -4,7 +4,7 @@ import { searchSimilarCases } from "@/utils/openaiService";
 import { useToast } from "@/hooks/use-toast";
 import SearchSimilarCasesButton from "./SearchSimilarCasesButton";
 import SimilarCasesDialog from "./SimilarCasesDialog";
-import CaseOutcomePrediction from "./CaseOutcomePrediction";
+
 
 export interface SearchSimilarCasesSectionProps {
   clientId: string;
@@ -22,9 +22,6 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
   const [searchResult, setSearchResult] = useState<any>(null);
   const { toast } = useToast();
   
-  // Default outcome prediction values - will be updated based on case analysis
-  const [outcomeDefense, setOutcomeDefense] = useState(75); // Default to 75% client win likelihood
-  const [outcomeProsecution, setOutcomeProsecution] = useState(25); // Default to 25% case loss risk
 
   // Clear state when clientId changes to prevent showing cached results from previous client
   useEffect(() => {
@@ -34,9 +31,6 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
     setSearchResult(null);
     setIsDialogOpen(false);
     setIsSearchingCases(false);
-    // Reset outcome predictions to defaults
-    setOutcomeDefense(75);
-    setOutcomeProsecution(25);
   }, [clientId]);
 
   const handleSearchSimilarCases = async () => {
@@ -63,28 +57,6 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
       } else {
         setSimilarCases(result.similarCases || []);
         
-        // Update the prediction percentages based on similar cases
-        if (result.similarCases?.length > 0) {
-          let favorableCases = 0;
-          result.similarCases.forEach((c: SimilarCase) => {
-            const outcome = c.outcome?.toLowerCase() || '';
-            if (outcome.includes('favorable') || outcome.includes('victory') || 
-                outcome.includes('ruled in favor') || outcome.includes('prevailed') ||
-                outcome.includes('for the plaintiff') || outcome.includes('for plaintiff') ||
-                outcome.includes('awarded') || outcome.includes('damages')) {
-              favorableCases++;
-            }
-          });
-          
-          // Calculate win likelihood based on similar case outcomes
-          if (result.similarCases.length > 0) {
-            const winRate = (favorableCases / result.similarCases.length) * 100;
-            // Adjust the win percentage but keep it between 25-85% to avoid extreme predictions
-            const adjustedDefense = Math.min(Math.max(winRate, 25), 85);
-            setOutcomeDefense(Math.round(adjustedDefense));
-            setOutcomeProsecution(100 - Math.round(adjustedDefense));
-          }
-        }
         
         // Handle different search outcomes
         if (result.analysisFound === false) {
@@ -169,14 +141,6 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
 
   return (
     <>
-      {/* Add the case outcome prediction bar */}
-      <div className="mb-6">
-        <CaseOutcomePrediction 
-          defense={outcomeDefense} 
-          prosecution={outcomeProsecution}
-          caseType={caseType}
-        />
-      </div>
       
       <SearchSimilarCasesButton 
         onClick={handleSearchSimilarCases}

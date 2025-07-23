@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import CaseOutcomePrediction from "./CaseOutcomePrediction";
+
 
 export interface SimilarCase {
   source: "internal" | "courtlistener" | "perplexity";
@@ -38,23 +38,6 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
   analysisFound = true,
   fallbackUsed = false
 }) => {
-  // Calculate outcome prediction based on similar cases
-  const calculateOutcome = () => {
-    if (!similarCases || similarCases.length === 0) {
-      return { defense: 65, prosecution: 35 };
-    }
-    
-    const favorableOutcomes = similarCases.filter(c => 
-      c.outcome.toLowerCase().includes('favorable') || 
-      c.outcome.toLowerCase().includes('won') ||
-      c.outcome.toLowerCase().includes('success')
-    ).length;
-    
-    const defense = Math.round((favorableOutcomes / similarCases.length) * 100);
-    return { defense: Math.max(defense, 20), prosecution: Math.min(100 - defense, 80) };
-  };
-
-  const outcome = calculateOutcome();
   
   // Separate cases by source
   const courtCases = similarCases.filter(c => c.source === "courtlistener");
@@ -64,12 +47,6 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
   if (isLoading) {
     return (
       <>
-        <CaseOutcomePrediction
-          defense={outcome.defense}
-          prosecution={outcome.prosecution}
-          isLoading={true}
-          caseType={caseType}
-        />
         <Card className="mb-6 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-xl font-semibold flex items-center">
@@ -101,11 +78,6 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
   if (!similarCases || similarCases.length === 0) {
     return (
       <>
-        <CaseOutcomePrediction
-          defense={outcome.defense}
-          prosecution={outcome.prosecution}
-          caseType={caseType}
-        />
         <Card className="mb-6 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-xl font-semibold flex items-center">
@@ -142,11 +114,6 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
 
   return (
     <>
-      <CaseOutcomePrediction
-        defense={outcome.defense}
-        prosecution={outcome.prosecution}
-        caseType={caseType}
-      />
       <Card className="mb-6 shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-xl font-semibold flex items-center justify-between">
