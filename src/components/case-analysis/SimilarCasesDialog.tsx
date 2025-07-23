@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export interface SimilarCase {
-  source: "internal" | "courtlistener";
+  source: "internal" | "courtlistener" | "perplexity";
   clientId: string | null;
   clientName: string;
   similarity: number;
@@ -19,6 +19,8 @@ export interface SimilarCase {
   citation?: string;
   dateDecided?: string;
   url?: string | null;
+  citations?: string[];
+  agentReasoning?: string;
 }
 
 interface SimilarCasesDialogProps {
@@ -45,9 +47,11 @@ const SimilarCasesDialog: React.FC<SimilarCasesDialogProps> = ({
   // Split cases by source
   const internalCases = similarCases.filter(c => c.source === "internal");
   const courtListenerCases = similarCases.filter(c => c.source === "courtlistener");
+  const perplexityCases = similarCases.filter(c => c.source === "perplexity");
   
-  // Default to "court" tab if we have court cases, otherwise "internal"
-  const defaultTab = courtListenerCases.length > 0 ? "court" : "internal";
+  // Default to "perplexity" tab if we have Perplexity cases, otherwise "court", then "internal"
+  const defaultTab = perplexityCases.length > 0 ? "perplexity" : 
+                     courtListenerCases.length > 0 ? "court" : "internal";
 
   // Check if we need to show a message about no analysis
   const needsAnalysis = searchResult?.analysisFound === false;
@@ -119,14 +123,81 @@ const SimilarCasesDialog: React.FC<SimilarCasesDialogProps> = ({
             )}
             
             <Tabs defaultValue={defaultTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-4">
-                <TabsTrigger value="internal" disabled={internalCases.length === 0}>
-                  Firm Cases ({internalCases.length})
+              <TabsList className="grid w-full grid-cols-3 mb-4">
+                <TabsTrigger value="perplexity" disabled={perplexityCases.length === 0}>
+                  AI Research ({perplexityCases.length})
                 </TabsTrigger>
                 <TabsTrigger value="court" disabled={courtListenerCases.length === 0}>
                   Court Opinions ({courtListenerCases.length})
                 </TabsTrigger>
+                <TabsTrigger value="internal" disabled={internalCases.length === 0}>
+                  Firm Cases ({internalCases.length})
+                </TabsTrigger>
               </TabsList>
+              
+              <TabsContent value="perplexity" className="space-y-4">
+                {perplexityCases.length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-muted-foreground">No AI research results found.</p>
+                  </div>
+                ) : (
+                  <>
+                    <Alert>
+                      <Info className="h-4 w-4" />
+                      <AlertDescription className="text-sm">
+                        These results are generated using Perplexity Deep Research with real-time legal database access.
+                      </AlertDescription>
+                    </Alert>
+                    
+                    {perplexityCases.map((perplexityCase, index) => (
+                      <div key={index} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-medium text-lg">{perplexityCase.clientName}</h3>
+                            <Badge variant="outline" className="mt-1 text-xs">
+                              {Math.round(perplexityCase.similarity)}% relevance
+                            </Badge>
+                          </div>
+                          <Badge variant="secondary" className="text-xs">
+                            AI Research
+                          </Badge>
+                        </div>
+                        
+                        <div className="mt-3 text-sm">
+                          <h4 className="font-medium mb-1">Research Findings:</h4>
+                          <p className="text-muted-foreground mb-3 text-sm bg-muted p-2 rounded">{perplexityCase.relevantFacts}</p>
+                          
+                          <h4 className="font-medium mb-1">Analysis:</h4>
+                          <p className="text-muted-foreground mb-3">{perplexityCase.outcome}</p>
+                          
+                          {perplexityCase.agentReasoning && (
+                            <>
+                              <h4 className="font-medium mb-1">Source:</h4>
+                              <p className="text-muted-foreground text-xs mb-3">{perplexityCase.agentReasoning}</p>
+                            </>
+                          )}
+                          
+                          {perplexityCase.citations && perplexityCase.citations.length > 0 && (
+                            <>
+                              <h4 className="font-medium mb-2">Citations:</h4>
+                              <div className="space-y-1">
+                                {perplexityCase.citations.map((citation, citationIndex) => (
+                                  <div key={citationIndex} className="text-xs">
+                                    <Badge variant="outline" className="text-xs mr-2">
+                                      [{citationIndex + 1}]
+                                    </Badge>
+                                    <span className="text-muted-foreground">{citation}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </TabsContent>
               
               <TabsContent value="internal" className="space-y-4">
                 {internalCases.length === 0 ? (
@@ -234,6 +305,11 @@ const SimilarCasesDialog: React.FC<SimilarCasesDialogProps> = ({
                 {courtListenerCases.length > 0 && (
                   <div className="flex items-center justify-center text-xs text-muted-foreground mt-4 pt-4 border-t">
                     <p>Data sourced from CourtListener and Free Law Project</p>
+                  </div>
+                )}
+                {perplexityCases.length > 0 && (
+                  <div className="flex items-center justify-center text-xs text-muted-foreground mt-4 pt-4 border-t">
+                    <p>Research powered by Perplexity Deep Research with real-time legal database access</p>
                   </div>
                 )}
               </TabsContent>

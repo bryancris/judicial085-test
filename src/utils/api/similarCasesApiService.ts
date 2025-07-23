@@ -2,7 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export interface SimilarCase {
-  source: "internal" | "courtlistener";
+  source: "internal" | "courtlistener" | "perplexity";
   clientId: string | null;
   clientName: string;
   similarity: number;
@@ -13,6 +13,7 @@ export interface SimilarCase {
   dateDecided?: string;
   url?: string | null;
   agentReasoning?: string;
+  citations?: string[];
 }
 
 export interface SimilarCasesRecord {
