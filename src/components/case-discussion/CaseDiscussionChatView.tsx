@@ -2,6 +2,7 @@
 import React, { useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import CaseDiscussionMessageItem from "./CaseDiscussionMessageItem";
+import ResearchLoading from "./ResearchLoading";
 import { CaseDiscussionMessage } from "@/utils/caseDiscussionService";
 
 interface CaseDiscussionChatViewProps {
@@ -9,13 +10,17 @@ interface CaseDiscussionChatViewProps {
   isLoading: boolean;
   clientId: string;
   onFindingsAdded?: () => void;
+  researchStage?: 'analyzing' | 'researching' | 'formatting' | 'saving';
+  researchType?: 'similar-cases' | 'legal-research' | 'general';
 }
 
 const CaseDiscussionChatView: React.FC<CaseDiscussionChatViewProps> = ({ 
   messages, 
   isLoading,
   clientId,
-  onFindingsAdded
+  onFindingsAdded,
+  researchStage = 'analyzing',
+  researchType = 'general'
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -45,10 +50,11 @@ const CaseDiscussionChatView: React.FC<CaseDiscussionChatViewProps> = ({
         </div>
       )}
       {isLoading && (
-        <div className="flex items-center gap-2 text-muted-foreground mt-4">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Analyzing and researching...</span>
-        </div>
+        <ResearchLoading 
+          isVisible={isLoading}
+          stage={researchStage}
+          researchType={researchType}
+        />
       )}
     </div>
   );
