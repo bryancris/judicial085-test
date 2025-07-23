@@ -87,6 +87,7 @@ serve(async (req) => {
 
     let researchResult = null;
     let enhancedResponse = "";
+    let savedResearchId = null;
 
     // Perform research if needed
     if (researchTrigger.needsResearch && researchTrigger.confidence >= 0.6) {
@@ -120,7 +121,6 @@ serve(async (req) => {
         }
 
         // Save research to database (will be linked to message later)
-        let savedResearchId = null;
         try {
           const { data: savedResearch, error: saveError } = await supabaseAdmin
             .from('perplexity_research')
