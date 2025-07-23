@@ -65,7 +65,18 @@ serve(async (req) => {
     if (searchType === 'legal-research') {
       enhancedQuery = `Legal research: ${query}. Focus on current Texas law, recent cases, statutes, and legal precedents. Provide citations and sources.`;
     } else if (searchType === 'similar-cases') {
-      enhancedQuery = `Find similar legal cases: ${query}. Search for relevant case law, precedents, and legal decisions with similar facts or legal issues. Include case citations, court decisions, and outcomes.`;
+      enhancedQuery = `Find similar legal cases with specific details: ${query}. 
+
+For each similar case, provide ONLY factual information in this structured format:
+**Case Name**: [Exact case name]
+**Court**: [Specific court name]
+**Citation**: [Legal citation]
+**Date**: [Decision date]
+**Relevant Facts**: [Key facts that make this case similar]
+**Outcome**: [Actual court decision/outcome]
+**URL**: [Direct link to case if available]
+
+Do NOT include any thinking process, analysis, or reasoning. Only provide verified case information from legal databases.`;
     }
 
     if (context) {
