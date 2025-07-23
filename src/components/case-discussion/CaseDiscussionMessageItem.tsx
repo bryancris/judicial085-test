@@ -22,8 +22,8 @@ const CaseDiscussionMessageItem: React.FC<CaseDiscussionMessageItemProps> = ({
 }) => {
   const isAttorney = message.role === "attorney";
   
-  // Check if message contains research results
-  const hasResearchSection = message.content.includes("## 📚 Legal Research Results");
+  // Check if message contains research results (updated for new format)
+  const hasResearchSection = message.content.includes("🔍 Legal Research Analysis") || message.content.includes("## 📚 Legal Research Results");
   const researchType = hasResearchSection ? 
     (message.content.includes("similar court cases") || message.content.includes("Find similar court cases") ? "similar-cases" : "legal-research") : null;
   

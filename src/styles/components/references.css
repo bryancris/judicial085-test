@@ -22,3 +22,40 @@
     border-gray-300 dark:border-gray-600
     text-gray-600 dark:text-gray-300;
 }
+
+/* Enhanced research formatting */
+.research-section {
+  @apply border border-border rounded-lg p-4 my-4
+    bg-gradient-to-r from-blue-50/50 to-indigo-50/50
+    dark:from-blue-950/30 dark:to-indigo-950/30;
+}
+
+.research-metadata {
+  @apply text-xs text-muted-foreground mb-3 p-2
+    bg-secondary/30 rounded border-l-4 border-blue-300 dark:border-blue-600;
+}
+
+.citation-group {
+  @apply mb-4 last:mb-0;
+}
+
+.citation-item {
+  @apply flex items-start gap-2 py-1 px-2 rounded
+    hover:bg-secondary/50 transition-colors;
+}
+
+.confidence-indicator {
+  @apply inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium;
+}
+
+.confidence-high {
+  @apply bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200;
+}
+
+.confidence-medium {
+  @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200;
+}
+
+.confidence-low {
+  @apply bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200;
+}

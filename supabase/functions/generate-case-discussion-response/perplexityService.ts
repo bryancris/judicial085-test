@@ -4,6 +4,14 @@
 
 import { getEnvVars } from "./config.ts";
 
+export interface Citation {
+  text: string;
+  type: 'case' | 'statute' | 'regulation' | 'url' | 'other';
+  jurisdiction?: string;
+  year?: string;
+  relevance?: number;
+}
+
 export interface PerplexityResearchResult {
   content: string;
   model: string;
@@ -12,8 +20,15 @@ export interface PerplexityResearchResult {
     completion_tokens: number;
     total_tokens: number;
   };
-  citations: string[];
+  citations: Citation[];
+  rawCitations: string[];
   query: string;
+  confidence: number;
+  researchMetadata: {
+    searchTime: number;
+    primaryAuthorities: number;
+    secondaryAuthorities: number;
+  };
 }
 
 /**
@@ -87,15 +102,28 @@ export const performPerplexityResearch = async (
   const content = data.choices[0].message.content;
   const usage = data.usage || { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
   
-  // Extract citations from the content (look for URLs and case citations)
-  const citationRegex = /https?:\/\/[^\s]+|[\w\s]+\s+v\.?\s+[\w\s]+,?\s+\d+/gi;
-  const citations = content.match(citationRegex) || [];
+  const startTime = Date.now();
+  
+  // Enhanced citation extraction with better patterns
+  const rawCitations = extractCitations(content);
+  const structuredCitations = categorizeAndEnhanceCitations(rawCitations);
+  
+  const searchTime = Date.now() - startTime;
+  const primaryAuthorities = structuredCitations.filter(c => c.type === 'case' || c.type === 'statute').length;
+  const secondaryAuthorities = structuredCitations.filter(c => c.type === 'url' || c.type === 'other').length;
+  
+  // Calculate confidence based on citation quality and quantity
+  const confidence = calculateResearchConfidence(structuredCitations, content.length);
 
   console.log(`✅ Perplexity research completed:`, {
     model,
     query,
     resultLength: content.length,
-    citations: citations.length,
+    structuredCitations: structuredCitations.length,
+    primaryAuthorities,
+    secondaryAuthorities,
+    confidence,
+    searchTime,
     usage
   });
 
@@ -103,7 +131,123 @@ export const performPerplexityResearch = async (
     content,
     model,
     usage,
-    citations,
-    query
+    citations: structuredCitations,
+    rawCitations,
+    query,
+    confidence,
+    researchMetadata: {
+      searchTime,
+      primaryAuthorities,
+      secondaryAuthorities
+    }
   };
+};
+
+/**
+ * Enhanced citation extraction with multiple patterns
+ */
+const extractCitations = (content: string): string[] => {
+  const citationPatterns = [
+    // Case law citations with reporters
+    /([A-Z][a-z\s&,.']+\s+v\.?\s+[A-Z][a-z\s&,.']+),?\s+(\d+\s+[A-Za-z.]+\s+\d+)\s*\(([^)]+)\s+(\d{4})\)/gi,
+    // Simple case citations
+    /([A-Z][a-z\s&,.']+\s+v\.?\s+[A-Z][a-z\s&,.']+)/gi,
+    // U.S. Code citations
+    /(\d+)\s+U\.?S\.?C\.?\s+[§§]?\s*(\d+[\w\-\.]*)/gi,
+    // CFR citations
+    /(\d+)\s+C\.?F\.?R\.?\s+[§§]?\s*(\d+[\w\-\.]*)/gi,
+    // State statute citations
+    /([A-Z][a-z\s]+)\s+(Code|Stat\.?|Rev\.?\s+Stat\.?)\s+[§§]?\s*(\d+[\w\-\.]*)/gi,
+    // Federal Rules
+    /(Fed\.?\s+R\.?\s+(Civ\.?\s+P\.|Evid\.?|Crim\.?\s+P\.?))\s+(\d+[\w\-\.]*)/gi,
+    // URLs
+    /https?:\/\/[^\s)]+/gi,
+    // Generic section references
+    /[§§]\s*(\d+[\w\-\.]*)/gi
+  ];
+
+  const citations: string[] = [];
+  
+  citationPatterns.forEach(pattern => {
+    const matches = content.matchAll(pattern);
+    for (const match of matches) {
+      citations.push(match[0].trim());
+    }
+  });
+  
+  return [...new Set(citations)]; // Remove duplicates
+};
+
+/**
+ * Categorize and enhance citations with metadata
+ */
+const categorizeAndEnhanceCitations = (rawCitations: string[]): Citation[] => {
+  return rawCitations.map(citation => {
+    const lowerCitation = citation.toLowerCase();
+    
+    // Determine citation type
+    let type: Citation['type'] = 'other';
+    let jurisdiction: string | undefined;
+    let year: string | undefined;
+    
+    if (citation.includes(' v. ') || citation.includes(' v ')) {
+      type = 'case';
+      // Extract year from case citation
+      const yearMatch = citation.match(/\(.*(\d{4}).*\)/);
+      if (yearMatch) year = yearMatch[1];
+      
+      // Extract jurisdiction
+      const jurisdictionMatch = citation.match(/\(([^)]+)\s+\d{4}\)/);
+      if (jurisdictionMatch) jurisdiction = jurisdictionMatch[1];
+    } else if (lowerCitation.includes('u.s.c') || lowerCitation.includes('usc')) {
+      type = 'statute';
+      jurisdiction = 'Federal';
+    } else if (lowerCitation.includes('c.f.r') || lowerCitation.includes('cfr')) {
+      type = 'regulation';
+      jurisdiction = 'Federal';
+    } else if (lowerCitation.includes('code') || lowerCitation.includes('stat')) {
+      type = 'statute';
+      // Try to extract state from statute citation
+      const stateMatch = citation.match(/^([A-Z][a-z\s]+)\s+(Code|Stat)/);
+      if (stateMatch) jurisdiction = stateMatch[1];
+    } else if (citation.startsWith('http')) {
+      type = 'url';
+    }
+    
+    // Calculate relevance score (simplified)
+    let relevance = 0.5;
+    if (type === 'case') relevance = 0.9;
+    else if (type === 'statute') relevance = 0.8;
+    else if (type === 'regulation') relevance = 0.7;
+    else if (type === 'url') relevance = 0.3;
+    
+    return {
+      text: citation,
+      type,
+      jurisdiction,
+      year,
+      relevance
+    };
+  }).sort((a, b) => (b.relevance || 0) - (a.relevance || 0)); // Sort by relevance
+};
+
+/**
+ * Calculate confidence score based on citation quality
+ */
+const calculateResearchConfidence = (citations: Citation[], contentLength: number): number => {
+  let confidence = 0.3; // Base confidence
+  
+  // Quality of citations
+  const primaryCount = citations.filter(c => c.type === 'case' || c.type === 'statute').length;
+  const totalCount = citations.length;
+  
+  if (primaryCount > 0) confidence += 0.3;
+  if (primaryCount >= 3) confidence += 0.2;
+  if (totalCount >= 5) confidence += 0.1;
+  
+  // Content quality indicator
+  if (contentLength > 500) confidence += 0.1;
+  if (contentLength > 1000) confidence += 0.1;
+  
+  return Math.min(confidence, 1.0);
 };

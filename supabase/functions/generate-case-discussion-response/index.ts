@@ -14,6 +14,7 @@ import { buildCompleteContext } from "./contextBuilders/index.ts";
 import { generateGeminiCaseDiscussion } from "./geminiService.ts";
 import { detectResearchNeed, formatResearchQuery } from "./researchDetection.ts";
 import { performPerplexityResearch } from "./perplexityService.ts";
+import { formatEnhancedResearchResponse } from "./responseFormatter.ts";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -137,18 +138,7 @@ serve(async (req) => {
 
     // Enhanced response with research if available
     if (researchResult) {
-      enhancedResponse = `${aiResponse}
-
----
-
-## 📚 Legal Research Results
-
-${researchResult.content}
-
-**Sources and Citations:**
-${researchResult.citations.length > 0 ? researchResult.citations.map(citation => `• ${citation}`).join('\n') : '• Research completed using current legal databases'}
-
-*Research performed using ${researchResult.model}*`;
+      enhancedResponse = formatEnhancedResearchResponse(aiResponse, researchResult);
     } else {
       enhancedResponse = aiResponse;
     }
