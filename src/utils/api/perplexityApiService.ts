@@ -123,7 +123,7 @@ export const savePerplexityResearch = async (
   try {
     console.log("Saving Perplexity research to database:", { clientId, legalAnalysisId, searchType });
     
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("perplexity_research")
       .insert({
         client_id: clientId,
@@ -161,21 +161,13 @@ export const loadPerplexityResearch = async (
   legalAnalysisId: string,
   searchType?: string
 ): Promise<{ 
-  results: Array<{
-    id: string;
-    search_type: string;
-    query: string;
-    content: string;
-    model: string;
-    citations: string[];
-    created_at: string;
-  }>; 
+  results: any[]; 
   error?: string 
 }> => {
   try {
     console.log("Loading Perplexity research from database:", { clientId, legalAnalysisId, searchType });
     
-    let query = supabase
+    let query = (supabase as any)
       .from("perplexity_research")
       .select("*")
       .eq("client_id", clientId)

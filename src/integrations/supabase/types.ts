@@ -791,6 +791,51 @@ export type Database = {
         }
         Relationships: []
       }
+      perplexity_research: {
+        Row: {
+          citations: string[] | null
+          client_id: string
+          content: string
+          created_at: string
+          id: string
+          legal_analysis_id: string
+          metadata: Json | null
+          model: string
+          query: string
+          search_type: string
+          updated_at: string
+          usage_data: Json | null
+        }
+        Insert: {
+          citations?: string[] | null
+          client_id: string
+          content: string
+          created_at?: string
+          id?: string
+          legal_analysis_id: string
+          metadata?: Json | null
+          model: string
+          query: string
+          search_type: string
+          updated_at?: string
+          usage_data?: Json | null
+        }
+        Update: {
+          citations?: string[] | null
+          client_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          legal_analysis_id?: string
+          metadata?: Json | null
+          model?: string
+          query?: string
+          search_type?: string
+          updated_at?: string
+          usage_data?: Json | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
