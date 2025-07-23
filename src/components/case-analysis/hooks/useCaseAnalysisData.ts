@@ -215,6 +215,7 @@ export const useCaseAnalysisData = (clientId: string, caseId?: string) => {
     clientDocuments,
     documentsLoading,
     processDocument,
-    isProcessingDocument
+    isProcessingDocument,
+    currentAnalysisId
   };
 };

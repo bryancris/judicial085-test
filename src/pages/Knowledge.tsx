@@ -10,12 +10,11 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ScholarlyResearch from '@/components/knowledge/ScholarlyResearch';
 import TexasLawDocuments from '@/components/knowledge/TexasLawDocuments';
-import LegalResearch from '@/components/knowledge/LegalResearch';
 
 const Knowledge = () => {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [debugMode, setDebugMode] = useState(false);
-  const [activeTab, setActiveTab] = useState<"documents" | "scholarly" | "law" | "research">("documents");
+  const [activeTab, setActiveTab] = useState<"documents" | "scholarly" | "law">("documents");
   
   const {
     session,
@@ -103,7 +102,7 @@ const Knowledge = () => {
         
         <Tabs 
           value={activeTab} 
-          onValueChange={(value) => setActiveTab(value as "documents" | "scholarly" | "law" | "research")}
+          onValueChange={(value) => setActiveTab(value as "documents" | "scholarly" | "law")}
           className="mb-6"
         >
           <TabsList>
@@ -118,10 +117,6 @@ const Knowledge = () => {
             <TabsTrigger value="law" className="flex items-center gap-1">
               <Scale className="h-4 w-4" />
               Texas Law Documents
-            </TabsTrigger>
-            <TabsTrigger value="research" className="flex items-center gap-1">
-              <BookOpen className="h-4 w-4" />
-              Legal Research
             </TabsTrigger>
           </TabsList>
           
@@ -191,10 +186,6 @@ const Knowledge = () => {
 
           <TabsContent value="law" className="mt-6">
             <TexasLawDocuments />
-          </TabsContent>
-          
-          <TabsContent value="research" className="mt-6">
-            <LegalResearch />
           </TabsContent>
         </Tabs>
       </main>

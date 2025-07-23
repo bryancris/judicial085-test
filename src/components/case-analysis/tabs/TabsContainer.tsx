@@ -5,6 +5,7 @@ import AnalysisTabContent from "./AnalysisTabContent";
 import ConversationList from "../conversation/ConversationList";
 import AttorneyNotesList from "../conversation/AttorneyNotesList";
 import ClientDocumentsSection from "../documents/ClientDocumentsSection";
+import LegalResearchTab from "../research/LegalResearchTab";
 import { AnalysisData } from "@/hooks/useAnalysisData";
 import { ProcessDocumentContentFunction } from "@/types/caseAnalysis";
 import { ScholarlyArticle } from "@/utils/api/scholarApiService";
@@ -15,6 +16,8 @@ interface TabsContainerProps {
   analysisData: AnalysisData;
   isLoading: boolean;
   clientId: string;
+  caseId?: string;
+  currentAnalysisId?: string;
   conversation: any[];
   conversationLoading: boolean;
   notes: any[];
@@ -38,6 +41,8 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
   analysisData,
   isLoading,
   clientId,
+  caseId,
+  currentAnalysisId,
   conversation,
   conversationLoading,
   notes,
@@ -103,6 +108,16 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
             onDeleteDocument={async () => {}}
             onToggleDocumentAnalysis={async () => {}}
             isProcessing={isProcessingDocument}
+          />
+        </div>
+      )}
+
+      {selectedTab === "research" && (
+        <div className="mt-6">
+          <LegalResearchTab
+            clientId={clientId}
+            caseId={caseId}
+            currentAnalysisId={currentAnalysisId}
           />
         </div>
       )}

@@ -53,7 +53,8 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
     clientDocuments,
     documentsLoading,
     processDocument,
-    isProcessingDocument
+    isProcessingDocument,
+    currentAnalysisId
   } = useCaseAnalysisData(clientId, caseId);
 
   // Get analysis generation functionality
@@ -141,6 +142,8 @@ const CaseAnalysisContainer: React.FC<CaseAnalysisContainerProps> = ({
         analysisData={analysisData}
         isLoading={isCombinedLoading}
         clientId={clientId}
+        caseId={caseId}
+        currentAnalysisId={currentAnalysisId}
         conversation={conversation}
         conversationLoading={conversationLoading}
         notes={notes}
