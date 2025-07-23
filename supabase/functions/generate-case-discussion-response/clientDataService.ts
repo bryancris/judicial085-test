@@ -130,7 +130,7 @@ export const fetchClientMessages = async (supabaseAdmin: any, clientId: string) 
 // Save case discussion messages
 export const saveCaseDiscussion = async (supabaseAdmin: any, clientId: string, userId: string, content: string, role: 'attorney' | 'ai', timestamp: string) => {
   try {
-    const { error } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from('case_discussions')
       .insert({
         client_id: clientId,
@@ -138,16 +138,18 @@ export const saveCaseDiscussion = async (supabaseAdmin: any, clientId: string, u
         content,
         role,
         timestamp
-      });
+      })
+      .select('id')
+      .single();
 
     if (error) {
       console.error(`Error saving ${role} message:`, error);
-      return error;
+      return { data: null, error };
     }
     
-    return null;
+    return { data, error: null };
   } catch (err) {
     console.error(`Error in saveCaseDiscussion for ${role}:`, err);
-    return err;
+    return { data: null, error: err };
   }
 };

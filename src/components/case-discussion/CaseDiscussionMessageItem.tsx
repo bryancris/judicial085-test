@@ -103,6 +103,7 @@ const CaseDiscussionMessageItem: React.FC<CaseDiscussionMessageItemProps> = ({
               clientId={clientId}
               researchType={researchType}
               confidence={confidence}
+              researchId={undefined} // Will be enhanced when message metadata is available
               onSaveToAnalysis={onFindingsAdded}
               onResearchFurther={() => {
                 // This could trigger additional research

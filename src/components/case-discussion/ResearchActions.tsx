@@ -14,12 +14,14 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useResearchIntegration } from "@/hooks/useResearchIntegration";
 
 interface ResearchActionsProps {
   messageContent: string;
   clientId: string;
-  researchType?: 'similar-cases' | 'legal-research' | null;
+  researchType?: string | null;
   confidence?: number;
+  researchId?: string;
   onSaveToAnalysis?: () => void;
   onResearchFurther?: () => void;
 }
@@ -29,6 +31,7 @@ const ResearchActions: React.FC<ResearchActionsProps> = ({
   clientId,
   researchType,
   confidence,
+  researchId,
   onSaveToAnalysis,
   onResearchFurther
 }) => {
@@ -37,18 +40,16 @@ const ResearchActions: React.FC<ResearchActionsProps> = ({
   const [isResearching, setIsResearching] = useState(false);
   const [hasSaved, setHasSaved] = useState(false);
   const { toast } = useToast();
+  const { saveResearchToAnalysis, linkResearchToAnalysis } = useResearchIntegration(clientId);
 
   const handleSaveToAnalysis = async () => {
     setIsSaving(true);
     try {
-      // Simulate API call - replace with actual implementation
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setHasSaved(true);
-      onSaveToAnalysis?.();
-      toast({
-        title: "Research Saved",
-        description: "Research findings have been added to the legal analysis.",
-      });
+      const success = await saveResearchToAnalysis(messageContent);
+      if (success) {
+        setHasSaved(true);
+        onSaveToAnalysis?.();
+      }
     } catch (error) {
       toast({
         title: "Save Failed",

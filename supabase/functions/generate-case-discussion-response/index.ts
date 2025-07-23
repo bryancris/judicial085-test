@@ -101,9 +101,28 @@ serve(async (req) => {
         researchResult = await performPerplexityResearch(researchQuery, researchTrigger.researchType);
         console.log(`✅ Research completed, content length: ${researchResult.content.length}`);
 
-        // Save research to database
+        // Check for similar existing research to avoid duplicates
         try {
-          const { error: saveError } = await supabaseAdmin
+          const { data: similarResearch, error: similarError } = await supabaseAdmin
+            .rpc('find_similar_research', {
+              client_id_param: clientId,
+              search_type_param: researchTrigger.researchType,
+              query_param: researchResult.query,
+              similarity_threshold: 0.7
+            });
+
+          if (!similarError && similarResearch && similarResearch.length > 0) {
+            console.log(`📋 Found ${similarResearch.length} similar research entries`);
+            // Optionally use existing research or combine with new research
+          }
+        } catch (similarErr) {
+          console.warn('Non-critical error checking similar research:', similarErr);
+        }
+
+        // Save research to database (will be linked to message later)
+        let savedResearchId = null;
+        try {
+          const { data: savedResearch, error: saveError } = await supabaseAdmin
             .from('perplexity_research')
             .insert({
               client_id: clientId,
@@ -113,17 +132,21 @@ serve(async (req) => {
               content: researchResult.content,
               model: researchResult.model,
               usage_data: researchResult.usage,
-              citations: researchResult.citations,
+              citations: researchResult.rawCitations, // Use raw citations array for database
               metadata: {
-                confidence: researchTrigger.confidence,
+                confidence: researchResult.confidence,
+                researchMetadata: researchResult.researchMetadata,
                 timestamp: new Date().toISOString()
               }
-            });
+            })
+            .select('id')
+            .single();
 
           if (saveError) {
             console.warn('Non-critical error saving research:', saveError);
           } else {
-            console.log('✅ Research saved to database');
+            savedResearchId = savedResearch?.id;
+            console.log('✅ Research saved to database with ID:', savedResearchId);
           }
         } catch (saveErr) {
           console.warn('Non-critical error saving research:', saveErr);
@@ -147,7 +170,7 @@ serve(async (req) => {
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     
     // Save attorney's message using admin client
-    const saveAttorneyError = await saveCaseDiscussion(
+    const { data: attorneyMessage, error: saveAttorneyError } = await saveCaseDiscussion(
       supabaseAdmin, 
       clientId, 
       userId, 
@@ -161,7 +184,7 @@ serve(async (req) => {
     }
 
     // Save AI's response using admin client
-    const saveAIError = await saveCaseDiscussion(
+    const { data: aiMessage, error: saveAIError } = await saveCaseDiscussion(
       supabaseAdmin, 
       clientId, 
       userId, 
@@ -174,13 +197,36 @@ serve(async (req) => {
       console.warn('Non-critical error saving AI response:', saveAIError);
     }
 
+    // Link research to the AI message if both were saved successfully
+    if (savedResearchId && aiMessage && !saveAIError) {
+      try {
+        const { error: linkError } = await supabaseAdmin
+          .from('perplexity_research')
+          .update({
+            case_discussion_id: aiMessage.id,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', savedResearchId);
+
+        if (linkError) {
+          console.warn('Non-critical error linking research to message:', linkError);
+        } else {
+          console.log('✅ Research linked to AI message');
+        }
+      } catch (linkErr) {
+        console.warn('Non-critical error linking research:', linkErr);
+      }
+    }
+
     // Return response with research indicators
     return new Response(
       JSON.stringify({ 
         response: enhancedResponse,
         timestamp: timestamp,
         hasResearch: !!researchResult,
-        researchType: researchResult ? researchTrigger.researchType : null
+        researchType: researchResult ? researchTrigger.researchType : null,
+        researchId: savedResearchId,
+        confidence: researchResult ? researchResult.confidence : null
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

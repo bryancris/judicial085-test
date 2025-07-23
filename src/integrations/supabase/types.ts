@@ -793,6 +793,7 @@ export type Database = {
       }
       perplexity_research: {
         Row: {
+          case_discussion_id: string | null
           citations: string[] | null
           client_id: string
           content: string
@@ -807,6 +808,7 @@ export type Database = {
           usage_data: Json | null
         }
         Insert: {
+          case_discussion_id?: string | null
           citations?: string[] | null
           client_id: string
           content: string
@@ -821,6 +823,7 @@ export type Database = {
           usage_data?: Json | null
         }
         Update: {
+          case_discussion_id?: string | null
           citations?: string[] | null
           client_id?: string
           content?: string
@@ -834,7 +837,15 @@ export type Database = {
           updated_at?: string
           usage_data?: Json | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "perplexity_research_case_discussion_id_fkey"
+            columns: ["case_discussion_id"]
+            isOneToOne: false
+            referencedRelation: "case_discussions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -1089,6 +1100,35 @@ export type Database = {
         Args: { client_id_param: string }
         Returns: undefined
       }
+      find_similar_research: {
+        Args: {
+          client_id_param: string
+          search_type_param: string
+          query_param: string
+          similarity_threshold?: number
+        }
+        Returns: {
+          id: string
+          query: string
+          content: string
+          similarity_score: number
+          created_at: string
+        }[]
+      }
+      get_case_discussion_research: {
+        Args: { discussion_id_param: string }
+        Returns: {
+          id: string
+          search_type: string
+          query: string
+          content: string
+          model: string
+          citations: string[]
+          usage_data: Json
+          metadata: Json
+          created_at: string
+        }[]
+      }
       get_case_documents: {
         Args: { case_id_param: string }
         Returns: {
@@ -1112,6 +1152,28 @@ export type Database = {
           client_id: string
           case_id: string
           case_title: string
+        }[]
+      }
+      get_client_research_for_analysis: {
+        Args: { client_id_param: string; legal_analysis_id_param?: string }
+        Returns: {
+          id: string
+          search_type: string
+          query: string
+          content: string
+          citations: string[]
+          created_at: string
+          case_discussion_id: string
+        }[]
+      }
+      get_client_research_stats: {
+        Args: { client_id_param: string }
+        Returns: {
+          total_research_count: number
+          similar_cases_count: number
+          legal_research_count: number
+          recent_research_count: number
+          avg_confidence: number
         }[]
       }
       get_user_firm_id: {
@@ -1176,6 +1238,10 @@ export type Database = {
       l2_normalize: {
         Args: { "": string } | { "": unknown } | { "": unknown }
         Returns: unknown
+      }
+      link_research_to_analysis: {
+        Args: { research_id_param: string; legal_analysis_id_param: string }
+        Returns: boolean
       }
       match_documents: {
         Args: { query_embedding: string; match_count?: number; filter?: Json }
