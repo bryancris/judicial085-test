@@ -4,10 +4,8 @@ import { TabsContent } from "@/components/ui/tabs";
 import AnalysisTabContent from "./AnalysisTabContent";
 import ConversationList from "../conversation/ConversationList";
 import AttorneyNotesList from "../conversation/AttorneyNotesList";
-import ClientDocumentsSection from "../documents/ClientDocumentsSection";
 
 import { AnalysisData } from "@/hooks/useAnalysisData";
-import { ProcessDocumentContentFunction } from "@/types/caseAnalysis";
 import { ScholarlyArticle } from "@/utils/api/scholarApiService";
 import { SimilarCase } from "../SimilarCasesSection";
 
@@ -22,10 +20,6 @@ interface TabsContainerProps {
   conversationLoading: boolean;
   notes: any[];
   notesLoading: boolean;
-  clientDocuments: any[];
-  documentsLoading: boolean;
-  processDocument: ProcessDocumentContentFunction;
-  isProcessingDocument: boolean;
   scholarlyReferences: ScholarlyArticle[];
   isScholarlyReferencesLoading: boolean;
   onScholarSearch: (query: string) => void;
@@ -47,10 +41,6 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
   conversationLoading,
   notes,
   notesLoading,
-  clientDocuments,
-  documentsLoading,
-  processDocument,
-  isProcessingDocument,
   scholarlyReferences,
   isScholarlyReferencesLoading,
   onScholarSearch,
@@ -98,19 +88,6 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
         </div>
       )}
 
-      {selectedTab === "documents" && (
-        <div className="mt-6">
-          <ClientDocumentsSection
-            clientId={clientId}
-            documents={clientDocuments}
-            isLoading={documentsLoading}
-            onProcessDocument={processDocument}
-            onDeleteDocument={async () => {}}
-            onToggleDocumentAnalysis={async () => {}}
-            isProcessing={isProcessingDocument}
-          />
-        </div>
-      )}
 
     </div>
   );

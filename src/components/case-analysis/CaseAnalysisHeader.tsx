@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { FileText, MessageCircle, StickyNote, Upload, Sparkles, RefreshCw, Search } from "lucide-react";
+import { FileText, MessageCircle, StickyNote, RefreshCw, Search, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ExportButton } from "./export/ExportButton";
 
@@ -35,7 +35,6 @@ const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
     { id: "analysis", label: "Analysis", icon: FileText },
     { id: "conversation", label: "Conversation", icon: MessageCircle },
     { id: "notes", label: "Notes", icon: StickyNote },
-    { id: "documents", label: "Documents", icon: Upload },
   ];
 
   return (
@@ -102,7 +101,7 @@ const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
       </div>
 
       <div className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full">
-        <div className="grid w-full grid-cols-4">
+        <div className="grid w-full grid-cols-3">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = selectedTab === tab.id;
