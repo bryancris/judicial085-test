@@ -9,3 +9,4 @@ export { extractCitations, getDirectUrlForCitation } from './citationUtils';
 export { createLawLink, createLawReferenceLinkProps } from './linkUtils';
 export { searchLawDocuments } from './searchUtils';
 export { processLawReferences, processLawReferencesSync } from './processor';
+export { formatCitationWithContext, enhanceConsumerProtectionAnalysis } from './consumerProtectionUtils';

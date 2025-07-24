@@ -136,13 +136,62 @@ export const dtpaCaseLaw = [
   }
 ];
 
+/**
+ * Formats a citation to include full context and description
+ * @param citation The raw citation text
+ * @returns Formatted citation with context
+ */
+export const formatCitationWithContext = (citation: string): string => {
+  // Handle bare "50" - convert to full DTPA section reference
+  if (citation.trim() === "50") {
+    return "§ 17.50 (Relief for Consumers)";
+  }
+  
+  // Handle partial section numbers that should be DTPA sections
+  const partialMatch = citation.match(/^\s*(\d+)\s*$/);
+  if (partialMatch && partialMatch[1] && ["50", "505", "501"].includes(partialMatch[1])) {
+    const sectionNum = partialMatch[1];
+    if (dtpaSections[`17.${sectionNum}`]) {
+      return `§ 17.${sectionNum} (${dtpaSections[`17.${sectionNum}`]})`;
+    }
+  }
+  
+  // Add context to DTPA sections
+  Object.entries(dtpaSections).forEach(([section, description]) => {
+    const patterns = [
+      new RegExp(`^\\s*§?\\s*${section}\\s*$`, 'i'),
+      new RegExp(`^\\s*Section\\s*${section}\\s*$`, 'i'),
+      new RegExp(`^\\s*${section}\\s*$`, 'i')
+    ];
+    
+    patterns.forEach(pattern => {
+      if (pattern.test(citation)) {
+        citation = `§ ${section} (${description})`;
+      }
+    });
+  });
+  
+  return citation;
+};
+
 // Process analysis content to enhance consumer protection references
 export function enhanceConsumerProtectionAnalysis(content: string): string {
   let enhanced = content;
   
+  // First, fix any bare numbers that should be DTPA sections
+  enhanced = enhanced.replace(/\b(\d{2,3})\b/g, (match, num) => {
+    if (["50", "501", "505"].includes(num)) {
+      const fullSection = `17.${num}`;
+      if (dtpaSections[fullSection]) {
+        return `§ ${fullSection} (${dtpaSections[fullSection]})`;
+      }
+    }
+    return match;
+  });
+  
   // Enhance DTPA citations with description where possible
   Object.keys(dtpaSections).forEach(section => {
-    const regex = new RegExp(`(§|sec\\.?|section)\\s*${section.replace('.', '\\.')}\\b`, 'gi');
+    const regex = new RegExp(`(§|sec\\.?|section)\\s*${section.replace('.', '\\.')}\\b(?!\\s*\\([^)]*\\))`, 'gi');
     enhanced = enhanced.replace(regex, `$1 ${section} (${dtpaSections[section]})`);
   });
   

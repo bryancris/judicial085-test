@@ -6,6 +6,7 @@ import { createLawLink } from "./linkUtils";
 import { extractCitations, getDirectUrlForCitation } from "./citationUtils";
 import { searchLawDocuments } from "./searchUtils";
 import { CITATION_PATTERNS, HARDCODED_URLS } from "./citationPatterns";
+import { formatCitationWithContext } from "./consumerProtectionUtils";
 
 /**
  * Process text to identify and convert law references to clickable links
@@ -22,12 +23,15 @@ export const processLawReferences = async (text: string): Promise<string> => {
   // For each citation, try to find a direct URL
   for (const citation of citations) {
     try {
+      // Format citation with proper context
+      const formattedCitation = formatCitationWithContext(citation);
+      
       // First check for known direct URLs
       let directUrl = getDirectUrlForCitation(citation);
       
       // If we have a direct URL already, use it
       if (directUrl) {
-        const linkHtml = createLawLink(citation, directUrl);
+        const linkHtml = createLawLink(formattedCitation, directUrl);
         processedText = processedText.replace(
           new RegExp(citation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), 
           linkHtml
@@ -39,14 +43,14 @@ export const processLawReferences = async (text: string): Promise<string> => {
       const results = await searchLawDocuments(citation);
       if (results.length > 0 && results[0].url) {
         // If we found a direct URL, create a link with it
-        const linkHtml = createLawLink(citation, results[0].url);
+        const linkHtml = createLawLink(formattedCitation, results[0].url);
         processedText = processedText.replace(
           new RegExp(citation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), 
           linkHtml
         );
       } else {
         // Otherwise, create a link to the knowledge search page
-        const linkHtml = createLawLink(citation);
+        const linkHtml = createLawLink(formattedCitation);
         processedText = processedText.replace(
           new RegExp(citation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), 
           linkHtml
@@ -54,8 +58,9 @@ export const processLawReferences = async (text: string): Promise<string> => {
       }
     } catch (error) {
       console.error(`Error processing citation ${citation}:`, error);
-      // If there's an error, still create a link, but to the search page
-      const linkHtml = createLawLink(citation);
+      // If there's an error, still create a link, but to the search page with formatted citation
+      const formattedCitation = formatCitationWithContext(citation);
+      const linkHtml = createLawLink(formattedCitation);
       processedText = processedText.replace(
         new RegExp(citation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), 
         linkHtml
@@ -79,7 +84,8 @@ export const processLawReferencesSync = (text: string): string => {
   Object.entries(HARDCODED_URLS).forEach(([citation, url]) => {
     const regex = new RegExp(citation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
     processedText = processedText.replace(regex, (match) => {
-      return createLawLink(match, url);
+      const formattedMatch = formatCitationWithContext(match);
+      return createLawLink(formattedMatch, url);
     });
   });
   
@@ -94,14 +100,17 @@ export const processLawReferencesSync = (text: string): string => {
         }
       }
       
+      // Format citation with proper context
+      const formattedMatch = formatCitationWithContext(match);
+      
       // Check for known direct URLs
       const directUrl = getDirectUrlForCitation(match);
       if (directUrl) {
-        return createLawLink(match, directUrl);
+        return createLawLink(formattedMatch, directUrl);
       }
       
       // Process this citation with a standard link
-      return createLawLink(match);
+      return createLawLink(formattedMatch);
     });
   });
   

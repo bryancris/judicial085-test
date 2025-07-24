@@ -1,4 +1,5 @@
 import React from "react";
+import { enhanceConsumerProtectionAnalysis } from "@/utils/lawReferences/consumerProtectionUtils";
 
 /**
  * Highlights search terms in text
@@ -25,10 +26,16 @@ export const highlightSearchTerm = (text: string, searchTerm: string): React.Rea
  * @returns HTML string with highlighted search terms
  */
 export const highlightLawLinksWithSearch = (htmlContent: string, term: string): string => {
-  if (!term) return htmlContent;
+  if (!term) {
+    // Even without a search term, enhance the content with better citation formatting
+    return enhanceConsumerProtectionAnalysis(htmlContent);
+  }
+  
+  // First enhance the content with better citation formatting
+  let enhancedContent = enhanceConsumerProtectionAnalysis(htmlContent);
   
   // Split the content at HTML tags and then only highlight text content
-  const tagSplit = htmlContent.split(/(<[^>]*>)/g);
+  const tagSplit = enhancedContent.split(/(<[^>]*>)/g);
   
   return tagSplit.map(part => {
     // If this is an HTML tag, leave it untouched

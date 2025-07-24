@@ -5,14 +5,20 @@
 
 // Common Texas law citation patterns
 export const CITATION_PATTERNS = [
+  // Texas Business & Commerce Code (DTPA) sections - prioritize full format
+  /Texas\s+Business\s+(?:and|&)\s+Commerce\s+Code\s+(?:Section|§)\s+(\d+\.\d+)/gi,
+  // DTPA Section references with full context
+  /(?:DTPA\s+)?(?:Section|§)\s+(17\.\d+)/gi,
   // Texas Civil Practice and Remedies Code § 75.001
   /Texas\s+Civil\s+Practice\s+and\s+Remedies\s+Code\s+§\s+(\d+\.\d+)/gi,
-  // Section 75.001
-  /Section\s+(\d+\.\d+)/gi,
-  // § 75.001
-  /§\s+(\d+\.\d+)/gi,
+  // Section with full number (prevent partial matching)
+  /Section\s+(\d+\.\d+)(?!\d)/gi,
+  // § with full number (prevent partial matching)
+  /§\s+(\d+\.\d+)(?!\d)/gi,
   // Texas Civil Practice & Remedies Code
   /Texas\s+Civil\s+Practice\s+(?:and|&)\s+Remedies\s+Code/gi,
+  // Texas Business & Commerce Code
+  /Texas\s+Business\s+(?:and|&)\s+Commerce\s+Code/gi,
   // Texas Penal Code Section 123
   /Texas\s+([A-Za-z]+)\s+Code\s+(?:Section|§)\s+(\d+)/gi,
   // Case law citations like *Wal-Mart Stores, Inc. v. Gonzalez*
