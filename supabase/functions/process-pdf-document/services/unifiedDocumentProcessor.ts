@@ -18,14 +18,21 @@ export async function processDocument(
   fileName: string,
   mimeType?: string
 ): Promise<DocumentExtractionResult> {
-  console.log('=== UNIFIED DOCUMENT PROCESSOR WITH OCR FALLBACK ===');
+  console.log('=== UNIFIED DOCUMENT PROCESSOR WITH ROBUST ERROR HANDLING ===');
   console.log(`Processing: ${fileName} (${fileData.length} bytes)`);
   
   const detectedType = detectFileType(fileName, mimeType);
   console.log(`Detected file type: ${detectedType}`);
   
   if (detectedType === 'pdf') {
-    return await processPdfWithOcrFallback(fileData, fileName);
+    try {
+      return await processPdfWithOcrFallback(fileData, fileName);
+    } catch (error) {
+      console.error('❌ PDF processing completely failed:', error);
+      // Use fallback summary when all processing methods fail
+      const { createFallbackSummary } = await import('../utils/fallbackSummaryGenerator.ts');
+      return createFallbackSummary(fileData, fileName, detectedType, error.message);
+    }
   }
   
   // For other file types, use existing processors
@@ -150,10 +157,8 @@ async function processScannedPdfWithOcr(
   pdfData: Uint8Array, 
   fileName: string
 ): Promise<DocumentExtractionResult> {
-  console.log('🔍 Processing scanned PDF with simplified OCR...');
+  console.log('🔍 Processing scanned PDF with timeout-protected OCR...');
   
-  // Only try Gemini Vision OCR with timeout protection
-  console.log('🤖 Attempting Gemini Vision OCR for scanned document...');
   try {
     // Check if Gemini API key is available
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
@@ -161,64 +166,47 @@ async function processScannedPdfWithOcr(
       throw new Error('Gemini API key not available');
     }
     
+    console.log('🤖 Attempting Gemini Vision OCR with 30-second timeout...');
     const { extractTextWithGeminiVision } = await import('./geminiVisionOcrService.ts');
     
-    // Add timeout protection for Gemini OCR
+    // Add robust timeout protection for Gemini OCR (30 seconds max)
     const geminiResult = await Promise.race([
       extractTextWithGeminiVision(pdfData, fileName),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Gemini Vision OCR timeout after 35 seconds')), 35000)
+        setTimeout(() => reject(new Error('Gemini Vision OCR timeout after 30 seconds')), 30000)
       )
     ]) as any;
     
-    // Validate the result quality
+    // More lenient validation - accept any meaningful text
     if (geminiResult.text && geminiResult.text.length > 50) {
       console.log(`✅ Gemini Vision OCR successful: ${geminiResult.text.length} characters, confidence: ${geminiResult.confidence}`);
       
       return {
         text: geminiResult.text,
-        method: 'Gemini Vision OCR',
-        quality: geminiResult.confidence || 0.7,
+        method: 'gemini-vision-ocr',
+        quality: Math.min(geminiResult.confidence || 0.7, 1.0),
         confidence: geminiResult.confidence || 0.7,
         pageCount: geminiResult.pageCount || Math.max(1, Math.ceil(pdfData.length / 50000)),
         fileType: 'pdf',
-        processingNotes: `Successfully processed scanned document using Gemini Vision OCR. Text length: ${geminiResult.text.length} characters.`,
+        processingNotes: `Gemini Vision OCR: ${geminiResult.pageCount || 'unknown'} pages, ${geminiResult.text.length} characters, confidence ${((geminiResult.confidence || 0.7) * 100).toFixed(1)}%`,
         isScanned: true
       };
     } else {
-      throw new Error('Gemini Vision result quality insufficient');
+      throw new Error('Gemini Vision OCR returned insufficient text');
     }
     
   } catch (geminiError) {
-    console.error(`❌ Gemini Vision OCR failed: ${geminiError.message}`);
-    // Skip OpenAI Vision fallback for now to debug import issues
-    console.log('⚠️ Skipping OpenAI Vision fallback due to import issues');
+    console.error('❌ Gemini Vision processing failed:', geminiError);
+    console.log('⚠️ Gemini Vision OCR failed, creating fallback document...');
     
-    // Create a more informative placeholder for scanned documents
-    const placeholderText = `SCANNED DOCUMENT DETECTED
-File: ${fileName}
-Size: ${Math.round(pdfData.length / 1024)}KB
-
-This appears to be a scanned document that could not be processed with OCR.
-The document has been uploaded and is available for manual review.
-
-Reason: ${geminiError.message}
-
-Please consider:
-1. Re-uploading if this is a text-based PDF
-2. Manual review of the document content
-3. Using alternative OCR tools if text extraction is critical`;
-
-    return {
-      text: placeholderText,
-      method: 'scanned-placeholder',
-      quality: 0.3,
-      confidence: 0.4,
-      pageCount: Math.max(1, Math.ceil(pdfData.length / 50000)),
-      fileType: 'pdf',
-      processingNotes: `Scanned document OCR failed: ${geminiError.message}`,
-      isScanned: true
-    };
+    // Return a fallback summary instead of throwing error
+    const { createFallbackSummary } = await import('../utils/fallbackSummaryGenerator.ts');
+    return createFallbackSummary(
+      pdfData, 
+      fileName, 
+      'pdf', 
+      `OCR processing failed: ${geminiError.message}. Document uploaded successfully but text extraction was not possible.`
+    );
   }
 }
 
