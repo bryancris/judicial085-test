@@ -28,7 +28,9 @@ serve(async (req) => {
   let documentId: string | null = null;
   
   try {
-    console.log('🚀 === DOCUMENT PROCESSING SYSTEM WITH TIMEOUT PROTECTION v13.0 ===');
+    console.log('🚀 === DOCUMENT PROCESSING SYSTEM WITH TIMEOUT PROTECTION v14.0 - FORCE REDEPLOY ===');
+    console.log(`⏰ Deployment timestamp: ${new Date().toISOString()}`);
+    console.log('🔧 Using updated timeout values: Gemini 35s, OpenAI fallback 20s');
     
     if (!supabaseUrl || !supabaseServiceKey || !geminiApiKey) {
       throw new Error('Missing required environment variables');
