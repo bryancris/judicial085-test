@@ -70,12 +70,19 @@ serve(async (req) => {
 
     // Process document with timeout protection (reduced to 20 seconds)
     console.log('🔍 === STARTING SIMPLIFIED DOCUMENT PROCESSING ===');
-    const extractionResult = await Promise.race([
-      processDocument(fileData, validatedRequest.fileName, undefined),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Document processing timeout after 20 seconds')), 20000)
-      )
-    ]) as any;
+    
+    let extractionResult;
+    try {
+      extractionResult = await Promise.race([
+        processDocument(fileData, validatedRequest.fileName, undefined),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Document processing timeout after 20 seconds')), 20000)
+        )
+      ]) as any;
+    } catch (processingError) {
+      console.error('❌ Document processing failed:', processingError);
+      throw processingError;
+    }
 
     console.log(`✅ Document extraction completed using ${extractionResult.method}: {
   textLength: ${extractionResult.text.length},

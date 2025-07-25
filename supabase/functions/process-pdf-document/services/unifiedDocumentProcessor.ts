@@ -201,44 +201,8 @@ async function processScannedPdfWithOcr(
     
   } catch (geminiError) {
     console.error(`❌ Gemini Vision OCR failed: ${geminiError.message}`);
-    
-    // Try OpenAI Vision as fallback before giving up
-    console.log('🔄 Trying OpenAI Vision OCR as fallback...');
-    try {
-      const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-      if (!openaiApiKey) {
-        throw new Error('OpenAI API key not available');
-      }
-      
-      const { extractTextWithOpenAIVision } = await import('../openaiVisionService.ts');
-      
-      const openaiResult = await Promise.race([
-        extractTextWithOpenAIVision(pdfData),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('OpenAI Vision OCR timeout after 20 seconds')), 20000)
-        )
-      ]) as any;
-      
-      if (openaiResult.text && openaiResult.text.length > 50) {
-        console.log(`✅ OpenAI Vision OCR successful: ${openaiResult.text.length} characters`);
-        
-        return {
-          text: openaiResult.text,
-          method: 'OpenAI Vision OCR',
-          quality: openaiResult.confidence || 0.7,
-          confidence: openaiResult.confidence || 0.7,
-          pageCount: openaiResult.pageCount || Math.max(1, Math.ceil(pdfData.length / 50000)),
-          fileType: 'pdf',
-          processingNotes: `Successfully processed scanned document using OpenAI Vision OCR. Text length: ${openaiResult.text.length} characters.`,
-          isScanned: true
-        };
-      } else {
-        throw new Error('OpenAI Vision result quality insufficient');
-      }
-      
-    } catch (openaiError) {
-      console.error(`❌ OpenAI Vision OCR also failed: ${openaiError.message}`);
-    }
+    // Skip OpenAI Vision fallback for now to debug import issues
+    console.log('⚠️ Skipping OpenAI Vision fallback due to import issues');
     
     // Create a more informative placeholder for scanned documents
     const placeholderText = `SCANNED DOCUMENT DETECTED
