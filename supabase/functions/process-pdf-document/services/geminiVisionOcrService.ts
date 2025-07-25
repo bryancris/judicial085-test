@@ -90,7 +90,7 @@ async function processSingleDocumentWithGemini(
   console.log(`📊 Payload size: ${JSON.stringify(payload).length} characters`);
   
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
+  const timeoutId = setTimeout(() => controller.abort(), 35000); // 35 second timeout
   
   try {
     const response = await fetch(
@@ -294,7 +294,7 @@ async function processImageWithGemini(
   console.log(`🚀 Processing image page: ${pageName}`);
   
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout for images
+  const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout for images
   
   try {
     const response = await fetch(
