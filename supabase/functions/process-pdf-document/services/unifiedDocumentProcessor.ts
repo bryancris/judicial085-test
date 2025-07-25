@@ -96,31 +96,21 @@ async function processPdfWithOcrFallback(
   }
 }
 
-// Smart scanned document detection
+// Conservative scanned document detection - only flag as scanned if we're very sure
 async function detectScannedDocument(pdfData: Uint8Array, fileName: string): Promise<boolean> {
-  console.log('🔍 Detecting if document is scanned...');
+  console.log('🔍 Conservative scanned document detection...');
   
-  // Size-based heuristics (scanned documents are typically larger)
-  const fileSizeIndicator = pdfData.length > 5 * 1024 * 1024; // > 5MB
+  // Strong filename indicators (only obvious scanned documents)
+  const strongNameIndicators = fileName.toLowerCase().includes('scan') || 
+                              fileName.toLowerCase().includes('scanned');
   
-  // Filename heuristics
-  const nameIndicators = fileName.toLowerCase().includes('scan') || 
-                        fileName.toLowerCase().includes('scanned') ||
-                        fileName.toLowerCase().includes('copy');
+  // Size-based heuristics (only very large files that are likely scanned)
+  const verylargeSizeIndicator = pdfData.length > 10 * 1024 * 1024; // > 10MB
   
-  // Quick text extraction test
-  let hasMinimalText = false;
-  try {
-    const quickTest = await processPdfDocument(pdfData, fileName);
-    // If we get very little text or it's garbled, likely scanned
-    hasMinimalText = quickTest.text.length < 100 || isGarbageText(quickTest.text);
-  } catch {
-    // If basic extraction fails completely, likely scanned
-    hasMinimalText = true;
-  }
-  
-  const isScanned = fileSizeIndicator || nameIndicators || hasMinimalText;
-  console.log(`📊 Scanned detection: size=${fileSizeIndicator}, name=${nameIndicators}, minimalText=${hasMinimalText} → ${isScanned}`);
+  // Only mark as scanned if we have strong indicators
+  // Don't use text extraction failure as the primary indicator since many complex PDFs fail pdf-parse
+  const isScanned = strongNameIndicators || verylargeSizeIndicator;
+  console.log(`📊 Conservative scanned detection: strongName=${strongNameIndicators}, veryLarge=${verylargeSizeIndicator} → ${isScanned}`);
   
   return isScanned;
 }
