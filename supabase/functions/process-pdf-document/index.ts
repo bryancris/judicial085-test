@@ -36,12 +36,12 @@ serve(async (req) => {
       throw new Error('Missing required environment variables');
     }
     
-    // Set up timeout protection (45 seconds max for edge function)
+    // Set up timeout protection (55 seconds max for edge function - allows for OCR operations)
     const timeoutController = new AbortController();
     const timeoutId = setTimeout(() => {
       console.log('⚠️ Edge function timeout approaching, terminating gracefully');
       timeoutController.abort();
-    }, 45000); // 45 second timeout
+    }, 55000); // 55 second timeout to allow for 45s document processing + overhead
     
     const requestBody = await req.json();
     console.log('📋 Processing request:', {
@@ -68,15 +68,15 @@ serve(async (req) => {
     ]) as Uint8Array;
     console.log(`✅ File downloaded successfully: ${fileData.length} bytes`);
 
-    // Process document with timeout protection (reduced to 20 seconds)
-    console.log('🔍 === STARTING SIMPLIFIED DOCUMENT PROCESSING ===');
+    // Process document with timeout protection (increased to 45 seconds to allow OCR to complete)
+    console.log('🔍 === STARTING DOCUMENT PROCESSING WITH EXTENDED TIMEOUT ===');
     
     let extractionResult;
     try {
       extractionResult = await Promise.race([
         processDocument(fileData, validatedRequest.fileName, undefined),
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Document processing timeout after 20 seconds')), 20000)
+          setTimeout(() => reject(new Error('Document processing timeout after 45 seconds')), 45000)
         )
       ]) as any;
     } catch (processingError) {
