@@ -1,7 +1,7 @@
-// Unified Document Processor with Mistral OCR as primary extraction method
+// Unified Document Processor - Simplified approach
+// Normal PDF extraction -> Placeholder if fails
 
 import { processPdfDocument } from '../processors/pdfDocumentProcessor.ts';
-import { extractTextWithMistralOcr, calculateMistralTimeout } from './mistralOcrService.ts';
 
 export interface DocumentExtractionResult {
   text: string;
@@ -49,10 +49,10 @@ async function processPdfWithOcrFallback(
   pdfData: Uint8Array, 
   fileName: string
 ): Promise<DocumentExtractionResult> {
-  console.log('📄 Starting simplified 2-step PDF processing...');
+  console.log('📄 Starting simple PDF processing...');
   
   // Step 1: Try normal PDF text extraction with pdf-parse
-  console.log('🔍 Step 1: Attempting normal PDF text extraction...');
+  console.log('🔍 Attempting normal PDF text extraction...');
   try {
     const directResult = await processPdfDocument(pdfData, fileName);
     
@@ -61,34 +61,14 @@ async function processPdfWithOcrFallback(
       console.log('✅ Normal PDF extraction successful');
       return directResult;
     }
-    console.log('📝 Normal extraction produced low quality text, going to Mistral OCR...');
+    console.log('📝 Normal extraction produced low quality text, creating placeholder...');
   } catch (directError) {
-    console.log('⚠️ Normal extraction failed:', directError.message, '- going to Mistral OCR...');
+    console.log('⚠️ Normal extraction failed:', directError.message, '- creating placeholder...');
   }
   
-  // Step 2: Use Mistral OCR as the only fallback
-  console.log('🤖 Step 2: Using Mistral OCR...');
-  try {
-    const mistralTimeout = calculateMistralTimeout(pdfData.length);
-    console.log(`🤖 Starting Mistral OCR with ${mistralTimeout}ms timeout...`);
-    
-    const mistralResult = await extractTextWithMistralOcr(pdfData, fileName, mistralTimeout);
-    
-    return {
-      text: mistralResult.text,
-      method: "mistral-ocr",
-      quality: mistralResult.quality,
-      confidence: mistralResult.confidence,
-      pageCount: Math.max(1, Math.ceil(pdfData.length / 50000)),
-      fileType: "pdf",
-      processingNotes: mistralResult.notes || `Successfully processed using Mistral OCR in ${mistralResult.processingTime}ms`
-    };
-    
-  } catch (mistralError) {
-    console.error('❌ Mistral OCR failed:', mistralError.message);
-    // Only use placeholder as last resort
-    return createDocumentPlaceholder(pdfData, fileName, 'pdf', `Text extraction failed. Normal extraction failed, Mistral OCR failed: ${mistralError.message}`);
-  }
+  // Step 2: Create placeholder document
+  console.log('📄 Creating placeholder document...');
+  return createDocumentPlaceholder(pdfData, fileName, 'pdf', `Normal PDF text extraction was unsuccessful. The document has been uploaded and is available for manual review.`);
 }
 
 
