@@ -1,8 +1,8 @@
 // Unified Document Processor - Simplified approach
-// Normal PDF extraction -> Google Cloud Document AI OCR fallback
+// Normal PDF extraction -> Mistral OCR fallback
 
 import { processPdfDocument } from '../processors/pdfDocumentProcessor.ts';
-import { extractTextWithGoogleDocumentAI } from './googleCloudDocumentAiService.ts';
+import { extractTextWithMistralOcr } from './mistralOcrService.ts';
 
 export interface DocumentExtractionResult {
   text: string;
@@ -67,23 +67,23 @@ async function processPdfWithOcrFallback(
     console.log('⚠️ Normal extraction failed:', directError.message, '- creating placeholder...');
   }
   
-  // Step 2: Try Google Cloud Document AI OCR
-  console.log('🤖 Step 2: Using Google Cloud Document AI OCR...');
+  // Step 2: Try Mistral OCR
+  console.log('🤖 Step 2: Using Mistral OCR for scanned PDF...');
   try {
-    const ocrResult = await extractTextWithGoogleDocumentAI(pdfData);
+    const ocrResult = await extractTextWithMistralOcr(pdfData);
     
     return {
       text: ocrResult.text,
-      method: "google-cloud-document-ai",
+      method: "mistral-ocr",
       quality: ocrResult.confidence,
       confidence: ocrResult.confidence,
       pageCount: ocrResult.pageCount || Math.max(1, Math.ceil(pdfData.length / 50000)),
       fileType: "pdf",
-      processingNotes: `Successfully processed using Google Cloud Document AI OCR. Extracted ${ocrResult.text.length} characters from ${ocrResult.pageCount || 1} pages.`
+      processingNotes: `Successfully processed using Mistral OCR. Extracted ${ocrResult.text.length} characters from ${ocrResult.pageCount || 1} pages.`
     };
     
   } catch (ocrError) {
-    console.error('❌ Google Cloud Document AI OCR failed:', ocrError.message);
+    console.error('❌ Mistral OCR failed:', ocrError.message);
     // Only use placeholder as last resort
     return createDocumentPlaceholder(pdfData, fileName, 'pdf', `Normal PDF text extraction and OCR both failed. The document has been uploaded and is available for manual review. Error: ${ocrError.message}`);
   }
