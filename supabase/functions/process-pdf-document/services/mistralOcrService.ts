@@ -32,33 +32,16 @@ export async function extractTextWithMistralOcr(pdfData: Uint8Array): Promise<Mi
     
     console.log(`📊 PDF data size: ${pdfData.length} bytes (${Math.round(pdfData.length / 1024)}KB)`);
 
-    const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
+    const response = await fetch('https://api.mistral.ai/v1/ocr', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${mistralApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'pixtral-12b-2409',
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: 'Extract all text from this PDF document. Return only the extracted text content, no additional commentary or formatting. If this is a legal document, preserve the structure and formatting as much as possible.'
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:application/pdf;base64,${base64Pdf}`
-                }
-              }
-            ]
-          }
-        ],
-        max_tokens: 4000,
-        temperature: 0.1
+        model: 'mistral-ocr-latest',
+        document: base64Pdf,
+        format: 'pdf'
       }),
     });
 
@@ -68,7 +51,7 @@ export async function extractTextWithMistralOcr(pdfData: Uint8Array): Promise<Mi
     }
 
     const result = await response.json();
-    const extractedText = result.choices[0]?.message?.content || '';
+    const extractedText = result.text || result.content || '';
 
     if (!extractedText || extractedText.length < 10) {
       throw new Error('Mistral OCR returned insufficient text content');
