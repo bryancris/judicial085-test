@@ -21,8 +21,13 @@ export async function extractTextWithMistralOcr(
   console.log(`⏱️ Using timeout: ${timeoutMs}ms for ${Math.round(pdfData.length / 1024)}KB file`);
 
   try {
-    // Convert PDF to base64 for Mistral API
-    const base64Pdf = btoa(String.fromCharCode(...pdfData));
+    // Convert PDF to base64 for Mistral API - fix stack overflow for large files
+    const chunkSize = 8192;
+    let base64Pdf = '';
+    for (let i = 0; i < pdfData.length; i += chunkSize) {
+      const chunk = pdfData.slice(i, i + chunkSize);
+      base64Pdf += btoa(String.fromCharCode.apply(null, Array.from(chunk)));
+    }
     console.log(`✅ Base64 conversion successful: ${base64Pdf.length} characters`);
 
     const mistralApiKey = Deno.env.get("MISTRAL_API_KEY");

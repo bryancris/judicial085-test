@@ -49,52 +49,25 @@ async function processPdfWithOcrFallback(
   pdfData: Uint8Array, 
   fileName: string
 ): Promise<DocumentExtractionResult> {
-  console.log('📄 Starting simplified PDF processing with smart scanned detection...');
+  console.log('📄 Starting simplified 2-step PDF processing...');
   
-  // Quick scanned document detection
-  const isLikelyScanned = await detectScannedDocument(pdfData, fileName);
-  
-  if (isLikelyScanned) {
-    console.log('🖼️ Document appears to be scanned, going directly to OCR...');
-    try {
-      return await processScannedPdfWithOcr(pdfData, fileName);
-    } catch (ocrError) {
-      console.error('❌ OCR processing failed:', ocrError.message);
-      // Fall back to standard processing as last resort
-      console.log('🔄 OCR failed, trying standard extraction as fallback...');
-    }
-  }
-  
-  // Step 1: Try direct PDF text extraction (multiple methods)
-  console.log('🔍 Attempting direct PDF text extraction...');
+  // Step 1: Try normal PDF text extraction with pdf-parse
+  console.log('🔍 Step 1: Attempting normal PDF text extraction...');
   try {
     const directResult = await processPdfDocument(pdfData, fileName);
     
-    // Use stricter success criteria for better quality
-    if (directResult.text.length > 200 && !isGarbageText(directResult.text)) {
-      console.log('✅ Direct PDF extraction successful');
+    // Check if we got good quality text
+    if (directResult.text.length > 50 && !isGarbageText(directResult.text)) {
+      console.log('✅ Normal PDF extraction successful');
       return directResult;
     }
-    console.log('📝 Direct extraction insufficient quality, proceeding to enhanced methods...');
+    console.log('📝 Normal extraction produced low quality text, going to Mistral OCR...');
   } catch (directError) {
-    console.log('⚠️ Direct extraction failed:', directError.message, '- proceeding to enhanced methods...');
+    console.log('⚠️ Normal extraction failed:', directError.message, '- going to Mistral OCR...');
   }
   
-  // Step 2: Try enhanced PDF text extraction
-  console.log('🔧 Attempting enhanced PDF text extraction...');
-  try {
-    const enhancedResult = await tryEnhancedPdfExtraction(pdfData, fileName);
-    if (enhancedResult.text.length > 100 && !isGarbageText(enhancedResult.text)) {
-      console.log('✅ Enhanced PDF extraction successful');
-      return enhancedResult;
-    }
-    console.log('📝 Enhanced extraction insufficient quality, proceeding to OCR...');
-  } catch (enhancedError) {
-    console.log('⚠️ Enhanced extraction failed:', enhancedError.message, '- proceeding to OCR...');
-  }
-  
-  // Step 3: Use Mistral OCR as primary OCR method
-  console.log('🖼️ Standard extraction failed, using Mistral OCR...');
+  // Step 2: Use Mistral OCR as the only fallback
+  console.log('🤖 Step 2: Using Mistral OCR...');
   try {
     const mistralTimeout = calculateMistralTimeout(pdfData.length);
     console.log(`🤖 Starting Mistral OCR with ${mistralTimeout}ms timeout...`);
@@ -106,45 +79,18 @@ async function processPdfWithOcrFallback(
       method: "mistral-ocr",
       quality: mistralResult.quality,
       confidence: mistralResult.confidence,
-      pageCount: Math.max(1, Math.ceil(pdfData.length / 50000)), // Estimate page count
+      pageCount: Math.max(1, Math.ceil(pdfData.length / 50000)),
       fileType: "pdf",
-      processingNotes: mistralResult.notes || `Successfully processed using Mistral OCR in ${mistralResult.processingTime}ms`,
-      isScanned: true
+      processingNotes: mistralResult.notes || `Successfully processed using Mistral OCR in ${mistralResult.processingTime}ms`
     };
     
   } catch (mistralError) {
     console.error('❌ Mistral OCR failed:', mistralError.message);
-    console.log('🔄 Falling back to Gemini Vision OCR...');
-    
-    try {
-      // Fallback to Gemini Vision OCR if Mistral fails
-      return await processScannedPdfWithOcr(pdfData, fileName);
-    } catch (geminiError) {
-      console.error('❌ Both Mistral and Gemini OCR failed');
-      // Only use placeholder as absolute last resort
-      return createDocumentPlaceholder(pdfData, fileName, 'pdf', `All OCR methods failed. Mistral: ${mistralError.message}, Gemini: ${geminiError.message}`);
-    }
+    // Only use placeholder as last resort
+    return createDocumentPlaceholder(pdfData, fileName, 'pdf', `Text extraction failed. Normal extraction failed, Mistral OCR failed: ${mistralError.message}`);
   }
 }
 
-// Conservative scanned document detection - only flag as scanned if we're very sure
-async function detectScannedDocument(pdfData: Uint8Array, fileName: string): Promise<boolean> {
-  console.log('🔍 Conservative scanned document detection...');
-  
-  // Strong filename indicators (only obvious scanned documents)
-  const strongNameIndicators = fileName.toLowerCase().includes('scan') || 
-                              fileName.toLowerCase().includes('scanned');
-  
-  // Size-based heuristics (only very large files that are likely scanned)
-  const verylargeSizeIndicator = pdfData.length > 10 * 1024 * 1024; // > 10MB
-  
-  // Only mark as scanned if we have strong indicators
-  // Don't use text extraction failure as the primary indicator since many complex PDFs fail pdf-parse
-  const isScanned = strongNameIndicators || verylargeSizeIndicator;
-  console.log(`📊 Conservative scanned detection: strongName=${strongNameIndicators}, veryLarge=${verylargeSizeIndicator} → ${isScanned}`);
-  
-  return isScanned;
-}
 
 // Improved garbage text detection with more lenient criteria
 function isGarbageText(text: string): boolean {
@@ -184,105 +130,6 @@ function isGarbageText(text: string): boolean {
   return isGarbage;
 }
 
-async function processScannedPdfWithOcr(
-  pdfData: Uint8Array, 
-  fileName: string
-): Promise<DocumentExtractionResult> {
-  console.log('🔍 Processing scanned PDF with timeout-protected OCR...');
-  
-  try {
-    // Check if Gemini API key is available
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!geminiApiKey) {
-      throw new Error('Gemini API key not available');
-    }
-    
-    console.log('🤖 Attempting Gemini Vision OCR with progressive timeout...');
-    const { extractTextWithGeminiVision } = await import('./geminiVisionOcrService.ts');
-    
-    // Progressive timeout based on file size (45-60 seconds max)
-    const fileSize = pdfData.length;
-    const sizeMultiplier = Math.min(2.0, fileSize / (5 * 1024 * 1024));
-    const overallTimeout = Math.min(45000 * sizeMultiplier, 60000); // Max 60 seconds
-    
-    console.log(`⏱️ Using ${overallTimeout}ms overall timeout for ${(fileSize / 1024).toFixed(0)}KB file`);
-    
-    const geminiResult = await Promise.race([
-      extractTextWithGeminiVision(pdfData, fileName),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error(`Gemini Vision OCR timeout after ${overallTimeout}ms`)), overallTimeout)
-      )
-    ]) as any;
-    
-    // More lenient validation - accept any meaningful text
-    if (geminiResult.text && geminiResult.text.length > 50) {
-      console.log(`✅ Gemini Vision OCR successful: ${geminiResult.text.length} characters, confidence: ${geminiResult.confidence}`);
-      
-      return {
-        text: geminiResult.text,
-        method: 'gemini-vision-ocr',
-        quality: Math.min(geminiResult.confidence || 0.7, 1.0),
-        confidence: geminiResult.confidence || 0.7,
-        pageCount: geminiResult.pageCount || Math.max(1, Math.ceil(pdfData.length / 50000)),
-        fileType: 'pdf',
-        processingNotes: `Gemini Vision OCR: ${geminiResult.pageCount || 'unknown'} pages, ${geminiResult.text.length} characters, confidence ${((geminiResult.confidence || 0.7) * 100).toFixed(1)}%`,
-        isScanned: true
-      };
-    } else {
-      throw new Error('Gemini Vision OCR returned insufficient text');
-    }
-    
-  } catch (geminiError) {
-    console.error('❌ Gemini Vision processing failed:', geminiError);
-    console.log('⚠️ Gemini Vision OCR failed, creating fallback document...');
-    
-    // Return a fallback summary instead of throwing error
-    const { createFallbackSummary } = await import('../utils/fallbackSummaryGenerator.ts');
-    return createFallbackSummary(
-      pdfData, 
-      fileName, 
-      'pdf', 
-      `OCR processing failed: ${geminiError.message}. Document uploaded successfully but text extraction was not possible.`
-    );
-  }
-}
-
-// Enhanced PDF extraction using multiple direct methods
-async function tryEnhancedPdfExtraction(
-  pdfData: Uint8Array, 
-  fileName: string
-): Promise<DocumentExtractionResult> {
-  console.log('🔧 Trying enhanced PDF extraction methods...');
-  
-  try {
-    // Import and use the enhanced library service
-    const { extractTextWithLibrary, validateLibraryExtraction } = await import('../pdfLibraryService.ts');
-    
-    const libraryResult = await extractTextWithLibrary(pdfData);
-    const validation = validateLibraryExtraction(libraryResult.text, libraryResult.pageCount);
-    
-    console.log(`Enhanced extraction: ${libraryResult.text.length} chars, validation: ${validation.isValid}`);
-    
-    // Be much more lenient - accept any text that was extracted
-    if (libraryResult.text.length > 5) {
-      return {
-        text: libraryResult.text,
-        method: 'enhanced-pdf-extraction',
-        quality: Math.max(validation.quality, 0.5), // Higher boost for any extracted text
-        confidence: validation.isValid ? 0.8 : 0.6, // Higher confidence
-        pageCount: libraryResult.pageCount,
-        fileType: 'pdf',
-        processingNotes: `Enhanced extraction: ${libraryResult.text.length} characters from ${libraryResult.pageCount} pages`
-      };
-    }
-    
-    throw new Error('Enhanced extraction yielded no readable content');
-    
-  } catch (error) {
-    console.error('❌ Enhanced PDF extraction failed:', error);
-    throw error;
-  }
-}
 
 function detectFileType(fileName: string, mimeType?: string): string {
   const extension = fileName.toLowerCase().split('.').pop();
