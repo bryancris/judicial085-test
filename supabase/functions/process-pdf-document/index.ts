@@ -94,10 +94,10 @@ serve(async (req) => {
   processingNotes: '${extractionResult.processingNotes}'
 }`);
 
-    // Enhanced document chunking
-    console.log('📂 === STARTING DOCUMENT CHUNKING ===');
-    const chunks = chunkDocumentAdvanced(extractionResult.text);
-    console.log(`✅ Chunking completed: ${chunks.length} chunks created`);
+    // Store full text without chunking for OCR results
+    console.log('📂 === PREPARING DOCUMENT STORAGE ===');
+    const chunks = [extractionResult.text]; // Store as single chunk to avoid resource exhaustion
+    console.log(`✅ Document prepared for storage: ${extractionResult.text.length} characters`);
 
     // Clear timeout since we're about to return
     clearTimeout(timeoutId);
