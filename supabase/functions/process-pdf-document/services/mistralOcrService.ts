@@ -87,10 +87,30 @@ export async function extractTextWithMistralOcr(pdfData: Uint8Array): Promise<Mi
         image_limit: 0,
         image_min_size: 0,
         bbox_annotation_format: {
-          type: 'text'
+          type: 'text',
+          json_schema: {
+            type: 'object',
+            properties: {
+              text: {
+                type: 'string',
+                description: 'Extracted text content'
+              }
+            },
+            required: ['text']
+          }
         },
         document_annotation_format: {
-          type: 'text'
+          type: 'text',
+          json_schema: {
+            type: 'object',
+            properties: {
+              text: {
+                type: 'string',
+                description: 'Complete document text content'
+              }
+            },
+            required: ['text']
+          }
         }
       }),
     });
