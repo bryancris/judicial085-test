@@ -39,7 +39,7 @@ export async function extractTextWithMistralOcr(pdfData: Uint8Array): Promise<Mi
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'mistral-large-latest',
+        model: 'pixtral-12b-2409',
         messages: [
           {
             role: 'user',
