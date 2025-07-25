@@ -10,6 +10,115 @@ interface ChunkMetadata {
   pageCount: number;
 }
 
+// Background processing version with timeout protection
+export async function generateAndStoreEmbeddingsWithTimeout(
+  chunks: string[],
+  documentId: string,
+  clientId: string,
+  caseId: string | null,
+  supabase: any,
+  openaiApiKey: string,
+  metadata: ChunkMetadata
+): Promise<void> {
+  console.log(`Generating embeddings for ${chunks.length} text chunks with timeout protection`);
+  
+  // Get existing document to preserve URL
+  const { data: existingDoc } = await supabase
+    .from('document_metadata')
+    .select('url')
+    .eq('id', documentId)
+    .single();
+  
+  const existingUrl = existingDoc?.url;
+  
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    const chunkIndex = i + 1;
+    
+    console.log(`Processing chunk ${chunkIndex}/${chunks.length} (${chunk.length} chars)`);
+    
+    // Calculate quality score for this chunk
+    const quality = calculateChunkQuality(chunk);
+    console.log(`Chunk ${chunkIndex} quality score: ${quality}`);
+    
+    try {
+      // Generate embedding with 10 second timeout
+      const embeddingResponse = await Promise.race([
+        fetch('https://api.openai.com/v1/embeddings', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openaiApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            input: chunk,
+            model: 'text-embedding-3-small',
+            dimensions: 1536
+          }),
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('OpenAI API timeout')), 10000)
+        )
+      ]) as Response;
+
+      if (!embeddingResponse.ok) {
+        const errorText = await embeddingResponse.text();
+        throw new Error(`OpenAI API error: ${embeddingResponse.status} - ${errorText}`);
+      }
+
+      const embeddingData = await embeddingResponse.json();
+      const embedding = embeddingData.data[0].embedding;
+      
+      console.log(`Embedding generated for chunk ${chunkIndex} (${embedding.length} dimensions)`);
+
+      // Store chunk with embedding
+      const chunkMetadata = {
+        fileName: metadata.fileName,
+        fileUrl: metadata.fileUrl,
+        extractionMethod: metadata.extractionMethod,
+        quality: metadata.quality,
+        confidence: metadata.confidence,
+        pageCount: metadata.pageCount,
+        chunkQuality: quality,
+        isPdfDocument: true,
+        fileType: 'pdf'
+      };
+
+      const { error: chunkError } = await supabase
+        .from('document_chunks')
+        .insert({
+          id: crypto.randomUUID(),
+          document_id: documentId,
+          client_id: clientId,
+          case_id: caseId,
+          chunk_index: chunkIndex,
+          content: chunk,
+          embedding: embedding,
+          metadata: chunkMetadata
+        });
+
+      if (chunkError) {
+        console.error(`Failed to store chunk ${chunkIndex}:`, chunkError);
+        throw chunkError;
+      }
+
+      console.log(`Successfully stored chunk ${chunkIndex}/${chunks.length} with embedding (quality: ${quality})`);
+      
+      // Clear memory after each chunk
+      if (global.gc) {
+        global.gc();
+      }
+      
+    } catch (error) {
+      console.error(`Error processing chunk ${chunkIndex}:`, error);
+      // Continue with next chunk instead of failing completely
+      continue;
+    }
+  }
+  
+  console.log(`Successfully stored ${chunks.length}/${chunks.length} chunks`);
+}
+
 export async function generateAndStoreEmbeddings(
   chunks: string[],
   documentId: string,

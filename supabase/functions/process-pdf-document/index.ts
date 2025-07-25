@@ -8,7 +8,7 @@ import { createSuccessResponse, createErrorResponse } from './handlers/responseH
 import { handleProcessingError } from './handlers/errorHandler.ts';
 import { processDocument } from './services/unifiedDocumentProcessor.ts';
 import { chunkDocumentAdvanced } from './utils/chunkingUtils.ts';
-import { generateAndStoreEmbeddings } from './services/embeddingService.ts';
+import { generateAndStoreEmbeddings, generateAndStoreEmbeddingsWithTimeout } from './services/embeddingService.ts';
 import { updateDocumentStatus } from './services/documentStatusService.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -28,11 +28,18 @@ serve(async (req) => {
   let documentId: string | null = null;
   
   try {
-    console.log('🚀 === DOCUMENT PROCESSING SYSTEM WITH OCR FALLBACK v12.0 ===');
+    console.log('🚀 === DOCUMENT PROCESSING SYSTEM WITH TIMEOUT PROTECTION v13.0 ===');
     
     if (!supabaseUrl || !supabaseServiceKey || !geminiApiKey) {
       throw new Error('Missing required environment variables');
     }
+    
+    // Set up timeout protection (45 seconds max for edge function)
+    const timeoutController = new AbortController();
+    const timeoutId = setTimeout(() => {
+      console.log('⚠️ Edge function timeout approaching, terminating gracefully');
+      timeoutController.abort();
+    }, 45000); // 45 second timeout
     
     const requestBody = await req.json();
     console.log('📋 Processing request:', {
@@ -50,17 +57,23 @@ serve(async (req) => {
     // Mark document as processing
     await updateDocumentStatus(supabase, documentId, 'processing', validatedRequest.fileUrl);
 
-    // Download the file
-    const fileData = await downloadPdf(validatedRequest.fileUrl);
+    // Download the file with timeout
+    const fileData = await Promise.race([
+      downloadPdf(validatedRequest.fileUrl),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('File download timeout')), 10000)
+      )
+    ]) as Uint8Array;
     console.log(`✅ File downloaded successfully: ${fileData.length} bytes`);
 
-    // Use unified document processor with automatic OCR fallback for scanned documents
-    console.log('🔍 === STARTING UNIFIED DOCUMENT PROCESSING WITH AUTOMATIC OCR FALLBACK ===');
-    const extractionResult = await processDocument(
-      fileData,
-      validatedRequest.fileName,
-      undefined // Let the processor detect MIME type from filename
-    );
+    // Process document with timeout protection
+    console.log('🔍 === STARTING UNIFIED DOCUMENT PROCESSING WITH TIMEOUT PROTECTION ===');
+    const extractionResult = await Promise.race([
+      processDocument(fileData, validatedRequest.fileName, undefined),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Document processing timeout')), 30000)
+      )
+    ]) as any;
 
     console.log(`✅ Document extraction completed using ${extractionResult.method}: {
   textLength: ${extractionResult.text.length},
@@ -72,72 +85,97 @@ serve(async (req) => {
   processingNotes: '${extractionResult.processingNotes}'
 }`);
 
-    // Log successful OCR processing
-    if (extractionResult.isScanned) {
-      console.log('📷 Successfully processed scanned document using real OCR');
-      console.log(`OCR confidence: ${(extractionResult.confidence * 100).toFixed(1)}%`);
-    }
-
-    // Provide clear user feedback about processing method used
-    if (extractionResult.isScanned) {
-      console.log('📷 Document was processed using OCR for scanned content');
-      await updateDocumentStatus(
-        supabase, 
-        documentId, 
-        'processing', 
-        validatedRequest.fileUrl, 
-        `OCR processing completed. ${extractionResult.processingNotes}`
-      );
-    } else {
-      console.log('📄 Document processed using standard text extraction');
-    }
-
     // Enhanced document chunking
     console.log('📂 === STARTING DOCUMENT CHUNKING ===');
     const chunks = chunkDocumentAdvanced(extractionResult.text);
     console.log(`✅ Chunking completed: ${chunks.length} chunks created`);
 
-    // Note: Keep OpenAI embeddings for now (hybrid approach)
-    // Gemini doesn't have competitive embedding models yet
-    console.log('🧠 === STARTING EMBEDDING GENERATION (OpenAI) ===');
-    await generateAndStoreEmbeddings(
-      chunks,
-      documentId,
-      validatedRequest.clientId,
-      validatedRequest.caseId,
-      supabase,
-      Deno.env.get('OPENAI_API_KEY')!,
-      {
-        fileName: validatedRequest.fileName,
-        fileUrl: validatedRequest.fileUrl,
-        extractionMethod: extractionResult.method,
-        quality: extractionResult.quality,
-        confidence: extractionResult.confidence,
-        pageCount: extractionResult.pageCount,
-        isScanned: extractionResult.isScanned || false
-      }
+    // Clear timeout since we're about to return
+    clearTimeout(timeoutId);
+
+    // Update document status to include text extraction completion
+    await updateDocumentStatus(
+      supabase, 
+      documentId, 
+      'processing', 
+      validatedRequest.fileUrl, 
+      `Text extraction completed. Starting embeddings generation in background.`
     );
 
-    console.log('✅ Document processing completed with embeddings for search functionality');
-
-    // Mark document as completed and preserve URL
-    const finalProcessingNotes = extractionResult.isScanned 
-      ? `Successfully processed scanned document using OCR. ${extractionResult.processingNotes}`
-      : `Successfully processed document using standard extraction. ${extractionResult.processingNotes}`;
-    
-    await updateDocumentStatus(supabase, documentId, 'completed', validatedRequest.fileUrl, finalProcessingNotes);
-
-    console.log('🎉 === DOCUMENT PROCESSING WITH AUTOMATIC OCR FALLBACK COMPLETED SUCCESSFULLY ===');
-
-    return createSuccessResponse(
+    // Return early success response - embeddings will continue in background
+    const earlyResponse = createSuccessResponse(
       validatedRequest.documentId,
       chunks,
       extractionResult,
       validatedRequest.fileName
     );
 
+    // Continue embeddings generation in background using EdgeRuntime.waitUntil
+    const backgroundTask = async () => {
+      try {
+        console.log('🧠 === STARTING BACKGROUND EMBEDDING GENERATION ===');
+        await generateAndStoreEmbeddingsWithTimeout(
+          chunks,
+          documentId,
+          validatedRequest.clientId,
+          validatedRequest.caseId,
+          supabase,
+          Deno.env.get('OPENAI_API_KEY')!,
+          {
+            fileName: validatedRequest.fileName,
+            fileUrl: validatedRequest.fileUrl,
+            extractionMethod: extractionResult.method,
+            quality: extractionResult.quality,
+            confidence: extractionResult.confidence,
+            pageCount: extractionResult.pageCount,
+            isScanned: extractionResult.isScanned || false
+          }
+        );
+
+        // Mark document as completed
+        const finalProcessingNotes = extractionResult.isScanned 
+          ? `Successfully processed scanned document using OCR. ${extractionResult.processingNotes}`
+          : `Successfully processed document using standard extraction. ${extractionResult.processingNotes}`;
+        
+        await updateDocumentStatus(supabase, documentId, 'completed', validatedRequest.fileUrl, finalProcessingNotes);
+        console.log('🎉 === BACKGROUND EMBEDDING GENERATION COMPLETED ===');
+        
+      } catch (backgroundError) {
+        console.error('❌ Background processing failed:', backgroundError);
+        await handleProcessingError(backgroundError, documentId, supabase);
+      }
+    };
+
+    // Use EdgeRuntime.waitUntil to continue processing in background
+    if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
+      EdgeRuntime.waitUntil(backgroundTask());
+    } else {
+      // Fallback: start background task without waiting
+      backgroundTask().catch(error => 
+        console.error('Background task error:', error)
+      );
+    }
+
+    console.log('✅ Returning early response - embeddings continue in background');
+    return earlyResponse;
+
   } catch (error: any) {
     console.error('❌ Processing pipeline failed:', error);
+    
+    // Check if it's a timeout error
+    if (error.message?.includes('timeout')) {
+      console.log('⚠️ Timeout detected - updating document status');
+      if (documentId) {
+        await updateDocumentStatus(
+          supabase, 
+          documentId, 
+          'failed', 
+          undefined, 
+          `Processing timeout: ${error.message}`
+        );
+      }
+    }
+    
     await handleProcessingError(error, documentId, supabase);
     return createErrorResponse(error, documentId);
   }
