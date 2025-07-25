@@ -21,14 +21,16 @@ export async function extractTextWithMistralOcr(
   console.log(`⏱️ Using timeout: ${timeoutMs}ms for ${Math.round(pdfData.length / 1024)}KB file`);
 
   try {
-    // Convert PDF to base64 for Mistral API - fix stack overflow for large files
-    const chunkSize = 8192;
-    let base64Pdf = '';
-    for (let i = 0; i < pdfData.length; i += chunkSize) {
-      const chunk = pdfData.slice(i, i + chunkSize);
-      base64Pdf += btoa(String.fromCharCode.apply(null, Array.from(chunk)));
+    // Convert PDF to images first using PDF.js
+    console.log('📄 Converting PDF to images for Mistral OCR...');
+    const { renderPdfToImages } = await import('./pdfToImageService.ts');
+    const images = await renderPdfToImages(pdfData);
+    
+    if (!images || images.length === 0) {
+      throw new Error('Failed to convert PDF to images');
     }
-    console.log(`✅ Base64 conversion successful: ${base64Pdf.length} characters`);
+    
+    console.log(`✅ Converted PDF to ${images.length} images`);
 
     const mistralApiKey = Deno.env.get("MISTRAL_API_KEY");
     if (!mistralApiKey) {
@@ -42,80 +44,92 @@ export async function extractTextWithMistralOcr(
       console.log(`⏰ Mistral OCR timeout after ${timeoutMs}ms`);
     }, timeoutMs);
 
-    // Prepare Mistral OCR request
-    const requestPayload = {
-      model: "pixtral-large-latest", // Mistral's vision model for OCR
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: `Extract all text from this PDF document. Return only the text content in a clean, readable format preserving the document structure. Focus on accuracy and completeness. Do not include any commentary or explanations, just the extracted text.`
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:application/pdf;base64,${base64Pdf}`
+    // Process first few pages (limit to avoid timeouts)
+    const maxPages = Math.min(images.length, 3);
+    console.log(`📊 Processing ${maxPages} pages with Mistral OCR`);
+    
+    let allText = '';
+    
+    for (let i = 0; i < maxPages; i++) {
+      console.log(`🖼️ Processing page ${i + 1}/${maxPages}...`);
+      
+      // Prepare Mistral OCR request for this page
+      const requestPayload = {
+        model: "pixtral-large-latest",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Extract all text from this document page. Return only the text content in a clean, readable format preserving the document structure. Focus on accuracy and completeness. Do not include any commentary or explanations, just the extracted text.`
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:image/png;base64,${images[i]}`
+                }
               }
-            }
-          ]
-        }
-      ],
-      max_tokens: 4000,
-      temperature: 0.1
-    };
+            ]
+          }
+        ],
+        max_tokens: 4000,
+        temperature: 0.1
+      };
 
-    console.log(`📊 Payload size: ${JSON.stringify(requestPayload).length} characters`);
-    console.log(`🚀 Sending request to Mistral OCR API...`);
+      console.log(`🚀 Sending page ${i + 1} to Mistral OCR API...`);
 
-    // Make API request with timeout protection
-    const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${mistralApiKey}`
-      },
-      body: JSON.stringify(requestPayload),
-      signal: controller.signal
-    });
+      // Make API request with timeout protection
+      const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${mistralApiKey}`
+        },
+        body: JSON.stringify(requestPayload),
+        signal: controller.signal
+      });
 
-    clearTimeout(timeoutId);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Mistral API error for page ${i + 1}: ${response.status} ${response.statusText}`);
+        console.error(`Error details: ${errorText}`);
+        throw new Error(`Mistral OCR API failed for page ${i + 1}: ${response.status} ${response.statusText} - ${errorText}`);
+      }
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ Mistral API error: ${response.status} ${response.statusText}`);
-      console.error(`Error details: ${errorText}`);
-      throw new Error(`Mistral OCR API failed: ${response.status} ${response.statusText} - ${errorText}`);
+      const result = await response.json();
+      const pageText = result.choices?.[0]?.message?.content || "";
+      
+      if (pageText && pageText.length > 5) {
+        allText += (allText ? '\n\n' : '') + `--- Page ${i + 1} ---\n${pageText}`;
+        console.log(`✅ Extracted ${pageText.length} characters from page ${i + 1}`);
+      }
     }
 
-    const result = await response.json();
-    console.log(`✅ Mistral OCR API response received`);
-
-    // Extract text from response
-    const extractedText = result.choices?.[0]?.message?.content || "";
+    clearTimeout(timeoutId);
     
-    if (!extractedText || extractedText.length < 10) {
+    if (!allText || allText.length < 10) {
       throw new Error("Mistral OCR returned insufficient text content");
     }
 
     const processingTime = Date.now() - startTime;
-    const quality = calculateTextQuality(extractedText);
+    const quality = calculateTextQuality(allText);
     const confidence = Math.min(0.95, quality * 1.1); // Mistral typically has high confidence
 
     console.log(`✅ Mistral OCR completed successfully:`);
     console.log(`- Processing time: ${processingTime}ms`);
-    console.log(`- Text length: ${extractedText.length} characters`);
+    console.log(`- Text length: ${allText.length} characters`);
+    console.log(`- Pages processed: ${maxPages}`);
     console.log(`- Quality score: ${quality.toFixed(2)}`);
     console.log(`- Confidence: ${confidence.toFixed(2)}`);
 
     return {
-      text: extractedText,
+      text: allText,
       confidence,
       quality,
       processingTime,
       method: "mistral-ocr",
-      notes: `Successfully processed ${Math.round(pdfData.length / 1024)}KB PDF in ${processingTime}ms using Mistral OCR`
+      notes: `Successfully processed ${maxPages} pages (${Math.round(pdfData.length / 1024)}KB PDF) in ${processingTime}ms using Mistral OCR`
     };
 
   } catch (error: any) {
