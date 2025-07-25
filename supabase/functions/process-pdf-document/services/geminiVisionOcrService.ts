@@ -121,68 +121,164 @@ async function processLargeDocumentWithGemini(
   fileName: string,
   apiKey: string
 ): Promise<GeminiOcrResult> {
-  console.log('📚 Processing large document with chunked approach...');
+  console.log('📚 Processing large document - trying smaller size limits...');
   
   const startTime = Date.now();
-  const chunkSize = 8 * 1024 * 1024; // 8MB chunks
-  const chunks = [];
   
-  // Split PDF into chunks
-  for (let i = 0; i < pdfData.length; i += chunkSize) {
-    const chunk = pdfData.slice(i, i + chunkSize);
-    chunks.push(chunk);
+  // For very large documents, try processing the full document first with size limits
+  const maxSizeForFullDoc = 15 * 1024 * 1024; // 15MB limit for Gemini Vision
+  
+  if (pdfData.length <= maxSizeForFullDoc) {
+    console.log('📄 Large document within API limits, processing as single document...');
+    try {
+      return await processSingleDocumentWithGemini(pdfData, fileName, apiKey);
+    } catch (error) {
+      console.log(`⚠️ Single document processing failed: ${error.message}`);
+      console.log('📄 Falling back to page-based processing...');
+    }
   }
   
-  console.log(`📝 Split document into ${chunks.length} chunks`);
+  // Convert PDF to individual page images using PDF.js
+  console.log('🖼️ Converting PDF to individual page images for processing...');
+  let pageImages = [];
+  
+  try {
+    const { convertPdfToImagesWithPdfJs } = await import('./pdfJsImageService.ts');
+    const { images, pageCount } = await convertPdfToImagesWithPdfJs(pdfData);
+    pageImages = images;
+    console.log(`✅ Generated ${pageImages.length} page images from ${pageCount} pages`);
+  } catch (pdfJsError) {
+    console.log(`⚠️ PDF.js conversion failed: ${pdfJsError.message}`);
+    console.log('🔄 Trying alternative PDF conversion...');
+    
+    try {
+      const { convertPdfToImages } = await import('../pdfToImageService.ts');
+      const { images } = await convertPdfToImages(pdfData);
+      pageImages = images;
+      console.log(`✅ Generated ${pageImages.length} page images using alternative method`);
+    } catch (altError) {
+      throw new Error(`Failed to convert PDF to images: ${altError.message}`);
+    }
+  }
+  
+  if (pageImages.length === 0) {
+    throw new Error('No page images generated from PDF');
+  }
   
   const extractedTexts = [];
   let totalConfidence = 0;
+  const maxPagesToProcess = Math.min(pageImages.length, 20); // Process up to 20 pages for large docs
   
-  // Process chunks with rate limiting
-  for (let i = 0; i < Math.min(chunks.length, 5); i++) { // Limit to first 5 chunks for efficiency
-    console.log(`🔄 Processing chunk ${i + 1}/${Math.min(chunks.length, 5)}...`);
+  console.log(`📋 Processing ${maxPagesToProcess} pages out of ${pageImages.length} total pages...`);
+  
+  // Process pages individually with Gemini Vision
+  for (let i = 0; i < maxPagesToProcess; i++) {
+    console.log(`🔄 Processing page ${i + 1}/${maxPagesToProcess}...`);
     
     try {
-      const chunkResult = await processSingleDocumentWithGemini(
-        chunks[i], 
-        `${fileName}_chunk_${i + 1}`, 
-        apiKey
-      );
+      // Convert base64 image to bytes for Gemini Vision API
+      const imageResponse = await fetch(pageImages[i]);
+      const imageArrayBuffer = await imageResponse.arrayBuffer();
+      const imageBytes = new Uint8Array(imageArrayBuffer);
       
-      if (chunkResult.text.length > 100) {
-        extractedTexts.push(chunkResult.text);
-        totalConfidence += chunkResult.confidence;
+      const pageResult = await processImageWithGemini(imageBytes, `${fileName}_page_${i + 1}`, apiKey);
+      
+      if (pageResult.text.length > 50) {
+        extractedTexts.push(`=== PAGE ${i + 1} ===\n${pageResult.text}`);
+        totalConfidence += pageResult.confidence;
+        console.log(`✅ Page ${i + 1}: ${pageResult.text.length} characters extracted`);
+      } else {
+        console.log(`⚠️ Page ${i + 1}: Minimal text extracted`);
       }
       
-      // Rate limiting - wait between chunks
-      if (i < chunks.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      // Rate limiting - wait between pages
+      if (i < maxPagesToProcess - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1500));
       }
       
-    } catch (chunkError) {
-      console.log(`⚠️ Chunk ${i + 1} failed: ${chunkError.message}`);
-      // Continue with other chunks
+    } catch (pageError) {
+      console.log(`⚠️ Page ${i + 1} failed: ${pageError.message}`);
+      // Continue with other pages
     }
   }
   
   if (extractedTexts.length === 0) {
-    throw new Error('No text extracted from any chunks');
+    throw new Error('No text extracted from any pages');
   }
   
-  const combinedText = extractedTexts.join('\n\n--- PAGE BREAK ---\n\n');
+  const combinedText = extractedTexts.join('\n\n');
   const avgConfidence = totalConfidence / extractedTexts.length;
   const processingTime = Date.now() - startTime;
-  const pageCount = estimatePageCount(combinedText, pdfData.length);
   
-  console.log(`✅ Large document processing completed: ${extractedTexts.length} chunks, ${combinedText.length} total characters`);
+  console.log(`✅ Large document processing completed: ${extractedTexts.length} pages processed, ${combinedText.length} total characters`);
   
   return {
     text: combinedText,
     confidence: avgConfidence,
-    pageCount,
+    pageCount: pageImages.length,
     processingTime,
-    processingNotes: `Gemini Vision chunked processing: ${extractedTexts.length} chunks, ${combinedText.length} characters in ${processingTime}ms`
+    processingNotes: `Gemini Vision page-by-page processing: ${extractedTexts.length}/${pageImages.length} pages, ${combinedText.length} characters in ${processingTime}ms`
   };
+}
+
+// Helper function to process individual images with Gemini Vision
+async function processImageWithGemini(
+  imageData: Uint8Array,
+  pageName: string,
+  apiKey: string
+): Promise<{ text: string; confidence: number }> {
+  
+  // Convert image to base64
+  const base64Image = btoa(String.fromCharCode(...imageData));
+  
+  const payload = {
+    contents: [{
+      parts: [
+        {
+          text: `Extract ALL text from this page of a legal document. Be thorough and accurate. Include all visible text, maintaining formatting where possible. Do not summarize - extract the complete text exactly as shown.`
+        },
+        {
+          inline_data: {
+            mime_type: "image/jpeg",
+            data: base64Image
+          }
+        }
+      ]
+    }],
+    generationConfig: {
+      temperature: 0.1,
+      topK: 1,
+      topP: 0.8,
+      maxOutputTokens: 8000,
+    }
+  };
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Gemini API error for ${pageName} (${response.status}): ${errorText}`);
+  }
+
+  const result = await response.json();
+  
+  if (!result.candidates || !result.candidates[0] || !result.candidates[0].content) {
+    throw new Error(`No content generated by Gemini Vision for ${pageName}`);
+  }
+
+  const extractedText = result.candidates[0].content.parts[0].text;
+  const confidence = calculateTextConfidence(extractedText);
+  
+  return { text: extractedText, confidence };
 }
 
 function buildLegalDocumentPrompt(fileName: string): string {

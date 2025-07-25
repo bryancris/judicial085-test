@@ -42,19 +42,33 @@ async function processPdfWithOcrFallback(
   pdfData: Uint8Array, 
   fileName: string
 ): Promise<DocumentExtractionResult> {
-  console.log('📄 Starting simplified PDF processing with better fallbacks...');
+  console.log('📄 Starting simplified PDF processing with smart scanned detection...');
+  
+  // Quick scanned document detection
+  const isLikelyScanned = await detectScannedDocument(pdfData, fileName);
+  
+  if (isLikelyScanned) {
+    console.log('🖼️ Document appears to be scanned, going directly to OCR...');
+    try {
+      return await processScannedPdfWithOcr(pdfData, fileName);
+    } catch (ocrError) {
+      console.error('❌ OCR processing failed:', ocrError.message);
+      // Fall back to standard processing as last resort
+      console.log('🔄 OCR failed, trying standard extraction as fallback...');
+    }
+  }
   
   // Step 1: Try direct PDF text extraction (multiple methods)
   console.log('🔍 Attempting direct PDF text extraction...');
   try {
     const directResult = await processPdfDocument(pdfData, fileName);
     
-    // Use much more lenient success criteria
-    if (directResult.text.length > 20) {
+    // Use stricter success criteria for better quality
+    if (directResult.text.length > 200 && !isGarbageText(directResult.text)) {
       console.log('✅ Direct PDF extraction successful');
       return directResult;
     }
-    console.log('📝 Direct extraction minimal, proceeding to enhanced methods...');
+    console.log('📝 Direct extraction insufficient quality, proceeding to enhanced methods...');
   } catch (directError) {
     console.log('⚠️ Direct extraction failed:', directError.message, '- proceeding to enhanced methods...');
   }
@@ -63,17 +77,17 @@ async function processPdfWithOcrFallback(
   console.log('🔧 Attempting enhanced PDF text extraction...');
   try {
     const enhancedResult = await tryEnhancedPdfExtraction(pdfData, fileName);
-    if (enhancedResult.text.length > 10) {
+    if (enhancedResult.text.length > 100 && !isGarbageText(enhancedResult.text)) {
       console.log('✅ Enhanced PDF extraction successful');
       return enhancedResult;
     }
-    console.log('📝 Enhanced extraction minimal, proceeding to OCR...');
+    console.log('📝 Enhanced extraction insufficient quality, proceeding to OCR...');
   } catch (enhancedError) {
     console.log('⚠️ Enhanced extraction failed:', enhancedError.message, '- proceeding to OCR...');
   }
   
-  // Step 3: Use OCR for scanned documents
-  console.log('🖼️ Document appears to be scanned, using OCR processing...');
+  // Step 3: Use OCR for scanned documents (forced if we get here)
+  console.log('🖼️ Standard extraction failed, using OCR processing...');
   try {
     return await processScannedPdfWithOcr(pdfData, fileName);
   } catch (ocrError) {
@@ -81,6 +95,66 @@ async function processPdfWithOcrFallback(
     // Only use placeholder as absolute last resort
     return createDocumentPlaceholder(pdfData, fileName, 'pdf', `All processing methods failed. Last error: ${ocrError.message}`);
   }
+}
+
+// Smart scanned document detection
+async function detectScannedDocument(pdfData: Uint8Array, fileName: string): Promise<boolean> {
+  console.log('🔍 Detecting if document is scanned...');
+  
+  // Size-based heuristics (scanned documents are typically larger)
+  const fileSizeIndicator = pdfData.length > 5 * 1024 * 1024; // > 5MB
+  
+  // Filename heuristics
+  const nameIndicators = fileName.toLowerCase().includes('scan') || 
+                        fileName.toLowerCase().includes('scanned') ||
+                        fileName.toLowerCase().includes('copy');
+  
+  // Quick text extraction test
+  let hasMinimalText = false;
+  try {
+    const quickTest = await processPdfDocument(pdfData, fileName);
+    // If we get very little text or it's garbled, likely scanned
+    hasMinimalText = quickTest.text.length < 100 || isGarbageText(quickTest.text);
+  } catch {
+    // If basic extraction fails completely, likely scanned
+    hasMinimalText = true;
+  }
+  
+  const isScanned = fileSizeIndicator || nameIndicators || hasMinimalText;
+  console.log(`📊 Scanned detection: size=${fileSizeIndicator}, name=${nameIndicators}, minimalText=${hasMinimalText} → ${isScanned}`);
+  
+  return isScanned;
+}
+
+// Check for garbled/garbage text that indicates OCR is needed
+function isGarbageText(text: string): boolean {
+  if (!text || text.length < 20) return true;
+  
+  // Check for high ratio of special characters
+  const specialChars = (text.match(/[^\w\s\.\,\!\?\-\(\)]/g) || []).length;
+  const specialRatio = specialChars / text.length;
+  
+  // Check for repeated garbled patterns
+  const garbagePatterns = [
+    /[^\w\s]{5,}/g,  // 5+ consecutive non-word characters
+    /(.)\1{4,}/g,    // 4+ repeated characters
+    /^\s*[\?\.\-\*]{5,}/, // Starts with lots of special chars
+  ];
+  
+  const hasGarbagePatterns = garbagePatterns.some(pattern => pattern.test(text));
+  
+  // Check for lack of real words
+  const words = text.split(/\s+/).filter(word => word.length > 2);
+  const realWords = words.filter(word => /^[a-zA-Z]+$/.test(word));
+  const wordRatio = words.length > 0 ? realWords.length / words.length : 0;
+  
+  const isGarbage = specialRatio > 0.3 || hasGarbagePatterns || wordRatio < 0.3;
+  
+  if (isGarbage) {
+    console.log(`🗑️ Detected garbage text: specialRatio=${specialRatio.toFixed(2)}, patterns=${hasGarbagePatterns}, wordRatio=${wordRatio.toFixed(2)}`);
+  }
+  
+  return isGarbage;
 }
 
 async function processScannedPdfWithOcr(
