@@ -1,6 +1,7 @@
-// Unified Document Processor with real OCR fallback for scanned documents
+// Unified Document Processor with Mistral OCR as primary extraction method
 
 import { processPdfDocument } from '../processors/pdfDocumentProcessor.ts';
+import { extractTextWithMistralOcr, calculateMistralTimeout } from './mistralOcrService.ts';
 
 export interface DocumentExtractionResult {
   text: string;
@@ -92,14 +93,37 @@ async function processPdfWithOcrFallback(
     console.log('⚠️ Enhanced extraction failed:', enhancedError.message, '- proceeding to OCR...');
   }
   
-  // Step 3: Use OCR for scanned documents (forced if we get here)
-  console.log('🖼️ Standard extraction failed, using OCR processing...');
+  // Step 3: Use Mistral OCR as primary OCR method
+  console.log('🖼️ Standard extraction failed, using Mistral OCR...');
   try {
-    return await processScannedPdfWithOcr(pdfData, fileName);
-  } catch (ocrError) {
-    console.error('❌ OCR processing failed:', ocrError.message);
-    // Only use placeholder as absolute last resort
-    return createDocumentPlaceholder(pdfData, fileName, 'pdf', `All processing methods failed. Last error: ${ocrError.message}`);
+    const mistralTimeout = calculateMistralTimeout(pdfData.length);
+    console.log(`🤖 Starting Mistral OCR with ${mistralTimeout}ms timeout...`);
+    
+    const mistralResult = await extractTextWithMistralOcr(pdfData, fileName, mistralTimeout);
+    
+    return {
+      text: mistralResult.text,
+      method: "mistral-ocr",
+      quality: mistralResult.quality,
+      confidence: mistralResult.confidence,
+      pageCount: Math.max(1, Math.ceil(pdfData.length / 50000)), // Estimate page count
+      fileType: "pdf",
+      processingNotes: mistralResult.notes || `Successfully processed using Mistral OCR in ${mistralResult.processingTime}ms`,
+      isScanned: true
+    };
+    
+  } catch (mistralError) {
+    console.error('❌ Mistral OCR failed:', mistralError.message);
+    console.log('🔄 Falling back to Gemini Vision OCR...');
+    
+    try {
+      // Fallback to Gemini Vision OCR if Mistral fails
+      return await processScannedPdfWithOcr(pdfData, fileName);
+    } catch (geminiError) {
+      console.error('❌ Both Mistral and Gemini OCR failed');
+      // Only use placeholder as absolute last resort
+      return createDocumentPlaceholder(pdfData, fileName, 'pdf', `All OCR methods failed. Mistral: ${mistralError.message}, Gemini: ${geminiError.message}`);
+    }
   }
 }
 
