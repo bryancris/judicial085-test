@@ -1,4 +1,17 @@
 // Mistral OCR Service - Direct PDF processing
+
+function uint8ArrayToBase64(uint8Array: Uint8Array): string {
+  let binary = '';
+  const chunkSize = 8192;
+  
+  for (let i = 0; i < uint8Array.length; i += chunkSize) {
+    const chunk = uint8Array.slice(i, i + chunkSize);
+    binary += String.fromCharCode.apply(null, Array.from(chunk));
+  }
+  
+  return btoa(binary);
+}
+
 export interface MistralOcrResult {
   text: string;
   confidence: number;
@@ -14,8 +27,8 @@ export async function extractTextWithMistralOcr(pdfData: Uint8Array): Promise<Mi
   }
 
   try {
-    // Convert PDF to base64
-    const base64Pdf = btoa(String.fromCharCode(...pdfData));
+    // Convert PDF to base64 using chunked approach to avoid stack overflow
+    const base64Pdf = uint8ArrayToBase64(pdfData);
     
     console.log(`📊 PDF data size: ${pdfData.length} bytes (${Math.round(pdfData.length / 1024)}KB)`);
 
