@@ -1,7 +1,6 @@
 // Unified Document Processor with real OCR fallback for scanned documents
 
 import { processPdfDocument } from '../processors/pdfDocumentProcessor.ts';
-import { extractTextWithWorkingOCR, processLargeDocument } from '../workingOcrService.ts';
 
 export interface DocumentExtractionResult {
   text: string;
@@ -161,81 +160,73 @@ async function processScannedPdfWithOcr(
   pdfData: Uint8Array, 
   fileName: string
 ): Promise<DocumentExtractionResult> {
-  console.log('🔍 Processing scanned PDF with OCR pipeline...');
+  console.log('🔍 Processing scanned PDF with simplified OCR...');
   
-  // Step 1: Try Gemini Vision OCR first for scanned documents
+  // Only try Gemini Vision OCR with timeout protection
   console.log('🤖 Attempting Gemini Vision OCR for scanned document...');
   try {
+    // Check if Gemini API key is available
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!geminiApiKey) {
+      throw new Error('Gemini API key not available');
+    }
+    
     const { extractTextWithGeminiVision } = await import('./geminiVisionOcrService.ts');
     
-    const geminiResult = await extractTextWithGeminiVision(pdfData, fileName);
+    // Add timeout protection for Gemini OCR
+    const geminiResult = await Promise.race([
+      extractTextWithGeminiVision(pdfData, fileName),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Gemini Vision OCR timeout after 15 seconds')), 15000)
+      )
+    ]) as any;
     
     // Validate the result quality
-    if (geminiResult.text && geminiResult.text.length > 100 && !isGarbageText(geminiResult.text)) {
+    if (geminiResult.text && geminiResult.text.length > 50) {
       console.log(`✅ Gemini Vision OCR successful: ${geminiResult.text.length} characters, confidence: ${geminiResult.confidence}`);
       
       return {
         text: geminiResult.text,
         method: 'Gemini Vision OCR',
-        quality: geminiResult.confidence,
-        confidence: geminiResult.confidence,
-        pageCount: geminiResult.pageCount || 1,
+        quality: geminiResult.confidence || 0.7,
+        confidence: geminiResult.confidence || 0.7,
+        pageCount: geminiResult.pageCount || Math.max(1, Math.ceil(pdfData.length / 50000)),
         fileType: 'pdf',
-        processingNotes: `Successfully processed scanned document using Gemini Vision OCR. ${geminiResult.processingNotes}`,
+        processingNotes: `Successfully processed scanned document using Gemini Vision OCR. Text length: ${geminiResult.text.length} characters.`,
         isScanned: true
       };
     } else {
-      console.log('⚠️ Gemini Vision result quality insufficient, trying multi-stage pipeline...');
+      throw new Error('Gemini Vision result quality insufficient');
     }
     
   } catch (geminiError) {
-    console.log(`⚠️ Gemini Vision OCR failed: ${geminiError.message}`);
-    console.log('🔄 Falling back to multi-stage OCR pipeline...');
-  }
-  
-  // Step 2: Try multi-stage OCR pipeline
-  try {
-    const { processDocumentWithMultiStageOcr } = await import('./multiStageOcrPipeline.ts');
+    console.error(`❌ Gemini Vision OCR failed: ${geminiError.message}`);
     
-    const ocrResult = await processDocumentWithMultiStageOcr(pdfData, fileName, true);
-    
-    console.log(`✅ Multi-stage OCR completed using ${ocrResult.method} (Stage ${ocrResult.stage})`);
-    console.log(`Result: ${ocrResult.text.length} characters, confidence: ${ocrResult.confidence.toFixed(2)}, time: ${ocrResult.processingTime}ms`);
-    
+    // Create a more informative placeholder for scanned documents
+    const placeholderText = `SCANNED DOCUMENT DETECTED
+File: ${fileName}
+Size: ${Math.round(pdfData.length / 1024)}KB
+
+This appears to be a scanned document that could not be processed with OCR.
+The document has been uploaded and is available for manual review.
+
+Reason: ${geminiError.message}
+
+Please consider:
+1. Re-uploading if this is a text-based PDF
+2. Manual review of the document content
+3. Using alternative OCR tools if text extraction is critical`;
+
     return {
-      text: ocrResult.text,
-      method: ocrResult.method,
-      quality: Math.min(ocrResult.confidence, 0.95),
-      confidence: ocrResult.confidence,
-      pageCount: ocrResult.pageCount || Math.max(1, Math.ceil(pdfData.length / 50000)),
+      text: placeholderText,
+      method: 'scanned-placeholder',
+      quality: 0.3,
+      confidence: 0.4,
+      pageCount: Math.max(1, Math.ceil(pdfData.length / 50000)),
       fileType: 'pdf',
-      processingNotes: `Scanned document processing failed. Tried Gemini Vision and Google Cloud Document AI. Last error: Multi-stage OCR: ${ocrResult.processingNotes}. Processing time: ${ocrResult.processingTime}ms`,
+      processingNotes: `Scanned document OCR failed: ${geminiError.message}`,
       isScanned: true
     };
-    
-  } catch (error) {
-    console.error('❌ Multi-stage OCR processing failed:', error);
-    console.log('🔄 Falling back to legacy OCR method...');
-    
-    // Step 3: Fallback to original method if multi-stage fails
-    try {
-      const { extractTextWithWorkingOCR } = await import('../workingOcrService.ts');
-      const legacyResult = await extractTextWithWorkingOCR(pdfData);
-      
-      return {
-        text: legacyResult.text,
-        method: 'legacy-ocr-fallback',
-        quality: Math.min(legacyResult.confidence, 0.7),
-        confidence: legacyResult.confidence,
-        pageCount: Math.max(1, Math.ceil(pdfData.length / 50000)),
-        fileType: 'pdf',
-        processingNotes: `Scanned document processing failed. Tried Gemini Vision and Google Cloud Document AI. Last error: Legacy OCR fallback: ${legacyResult.text.length} characters. Multi-stage failed: ${error.message}`,
-        isScanned: true
-      };
-    } catch (fallbackError) {
-      console.error('❌ Legacy OCR fallback also failed:', fallbackError);
-      throw new Error(`All OCR methods failed: ${error.message}`);
-    }
   }
 }
 

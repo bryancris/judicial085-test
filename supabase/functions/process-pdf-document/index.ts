@@ -66,12 +66,12 @@ serve(async (req) => {
     ]) as Uint8Array;
     console.log(`✅ File downloaded successfully: ${fileData.length} bytes`);
 
-    // Process document with timeout protection
-    console.log('🔍 === STARTING UNIFIED DOCUMENT PROCESSING WITH TIMEOUT PROTECTION ===');
+    // Process document with timeout protection (reduced to 20 seconds)
+    console.log('🔍 === STARTING SIMPLIFIED DOCUMENT PROCESSING ===');
     const extractionResult = await Promise.race([
       processDocument(fileData, validatedRequest.fileName, undefined),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Document processing timeout')), 30000)
+        setTimeout(() => reject(new Error('Document processing timeout after 20 seconds')), 20000)
       )
     ]) as any;
 
