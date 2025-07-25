@@ -89,11 +89,18 @@ async function processSingleDocumentWithGemini(
   console.log('🚀 Sending request to Gemini Vision API...');
   console.log(`📊 Payload size: ${JSON.stringify(payload).length} characters`);
   
+  // Progressive timeout based on file size
+  const baseTimeout = 30000; // 30 seconds base
+  const sizeMultiplier = Math.min(2.0, pdfData.length / (5 * 1024 * 1024)); // Up to 2x for large files
+  const dynamicTimeout = Math.min(baseTimeout * sizeMultiplier, 45000); // Max 45 seconds
+  
+  console.log(`⏱️ Using dynamic timeout: ${dynamicTimeout}ms for ${(pdfData.length / 1024).toFixed(0)}KB file`);
+  
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
-    console.log('⏰ Gemini API call timeout, aborting request...');
+    console.log(`⏰ Gemini API call timeout after ${dynamicTimeout}ms, aborting request...`);
     controller.abort();
-  }, 25000); // 25 second timeout for API call
+  }, dynamicTimeout);
   
   try {
     const response = await fetch(
@@ -144,10 +151,10 @@ async function processSingleDocumentWithGemini(
   } catch (error) {
     clearTimeout(timeoutId);
     if (error.name === 'AbortError') {
-      throw new Error('Gemini API request timed out after 25 seconds');
+      throw new Error(`Gemini API request timed out after ${dynamicTimeout}ms`);
     }
     if (error.message.includes('timeout')) {
-      throw new Error('Gemini API request timed out after 25 seconds');
+      throw new Error(`Gemini API request timed out after ${dynamicTimeout}ms`);
     }
     throw error;
   }

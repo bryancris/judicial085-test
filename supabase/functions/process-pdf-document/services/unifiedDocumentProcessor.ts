@@ -122,32 +122,39 @@ async function detectScannedDocument(pdfData: Uint8Array, fileName: string): Pro
   return isScanned;
 }
 
-// Check for garbled/garbage text that indicates OCR is needed
+// Improved garbage text detection with more lenient criteria
 function isGarbageText(text: string): boolean {
   if (!text || text.length < 20) return true;
   
-  // Check for high ratio of special characters
-  const specialChars = (text.match(/[^\w\s\.\,\!\?\-\(\)]/g) || []).length;
+  // Check for high ratio of special characters (more lenient)
+  const specialChars = (text.match(/[^\w\s\.\,\!\?\-\(\)\:\;\'\"\[\]]/g) || []).length;
   const specialRatio = specialChars / text.length;
   
-  // Check for repeated garbled patterns
+  // More specific garbage patterns
   const garbagePatterns = [
-    /[^\w\s]{5,}/g,  // 5+ consecutive non-word characters
-    /(.)\1{4,}/g,    // 4+ repeated characters
-    /^\s*[\?\.\-\*]{5,}/, // Starts with lots of special chars
+    /[^\w\s]{8,}/g,  // 8+ consecutive non-word characters (increased threshold)
+    /(.)\1{6,}/g,    // 6+ repeated characters (increased threshold)
+    /^[\?\.\-\*\s]{10,}/, // Starts with lots of special chars
+    /^[^a-zA-Z0-9\s]{20,}/, // Starts with 20+ non-alphanumeric
   ];
   
   const hasGarbagePatterns = garbagePatterns.some(pattern => pattern.test(text));
   
-  // Check for lack of real words
-  const words = text.split(/\s+/).filter(word => word.length > 2);
-  const realWords = words.filter(word => /^[a-zA-Z]+$/.test(word));
+  // Check for lack of real words (more lenient)
+  const words = text.split(/\s+/).filter(word => word.length > 1);
+  const realWords = words.filter(word => /^[a-zA-Z0-9]+$/.test(word) || /^[a-zA-Z]+$/.test(word));
   const wordRatio = words.length > 0 ? realWords.length / words.length : 0;
   
-  const isGarbage = specialRatio > 0.3 || hasGarbagePatterns || wordRatio < 0.3;
+  // Check for readable content indicators
+  const hasReadableContent = /\b(?:the|and|or|to|of|in|for|with|by|from|that|this|is|was|are|were|will|would|could|should)\b/i.test(text);
+  
+  // More lenient criteria - only mark as garbage if severely corrupted
+  const isGarbage = (specialRatio > 0.5 && !hasReadableContent) || 
+                   hasGarbagePatterns || 
+                   (wordRatio < 0.15 && !hasReadableContent);
   
   if (isGarbage) {
-    console.log(`🗑️ Detected garbage text: specialRatio=${specialRatio.toFixed(2)}, patterns=${hasGarbagePatterns}, wordRatio=${wordRatio.toFixed(2)}`);
+    console.log(`🗑️ Detected garbage text: specialRatio=${specialRatio.toFixed(2)}, patterns=${hasGarbagePatterns}, wordRatio=${wordRatio.toFixed(2)}, readable=${hasReadableContent}`);
   }
   
   return isGarbage;
@@ -166,14 +173,20 @@ async function processScannedPdfWithOcr(
       throw new Error('Gemini API key not available');
     }
     
-    console.log('🤖 Attempting Gemini Vision OCR with 30-second timeout...');
+    console.log('🤖 Attempting Gemini Vision OCR with progressive timeout...');
     const { extractTextWithGeminiVision } = await import('./geminiVisionOcrService.ts');
     
-    // Add robust timeout protection for Gemini OCR (30 seconds max)
+    // Progressive timeout based on file size (45-60 seconds max)
+    const fileSize = pdfData.length;
+    const sizeMultiplier = Math.min(2.0, fileSize / (5 * 1024 * 1024));
+    const overallTimeout = Math.min(45000 * sizeMultiplier, 60000); // Max 60 seconds
+    
+    console.log(`⏱️ Using ${overallTimeout}ms overall timeout for ${(fileSize / 1024).toFixed(0)}KB file`);
+    
     const geminiResult = await Promise.race([
       extractTextWithGeminiVision(pdfData, fileName),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Gemini Vision OCR timeout after 30 seconds')), 30000)
+        setTimeout(() => reject(new Error(`Gemini Vision OCR timeout after ${overallTimeout}ms`)), overallTimeout)
       )
     ]) as any;
     
