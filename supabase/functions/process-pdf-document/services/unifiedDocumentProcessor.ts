@@ -1,7 +1,8 @@
 // Unified Document Processor - Simplified approach
-// Normal PDF extraction -> Placeholder if fails
+// Normal PDF extraction -> Google Cloud Document AI OCR fallback
 
 import { processPdfDocument } from '../processors/pdfDocumentProcessor.ts';
+import { extractTextWithGoogleDocumentAI } from './googleCloudDocumentAiService.ts';
 
 export interface DocumentExtractionResult {
   text: string;
@@ -66,9 +67,26 @@ async function processPdfWithOcrFallback(
     console.log('⚠️ Normal extraction failed:', directError.message, '- creating placeholder...');
   }
   
-  // Step 2: Create placeholder document
-  console.log('📄 Creating placeholder document...');
-  return createDocumentPlaceholder(pdfData, fileName, 'pdf', `Normal PDF text extraction was unsuccessful. The document has been uploaded and is available for manual review.`);
+  // Step 2: Try Google Cloud Document AI OCR
+  console.log('🤖 Step 2: Using Google Cloud Document AI OCR...');
+  try {
+    const ocrResult = await extractTextWithGoogleDocumentAI(pdfData);
+    
+    return {
+      text: ocrResult.text,
+      method: "google-cloud-document-ai",
+      quality: ocrResult.confidence,
+      confidence: ocrResult.confidence,
+      pageCount: ocrResult.pageCount || Math.max(1, Math.ceil(pdfData.length / 50000)),
+      fileType: "pdf",
+      processingNotes: `Successfully processed using Google Cloud Document AI OCR. Extracted ${ocrResult.text.length} characters from ${ocrResult.pageCount || 1} pages.`
+    };
+    
+  } catch (ocrError) {
+    console.error('❌ Google Cloud Document AI OCR failed:', ocrError.message);
+    // Only use placeholder as last resort
+    return createDocumentPlaceholder(pdfData, fileName, 'pdf', `Normal PDF text extraction and OCR both failed. The document has been uploaded and is available for manual review. Error: ${ocrError.message}`);
+  }
 }
 
 
