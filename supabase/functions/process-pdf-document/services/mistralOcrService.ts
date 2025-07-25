@@ -32,7 +32,7 @@ export async function extractTextWithMistralOcr(pdfData: Uint8Array): Promise<Mi
     
     console.log(`📊 PDF data size: ${pdfData.length} bytes (${Math.round(pdfData.length / 1024)}KB)`);
 
-    const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
+    const response = await fetch('https://api.mistral.ai/v1/ocr', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${mistralApiKey}`,
@@ -40,24 +40,11 @@ export async function extractTextWithMistralOcr(pdfData: Uint8Array): Promise<Mi
       },
       body: JSON.stringify({
         model: 'pixtral-12b-2409',
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: 'Please extract all the text from this PDF document. Return only the extracted text content without any additional formatting or commentary.'
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:application/pdf;base64,${base64Pdf}`
-                }
-              }
-            ]
-          }
-        ],
-        max_tokens: 4000
+        document: {
+          type: 'file_content',
+          content: base64Pdf,
+          mime_type: 'application/pdf'
+        }
       }),
     });
 
@@ -67,7 +54,15 @@ export async function extractTextWithMistralOcr(pdfData: Uint8Array): Promise<Mi
     }
 
     const result = await response.json();
-    const extractedText = result.choices?.[0]?.message?.content || '';
+    
+    // Extract text from OCR API response - concatenate markdown from all pages
+    let extractedText = '';
+    if (result.pages && Array.isArray(result.pages)) {
+      extractedText = result.pages
+        .map((page: any) => page.markdown || '')
+        .filter((text: string) => text.trim().length > 0)
+        .join('\n\n');
+    }
 
     if (!extractedText || extractedText.length < 10) {
       throw new Error('Mistral OCR returned insufficient text content');
