@@ -87,13 +87,13 @@ async function processScannedPdfWithOcr(
   pdfData: Uint8Array, 
   fileName: string
 ): Promise<DocumentExtractionResult> {
-  console.log('🔍 Processing scanned PDF with multi-stage OCR pipeline...');
+  console.log('🔍 Processing scanned PDF with optimized OCR pipeline...');
   
   try {
-    // Use the new multi-stage OCR pipeline
+    // Use the optimized multi-stage OCR pipeline for scanned documents
     const { processDocumentWithMultiStageOcr } = await import('./multiStageOcrPipeline.ts');
     
-    const ocrResult = await processDocumentWithMultiStageOcr(pdfData, fileName);
+    const ocrResult = await processDocumentWithMultiStageOcr(pdfData, fileName, true);
     
     console.log(`✅ Multi-stage OCR completed using ${ocrResult.method} (Stage ${ocrResult.stage})`);
     console.log(`Result: ${ocrResult.text.length} characters, confidence: ${ocrResult.confidence.toFixed(2)}, time: ${ocrResult.processingTime}ms`);

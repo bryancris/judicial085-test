@@ -19,13 +19,19 @@ export interface OcrResult {
 
 export async function processDocumentWithMultiStageOcr(
   pdfData: Uint8Array,
-  fileName: string
+  fileName: string,
+  isScanned: boolean = false
 ): Promise<OcrResult> {
   console.log('🚀 === STARTING MULTI-STAGE OCR PIPELINE ===');
-  console.log(`Processing: ${fileName} (${pdfData.length} bytes)`);
+  console.log(`Processing: ${fileName} (${pdfData.length} bytes) - Scanned: ${isScanned}`);
   
   const startTime = Date.now();
   let lastError = '';
+  
+  // For scanned documents, use optimized pipeline
+  if (isScanned) {
+    return await processScannedDocumentPipeline(pdfData, fileName, startTime);
+  }
   
   // Stage 1: Google Cloud Document AI (highest quality for documents)
   try {
@@ -255,4 +261,73 @@ export function selectOptimalOcrMethod(
   
   console.log('Optimal method order:', methods);
   return methods;
+}
+
+// Optimized pipeline specifically for scanned documents
+async function processScannedDocumentPipeline(
+  pdfData: Uint8Array,
+  fileName: string,
+  startTime: number
+): Promise<OcrResult> {
+  console.log('📄 === SCANNED DOCUMENT PIPELINE ===');
+  console.log('Skipping failing OCR methods, focusing on working solutions');
+  
+  let lastError = '';
+  
+  // Stage 1: Gemini Vision (direct PDF processing)
+  try {
+    console.log('🤖 STAGE 1: Attempting Gemini Vision direct PDF processing...');
+    const { extractTextWithGeminiVision } = await import('./geminiVisionOcrService.ts');
+    
+    const result = await extractTextWithGeminiVision(pdfData, fileName);
+    
+    if (result.text.length > 100 && result.confidence > 0.6) {
+      console.log('✅ STAGE 1 SUCCESS: Gemini Vision extraction completed');
+      return {
+        text: result.text,
+        confidence: result.confidence,
+        method: 'gemini-vision-pdf',
+        stage: 1,
+        processingNotes: result.processingNotes,
+        pageCount: result.pageCount,
+        processingTime: Date.now() - startTime
+      };
+    } else {
+      console.log('⚠️ STAGE 1: Gemini Vision result insufficient, proceeding to Stage 2');
+    }
+  } catch (error) {
+    console.log('⚠️ STAGE 1 FAILED: Gemini Vision unavailable:', error.message);
+    lastError = `Stage 1: ${error.message}`;
+  }
+  
+  // Stage 2: Google Cloud Document AI (fallback)
+  try {
+    console.log('📋 STAGE 2: Attempting Google Cloud Document AI...');
+    const result = await extractTextWithGoogleDocumentAI(pdfData);
+    
+    if (result.text.length > 50 && result.confidence > 0.7) {
+      console.log('✅ STAGE 2 SUCCESS: Google Cloud Document AI extraction completed');
+      return {
+        text: result.text,
+        confidence: result.confidence,
+        method: 'google-cloud-document-ai',
+        stage: 2,
+        processingNotes: `Google Cloud Document AI fallback: ${result.text.length} characters, confidence ${result.confidence.toFixed(2)}`,
+        pageCount: result.pageCount,
+        processingTime: Date.now() - startTime
+      };
+    } else {
+      console.log('⚠️ STAGE 2: Google Cloud Document AI result insufficient');
+    }
+  } catch (error) {
+    console.log('⚠️ STAGE 2 FAILED: Google Cloud Document AI unavailable:', error.message);
+    lastError = `Stage 2: ${error.message}`;
+  }
+  
+  // All scanned document methods failed
+  console.error('❌ ALL SCANNED DOCUMENT METHODS FAILED');
+  console.error('Skipped failing methods: Enhanced PDFShift, PDF.js Vision, Tesseract.js');
+  console.error('Last error:', lastError);
+  
+  throw new Error(`Scanned document processing failed. Tried Gemini Vision and Google Cloud Document AI. Last error: ${lastError}`);
 }
