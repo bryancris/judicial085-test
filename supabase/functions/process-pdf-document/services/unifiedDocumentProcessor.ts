@@ -161,10 +161,40 @@ async function processScannedPdfWithOcr(
   pdfData: Uint8Array, 
   fileName: string
 ): Promise<DocumentExtractionResult> {
-  console.log('🔍 Processing scanned PDF with optimized OCR pipeline...');
+  console.log('🔍 Processing scanned PDF with OCR pipeline...');
   
+  // Step 1: Try Gemini Vision OCR first for scanned documents
+  console.log('🤖 Attempting Gemini Vision OCR for scanned document...');
   try {
-    // Use the optimized multi-stage OCR pipeline for scanned documents
+    const { extractTextWithGeminiVision } = await import('./geminiVisionOcrService.ts');
+    
+    const geminiResult = await extractTextWithGeminiVision(pdfData, fileName);
+    
+    // Validate the result quality
+    if (geminiResult.text && geminiResult.text.length > 100 && !isGarbageText(geminiResult.text)) {
+      console.log(`✅ Gemini Vision OCR successful: ${geminiResult.text.length} characters, confidence: ${geminiResult.confidence}`);
+      
+      return {
+        text: geminiResult.text,
+        method: 'Gemini Vision OCR',
+        quality: geminiResult.confidence,
+        confidence: geminiResult.confidence,
+        pageCount: geminiResult.pageCount || 1,
+        fileType: 'pdf',
+        processingNotes: `Successfully processed scanned document using Gemini Vision OCR. ${geminiResult.processingNotes}`,
+        isScanned: true
+      };
+    } else {
+      console.log('⚠️ Gemini Vision result quality insufficient, trying multi-stage pipeline...');
+    }
+    
+  } catch (geminiError) {
+    console.log(`⚠️ Gemini Vision OCR failed: ${geminiError.message}`);
+    console.log('🔄 Falling back to multi-stage OCR pipeline...');
+  }
+  
+  // Step 2: Try multi-stage OCR pipeline
+  try {
     const { processDocumentWithMultiStageOcr } = await import('./multiStageOcrPipeline.ts');
     
     const ocrResult = await processDocumentWithMultiStageOcr(pdfData, fileName, true);
@@ -179,7 +209,7 @@ async function processScannedPdfWithOcr(
       confidence: ocrResult.confidence,
       pageCount: ocrResult.pageCount || Math.max(1, Math.ceil(pdfData.length / 50000)),
       fileType: 'pdf',
-      processingNotes: `Multi-stage OCR: ${ocrResult.processingNotes}. Processing time: ${ocrResult.processingTime}ms`,
+      processingNotes: `Scanned document processing failed. Tried Gemini Vision and Google Cloud Document AI. Last error: Multi-stage OCR: ${ocrResult.processingNotes}. Processing time: ${ocrResult.processingTime}ms`,
       isScanned: true
     };
     
@@ -187,7 +217,7 @@ async function processScannedPdfWithOcr(
     console.error('❌ Multi-stage OCR processing failed:', error);
     console.log('🔄 Falling back to legacy OCR method...');
     
-    // Fallback to original method if multi-stage fails
+    // Step 3: Fallback to original method if multi-stage fails
     try {
       const { extractTextWithWorkingOCR } = await import('../workingOcrService.ts');
       const legacyResult = await extractTextWithWorkingOCR(pdfData);
@@ -199,7 +229,7 @@ async function processScannedPdfWithOcr(
         confidence: legacyResult.confidence,
         pageCount: Math.max(1, Math.ceil(pdfData.length / 50000)),
         fileType: 'pdf',
-        processingNotes: `Legacy OCR fallback: ${legacyResult.text.length} characters. Multi-stage failed: ${error.message}`,
+        processingNotes: `Scanned document processing failed. Tried Gemini Vision and Google Cloud Document AI. Last error: Legacy OCR fallback: ${legacyResult.text.length} characters. Multi-stage failed: ${error.message}`,
         isScanned: true
       };
     } catch (fallbackError) {
