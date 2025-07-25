@@ -51,6 +51,102 @@ async function uploadFileToMistral(pdfData: Uint8Array, mistralApiKey: string): 
   return fileId;
 }
 
+async function getDocumentPageCount(fileId: string, mistralApiKey: string): Promise<number> {
+  try {
+    const response = await fetch('https://api.mistral.ai/v1/ocr', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${mistralApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'mistral-ocr-latest',
+        id: `page-count-${Date.now()}`,
+        document: {
+          type: 'file',
+          file_id: fileId
+        },
+        pages: [1], // Just check first page to get document info
+        include_image_base64: false,
+        image_limit: 0,
+        image_min_size: 0
+      }),
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      return result.document?.page_count || result.pages?.length || 1;
+    }
+  } catch (error) {
+    console.warn('Could not determine page count:', error);
+  }
+  return 1; // Default fallback
+}
+
+async function processPageChunk(fileId: string, startPage: number, endPage: number, mistralApiKey: string): Promise<string> {
+  console.log(`🔍 Processing pages ${startPage}-${endPage} with Mistral OCR...`);
+  
+  const pages = [];
+  for (let i = startPage; i <= endPage; i++) {
+    pages.push(i);
+  }
+
+  const response = await fetch('https://api.mistral.ai/v1/ocr', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${mistralApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'mistral-ocr-latest',
+      id: `ocr-chunk-${startPage}-${endPage}-${Date.now()}`,
+      document: {
+        type: 'file',
+        file_id: fileId
+      },
+      pages: pages,
+      include_image_base64: false,
+      image_limit: 0,
+      image_min_size: 0,
+      bbox_annotation_format: {
+        type: 'text',
+        json_schema: {
+          name: 'text_extraction',
+          schema: {
+            type: 'object',
+            properties: {
+              text: {
+                type: 'string',
+                description: 'Extracted text content'
+              }
+            },
+            required: ['text']
+          }
+        }
+      }
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Mistral OCR chunk API error: ${response.status} - ${errorText}`);
+  }
+
+  const result = await response.json();
+  
+  // Extract text from chunk response
+  let chunkText = '';
+  if (result.pages && Array.isArray(result.pages)) {
+    chunkText = result.pages
+      .map((page: any) => page.text || page.markdown || '')
+      .filter((text: string) => text.trim().length > 0)
+      .join('\n\n');
+  }
+
+  console.log(`✅ Chunk ${startPage}-${endPage} completed: ${chunkText.length} characters`);
+  return chunkText;
+}
+
 export async function extractTextWithMistralOcr(pdfData: Uint8Array): Promise<MistralOcrResult> {
   console.log('🔍 Starting Mistral OCR extraction...');
   
@@ -67,78 +163,106 @@ export async function extractTextWithMistralOcr(pdfData: Uint8Array): Promise<Mi
     // Step 1: Upload the PDF file to Mistral storage
     fileId = await uploadFileToMistral(pdfData, mistralApiKey);
 
-    // Step 2: Process with OCR using the file ID
-    console.log('🔍 Processing PDF with Mistral OCR...');
-    const response = await fetch('https://api.mistral.ai/v1/ocr', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${mistralApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'mistral-ocr-latest',
-        id: `ocr-${Date.now()}`,
-        document: {
-          type: 'file',
-          file_id: fileId
-        },
-        pages: null, // Process all pages
-        include_image_base64: false,
-        image_limit: 0,
-        image_min_size: 0,
-        bbox_annotation_format: {
-          type: 'text',
-          json_schema: {
-            name: 'text_extraction',
-            schema: {
-              type: 'object',
-              properties: {
-                text: {
-                  type: 'string',
-                  description: 'Extracted text content'
-                }
-              },
-              required: ['text']
-            }
-          }
-        },
-        document_annotation_format: {
-          type: 'text',
-          json_schema: {
-            name: 'document_text',
-            schema: {
-              type: 'object',
-              properties: {
-                text: {
-                  type: 'string',
-                  description: 'Complete document text content'
-                }
-              },
-              required: ['text']
-            }
-          }
-        }
-      }),
-    });
+    // Step 2: Check document page count
+    const pageCount = await getDocumentPageCount(fileId, mistralApiKey);
+    console.log(`📄 Document has ${pageCount} pages`);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Mistral OCR API error: ${response.status} - ${errorText}`);
-    }
-
-    const result = await response.json();
-    
-    // Extract text from OCR API response
     let extractedText = '';
-    if (result.pages && Array.isArray(result.pages)) {
-      extractedText = result.pages
-        .map((page: any) => page.text || page.markdown || '')
-        .filter((text: string) => text.trim().length > 0)
-        .join('\n\n');
-    } else if (result.text) {
-      extractedText = result.text;
-    } else if (result.content) {
-      extractedText = result.content;
+    let totalPageCount = pageCount;
+
+    if (pageCount <= 8) {
+      // Process normally for documents with 8 pages or less
+      console.log('🔍 Processing PDF with Mistral OCR (single request)...');
+      const response = await fetch('https://api.mistral.ai/v1/ocr', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${mistralApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'mistral-ocr-latest',
+          id: `ocr-${Date.now()}`,
+          document: {
+            type: 'file',
+            file_id: fileId
+          },
+          pages: null, // Process all pages
+          include_image_base64: false,
+          image_limit: 0,
+          image_min_size: 0,
+          bbox_annotation_format: {
+            type: 'text',
+            json_schema: {
+              name: 'text_extraction',
+              schema: {
+                type: 'object',
+                properties: {
+                  text: {
+                    type: 'string',
+                    description: 'Extracted text content'
+                  }
+                },
+                required: ['text']
+              }
+            }
+          },
+          document_annotation_format: {
+            type: 'text',
+            json_schema: {
+              name: 'document_text',
+              schema: {
+                type: 'object',
+                properties: {
+                  text: {
+                    type: 'string',
+                    description: 'Complete document text content'
+                  }
+                },
+                required: ['text']
+              }
+            }
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Mistral OCR API error: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      
+      // Extract text from OCR API response
+      if (result.pages && Array.isArray(result.pages)) {
+        extractedText = result.pages
+          .map((page: any) => page.text || page.markdown || '')
+          .filter((text: string) => text.trim().length > 0)
+          .join('\n\n');
+      } else if (result.text) {
+        extractedText = result.text;
+      } else if (result.content) {
+        extractedText = result.content;
+      }
+    } else {
+      // Process in chunks for documents with more than 8 pages
+      console.log(`📚 Document has ${pageCount} pages, processing in chunks of 8...`);
+      const textChunks: string[] = [];
+      
+      for (let startPage = 1; startPage <= pageCount; startPage += 8) {
+        const endPage = Math.min(startPage + 7, pageCount);
+        try {
+          const chunkText = await processPageChunk(fileId, startPage, endPage, mistralApiKey);
+          if (chunkText.trim()) {
+            textChunks.push(chunkText);
+          }
+        } catch (chunkError) {
+          console.warn(`⚠️ Failed to process chunk ${startPage}-${endPage}:`, chunkError);
+          // Continue with other chunks even if one fails
+        }
+      }
+      
+      extractedText = textChunks.join('\n\n--- PAGE BREAK ---\n\n');
+      console.log(`✅ Processed ${textChunks.length} chunks successfully`);
     }
 
     if (!extractedText || extractedText.length < 10) {
@@ -148,12 +272,12 @@ export async function extractTextWithMistralOcr(pdfData: Uint8Array): Promise<Mi
     // Calculate confidence based on text quality
     const confidence = calculateOcrConfidence(extractedText);
     
-    console.log(`✅ Mistral OCR completed: ${extractedText.length} characters extracted`);
+    console.log(`✅ Mistral OCR completed: ${extractedText.length} characters extracted from ${totalPageCount} pages`);
 
     return {
       text: extractedText,
       confidence: confidence,
-      pageCount: result.pages ? result.pages.length : Math.max(1, Math.ceil(pdfData.length / 50000))
+      pageCount: totalPageCount
     };
 
   } catch (error) {
