@@ -53,7 +53,26 @@ async function uploadFileToMistral(pdfData: Uint8Array, mistralApiKey: string): 
 
 async function getDocumentPageCount(fileId: string, mistralApiKey: string): Promise<number> {
   try {
-    const response = await fetch('https://api.mistral.ai/v1/ocr', {
+    console.log('📄 Getting document page count without annotations...');
+    const response = await fetch('https://api.mistral.ai/v1/files', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${mistralApiKey}`,
+      },
+    });
+
+    if (response.ok) {
+      const files = await response.json();
+      const file = files.data?.find((f: any) => f.id === fileId) || files.find((f: any) => f.id === fileId);
+      if (file?.metadata?.page_count) {
+        console.log(`📄 Found page count in file metadata: ${file.metadata.page_count}`);
+        return file.metadata.page_count;
+      }
+    }
+
+    // Fallback: Try a minimal OCR request without annotations
+    console.log('📄 Trying minimal OCR request to get page count...');
+    const ocrResponse = await fetch('https://api.mistral.ai/v1/ocr', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${mistralApiKey}`,
@@ -66,21 +85,30 @@ async function getDocumentPageCount(fileId: string, mistralApiKey: string): Prom
           type: 'file',
           file_id: fileId
         },
-        pages: [1], // Just check first page to get document info
+        pages: [1], // Just check first page
         include_image_base64: false,
         image_limit: 0,
         image_min_size: 0
+        // NO document_annotation_format to avoid page limit
       }),
     });
 
-    if (response.ok) {
-      const result = await response.json();
-      return result.document?.page_count || result.pages?.length || 1;
+    if (ocrResponse.ok) {
+      const result = await ocrResponse.json();
+      const pageCount = result.document?.page_count || result.document?.pages || 1;
+      console.log(`📄 OCR request returned page count: ${pageCount}`);
+      return pageCount;
+    } else {
+      const errorText = await ocrResponse.text();
+      console.warn(`⚠️ OCR page count request failed: ${ocrResponse.status} - ${errorText}`);
     }
   } catch (error) {
-    console.warn('Could not determine page count:', error);
+    console.warn('⚠️ Could not determine page count:', error);
   }
-  return 1; // Default fallback
+  
+  // Return a high number to trigger chunking as a safety fallback
+  console.log('⚠️ Page count detection failed, defaulting to chunking mode (assuming 16 pages)');
+  return 16;
 }
 
 async function processPageChunk(fileId: string, startPage: number, endPage: number, mistralApiKey: string): Promise<string> {
@@ -173,6 +201,8 @@ export async function extractTextWithMistralOcr(pdfData: Uint8Array): Promise<Mi
     if (pageCount <= 8) {
       // Process normally for documents with 8 pages or less
       console.log('🔍 Processing PDF with Mistral OCR (single request)...');
+      
+      try {
       const response = await fetch('https://api.mistral.ai/v1/ocr', {
         method: 'POST',
         headers: {
@@ -227,6 +257,15 @@ export async function extractTextWithMistralOcr(pdfData: Uint8Array): Promise<Mi
 
       if (!response.ok) {
         const errorText = await response.text();
+        
+        // Check if it's the "too many pages" error
+        if (errorText.includes('document_parser_too_many_pages') || errorText.includes('more than the maximum allowed')) {
+          console.log('⚠️ Single request failed due to page limit, switching to chunking...');
+          // Force chunking mode by setting a high page count
+          totalPageCount = 16;
+          throw new Error('SWITCH_TO_CHUNKING');
+        }
+        
         throw new Error(`Mistral OCR API error: ${response.status} - ${errorText}`);
       }
 
@@ -243,8 +282,19 @@ export async function extractTextWithMistralOcr(pdfData: Uint8Array): Promise<Mi
       } else if (result.content) {
         extractedText = result.content;
       }
-    } else {
-      // Process in chunks for documents with more than 8 pages
+      
+      } catch (singleRequestError) {
+        if (singleRequestError.message === 'SWITCH_TO_CHUNKING') {
+          console.log('🔄 Switching to chunking mode due to page limit...');
+          // Fall through to chunking logic below
+        } else {
+          throw singleRequestError;
+        }
+      }
+    }
+    
+    if (pageCount > 8 || extractedText === '') {
+      // Process in chunks for documents with more than 8 pages or if single request failed
       console.log(`📚 Document has ${pageCount} pages, processing in chunks of 8...`);
       const textChunks: string[] = [];
       
