@@ -1,5 +1,6 @@
 // Unified Document Processor - Simplified approach
 // Normal PDF extraction -> Mistral OCR fallback
+// DEPLOYMENT TRIGGER v15.0 - FORCE REDEPLOY FOR LEGAL DOCUMENT FIX
 
 import { processPdfDocument } from '../processors/pdfDocumentProcessor.ts';
 import { extractTextWithMistralOcr } from './mistralOcrService.ts';
