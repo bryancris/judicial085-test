@@ -94,10 +94,18 @@ serve(async (req) => {
   processingNotes: '${extractionResult.processingNotes}'
 }`);
 
-    // Store full text without chunking for OCR results
+    // Properly chunk the document for embedding generation
     console.log('📂 === PREPARING DOCUMENT STORAGE ===');
-    const chunks = [extractionResult.text]; // Store as single chunk to avoid resource exhaustion
-    console.log(`✅ Document prepared for storage: ${extractionResult.text.length} characters`);
+    console.log(`📝 Chunking document: ${extractionResult.text.length} characters`);
+    
+    const chunks = chunkDocumentAdvanced(extractionResult.text, {
+      fileName: validatedRequest.fileName,
+      fileType: extractionResult.fileType,
+      isLegalDocument: true // Most documents in this system are legal documents
+    });
+    
+    console.log(`✅ Document chunked into ${chunks.length} pieces for embedding`);
+    console.log(`📊 Chunk sizes: ${chunks.map(c => c.length).join(', ')} characters`);
 
     // Clear timeout since we're about to return
     clearTimeout(timeoutId);
