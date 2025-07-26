@@ -57,9 +57,15 @@ async function processPdfWithOcrFallback(
   try {
     const directResult = await processPdfDocument(pdfData, fileName);
     
-    // Check if we got good quality text
-    if (directResult.text.length > 50 && !isGarbageText(directResult.text)) {
-      console.log('✅ Normal PDF extraction successful');
+    // Check if we got substantial text (be more lenient for legal documents)
+    if (directResult.text.length > 1000 && !isGarbageText(directResult.text)) {
+      console.log('✅ Normal PDF extraction successful - substantial text found');
+      return directResult;
+    }
+    
+    // Even if text seems "low quality", prefer it over OCR if it's substantial
+    if (directResult.text.length > 10000) {
+      console.log('✅ Normal PDF extraction has substantial content - using despite quality concerns');
       return directResult;
     }
     console.log('📝 Normal extraction produced low quality text, creating placeholder...');
@@ -90,39 +96,43 @@ async function processPdfWithOcrFallback(
 }
 
 
-// Improved garbage text detection with more lenient criteria
+// Much more lenient garbage text detection, especially for legal documents
 function isGarbageText(text: string): boolean {
-  if (!text || text.length < 20) return true;
+  if (!text || text.length < 10) return true;
   
-  // Check for high ratio of special characters (more lenient)
-  const specialChars = (text.match(/[^\w\s\.\,\!\?\-\(\)\:\;\'\"\[\]]/g) || []).length;
-  const specialRatio = specialChars / text.length;
-  
-  // More specific garbage patterns
-  const garbagePatterns = [
-    /[^\w\s]{8,}/g,  // 8+ consecutive non-word characters (increased threshold)
-    /(.)\1{6,}/g,    // 6+ repeated characters (increased threshold)
-    /^[\?\.\-\*\s]{10,}/, // Starts with lots of special chars
-    /^[^a-zA-Z0-9\s]{20,}/, // Starts with 20+ non-alphanumeric
+  // Check for legal document indicators - never mark legal content as garbage
+  const legalIndicators = [
+    /\b(ARTICLE|SECTION|WHEREAS|THEREFORE|HEREIN|COVENANT|BYLAW|AMENDMENT|DECLARATION|CHARTER)\b/i,
+    /\b(HOMEOWNERS|ASSOCIATION|HOA|PROPERTY|RESIDENT|COMMUNITY|BOARD|DIRECTORS)\b/i,
+    /\b(ATTORNEY|LEGAL|COURT|CASE|MOTION|DEFENDANT|PLAINTIFF)\b/i,
+    /\b(AGREEMENT|CONTRACT|LEASE|DEED|TITLE|MORTGAGE)\b/i
   ];
   
-  const hasGarbagePatterns = garbagePatterns.some(pattern => pattern.test(text));
+  const hasLegalContent = legalIndicators.some(pattern => pattern.test(text));
+  if (hasLegalContent) {
+    console.log('📋 Legal document content detected - not garbage');
+    return false;
+  }
   
-  // Check for lack of real words (more lenient)
-  const words = text.split(/\s+/).filter(word => word.length > 1);
-  const realWords = words.filter(word => /^[a-zA-Z0-9]+$/.test(word) || /^[a-zA-Z]+$/.test(word));
-  const wordRatio = words.length > 0 ? realWords.length / words.length : 0;
+  // Only check for truly corrupted binary data patterns
+  const binaryPatterns = [
+    /[\x00-\x08\x0E-\x1F\x7F-\xFF]{10,}/g, // Binary data sequences
+    /^[^\w\s]{50,}/, // Starts with 50+ non-alphanumeric chars
+    /(.)\1{20,}/g,   // 20+ identical characters in a row
+  ];
   
-  // Check for readable content indicators
-  const hasReadableContent = /\b(?:the|and|or|to|of|in|for|with|by|from|that|this|is|was|are|were|will|would|could|should)\b/i.test(text);
+  const hasBinaryPatterns = binaryPatterns.some(pattern => pattern.test(text));
   
-  // More lenient criteria - only mark as garbage if severely corrupted
-  const isGarbage = (specialRatio > 0.5 && !hasReadableContent) || 
-                   hasGarbagePatterns || 
-                   (wordRatio < 0.15 && !hasReadableContent);
+  // Check if text has any recognizable words at all
+  const hasWords = /\b[a-zA-Z]{3,}\b/.test(text);
+  
+  // Only mark as garbage if it's clearly corrupted binary data with no readable words
+  const isGarbage = hasBinaryPatterns && !hasWords;
   
   if (isGarbage) {
-    console.log(`🗑️ Detected garbage text: specialRatio=${specialRatio.toFixed(2)}, patterns=${hasGarbagePatterns}, wordRatio=${wordRatio.toFixed(2)}, readable=${hasReadableContent}`);
+    console.log(`🗑️ Detected corrupted binary data: hasWords=${hasWords}, binaryPatterns=${hasBinaryPatterns}`);
+  } else if (text.length > 1000) {
+    console.log(`✅ Text appears valid: ${text.length} characters, hasLegal=${hasLegalContent}, hasWords=${hasWords}`);
   }
   
   return isGarbage;
