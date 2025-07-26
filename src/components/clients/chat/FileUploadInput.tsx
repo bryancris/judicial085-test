@@ -50,15 +50,29 @@ const FileUploadInput: React.FC<FileUploadInputProps> = ({
       return false;
     }
     
-    // Check file size (10MB limit)
-    if (file.size > 10 * 1024 * 1024) {
-      setFileError('File size exceeds 10MB limit');
+    // Check file size (30MB limit)
+    if (file.size > 30 * 1024 * 1024) {
+      setFileError('File size exceeds 30MB limit');
       toast({
         variant: "destructive",
         title: "File too large",
-        description: "File size exceeds 10MB limit",
+        description: "File size exceeds 30MB limit",
       });
       return false;
+    }
+    
+    // Show warnings for large files
+    const fileSizeMB = file.size / 1024 / 1024;
+    if (fileSizeMB > 25) {
+      toast({
+        title: "Very large file",
+        description: "This file is very large and may take longer to process. Please be patient.",
+      });
+    } else if (fileSizeMB > 15) {
+      toast({
+        title: "Large file",
+        description: "This file is large and processing may take a bit longer than usual.",
+      });
     }
     
     return true;
@@ -163,7 +177,7 @@ const FileUploadInput: React.FC<FileUploadInputProps> = ({
               Drag & drop a {getFileTypeText()} here, or click to select
             </p>
             <p className="text-gray-500 text-sm mt-1">
-              Maximum file size: 10MB
+              Maximum file size: 30MB
             </p>
             {fileError && (
               <div className="flex items-center text-red-600 mt-2">

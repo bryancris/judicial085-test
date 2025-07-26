@@ -66,7 +66,7 @@ const TemplateUpload: React.FC<TemplateUploadProps> = ({ onClose, onSuccess }) =
       'application/msword': ['.doc']
     },
     multiple: false,
-    maxSize: 10 * 1024 * 1024, // 10MB
+    maxSize: 30 * 1024 * 1024, // 30MB
   });
 
   const handleUpload = async () => {
@@ -164,7 +164,7 @@ const TemplateUpload: React.FC<TemplateUploadProps> = ({ onClose, onSuccess }) =
                   Drop your .docx file here, or click to select
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Max file size: 10MB
+                  Max file size: 30MB
                 </p>
               </div>
             ) : (
