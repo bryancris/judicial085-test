@@ -6,6 +6,11 @@ import LegalAnalysisView from "./LegalAnalysisView";
 import { useClientChat } from "@/hooks/useClientChat";
 import { Skeleton } from "@/components/ui/skeleton";
 
+/**
+ * Props for the ClientIntakeChat component
+ * @param clientId - Unique identifier for the client (used for data persistence)
+ * @param clientName - Display name for the client (shown in UI headers)
+ */
 interface ClientIntakeChatProps {
   clientId: string;
   clientName: string;
