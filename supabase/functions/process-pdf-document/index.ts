@@ -1,4 +1,31 @@
 
+/**
+ * ====================================================================
+ * PDF DOCUMENT PROCESSING EDGE FUNCTION - MAIN ENTRY POINT
+ * ====================================================================
+ * 
+ * This is the main HTTP handler for processing PDF documents in the legal system.
+ * 
+ * PROCESSING FLOW:
+ * 1. Receives HTTP request with document metadata (ID, URL, client info)
+ * 2. Downloads PDF file from storage URL with 10-second timeout
+ * 3. Processes document text extraction with 45-second timeout
+ * 4. Chunks extracted text for embedding generation
+ * 5. Returns early success response (within 55-second edge function limit)
+ * 6. Continues embedding generation in background using EdgeRuntime.waitUntil
+ * 7. Updates document status to "completed" when background processing finishes
+ * 
+ * TIMEOUT PROTECTION:
+ * - Overall function: 55 seconds (edge function limit)
+ * - File download: 10 seconds
+ * - Document processing: 45 seconds
+ * - Background embeddings: No timeout (runs until completion)
+ * 
+ * BACKGROUND PROCESSING:
+ * Uses EdgeRuntime.waitUntil() to continue embedding generation after returning
+ * early response, preventing timeout issues while ensuring all work completes.
+ */
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
@@ -17,7 +44,13 @@ const geminiApiKey = Deno.env.get('GEMINI_API_KEY')!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+/**
+ * HTTP REQUEST HANDLER
+ * Processes incoming PDF processing requests with comprehensive error handling
+ * and timeout protection.
+ */
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { 
       status: 200,
@@ -36,7 +69,12 @@ serve(async (req) => {
       throw new Error('Missing required environment variables');
     }
     
-    // Set up timeout protection (55 seconds max for edge function - allows for OCR operations)
+    /**
+     * TIMEOUT PROTECTION SETUP
+     * Edge functions have a 60-second maximum execution time.
+     * We set 55 seconds to allow graceful handling and response sending.
+     * This allows 45 seconds for document processing + 10 seconds overhead.
+     */
     const timeoutController = new AbortController();
     const timeoutId = setTimeout(() => {
       console.log('⚠️ Edge function timeout approaching, terminating gracefully');
@@ -59,7 +97,11 @@ serve(async (req) => {
     // Mark document as processing
     await updateDocumentStatus(supabase, documentId, 'processing', validatedRequest.fileUrl);
 
-    // Download the file with timeout
+    /**
+     * FILE DOWNLOAD PHASE
+     * Downloads PDF from Supabase storage with 10-second timeout.
+     * Files are typically small (<10MB) so this should be sufficient.
+     */
     const fileData = await Promise.race([
       downloadPdf(validatedRequest.fileUrl),
       new Promise((_, reject) => 
@@ -68,7 +110,14 @@ serve(async (req) => {
     ]) as Uint8Array;
     console.log(`✅ File downloaded successfully: ${fileData.length} bytes`);
 
-    // Process document with timeout protection (increased to 45 seconds to allow OCR to complete)
+    /**
+     * DOCUMENT PROCESSING PHASE
+     * Calls the unified document processor with 45-second timeout.
+     * This allows enough time for:
+     * - pdf-parse extraction (usually <5 seconds)
+     * - Mistral OCR processing (can take 30-40 seconds for large documents)
+     * - Fallback processing if needed
+     */
     console.log('🔍 === STARTING DOCUMENT PROCESSING WITH EXTENDED TIMEOUT ===');
     
     let extractionResult;
@@ -94,7 +143,11 @@ serve(async (req) => {
   processingNotes: '${extractionResult.processingNotes}'
 }`);
 
-    // Properly chunk the document for embedding generation
+    /**
+     * DOCUMENT CHUNKING PHASE
+     * Splits extracted text into optimally-sized chunks for embedding generation.
+     * Uses advanced chunking that preserves document structure and legal concepts.
+     */
     console.log('📂 === PREPARING DOCUMENT STORAGE ===');
     console.log(`📝 Chunking document: ${extractionResult.text.length} characters`);
     
@@ -127,7 +180,12 @@ serve(async (req) => {
       validatedRequest.fileName
     );
 
-    // Continue embeddings generation in background using EdgeRuntime.waitUntil
+    /**
+     * BACKGROUND PROCESSING SETUP
+     * This task runs after we return the early response to the client.
+     * It generates embeddings for all chunks and stores them in the database.
+     * This can take several minutes for large documents but doesn't block the response.
+     */
     const backgroundTask = async () => {
       try {
         console.log('🧠 === STARTING BACKGROUND EMBEDDING GENERATION ===');
@@ -163,7 +221,12 @@ serve(async (req) => {
       }
     };
 
-    // Use EdgeRuntime.waitUntil to continue processing in background
+    /**
+     * BACKGROUND TASK EXECUTION
+     * EdgeRuntime.waitUntil keeps the function instance alive until the background
+     * task completes, even after we return the response. This prevents the function
+     * from shutting down before embeddings are generated.
+     */
     if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
       EdgeRuntime.waitUntil(backgroundTask());
     } else {

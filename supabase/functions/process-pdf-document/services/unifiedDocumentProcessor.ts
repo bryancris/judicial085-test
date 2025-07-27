@@ -1,6 +1,38 @@
-// Unified Document Processor - Simplified approach
-// Normal PDF extraction -> Mistral OCR fallback
-// DEPLOYMENT TRIGGER v15.0 - FORCE REDEPLOY FOR LEGAL DOCUMENT FIX
+/**
+ * ====================================================================
+ * UNIFIED DOCUMENT PROCESSOR - MAIN ORCHESTRATION LOGIC
+ * ====================================================================
+ * 
+ * This module coordinates the entire document processing pipeline using a
+ * 3-step fallback strategy designed for legal documents.
+ * 
+ * PROCESSING STRATEGY:
+ * 
+ * Step 1: STANDARD PDF TEXT EXTRACTION (pdf-parse)
+ * - Uses pdf-parse library for fast, reliable text extraction
+ * - Works well for digitally-created PDFs with embedded text
+ * - Optimized for legal documents (lenient quality thresholds)
+ * - Completes in 2-5 seconds for most documents
+ * 
+ * Step 2: MISTRAL OCR FALLBACK (for scanned PDFs)
+ * - Triggered when pdf-parse fails or produces low-quality text
+ * - Uploads PDF to Mistral's file storage temporarily
+ * - Processes in 8-page chunks for large documents (>8 pages)
+ * - Uses advanced OCR with structured text extraction
+ * - Can take 30-40 seconds for large documents
+ * - Automatically cleans up uploaded files
+ * 
+ * Step 3: PLACEHOLDER FALLBACK (last resort)
+ * - Creates informative summary when all extraction methods fail
+ * - Documents are still stored and available for manual review
+ * - Provides metadata about the processing attempt
+ * 
+ * LEGAL DOCUMENT OPTIMIZATION:
+ * - Recognizes legal terminology and formatting
+ * - Never rejects content that contains legal indicators
+ * - Uses lenient quality thresholds for complex legal language
+ * - Preserves document structure and formatting where possible
+ */
 
 import { processPdfDocument } from '../processors/pdfDocumentProcessor.ts';
 import { extractTextWithMistralOcr } from './mistralOcrService.ts';
@@ -16,6 +48,19 @@ export interface DocumentExtractionResult {
   isScanned?: boolean;
 }
 
+/**
+ * MAIN DOCUMENT PROCESSING ENTRY POINT
+ * 
+ * Orchestrates the entire document processing workflow:
+ * 1. Detects file type based on extension and MIME type
+ * 2. Routes to appropriate processor (currently PDF-focused)
+ * 3. Handles errors gracefully with fallback summaries
+ * 
+ * @param fileData - Raw file bytes from upload
+ * @param fileName - Original filename for type detection
+ * @param mimeType - Optional MIME type for validation
+ * @returns DocumentExtractionResult with text, metadata, and processing info
+ */
 export async function processDocument(
   fileData: Uint8Array,
   fileName: string,
@@ -47,35 +92,56 @@ export async function processDocument(
   throw new Error(`Unsupported file type: ${detectedType}`);
 }
 
+/**
+ * PDF PROCESSING WITH OCR FALLBACK
+ * 
+ * Implements the 3-step processing strategy:
+ * 
+ * STEP 1: STANDARD PDF EXTRACTION
+ * - Uses pdf-parse for fast text extraction from digital PDFs
+ * - Accepts documents with >1000 characters of quality text
+ * - Prefers substantial content (>10,000 chars) even if quality is questionable
+ * - This handles most modern legal documents created digitally
+ * 
+ * STEP 2: MISTRAL OCR PROCESSING
+ * - Triggered when Step 1 fails or produces insufficient text
+ * - Designed for scanned documents or image-based PDFs
+ * - Uses advanced AI-powered OCR for accurate text recognition
+ * - Handles complex legal document layouts and formatting
+ * 
+ * STEP 3: PLACEHOLDER CREATION (handled by caller)
+ * - Creates informative fallback when both methods fail
+ * - Documents remain accessible for manual review
+ */
 async function processPdfWithOcrFallback(
   pdfData: Uint8Array, 
   fileName: string
 ): Promise<DocumentExtractionResult> {
-  console.log('📄 Starting simple PDF processing...');
+  console.log('📄 Starting PDF processing with OCR fallback strategy...');
   
-  // Step 1: Try normal PDF text extraction with pdf-parse
-  console.log('🔍 Attempting normal PDF text extraction...');
+  // STEP 1: STANDARD PDF TEXT EXTRACTION
+  console.log('🔍 Step 1: Attempting standard PDF text extraction with pdf-parse...');
   try {
     const directResult = await processPdfDocument(pdfData, fileName);
     
     // Check if we got substantial text (be more lenient for legal documents)
     if (directResult.text.length > 1000 && !isGarbageText(directResult.text)) {
-      console.log('✅ Normal PDF extraction successful - substantial text found');
+      console.log('✅ Step 1 successful - substantial quality text found');
       return directResult;
     }
     
     // Even if text seems "low quality", prefer it over OCR if it's substantial
     if (directResult.text.length > 10000) {
-      console.log('✅ Normal PDF extraction has substantial content - using despite quality concerns');
+      console.log('✅ Step 1 has substantial content - using despite quality concerns');
       return directResult;
     }
-    console.log('📝 Normal extraction produced low quality text, creating placeholder...');
+    console.log('📝 Step 1 produced insufficient text, proceeding to OCR...');
   } catch (directError) {
-    console.log('⚠️ Normal extraction failed:', directError.message, '- creating placeholder...');
+    console.log('⚠️ Step 1 failed:', directError.message, '- proceeding to OCR...');
   }
   
-  // Step 2: Try Mistral OCR
-  console.log('🤖 Step 2: Using Mistral OCR for scanned PDF...');
+  // STEP 2: MISTRAL OCR PROCESSING
+  console.log('🤖 Step 2: Using Mistral OCR for scanned/image-based PDF...');
   try {
     const ocrResult = await extractTextWithMistralOcr(pdfData);
     
@@ -86,22 +152,41 @@ async function processPdfWithOcrFallback(
       confidence: ocrResult.confidence,
       pageCount: ocrResult.pageCount || Math.max(1, Math.ceil(pdfData.length / 50000)),
       fileType: "pdf",
-      processingNotes: `Successfully processed using Mistral OCR. Extracted ${ocrResult.text.length} characters from ${ocrResult.pageCount || 1} pages.`
+      processingNotes: `Successfully processed using Mistral OCR. Extracted ${ocrResult.text.length} characters from ${ocrResult.pageCount || 1} pages.`,
+      isScanned: true // Mark as scanned document for tracking
     };
     
   } catch (ocrError) {
-    console.error('❌ Mistral OCR failed:', ocrError.message);
-    // Only use placeholder as last resort
+    console.error('❌ Step 2 (Mistral OCR) failed:', ocrError.message);
+    // STEP 3: Fallback placeholder (handled by caller)
     return createDocumentPlaceholder(pdfData, fileName, 'pdf', `Normal PDF text extraction and OCR both failed. The document has been uploaded and is available for manual review. Error: ${ocrError.message}`);
   }
 }
 
 
-// Much more lenient garbage text detection, especially for legal documents
+/**
+ * LEGAL DOCUMENT-OPTIMIZED TEXT QUALITY DETECTION
+ * 
+ * This function determines if extracted text is garbage/corrupted or valid content.
+ * It's specifically optimized for legal documents which may have:
+ * - Complex formatting and special characters
+ * - Legal jargon that might seem "low quality" to generic algorithms
+ * - Mixed fonts and styles from scanned originals
+ * 
+ * LEGAL DOCUMENT PROTECTION:
+ * - Never rejects text containing legal terminology
+ * - Recognizes common legal document patterns
+ * - Accounts for formal legal language structures
+ * 
+ * CORRUPTION DETECTION:
+ * - Only rejects text that's clearly binary data or completely unreadable
+ * - Requires multiple indicators of corruption before rejection
+ * - Preserves borderline cases for legal review
+ */
 function isGarbageText(text: string): boolean {
   if (!text || text.length < 10) return true;
   
-  // Check for legal document indicators - never mark legal content as garbage
+  // LEGAL CONTENT DETECTION - Never reject legal documents
   const legalIndicators = [
     /\b(ARTICLE|SECTION|WHEREAS|THEREFORE|HEREIN|COVENANT|BYLAW|AMENDMENT|DECLARATION|CHARTER)\b/i,
     /\b(HOMEOWNERS|ASSOCIATION|HOA|PROPERTY|RESIDENT|COMMUNITY|BOARD|DIRECTORS)\b/i,
@@ -111,11 +196,11 @@ function isGarbageText(text: string): boolean {
   
   const hasLegalContent = legalIndicators.some(pattern => pattern.test(text));
   if (hasLegalContent) {
-    console.log('📋 Legal document content detected - not garbage');
+    console.log('📋 Legal document content detected - preserving text');
     return false;
   }
   
-  // Only check for truly corrupted binary data patterns
+  // BINARY CORRUPTION DETECTION - Only reject truly corrupted data
   const binaryPatterns = [
     /[\x00-\x08\x0E-\x1F\x7F-\xFF]{10,}/g, // Binary data sequences
     /^[^\w\s]{50,}/, // Starts with 50+ non-alphanumeric chars

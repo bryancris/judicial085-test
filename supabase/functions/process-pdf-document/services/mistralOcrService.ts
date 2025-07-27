@@ -1,5 +1,43 @@
-// Mistral OCR Service - Direct PDF processing
+/**
+ * ====================================================================
+ * MISTRAL OCR SERVICE - SCANNED PDF PROCESSING
+ * ====================================================================
+ * 
+ * This service handles OCR (Optical Character Recognition) for scanned PDFs
+ * and image-based documents using Mistral's advanced AI-powered OCR API.
+ * 
+ * WHEN USED:
+ * - Triggered when standard pdf-parse extraction fails or produces low-quality text
+ * - Designed for scanned legal documents, court filings, and image-based PDFs
+ * - Handles complex document layouts, multiple columns, and mixed content
+ * 
+ * PROCESSING STRATEGY:
+ * 
+ * SMART CHUNKING FOR LARGE DOCUMENTS:
+ * - Documents ≤8 pages: Processed in single request for optimal accuracy
+ * - Documents >8 pages: Automatically chunked into 8-page segments
+ * - Each chunk processed independently to avoid API limits
+ * - Results combined with clear page break markers
+ * 
+ * FILE LIFECYCLE:
+ * 1. Upload PDF to Mistral's temporary file storage
+ * 2. Determine page count for chunking strategy
+ * 3. Process document in optimal chunks
+ * 4. Extract and combine text from all chunks
+ * 5. Calculate confidence score based on text quality
+ * 6. Clean up uploaded file from Mistral storage
+ * 
+ * ERROR HANDLING:
+ * - Graceful handling of API limits and rate limiting
+ * - Automatic chunking fallback for large documents
+ * - Partial processing continues even if some chunks fail
+ * - Comprehensive cleanup even on failures
+ */
 
+/**
+ * Base64 encoding utility for PDF upload
+ * Processes large files in chunks to avoid memory issues
+ */
 function uint8ArrayToBase64(uint8Array: Uint8Array): string {
   let binary = '';
   const chunkSize = 8192;
@@ -18,6 +56,16 @@ export interface MistralOcrResult {
   pageCount?: number;
 }
 
+/**
+ * UPLOAD PDF TO MISTRAL TEMPORARY STORAGE
+ * 
+ * Uploads the PDF file to Mistral's file storage system for OCR processing.
+ * Files are automatically cleaned up after processing to avoid storage costs.
+ * 
+ * @param pdfData - Raw PDF bytes
+ * @param mistralApiKey - Mistral API authentication key
+ * @returns File ID for subsequent OCR requests
+ */
 async function uploadFileToMistral(pdfData: Uint8Array, mistralApiKey: string): Promise<string> {
   console.log('📤 Uploading PDF to Mistral file storage...');
   
@@ -51,9 +99,27 @@ async function uploadFileToMistral(pdfData: Uint8Array, mistralApiKey: string): 
   return fileId;
 }
 
+/**
+ * DETERMINE DOCUMENT PAGE COUNT FOR CHUNKING STRATEGY
+ * 
+ * Attempts multiple methods to determine how many pages the document contains.
+ * This is crucial for deciding whether to process as single request (≤8 pages)
+ * or use chunking strategy (>8 pages).
+ * 
+ * DETECTION METHODS:
+ * 1. Check file metadata from upload response
+ * 2. Make minimal OCR request to get document info
+ * 3. Fallback to chunking mode if detection fails
+ * 
+ * @param fileId - Mistral file ID from upload
+ * @param mistralApiKey - API key for authentication
+ * @returns Number of pages (or high number to trigger chunking if unknown)
+ */
 async function getDocumentPageCount(fileId: string, mistralApiKey: string): Promise<number> {
   try {
-    console.log('📄 Getting document page count without annotations...');
+    console.log('📄 Determining document page count for chunking strategy...');
+    
+    // METHOD 1: Check file metadata
     const response = await fetch('https://api.mistral.ai/v1/files', {
       method: 'GET',
       headers: {
@@ -70,8 +136,8 @@ async function getDocumentPageCount(fileId: string, mistralApiKey: string): Prom
       }
     }
 
-    // Fallback: Try a minimal OCR request without annotations
-    console.log('📄 Trying minimal OCR request to get page count...');
+    // METHOD 2: Minimal OCR request to get page count
+    console.log('📄 Using minimal OCR request to determine page count...');
     const ocrResponse = await fetch('https://api.mistral.ai/v1/ocr', {
       method: 'POST',
       headers: {
@@ -89,31 +155,50 @@ async function getDocumentPageCount(fileId: string, mistralApiKey: string): Prom
         include_image_base64: false,
         image_limit: 0,
         image_min_size: 0
-        // NO document_annotation_format to avoid page limit
+        // NO document_annotation_format to avoid page limit restrictions
       }),
     });
 
     if (ocrResponse.ok) {
       const result = await ocrResponse.json();
       const pageCount = result.document?.page_count || result.document?.pages || 1;
-      console.log(`📄 OCR request returned page count: ${pageCount}`);
+      console.log(`📄 OCR request detected ${pageCount} pages`);
       return pageCount;
     } else {
       const errorText = await ocrResponse.text();
       console.warn(`⚠️ OCR page count request failed: ${ocrResponse.status} - ${errorText}`);
     }
   } catch (error) {
-    console.warn('⚠️ Could not determine page count:', error);
+    console.warn('⚠️ Page count detection failed:', error);
   }
   
-  // Return a high number to trigger chunking as a safety fallback
+  // METHOD 3: Safety fallback - assume large document to trigger chunking
   console.log('⚠️ Page count detection failed, defaulting to chunking mode (assuming 16 pages)');
   return 16;
 }
 
+/**
+ * PROCESS SINGLE PAGE CHUNK WITH MISTRAL OCR
+ * 
+ * Processes a specific range of pages (up to 8 pages) using Mistral's OCR API.
+ * This function is used when documents are too large for single-request processing.
+ * 
+ * CHUNK PROCESSING:
+ * - Processes up to 8 pages in a single API call
+ * - Uses structured text extraction with JSON schema
+ * - Combines text from all pages in the chunk
+ * - Filters out empty or whitespace-only pages
+ * 
+ * @param fileId - Mistral file ID
+ * @param startPage - First page to process (1-indexed)
+ * @param endPage - Last page to process (inclusive)
+ * @param mistralApiKey - API authentication key
+ * @returns Combined text from all pages in the chunk
+ */
 async function processPageChunk(fileId: string, startPage: number, endPage: number, mistralApiKey: string): Promise<string> {
   console.log(`🔍 Processing pages ${startPage}-${endPage} with Mistral OCR...`);
   
+  // Build page array for this chunk
   const pages = [];
   for (let i = startPage; i <= endPage; i++) {
     pages.push(i);
@@ -162,7 +247,7 @@ async function processPageChunk(fileId: string, startPage: number, endPage: numb
 
   const result = await response.json();
   
-  // Extract text from chunk response
+  // Extract and combine text from all pages in this chunk
   let chunkText = '';
   if (result.pages && Array.isArray(result.pages)) {
     chunkText = result.pages
@@ -175,8 +260,28 @@ async function processPageChunk(fileId: string, startPage: number, endPage: numb
   return chunkText;
 }
 
+/**
+ * MAIN MISTRAL OCR EXTRACTION FUNCTION
+ * 
+ * Orchestrates the complete OCR process from upload to cleanup.
+ * Automatically chooses between single-request and chunked processing
+ * based on document size.
+ * 
+ * PROCESSING WORKFLOW:
+ * 1. Upload PDF to Mistral temporary storage
+ * 2. Determine page count for processing strategy
+ * 3. Choose processing method:
+ *    - Single request: Documents ≤8 pages
+ *    - Chunked processing: Documents >8 pages (8-page chunks)
+ * 4. Extract and combine text from all processed content
+ * 5. Calculate confidence score based on text quality
+ * 6. Clean up uploaded file from Mistral storage
+ * 
+ * @param pdfData - Raw PDF file bytes
+ * @returns MistralOcrResult with extracted text, confidence, and metadata
+ */
 export async function extractTextWithMistralOcr(pdfData: Uint8Array): Promise<MistralOcrResult> {
-  console.log('🔍 Starting Mistral OCR extraction...');
+  console.log('🔍 Starting Mistral OCR extraction for scanned document...');
   
   const mistralApiKey = Deno.env.get('MISTRAL_API_KEY');
   if (!mistralApiKey) {
@@ -188,19 +293,19 @@ export async function extractTextWithMistralOcr(pdfData: Uint8Array): Promise<Mi
   try {
     console.log(`📊 PDF data size: ${pdfData.length} bytes (${Math.round(pdfData.length / 1024)}KB)`);
 
-    // Step 1: Upload the PDF file to Mistral storage
+    // STEP 1: Upload PDF to Mistral temporary storage
     fileId = await uploadFileToMistral(pdfData, mistralApiKey);
 
-    // Step 2: Check document page count
+    // STEP 2: Determine page count for processing strategy
     const pageCount = await getDocumentPageCount(fileId, mistralApiKey);
-    console.log(`📄 Document has ${pageCount} pages`);
+    console.log(`📄 Document has ${pageCount} pages - choosing processing strategy...`);
 
     let extractedText = '';
     let totalPageCount = pageCount;
 
     if (pageCount <= 8) {
-      // Process normally for documents with 8 pages or less
-      console.log('🔍 Processing PDF with Mistral OCR (single request)...');
+      // STRATEGY A: SINGLE REQUEST PROCESSING (≤8 pages)
+      console.log('🔍 Using single request processing (≤8 pages)...');
       
       try {
       const response = await fetch('https://api.mistral.ai/v1/ocr', {
@@ -294,10 +399,11 @@ export async function extractTextWithMistralOcr(pdfData: Uint8Array): Promise<Mi
     }
     
     if (pageCount > 8 || extractedText === '') {
-      // Process in chunks for documents with more than 8 pages or if single request failed
-      console.log(`📚 Document has ${pageCount} pages, processing in chunks of 8...`);
+      // STRATEGY B: CHUNKED PROCESSING (>8 pages or single request failed)
+      console.log(`📚 Using chunked processing: ${pageCount} pages in 8-page chunks...`);
       const textChunks: string[] = [];
       
+      // Process document in 8-page chunks
       for (let startPage = 1; startPage <= pageCount; startPage += 8) {
         const endPage = Math.min(startPage + 7, pageCount);
         try {
@@ -307,12 +413,13 @@ export async function extractTextWithMistralOcr(pdfData: Uint8Array): Promise<Mi
           }
         } catch (chunkError) {
           console.warn(`⚠️ Failed to process chunk ${startPage}-${endPage}:`, chunkError);
-          // Continue with other chunks even if one fails
+          // Continue processing other chunks even if one fails
         }
       }
       
+      // Combine all chunks with clear page break markers
       extractedText = textChunks.join('\n\n--- PAGE BREAK ---\n\n');
-      console.log(`✅ Processed ${textChunks.length} chunks successfully`);
+      console.log(`✅ Chunked processing completed: ${textChunks.length}/${Math.ceil(pageCount/8)} chunks successful`);
     }
 
     if (!extractedText || extractedText.length < 10) {
@@ -334,7 +441,8 @@ export async function extractTextWithMistralOcr(pdfData: Uint8Array): Promise<Mi
     console.error('❌ Mistral OCR extraction failed:', error);
     throw new Error(`Mistral OCR extraction failed: ${error.message}`);
   } finally {
-    // Optional: Clean up uploaded file
+    // CLEANUP: Remove uploaded file from Mistral storage
+    // This prevents storage costs and maintains security
     if (fileId) {
       try {
         console.log(`🧹 Cleaning up uploaded file: ${fileId}`);
@@ -347,27 +455,43 @@ export async function extractTextWithMistralOcr(pdfData: Uint8Array): Promise<Mi
         console.log(`✅ File ${fileId} deleted from Mistral storage`);
       } catch (cleanupError) {
         console.warn(`⚠️ Failed to delete file ${fileId}:`, cleanupError);
-        // Don't throw on cleanup failure
+        // Don't throw on cleanup failure - OCR result is still valid
       }
     }
   }
 }
 
+/**
+ * CALCULATE OCR CONFIDENCE SCORE
+ * 
+ * Analyzes the extracted text to estimate OCR accuracy and quality.
+ * Higher scores indicate more reliable text extraction.
+ * 
+ * CONFIDENCE FACTORS:
+ * - Alphanumeric ratio: Higher percentage of letters/numbers vs symbols
+ * - Word count: More words generally indicate better extraction
+ * - Average word length: Reasonable word lengths suggest accuracy
+ * - Total text length: Longer texts provide more confidence data
+ * 
+ * @param text - Extracted text to analyze
+ * @returns Confidence score between 0.1 (poor) and 0.95 (excellent)
+ */
 function calculateOcrConfidence(text: string): number {
   if (!text || text.length < 10) return 0.1;
   
-  // Calculate confidence based on text characteristics
+  // Analyze text characteristics for quality assessment
   const alphanumericRatio = (text.match(/[a-zA-Z0-9]/g) || []).length / text.length;
   const wordCount = text.split(/\s+/).filter(word => word.length > 0).length;
   const avgWordLength = text.replace(/\s+/g, '').length / Math.max(wordCount, 1);
   
-  // Higher confidence for more readable text
-  let confidence = 0.5; // Base confidence
+  // Start with base confidence for OCR processing
+  let confidence = 0.5;
   
-  if (alphanumericRatio > 0.7) confidence += 0.2;
-  if (wordCount > 50) confidence += 0.1;
-  if (avgWordLength >= 3 && avgWordLength <= 8) confidence += 0.1;
-  if (text.length > 100) confidence += 0.1;
+  // Boost confidence for readable text characteristics
+  if (alphanumericRatio > 0.7) confidence += 0.2;  // Good text vs symbols ratio
+  if (wordCount > 50) confidence += 0.1;           // Substantial content
+  if (avgWordLength >= 3 && avgWordLength <= 8) confidence += 0.1; // Reasonable word lengths
+  if (text.length > 100) confidence += 0.1;       // Sufficient content length
   
   return Math.min(0.95, Math.max(0.1, confidence));
 }
