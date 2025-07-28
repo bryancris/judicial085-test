@@ -15,6 +15,7 @@ import { useAuthState } from "@/hooks/useAuthState";
 import QuickConsultSidebar from "./QuickConsultSidebar";
 import CreateClientFromQuickConsultDialog from "../CreateClientFromQuickConsultDialog";
 import QuickConsultDocumentUploadDialog from "../../quick-consult/QuickConsultDocumentUploadDialog";
+import QuickConsultMessageContent from "../../quick-consult/QuickConsultMessageContent";
 
 const QuickConsultChat = () => {
   const [input, setInput] = useState("");
@@ -333,7 +334,10 @@ const QuickConsultChat = () => {
                               </Badge>
                             )}
                           </div>
-                          <div className="whitespace-pre-wrap">{message.content}</div>
+                          <QuickConsultMessageContent 
+                            content={message.content}
+                            enableCitationLinks={message.role === "assistant"}
+                          />
                           {showCitations && (
                             <CitationsDisplay citations={lastResponse.citations} />
                           )}
