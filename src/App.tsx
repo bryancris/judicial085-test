@@ -14,6 +14,7 @@ import Knowledge from "./pages/Knowledge";
 import Features from "./pages/Features";
 import Admin from "./pages/Admin";
 import FAQ from "./pages/FAQ";
+import QuickConsult from "./pages/QuickConsult";
 import DiscoveryRequestDetail from "./components/discovery/DiscoveryRequestDetail";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/clients" element={<Clients />} />
             <Route path="/clients/:id" element={<ClientDetail />} />
             <Route path="/clients/:clientId/discovery/:requestId" element={<DiscoveryRequestDetail />} />
+            <Route path="/quick-consult" element={<QuickConsult />} />
             <Route path="/knowledge" element={<Knowledge />} />
             <Route path="/features" element={<Features />} />
             <Route path="/admin" element={<Admin />} />

@@ -4,6 +4,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthState } from "@/hooks/useAuthState";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { FormValues } from "@/components/auth/AuthForm";
 
@@ -14,6 +15,7 @@ const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { session, isLoading } = useAuthState();
+  const isMobile = useIsMobile();
 
   const handleSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
@@ -49,7 +51,8 @@ const Auth = () => {
             title: "Login successful",
             description: "Welcome back!",
           });
-          navigate("/clients");
+          // Redirect mobile users to Quick Consult, desktop users to Clients
+          navigate(isMobile ? "/quick-consult" : "/clients");
         } else {
           setError("No session created. Please check your credentials and try again.");
         }
@@ -95,7 +98,8 @@ const Auth = () => {
 
   // Redirect if already logged in
   if (session) {
-    return <Navigate to="/clients" />;
+    // Redirect mobile users to Quick Consult, desktop users to Clients
+    return <Navigate to={isMobile ? "/quick-consult" : "/clients"} />;
   }
 
   return (
