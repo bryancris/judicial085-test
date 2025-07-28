@@ -21,7 +21,7 @@ const QuickConsultChat = () => {
   const { toast } = useToast();
 
   const { createSession, updateSessionTitle } = useQuickConsultSessions();
-  const { messages, addMessage, clearMessages } = useQuickConsultMessages(currentSessionId);
+  const { messages, addMessage, validateSession, clearMessages } = useQuickConsultMessages(currentSessionId);
 
   const handleNewChat = async () => {
     const sessionId = await createSession();
@@ -58,13 +58,36 @@ const QuickConsultChat = () => {
     setIsLoading(true);
 
     try {
-      // Add user message to database
-      await addMessage(userMessageContent, "user");
+      // Create session recovery function
+      const handleSessionRecovery = async (): Promise<string | null> => {
+        console.log("Creating new session due to invalid session...");
+        const newSessionId = await createSession("New Chat");
+        if (newSessionId) {
+          setCurrentSessionId(newSessionId);
+          clearMessages();
+          toast({
+            title: "Session Recovered",
+            description: "Created a new chat session and will retry your message",
+            variant: "default",
+          });
+        }
+        return newSessionId;
+      };
+
+      // Add user message to database with session recovery
+      const userMessage = await addMessage(userMessageContent, "user", handleSessionRecovery);
+      if (!userMessage) return;
+
+      // Update sessionId if it was recovered
+      const activeSessionId = userMessage.session_id;
+      if (activeSessionId !== sessionId) {
+        setCurrentSessionId(activeSessionId);
+      }
 
       // Generate session title from first message if it's still "New Chat"
       if (messages.length === 0) {
         const title = generateSessionTitle(userMessageContent);
-        await updateSessionTitle(sessionId, title);
+        await updateSessionTitle(activeSessionId, title);
       }
 
       // Get all messages for this session to send to AI
@@ -92,8 +115,8 @@ const QuickConsultChat = () => {
       // Store the full response for citation display
       setLastResponse(response);
 
-      // Add AI response to database
-      await addMessage(response.text, "assistant");
+      // Add AI response to database with session recovery
+      await addMessage(response.text, "assistant", handleSessionRecovery);
 
       // Show knowledge base usage notification
       if (response.hasKnowledgeBase && response.documentsFound && response.documentsFound > 0) {
