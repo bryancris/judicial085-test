@@ -73,7 +73,12 @@ const QuickConsultChat = () => {
 
       // Add user message to database (will create session if needed)
       const userMessage = await addMessage(userMessageContent, "user", handleSessionCreation);
-      if (!userMessage) return;
+      if (!userMessage) {
+        // Reset session if message failed to save
+        setCurrentSessionId(null);
+        clearMessages();
+        return;
+      }
 
       // Update sessionId if it was created
       const activeSessionId = userMessage.session_id;
