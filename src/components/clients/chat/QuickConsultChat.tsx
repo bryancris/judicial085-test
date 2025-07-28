@@ -42,18 +42,40 @@ const QuickConsultChat = () => {
   };
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+    console.log("handleSend called - input:", input, "isLoading:", isLoading);
+    
+    if (!input.trim()) {
+      console.log("Input is empty or whitespace only");
+      return;
+    }
+    
+    if (isLoading) {
+      console.log("Already loading, skipping");
+      return;
+    }
 
     let sessionId = currentSessionId;
+    console.log("Current session ID:", sessionId);
     
     // Create new session if none exists
     if (!sessionId) {
+      console.log("Creating new session...");
       sessionId = await createSession("New Chat");
-      if (!sessionId) return;
+      console.log("New session created:", sessionId);
+      if (!sessionId) {
+        console.error("Failed to create session");
+        toast({
+          title: "Error",
+          description: "Failed to create chat session. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
       setCurrentSessionId(sessionId);
     }
 
     const userMessageContent = input.trim();
+    console.log("Sending message:", userMessageContent);
     setInput("");
     setIsLoading(true);
 
@@ -139,9 +161,11 @@ const QuickConsultChat = () => {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    console.log("Key pressed:", e.key, "shiftKey:", e.shiftKey);
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
+      console.log("Enter pressed, calling handleSend");
       handleSend();
     }
   };
@@ -317,7 +341,7 @@ const QuickConsultChat = () => {
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyDown}
               placeholder="Ask a legal question..."
               className="flex-1 min-h-[60px] max-h-[120px] resize-none"
               disabled={isLoading}
