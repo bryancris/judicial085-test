@@ -3,10 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Trash2, Send, Loader2, SidebarClose, SidebarOpen } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Trash2, Send, Loader2, SidebarClose, SidebarOpen, FileText, ChevronDown, ChevronRight } from "lucide-react";
 import { useQuickConsultSessions } from "@/hooks/useQuickConsultSessions";
 import { useQuickConsultMessages } from "@/hooks/useQuickConsultMessages";
-import { sendQuickConsultMessage } from "@/utils/api/quickConsultService";
+import { sendQuickConsultMessage, QuickConsultResponse } from "@/utils/api/quickConsultService";
 import { useToast } from "@/hooks/use-toast";
 import QuickConsultSidebar from "./QuickConsultSidebar";
 
@@ -15,6 +17,7 @@ const QuickConsultChat = () => {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [lastResponse, setLastResponse] = useState<QuickConsultResponse | null>(null);
   const { toast } = useToast();
 
   const { createSession, updateSessionTitle } = useQuickConsultSessions();
@@ -74,20 +77,32 @@ const QuickConsultChat = () => {
         { role: "user" as const, content: userMessageContent, timestamp: new Date().toLocaleTimeString() }
       ];
 
-      // Send to AI service
-      const { text, error } = await sendQuickConsultMessage(allMessages);
+      // Send to AI service with enhanced response handling
+      const response = await sendQuickConsultMessage(allMessages);
 
-      if (error) {
+      if (response.error) {
         toast({
           title: "Error",
-          description: error,
+          description: response.error,
           variant: "destructive",
         });
         return;
       }
 
+      // Store the full response for citation display
+      setLastResponse(response);
+
       // Add AI response to database
-      await addMessage(text, "assistant");
+      await addMessage(response.text, "assistant");
+
+      // Show knowledge base usage notification
+      if (response.hasKnowledgeBase && response.documentsFound && response.documentsFound > 0) {
+        toast({
+          title: "Knowledge Base Referenced",
+          description: `Found ${response.documentsFound} relevant document(s)`,
+          variant: "default",
+        });
+      }
 
     } catch (error) {
       console.error("Error sending message:", error);
@@ -111,8 +126,48 @@ const QuickConsultChat = () => {
   const handleClearChat = () => {
     if (currentSessionId) {
       clearMessages();
+      setLastResponse(null);
       // Optionally delete the session or just clear messages
     }
+  };
+
+  // Component to display citations
+  const CitationsDisplay = ({ citations }: { citations: QuickConsultResponse['citations'] }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    
+    if (!citations || citations.length === 0) return null;
+
+    return (
+      <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mt-3">
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" size="sm" className="h-auto p-2 text-xs text-muted-foreground hover:text-foreground">
+            <FileText className="h-3 w-3 mr-1" />
+            {citations.length} document reference{citations.length > 1 ? 's' : ''}
+            {isOpen ? <ChevronDown className="h-3 w-3 ml-1" /> : <ChevronRight className="h-3 w-3 ml-1" />}
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-2">
+          {citations.map((citation, index) => (
+            <div key={citation.id} className="bg-background/50 border rounded-md p-2 text-xs">
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-medium">{citation.title}</span>
+                <Badge variant="secondary" className="text-xs">
+                  {Math.round(citation.relevance * 100)}% relevant
+                </Badge>
+              </div>
+              {citation.content_preview && (
+                <p className="text-muted-foreground">{citation.content_preview}</p>
+              )}
+              <div className="flex items-center mt-1 text-muted-foreground">
+                <Badge variant="outline" className="text-xs">
+                  {citation.type === 'knowledge_base' ? 'Knowledge Base' : citation.type}
+                </Badge>
+              </div>
+            </div>
+          ))}
+        </CollapsibleContent>
+      </Collapsible>
+    );
   };
 
 
@@ -164,37 +219,55 @@ const QuickConsultChat = () => {
                       Welcome to Quick Consult
                     </h3>
                     <p className="text-gray-500">
-                      Ask me any legal questions and I'll help provide insights and guidance. 
-                      I can assist with case analysis, legal research, and general legal advice.
+                      Ask me any legal questions and I'll help provide insights and guidance based on our knowledge base. 
+                      I can assist with case analysis, legal research, document review, and general legal advice with citations to relevant sources.
                     </p>
                   </div>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {messages.map((message, index) => (
-                    <div
-                      key={message.id || index}
-                      className={`flex ${
-                        message.role === "user" ? "justify-end" : "justify-start"
-                      }`}
-                    >
+                  {messages.map((message, index) => {
+                    const isLastAssistantMessage = message.role === "assistant" && 
+                      index === messages.length - 1;
+                    const showCitations = isLastAssistantMessage && lastResponse?.citations;
+                    const hasKnowledgeBase = isLastAssistantMessage && lastResponse?.hasKnowledgeBase;
+
+                    return (
                       <div
-                        className={`max-w-[80%] p-3 rounded-lg ${
-                          message.role === "user"
-                            ? "bg-teal-600 text-white"
-                            : "bg-gray-100 text-gray-900"
+                        key={message.id || index}
+                        className={`flex ${
+                          message.role === "user" ? "justify-end" : "justify-start"
                         }`}
                       >
-                        <div className="text-sm mb-1">
-                          <strong>{message.role === "user" ? "You" : "AI Assistant"}</strong>
-                          <span className="text-xs opacity-70 ml-2">
-                            {new Date(message.created_at || Date.now()).toLocaleTimeString()}
-                          </span>
+                        <div
+                          className={`max-w-[80%] p-3 rounded-lg ${
+                            message.role === "user"
+                              ? "bg-teal-600 text-white"
+                              : "bg-gray-100 text-gray-900"
+                          }`}
+                        >
+                          <div className="text-sm mb-1 flex items-center justify-between">
+                            <div>
+                              <strong>{message.role === "user" ? "You" : "AI Assistant"}</strong>
+                              <span className="text-xs opacity-70 ml-2">
+                                {new Date(message.created_at || Date.now()).toLocaleTimeString()}
+                              </span>
+                            </div>
+                            {hasKnowledgeBase && (
+                              <Badge variant="secondary" className="text-xs ml-2">
+                                <FileText className="h-3 w-3 mr-1" />
+                                KB
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="whitespace-pre-wrap">{message.content}</div>
+                          {showCitations && (
+                            <CitationsDisplay citations={lastResponse.citations} />
+                          )}
                         </div>
-                        <div className="whitespace-pre-wrap">{message.content}</div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   {isLoading && (
                     <div className="flex justify-start">
