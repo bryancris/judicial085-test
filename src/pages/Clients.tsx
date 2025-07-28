@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { supabase } from "@/integrations/supabase/client";
@@ -64,41 +63,40 @@ const Clients = () => {
     <div className="min-h-screen flex flex-col">
       <NavBar />
       <main className="flex-grow container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold">
-            {firmInfo?.name && (
-              <span className="text-brand-burgundy dark:text-brand-gold">
-                {firmInfo.name}
-              </span>
-            )}
-          </h1>
-          
-          <TabsList>
-            <TabsTrigger 
-              value="view-clients" 
-              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white data-[state=active]:bg-purple-700 transition-colors"
-            >
-              <User className="h-4 w-4" />
-              Clients
-            </TabsTrigger>
-            <TabsTrigger 
-              value="add-client" 
-              className="flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white data-[state=active]:bg-indigo-600 transition-colors"
-            >
-              <UserPlus className="h-4 w-4" />
-              Add Client
-            </TabsTrigger>
-            <TabsTrigger 
-              value="quick-consult" 
-              className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white data-[state=active]:bg-teal-700 transition-colors"
-            >
-              <MessageSquare className="h-4 w-4" />
-              Quick Consult
-            </TabsTrigger>
-          </TabsList>
-        </div>
-        
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-3xl font-bold">
+              {firmInfo?.name && (
+                <span className="text-brand-burgundy dark:text-brand-gold">
+                  {firmInfo.name}
+                </span>
+              )}
+            </h1>
+            
+            <TabsList>
+              <TabsTrigger 
+                value="view-clients" 
+                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white data-[state=active]:bg-purple-700 transition-colors"
+              >
+                <User className="h-4 w-4" />
+                Clients
+              </TabsTrigger>
+              <TabsTrigger 
+                value="add-client" 
+                className="flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white data-[state=active]:bg-indigo-600 transition-colors"
+              >
+                <UserPlus className="h-4 w-4" />
+                Add Client
+              </TabsTrigger>
+              <TabsTrigger 
+                value="quick-consult" 
+                className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white data-[state=active]:bg-teal-700 transition-colors"
+              >
+                <MessageSquare className="h-4 w-4" />
+                Quick Consult
+              </TabsTrigger>
+            </TabsList>
+          </div>
           
           <TabsContent value="view-clients">
             <Card>
