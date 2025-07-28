@@ -72,7 +72,7 @@ const Clients = () => {
           )}
           Clients
         </h1>
-        <p className="text-lg mb-4">Manage your legal clients and cases here.</p>
+        
         
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="mb-4">
