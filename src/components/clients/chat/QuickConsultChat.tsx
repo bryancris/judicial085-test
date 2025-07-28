@@ -98,8 +98,17 @@ const QuickConsultChat = () => {
       // Store the full response for citation display
       setLastResponse(response);
 
-      // Add AI response to database with session creation
-      await addMessage(response.text, "assistant", handleSessionCreation);
+      // Add AI response to database using the existing session ID
+      if (!activeSessionId) {
+        toast({
+          title: "Error",
+          description: "No session ID available for saving assistant response",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      await addMessage(response.text, "assistant");
 
       // Show knowledge base usage notification
       if (response.hasKnowledgeBase && response.documentsFound && response.documentsFound > 0) {
