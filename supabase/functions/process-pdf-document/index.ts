@@ -85,14 +85,16 @@ serve(async (req) => {
     console.log('📋 Processing request:', {
       documentId: requestBody.documentId,
       fileName: requestBody.fileName,
-      clientId: requestBody.clientId,
-      caseId: requestBody.caseId || 'none'
+      clientId: requestBody.clientId || 'none',
+      caseId: requestBody.caseId || 'none',
+      userId: requestBody.userId || 'none',
+      firmId: requestBody.firmId || 'none'
     });
     
     const validatedRequest = validateRequest(requestBody);
     documentId = validatedRequest.documentId;
     
-    console.log(`📄 Starting document processing: ${validatedRequest.fileName} for client: ${validatedRequest.clientId}`);
+    console.log(`📄 Starting document processing: ${validatedRequest.fileName} for ${validatedRequest.clientId ? `client: ${validatedRequest.clientId}` : `user: ${validatedRequest.userId || 'unknown'}`}`);
 
     // Mark document as processing
     await updateDocumentStatus(supabase, documentId, 'processing', validatedRequest.fileUrl);

@@ -1,16 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuthState } from "@/hooks/useAuthState";
 import { Navigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Menu, Users } from "lucide-react";
+import { ArrowLeft, Menu, Users, Upload } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import QuickConsultChat from "@/components/clients/chat/QuickConsultChat";
 import { useIsMobile } from "@/hooks/use-mobile";
+import QuickConsultDocumentUploadDialog from "@/components/quick-consult/QuickConsultDocumentUploadDialog";
 
 const QuickConsult = () => {
   const { session, isLoading } = useAuthState();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
 
   // Show loading while checking auth state
   if (isLoading) {
@@ -50,6 +52,15 @@ const QuickConsult = () => {
             <Button
               variant="ghost"
               size="icon"
+              onClick={() => setShowUploadDialog(true)}
+              className="text-muted-foreground hover:text-foreground"
+              title="Upload Documents"
+            >
+              <Upload className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => navigate('/clients')}
               className="text-muted-foreground hover:text-foreground"
               title="View Clients"
@@ -66,6 +77,16 @@ const QuickConsult = () => {
           <QuickConsultChat />
         </div>
       </main>
+
+      {/* Upload Dialog */}
+      <QuickConsultDocumentUploadDialog
+        isOpen={showUploadDialog}
+        onClose={() => setShowUploadDialog(false)}
+        onUpload={() => {
+          // Optionally refresh any document lists here
+          console.log("Document uploaded successfully");
+        }}
+      />
     </div>
   );
 };

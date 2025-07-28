@@ -37,7 +37,7 @@ const generateEmbedding = async (text: string): Promise<number[]> => {
 };
 
 // Function to search knowledge base documents
-const searchKnowledgeBase = async (query: string, clientId?: string): Promise<any[]> => {
+const searchKnowledgeBase = async (query: string, clientId?: string, userId?: string): Promise<any[]> => {
   try {
     console.log('Searching knowledge base for:', query.substring(0, 100) + '...');
     
@@ -45,7 +45,7 @@ const searchKnowledgeBase = async (query: string, clientId?: string): Promise<an
     const queryEmbedding = await generateEmbedding(query);
     console.log('Generated embedding with', queryEmbedding.length, 'dimensions');
     
-    // Search public documents (knowledge base) and client-specific documents
+    // Search public documents (knowledge base), client-specific documents, and firm documents
     let searchResults = [];
     
     if (clientId) {
@@ -66,6 +66,53 @@ const searchKnowledgeBase = async (query: string, clientId?: string): Promise<an
       } else if (clientDocs) {
         console.log('Found', clientDocs.length, 'client-specific documents');
         searchResults = [...searchResults, ...clientDocs];
+      }
+    }
+    
+    // Search firm documents if userId is provided
+    if (userId) {
+      console.log('Searching firm documents for user:', userId);
+      
+      // Get user's firm ID
+      const { data: firmData } = await supabase
+        .from('firm_users')
+        .select('firm_id')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .single();
+      
+      if (firmData?.firm_id) {
+        // Search firm documents using document metadata
+        const { data: firmDocIds } = await supabase
+          .from('document_metadata')
+          .select('id')
+          .eq('firm_id', firmData.firm_id)
+          .is('client_id', null);
+        
+        if (firmDocIds && firmDocIds.length > 0) {
+          const docIds = firmDocIds.map(doc => doc.id);
+          
+          const { data: firmDocs, error: firmError } = await supabase
+            .from('document_chunks')
+            .select(`
+              id,
+              document_id,
+              content,
+              metadata,
+              1 - (embedding <=> '[${queryEmbedding.join(',')}]') as similarity
+            `)
+            .in('document_id', docIds)
+            .gt('1 - (embedding <=> \'[' + queryEmbedding.join(',') + ']\')', 0.5)
+            .order('embedding <=> \'[' + queryEmbedding.join(',') + ']\'')
+            .limit(5);
+          
+          if (firmError) {
+            console.error('Firm documents search error:', firmError);
+          } else if (firmDocs) {
+            console.log('Found', firmDocs.length, 'firm documents');
+            searchResults = [...searchResults, ...firmDocs];
+          }
+        }
       }
     }
     
@@ -186,21 +233,22 @@ serve(async (req) => {
       throw new Error('OpenAI API key is not configured');
     }
 
-    const { messages, clientId } = await req.json();
+    const { messages, clientId, userId } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       throw new Error('Messages array is required');
     }
 
     console.log('Processing quick consult request with', messages.length, 'messages');
-    console.log('Client ID provided:', clientId || 'None (public knowledge base only)');
+    console.log('Client ID provided:', clientId || 'None');
+    console.log('User ID provided:', userId || 'None');
 
     // Get the latest user message for knowledge base search
     const latestUserMessage = messages.filter(msg => msg.role === 'user').pop();
     const userQuery = latestUserMessage?.content || '';
 
-    // Search knowledge base for relevant documents
-    const searchResults = await searchKnowledgeBase(userQuery, clientId);
+    // Search knowledge base for relevant documents (including firm documents)
+    const searchResults = await searchKnowledgeBase(userQuery, clientId, userId);
     console.log(`Found ${searchResults.length} relevant documents`);
 
     // Generate citations from search results

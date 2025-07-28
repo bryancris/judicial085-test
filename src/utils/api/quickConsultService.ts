@@ -23,7 +23,8 @@ export interface QuickConsultResponse {
 
 export const sendQuickConsultMessage = async (
   messages: QuickConsultMessage[],
-  clientId?: string
+  clientId?: string,
+  userId?: string
 ): Promise<QuickConsultResponse> => {
   try {
     const { data, error } = await invokeFunction<{
@@ -37,7 +38,8 @@ export const sendQuickConsultMessage = async (
         role: msg.role,
         content: msg.content
       })),
-      clientId
+      clientId,
+      userId
     });
 
     if (error) {

@@ -2,13 +2,14 @@
 import { ProcessPdfRequest } from '../types.ts';
 
 export function validateRequest(requestBody: any): ProcessPdfRequest {
-  const { documentId, clientId, caseId, title, fileUrl, fileName } = requestBody;
+  const { documentId, clientId, caseId, title, fileUrl, fileName, userId, firmId } = requestBody;
   
-  if (!documentId || !clientId || !fileUrl || !fileName) {
-    throw new Error('Missing required fields: documentId, clientId, fileUrl, or fileName');
+  // For firm documents, clientId can be null, but we need either clientId or userId
+  if (!documentId || (!clientId && !userId) || !fileUrl || !fileName) {
+    throw new Error('Missing required fields: documentId, (clientId or userId), fileUrl, or fileName');
   }
   
-  return { documentId, clientId, caseId, title, fileUrl, fileName };
+  return { documentId, clientId, caseId, title, fileUrl, fileName, userId, firmId };
 }
 
 export async function downloadPdf(fileUrl: string): Promise<Uint8Array> {

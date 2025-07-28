@@ -11,6 +11,7 @@ import { useQuickConsultMessages } from "@/hooks/useQuickConsultMessages";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { sendQuickConsultMessage, QuickConsultResponse } from "@/utils/api/quickConsultService";
 import { useToast } from "@/hooks/use-toast";
+import { useAuthState } from "@/hooks/useAuthState";
 import QuickConsultSidebar from "./QuickConsultSidebar";
 import CreateClientFromQuickConsultDialog from "../CreateClientFromQuickConsultDialog";
 
@@ -22,6 +23,7 @@ const QuickConsultChat = () => {
   const [lastResponse, setLastResponse] = useState<QuickConsultResponse | null>(null);
   const [createClientDialogOpen, setCreateClientDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { session } = useAuthState();
 
   const { createSession, updateSessionTitle } = useQuickConsultSessions();
   const { messages, addMessage, validateSession, clearMessages } = useQuickConsultMessages(currentSessionId);
@@ -85,8 +87,8 @@ const QuickConsultChat = () => {
         { role: "user" as const, content: userMessageContent, timestamp: new Date().toLocaleTimeString() }
       ];
 
-      // Send to AI service with enhanced response handling
-      const response = await sendQuickConsultMessage(allMessages);
+      // Send to AI service with enhanced response handling (include user ID for firm document search)
+      const response = await sendQuickConsultMessage(allMessages, undefined, session?.user?.id);
 
       if (response.error) {
         toast({
