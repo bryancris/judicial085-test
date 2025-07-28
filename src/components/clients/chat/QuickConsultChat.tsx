@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Trash2, Send, Loader2, SidebarClose, SidebarOpen, FileText, ChevronDown, ChevronRight, Mic, MicOff, UserPlus } from "lucide-react";
+import { Trash2, Send, Loader2, SidebarClose, SidebarOpen, FileText, ChevronDown, ChevronRight, Mic, MicOff, UserPlus, Upload } from "lucide-react";
 import { useQuickConsultSessions } from "@/hooks/useQuickConsultSessions";
 import { useQuickConsultMessages } from "@/hooks/useQuickConsultMessages";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuthState } from "@/hooks/useAuthState";
 import QuickConsultSidebar from "./QuickConsultSidebar";
 import CreateClientFromQuickConsultDialog from "../CreateClientFromQuickConsultDialog";
+import QuickConsultDocumentUploadDialog from "../../quick-consult/QuickConsultDocumentUploadDialog";
 
 const QuickConsultChat = () => {
   const [input, setInput] = useState("");
@@ -22,6 +23,8 @@ const QuickConsultChat = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [lastResponse, setLastResponse] = useState<QuickConsultResponse | null>(null);
   const [createClientDialogOpen, setCreateClientDialogOpen] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [isProcessingUpload, setIsProcessingUpload] = useState(false);
   const { toast } = useToast();
   const { session } = useAuthState();
 
@@ -169,6 +172,14 @@ const QuickConsultChat = () => {
     });
   };
 
+  const handleDocumentUpload = () => {
+    setUploadDialogOpen(false);
+    toast({
+      title: "Document Uploaded",
+      description: "Document has been added to your firm's knowledge base and is now available for consultation.",
+    });
+  };
+
   // Component to display citations
   const CitationsDisplay = ({ citations }: { citations: QuickConsultResponse['citations'] }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -234,6 +245,15 @@ const QuickConsultChat = () => {
                 <CardTitle className="text-xl text-teal-700">Quick Consult</CardTitle>
               </div>
               <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setUploadDialogOpen(true)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <Upload className="h-4 w-4 mr-1" />
+                  Upload Document
+                </Button>
                 {currentSessionId && messages.length > 0 && (
                   <Button
                     variant="default"
@@ -404,6 +424,12 @@ const QuickConsultChat = () => {
           timestamp: new Date(msg.created_at || Date.now()).toLocaleTimeString()
         }))}
         onSuccess={handleCreateClient}
+      />
+
+      <QuickConsultDocumentUploadDialog
+        isOpen={uploadDialogOpen}
+        onClose={() => setUploadDialogOpen(false)}
+        onUpload={handleDocumentUpload}
       />
     </div>
   );
