@@ -70,15 +70,34 @@ export const useQuickConsultMessages = (sessionId: string | null) => {
     content: string, 
     role: "user" | "assistant",
     onSessionInvalid?: () => Promise<string | null>
-  ) => {
-    if (!sessionId) return null;
+  ): Promise<QuickConsultMessage | null> => {
+    let currentSessionId = sessionId;
+
+    // If no session ID and this is a user message, create a new session
+    if (!currentSessionId && role === "user" && onSessionInvalid) {
+      console.log("No session ID, creating new session for first message");
+      currentSessionId = await onSessionInvalid();
+      if (!currentSessionId) {
+        toast({
+          title: "Error",
+          description: "Failed to create new session",
+          variant: "destructive",
+        });
+        return null;
+      }
+    }
+
+    if (!currentSessionId) {
+      console.error("No session ID available");
+      return null;
+    }
 
     try {
       // First attempt to save the message
       const { data, error } = await supabase
         .from("quick_consult_messages")
         .insert({
-          session_id: sessionId,
+          session_id: currentSessionId,
           role,
           content,
         })
@@ -89,7 +108,7 @@ export const useQuickConsultMessages = (sessionId: string | null) => {
         // Check if the error is due to session not existing (RLS violation)
         if (error.message?.includes("row-level security policy") || error.message?.includes("violates")) {
           // Validate if session exists
-          const sessionExists = await validateSession(sessionId);
+          const sessionExists = await validateSession(currentSessionId);
           
           if (!sessionExists && onSessionInvalid) {
             console.log("Session no longer exists, attempting to create new session...");
@@ -112,7 +131,7 @@ export const useQuickConsultMessages = (sessionId: string | null) => {
               }
 
               setMessages(prev => [...prev, retryData as QuickConsultMessage]);
-              return retryData;
+              return retryData as QuickConsultMessage;
             }
           }
         }
@@ -126,7 +145,7 @@ export const useQuickConsultMessages = (sessionId: string | null) => {
       }
 
       setMessages(prev => [...prev, data as QuickConsultMessage]);
-      return data;
+      return data as QuickConsultMessage;
     } catch (error) {
       console.error("Error adding message:", error);
       toast({

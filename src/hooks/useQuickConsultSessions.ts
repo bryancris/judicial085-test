@@ -22,7 +22,10 @@ export const useQuickConsultSessions = () => {
     try {
       const { data, error } = await supabase
         .from("quick_consult_sessions")
-        .select("*")
+        .select(`
+          *,
+          quick_consult_messages!inner(id)
+        `)
         .eq("is_archived", false)
         .order("updated_at", { ascending: false });
 
@@ -35,7 +38,12 @@ export const useQuickConsultSessions = () => {
         return;
       }
 
-      setSessions(data || []);
+      // Filter to only include sessions that have messages
+      const sessionsWithMessages = (data || []).filter(session => 
+        session.quick_consult_messages && session.quick_consult_messages.length > 0
+      );
+
+      setSessions(sessionsWithMessages);
     } catch (error) {
       console.error("Error fetching sessions:", error);
       toast({

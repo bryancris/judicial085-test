@@ -25,12 +25,11 @@ const QuickConsultChat = () => {
   const { messages, addMessage, validateSession, clearMessages } = useQuickConsultMessages(currentSessionId);
   const { isRecording, isRequestingPermission, isSupported, toggleRecording } = useVoiceInput();
 
-  const handleNewChat = async () => {
-    const sessionId = await createSession();
-    if (sessionId) {
-      setCurrentSessionId(sessionId);
-      clearMessages();
-    }
+  const handleNewChat = () => {
+    setCurrentSessionId(null);
+    clearMessages();
+    setInput("");
+    setLastResponse(null);
   };
 
   const handleSessionSelect = (sessionId: string) => {
@@ -44,74 +43,34 @@ const QuickConsultChat = () => {
   };
 
   const handleSend = async () => {
-    console.log("handleSend called - input:", input, "isLoading:", isLoading);
-    
-    if (!input.trim()) {
-      console.log("Input is empty or whitespace only");
+    if (!input.trim() || isLoading) {
       return;
-    }
-    
-    if (isLoading) {
-      console.log("Already loading, skipping");
-      return;
-    }
-
-    let sessionId = currentSessionId;
-    console.log("Current session ID:", sessionId);
-    
-    // Create new session if none exists
-    if (!sessionId) {
-      console.log("Creating new session...");
-      sessionId = await createSession("New Chat");
-      console.log("New session created:", sessionId);
-      if (!sessionId) {
-        console.error("Failed to create session");
-        toast({
-          title: "Error",
-          description: "Failed to create chat session. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-      setCurrentSessionId(sessionId);
     }
 
     const userMessageContent = input.trim();
-    console.log("Sending message:", userMessageContent);
     setInput("");
     setIsLoading(true);
 
     try {
-      // Create session recovery function
-      const handleSessionRecovery = async (): Promise<string | null> => {
-        console.log("Creating new session due to invalid session...");
-        const newSessionId = await createSession("New Chat");
+      // Create session recovery/creation function
+      const handleSessionCreation = async (): Promise<string | null> => {
+        const title = generateSessionTitle(userMessageContent);
+        const newSessionId = await createSession(title);
         if (newSessionId) {
           setCurrentSessionId(newSessionId);
           clearMessages();
-          toast({
-            title: "Session Recovered",
-            description: "Created a new chat session and will retry your message",
-            variant: "default",
-          });
         }
         return newSessionId;
       };
 
-      // Add user message to database with session recovery
-      const userMessage = await addMessage(userMessageContent, "user", handleSessionRecovery);
+      // Add user message to database (will create session if needed)
+      const userMessage = await addMessage(userMessageContent, "user", handleSessionCreation);
       if (!userMessage) return;
 
-      // Update sessionId if it was recovered
+      // Update sessionId if it was created
       const activeSessionId = userMessage.session_id;
-      if (activeSessionId !== sessionId) {
+      if (activeSessionId !== currentSessionId) {
         setCurrentSessionId(activeSessionId);
-      }
-
-      // Generate session title from first message if it's still "New Chat"
-      if (messages.length === 0) {
-        const title = generateSessionTitle(userMessageContent);
-        await updateSessionTitle(activeSessionId, title);
       }
 
       // Get all messages for this session to send to AI
@@ -139,8 +98,8 @@ const QuickConsultChat = () => {
       // Store the full response for citation display
       setLastResponse(response);
 
-      // Add AI response to database with session recovery
-      await addMessage(response.text, "assistant", handleSessionRecovery);
+      // Add AI response to database with session creation
+      await addMessage(response.text, "assistant", handleSessionCreation);
 
       // Show knowledge base usage notification
       if (response.hasKnowledgeBase && response.documentsFound && response.documentsFound > 0) {
