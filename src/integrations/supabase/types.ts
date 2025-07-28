@@ -537,6 +537,7 @@ export type Database = {
           case_id: string | null
           client_id: string | null
           created_at: string | null
+          firm_id: string | null
           id: string
           include_in_analysis: boolean
           processed_at: string | null
@@ -546,11 +547,13 @@ export type Database = {
           schema: string | null
           title: string | null
           url: string | null
+          user_id: string | null
         }
         Insert: {
           case_id?: string | null
           client_id?: string | null
           created_at?: string | null
+          firm_id?: string | null
           id: string
           include_in_analysis?: boolean
           processed_at?: string | null
@@ -560,11 +563,13 @@ export type Database = {
           schema?: string | null
           title?: string | null
           url?: string | null
+          user_id?: string | null
         }
         Update: {
           case_id?: string | null
           client_id?: string | null
           created_at?: string | null
+          firm_id?: string | null
           id?: string
           include_in_analysis?: boolean
           processed_at?: string | null
@@ -574,6 +579,7 @@ export type Database = {
           schema?: string | null
           title?: string | null
           url?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
