@@ -5,3 +5,6 @@ verify_jwt = true
 
 [functions.search-similar-cases]
 verify_jwt = true
+
+[functions.review-uploaded-document]
+verify_jwt = true

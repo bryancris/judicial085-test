@@ -173,11 +173,14 @@ const QuickConsultChat = () => {
   };
 
   const handleDocumentUpload = () => {
-    setUploadDialogOpen(false);
-    toast({
-      title: "Document Uploaded",
-      description: "Document has been added to your firm's knowledge base and is now available for consultation.",
-    });
+    // Refresh sessions or perform any necessary updates
+    console.log("Document uploaded to firm library");
+  };
+
+  const handleChatInitiated = (sessionId: string) => {
+    // Switch to the new session that was created with the AI review
+    setCurrentSessionId(sessionId);
+    setSidebarCollapsed(true); // Collapse sidebar to show chat
   };
 
   // Component to display citations
@@ -430,6 +433,7 @@ const QuickConsultChat = () => {
         isOpen={uploadDialogOpen}
         onClose={() => setUploadDialogOpen(false)}
         onUpload={handleDocumentUpload}
+        onChatInitiated={handleChatInitiated}
       />
     </div>
   );
