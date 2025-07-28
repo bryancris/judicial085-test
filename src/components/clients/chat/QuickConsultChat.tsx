@@ -1,21 +1,104 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Trash2, Bot } from "lucide-react";
-import { useQuickConsult } from "@/hooks/useQuickConsult";
-import { cn } from "@/lib/utils";
+import { Trash2, Send, Loader2, SidebarClose, SidebarOpen } from "lucide-react";
+import { useQuickConsultSessions } from "@/hooks/useQuickConsultSessions";
+import { useQuickConsultMessages } from "@/hooks/useQuickConsultMessages";
+import { sendQuickConsultMessage } from "@/utils/api/quickConsultService";
+import { useToast } from "@/hooks/use-toast";
+import QuickConsultSidebar from "./QuickConsultSidebar";
 
 const QuickConsultChat = () => {
-  const [inputValue, setInputValue] = useState("");
-  const { messages, isLoading, sendMessage, clearMessages } = useQuickConsult();
+  const [input, setInput] = useState("");
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { toast } = useToast();
+
+  const { createSession, updateSessionTitle } = useQuickConsultSessions();
+  const { messages, addMessage, clearMessages } = useQuickConsultMessages(currentSessionId);
+
+  const handleNewChat = async () => {
+    const sessionId = await createSession();
+    if (sessionId) {
+      setCurrentSessionId(sessionId);
+      clearMessages();
+    }
+  };
+
+  const handleSessionSelect = (sessionId: string) => {
+    setCurrentSessionId(sessionId);
+  };
+
+  const generateSessionTitle = (userMessage: string): string => {
+    // Generate a concise title from the first user message
+    const words = userMessage.trim().split(/\s+/).slice(0, 6);
+    return words.join(" ") + (words.length === 6 ? "..." : "");
+  };
 
   const handleSend = async () => {
-    if (!inputValue.trim() || isLoading) return;
+    if (!input.trim() || isLoading) return;
+
+    let sessionId = currentSessionId;
     
-    await sendMessage(inputValue);
-    setInputValue("");
+    // Create new session if none exists
+    if (!sessionId) {
+      sessionId = await createSession("New Chat");
+      if (!sessionId) return;
+      setCurrentSessionId(sessionId);
+    }
+
+    const userMessageContent = input.trim();
+    setInput("");
+    setIsLoading(true);
+
+    try {
+      // Add user message to database
+      await addMessage(userMessageContent, "user");
+
+      // Generate session title from first message if it's still "New Chat"
+      if (messages.length === 0) {
+        const title = generateSessionTitle(userMessageContent);
+        await updateSessionTitle(sessionId, title);
+      }
+
+      // Get all messages for this session to send to AI
+      const allMessages = [
+        ...messages.map(msg => ({
+          role: msg.role,
+          content: msg.content,
+          timestamp: new Date(msg.created_at).toLocaleTimeString()
+        })),
+        { role: "user" as const, content: userMessageContent, timestamp: new Date().toLocaleTimeString() }
+      ];
+
+      // Send to AI service
+      const { text, error } = await sendQuickConsultMessage(allMessages);
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: error,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Add AI response to database
+      await addMessage(text, "assistant");
+
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -25,117 +108,143 @@ const QuickConsultChat = () => {
     }
   };
 
-  return (
-    <div className="flex flex-col h-[600px] space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Bot className="h-5 w-5 text-teal-600" />
-          <h3 className="text-lg font-semibold">AI Legal Assistant</h3>
-        </div>
-        {messages.length > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={clearMessages}
-            className="text-muted-foreground hover:text-destructive"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Clear Chat
-          </Button>
-        )}
-      </div>
+  const handleClearChat = () => {
+    if (currentSessionId) {
+      clearMessages();
+      // Optionally delete the session or just clear messages
+    }
+  };
 
-      {/* Chat Messages */}
-      <Card className="flex-1 p-4">
-        <ScrollArea className="h-full">
-          {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-              <Bot className="h-12 w-12 mb-4 text-teal-600" />
-              <h4 className="text-lg font-medium mb-2">Quick Legal Consultation</h4>
-              <p className="text-sm max-w-md">
-                Ask me about legal research, document drafting, case analysis, or general legal questions. 
-                I'm here to assist with your professional legal work.
-              </p>
-              <p className="text-xs mt-2 italic">
-                Note: This is for informational assistance only, not legal advice.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {messages.map((message, index) => (
-                <div
-                  key={index}
-                  className={cn(
-                    "flex mb-4",
-                    message.role === "assistant" ? "justify-start" : "justify-end"
-                  )}
+  // Create initial session if none exists
+  useEffect(() => {
+    if (!currentSessionId) {
+      handleNewChat();
+    }
+  }, []);
+
+  return (
+    <div className="h-full flex">
+      <QuickConsultSidebar
+        currentSessionId={currentSessionId}
+        onSessionSelect={handleSessionSelect}
+        onNewChat={handleNewChat}
+        isCollapsed={sidebarCollapsed}
+      />
+      
+      <div className="flex-1 flex flex-col">
+        <Card className="flex-1 flex flex-col m-0 rounded-none border-0">
+          <CardHeader className="border-b">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                  className="text-muted-foreground hover:text-foreground"
                 >
-                  <div className={cn(
-                    "flex flex-col max-w-[80%]",
-                    message.role === "assistant" ? "items-start" : "items-end"
-                  )}>
-                    <div className="flex items-center mb-1">
-                      {message.role === "assistant" && (
-                        <Bot className="h-4 w-4 mr-2 text-teal-600" />
-                      )}
-                      <span className="text-sm font-medium">
-                        {message.role === "assistant" ? "AI Assistant" : "You"}
-                      </span>
+                  {sidebarCollapsed ? <SidebarOpen className="h-4 w-4" /> : <SidebarClose className="h-4 w-4" />}
+                </Button>
+                <CardTitle className="text-xl text-teal-700">AI Legal Assistant</CardTitle>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearChat}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Clear Chat
+              </Button>
+            </div>
+          </CardHeader>
+          
+          <CardContent className="flex-1 p-0">
+            <ScrollArea className="h-full p-4">
+              {messages.length === 0 ? (
+                <div className="flex items-center justify-center h-full text-center">
+                  <div className="max-w-md">
+                    <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <span className="text-2xl text-teal-600">⚖️</span>
                     </div>
-                    
-                    <div className={cn(
-                      "rounded-lg px-4 py-3 border",
-                      message.role === "assistant" 
-                        ? "bg-teal-50 text-foreground border-teal-200" 
-                        : "bg-primary/10 text-foreground border-border"
-                    )}>
-                      <p className="whitespace-pre-wrap break-words">{message.content}</p>
-                    </div>
-                    <span className="text-xs text-muted-foreground mt-1">{message.timestamp}</span>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      Welcome to AI Legal Assistant
+                    </h3>
+                    <p className="text-gray-500">
+                      Ask me any legal questions and I'll help provide insights and guidance. 
+                      I can assist with case analysis, legal research, and general legal advice.
+                    </p>
                   </div>
                 </div>
-              ))}
-              
-              {isLoading && (
-                <div className="flex justify-start mb-4">
-                  <div className="flex flex-col items-start max-w-[80%]">
-                    <div className="flex items-center mb-1">
-                      <Bot className="h-4 w-4 mr-2 text-teal-600" />
-                      <span className="text-sm font-medium">AI Assistant</span>
-                    </div>
-                    <div className="rounded-lg px-4 py-3 bg-teal-50 border border-teal-200">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-teal-500 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-teal-500 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
-                        <div className="w-2 h-2 bg-teal-500 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+              ) : (
+                <div className="space-y-4">
+                  {messages.map((message, index) => (
+                    <div
+                      key={message.id || index}
+                      className={`flex ${
+                        message.role === "user" ? "justify-end" : "justify-start"
+                      }`}
+                    >
+                      <div
+                        className={`max-w-[80%] p-3 rounded-lg ${
+                          message.role === "user"
+                            ? "bg-teal-600 text-white"
+                            : "bg-gray-100 text-gray-900"
+                        }`}
+                      >
+                        <div className="text-sm mb-1">
+                          <strong>{message.role === "user" ? "You" : "AI Assistant"}</strong>
+                          <span className="text-xs opacity-70 ml-2">
+                            {new Date(message.created_at || Date.now()).toLocaleTimeString()}
+                          </span>
+                        </div>
+                        <div className="whitespace-pre-wrap">{message.content}</div>
                       </div>
                     </div>
-                  </div>
+                  ))}
+
+                  {isLoading && (
+                    <div className="flex justify-start">
+                      <div className="bg-gray-100 text-gray-900 p-3 rounded-lg">
+                        <div className="flex items-center space-x-2">
+                          <div className="flex space-x-1">
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                          </div>
+                          <span className="text-sm text-gray-500">AI is thinking...</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-          )}
-        </ScrollArea>
-      </Card>
+            </ScrollArea>
+          </CardContent>
+        </Card>
 
-      {/* Input */}
-      <div className="flex gap-2">
-        <Textarea
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="Ask about legal research, document drafting, case analysis..."
-          className="flex-1 min-h-[80px] resize-none"
-          disabled={isLoading}
-        />
-        <Button
-          onClick={handleSend}
-          disabled={!inputValue.trim() || isLoading}
-          className="bg-teal-600 hover:bg-teal-700 text-white"
-        >
-          <Send className="h-4 w-4" />
-        </Button>
+        <div className="border-t p-4 bg-background">
+          <div className="flex gap-2">
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Ask a legal question..."
+              className="flex-1 min-h-[60px] max-h-[120px] resize-none"
+              disabled={isLoading}
+            />
+            <Button
+              onClick={handleSend}
+              disabled={!input.trim() || isLoading}
+              className="bg-teal-600 hover:bg-teal-700 text-white px-6"
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
