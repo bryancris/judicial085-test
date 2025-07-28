@@ -282,7 +282,7 @@ const CreateClientFromQuickConsultDialog = ({
             </div>
           </div>
 
-          <ScrollArea className="flex-1 min-h-0 max-h-[60vh] px-1">
+          <ScrollArea className="flex-1 min-h-0 max-h-[45vh] px-1">
             <div className="pr-4">
               {renderStepContent()}
             </div>
