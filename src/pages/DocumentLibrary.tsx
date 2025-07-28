@@ -1,20 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import NavBar from '@/components/NavBar';
-import { Library, Upload, Search, FileText, Calendar, Download, Trash2, Loader2 } from 'lucide-react';
+import { Library, Upload, Search, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { useAuthState } from '@/hooks/useAuthState';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useFirmDocumentProcessingService } from '@/hooks/documents/services/firmDocumentProcessingService';
+import { useFirmDocumentManager } from '@/hooks/useFirmDocumentManager';
+import { DocumentWithContent } from '@/types/knowledge';
+import DocumentLibraryCard from '@/components/knowledge/DocumentLibraryCard';
 import QuickConsultDocumentUploadDialog from '@/components/quick-consult/QuickConsultDocumentUploadDialog';
 
 const DocumentLibrary = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [documentsWithContent, setDocumentsWithContent] = useState<DocumentWithContent[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
   const { session } = useAuthState();
   const { processFileDocument, processTextDocument } = useFirmDocumentProcessingService();
 
@@ -41,38 +43,82 @@ const DocumentLibrary = () => {
     enabled: !!session?.user?.id,
   });
 
+  const { toggleDocumentAnalysis, deleteDocument } = useFirmDocumentManager(
+    documentsWithContent,
+    setDocumentsWithContent
+  );
+
+  // Fetch document content for each document
+  useEffect(() => {
+    const fetchDocumentContent = async () => {
+      if (!documents.length) {
+        setDocumentsWithContent([]);
+        return;
+      }
+
+      const documentsWithContentPromises = documents.map(async (doc) => {
+        try {
+          // Fetch content for this document
+          const { data: chunks, error } = await supabase
+            .from('document_chunks')
+            .select('*')
+            .eq('document_id', doc.id)
+            .order('chunk_index', { ascending: true })
+            .limit(5); // Limit to first 5 chunks for preview
+
+          if (error) {
+            console.error(`Error fetching content for document ${doc.id}:`, error);
+            return {
+              ...doc,
+              contents: [],
+              fetchError: error.message
+            } as DocumentWithContent;
+          }
+
+          const contents = chunks?.map((chunk, index) => ({
+            id: index + 1, // Use index as a number ID
+            content: chunk.content,
+            metadata: chunk.metadata || {},
+            embedding: null
+          })) || [];
+
+          return {
+            ...doc,
+            contents
+          } as DocumentWithContent;
+
+        } catch (error) {
+          console.error(`Exception fetching content for document ${doc.id}:`, error);
+          return {
+            ...doc,
+            contents: [],
+            fetchError: 'Failed to fetch content'
+          } as DocumentWithContent;
+        }
+      });
+
+      try {
+        const results = await Promise.all(documentsWithContentPromises);
+        setDocumentsWithContent(results);
+      } catch (error) {
+        console.error('Error fetching document content:', error);
+      }
+    };
+
+    fetchDocumentContent();
+  }, [documents]);
+
   // Filter documents based on search term
-  const filteredDocuments = documents.filter(doc => 
+  const filteredDocuments = documentsWithContent.filter(doc => 
     doc.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    doc.processing_notes?.toLowerCase().includes(searchTerm.toLowerCase())
+    doc.contents.some(content => 
+      content.content?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
   );
 
   const handleUpload = () => {
     setShowUploadDialog(false);
     refetch(); // Refresh the documents list
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <Badge variant="secondary" className="bg-green-100 text-green-800">Processed</Badge>;
-      case 'processing':
-        return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Processing</Badge>;
-      case 'failed':
-        return <Badge variant="destructive">Failed</Badge>;
-      default:
-        return <Badge variant="outline">Pending</Badge>;
-    }
   };
 
   return (
@@ -117,57 +163,25 @@ const DocumentLibrary = () => {
         ) : filteredDocuments.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredDocuments.map((document) => (
-              <Card key={document.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <FileText className="h-5 w-5 text-brand-burgundy" />
-                      <span className="truncate">{document.title || 'Untitled Document'}</span>
-                    </CardTitle>
-                    {getStatusBadge(document.processing_status)}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      {formatDate(document.created_at)}
-                    </div>
-                    
-                    {document.processing_notes && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {document.processing_notes}
-                      </p>
-                    )}
-                    
-                    <div className="flex gap-2 pt-2">
-                      {document.url && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(document.url, '_blank')}
-                          className="flex items-center gap-1"
-                        >
-                          <Download className="h-3 w-3" />
-                          View
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <DocumentLibraryCard
+                key={document.id}
+                document={document}
+                onDeleteDocument={deleteDocument}
+                onToggleAnalysis={toggleDocumentAnalysis}
+                isProcessing={isProcessing}
+              />
             ))}
           </div>
         ) : (
           <div className="text-center py-12">
-            <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <Library className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-xl font-medium mb-2">
               {searchTerm ? 'No documents match your search' : 'No documents yet'}
             </h3>
             <p className="text-muted-foreground mb-4">
               {searchTerm 
                 ? 'Try adjusting your search terms.' 
-                : 'Upload your first document to get started.'
+                : 'Upload your first document to get started building your document library.'
               }
             </p>
             {!searchTerm && (
