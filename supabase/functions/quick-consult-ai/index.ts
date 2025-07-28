@@ -171,6 +171,60 @@ const generateCitations = (searchResults: any[]): any[] => {
   }));
 };
 
+// Function to remove duplicate case citations from AI response
+const removeDuplicateCitations = (text: string): string => {
+  // Extract all case citations from the text
+  const casePattern = /\b[A-Z][a-zA-Z\s&.,-]+\s+v\.\s+[A-Z][a-zA-Z\s&.,-]+(?:,?\s+\d+[\w\s.]+\d+)?/g;
+  const foundCases = new Set<string>();
+  const duplicatePatterns: string[] = [];
+  
+  let match;
+  while ((match = casePattern.exec(text)) !== null) {
+    const caseName = match[0].trim();
+    const normalizedCase = caseName.replace(/[*_]/g, '').trim(); // Remove formatting
+    
+    if (foundCases.has(normalizedCase)) {
+      // Mark this as a duplicate pattern to remove
+      duplicatePatterns.push(caseName);
+    } else {
+      foundCases.add(normalizedCase);
+    }
+  }
+  
+  // Remove duplicate mentions and formatting markers
+  let cleanedText = text;
+  
+  // Remove duplicate case mentions
+  duplicatePatterns.forEach(pattern => {
+    const regex = new RegExp(`\\*\\*${pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\*\\*`, 'g');
+    cleanedText = cleanedText.replace(regex, '');
+  });
+  
+  // Remove standalone formatting markers around case names
+  cleanedText = cleanedText.replace(/\*\*([^*]+v\.[^*]+)\*\*/g, '$1');
+  
+  // Remove bullet points or numbered lists that repeat case information
+  const lines = cleanedText.split('\n');
+  const filteredLines = lines.filter(line => {
+    const trimmedLine = line.trim();
+    // Skip lines that are just bullet points or numbers with case names
+    if (/^[•\-*]\s*[A-Z][a-zA-Z\s&.,-]+\s+v\.\s+[A-Z][a-zA-Z\s&.,-]+/.test(trimmedLine)) {
+      return false;
+    }
+    if (/^\d+\.\s*[A-Z][a-zA-Z\s&.,-]+\s+v\.\s+[A-Z][a-zA-Z\s&.,-]+/.test(trimmedLine)) {
+      return false;
+    }
+    return true;
+  });
+  
+  // Remove empty lines and excessive whitespace
+  return filteredLines
+    .filter(line => line.trim().length > 0)
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -246,16 +300,31 @@ Your capabilities include:
 
 ${knowledgeContext}
 
-CITATION FORMAT INSTRUCTIONS:
-- When referencing knowledge base documents, cite them inline as [Document 1], [Document 2], etc.
-- When citing Texas statutes, use proper legal citation format (e.g., Tex. Prop. Code § 101.021, Tex. Bus. & Com. Code § 17.46)
-- When citing cases, use standard legal citation format (e.g., Smith v. Jones, 123 S.W.3d 456 (Tex. 2009))
-- Integrate all citations naturally within your response text
-- DO NOT create a separate "References" or "Citations" section at the end
-- DO NOT repeat the same case or statute information multiple times
-- Provide a cohesive, single-format response without redundant summaries
+CRITICAL RESPONSE REQUIREMENTS - FOLLOW EXACTLY:
+1. NEVER MENTION THE SAME CASE MORE THAN ONCE in your entire response
+2. DO NOT use asterisks (**) or bold formatting around case names
+3. DO NOT create numbered lists or bullet points with case names
+4. DO NOT create "References," "Citations," "Summary," or "Additional Cases" sections
+5. DO NOT repeat case information in any format
+6. If you mention "Smith v. Jones" once, NEVER mention it again
 
-Respond professionally and concisely. Focus on practical assistance for Texas legal professionals.`
+CITATION FORMAT:
+- Knowledge base documents: [Document 1], [Document 2], etc.
+- Texas statutes: Tex. Prop. Code § 101.021, Tex. Bus. & Com. Code § 17.46
+- Cases: Smith v. Jones, 123 S.W.3d 456 (Tex. 2009) - MENTION ONCE ONLY
+- Integrate citations naturally within sentences
+
+PROHIBITED FORMATS:
+❌ "The case Smith v. Jones established X... **Smith v. Jones** also held..."
+❌ "Key cases: 1. Smith v. Jones 2. Brown v. Green"
+❌ "**Smith v. Jones** - This case established..."
+❌ Any section that lists cases separately
+
+REQUIRED FORMAT:
+✅ "In Smith v. Jones, 123 S.W.3d 456 (Tex. 2009), the court established..."
+✅ Natural integration of one citation per case within the flow of text
+
+Write a single, cohesive response with no redundancy. Each case mentioned once only.`
     };
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -279,8 +348,11 @@ Respond professionally and concisely. Focus on practical assistance for Texas le
     }
 
     const data = await response.json();
-    const aiResponse = data.choices[0].message.content;
+    let aiResponse = data.choices[0].message.content;
 
+    // Post-process to remove duplicate citations
+    aiResponse = removeDuplicateCitations(aiResponse);
+    
     console.log('Quick consult response generated successfully');
 
     return new Response(JSON.stringify({ 
