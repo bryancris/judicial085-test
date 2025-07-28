@@ -5,13 +5,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Trash2, Send, Loader2, SidebarClose, SidebarOpen, FileText, ChevronDown, ChevronRight, Mic, MicOff } from "lucide-react";
+import { Trash2, Send, Loader2, SidebarClose, SidebarOpen, FileText, ChevronDown, ChevronRight, Mic, MicOff, UserPlus } from "lucide-react";
 import { useQuickConsultSessions } from "@/hooks/useQuickConsultSessions";
 import { useQuickConsultMessages } from "@/hooks/useQuickConsultMessages";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { sendQuickConsultMessage, QuickConsultResponse } from "@/utils/api/quickConsultService";
 import { useToast } from "@/hooks/use-toast";
 import QuickConsultSidebar from "./QuickConsultSidebar";
+import CreateClientFromQuickConsultDialog from "../CreateClientFromQuickConsultDialog";
 
 const QuickConsultChat = () => {
   const [input, setInput] = useState("");
@@ -19,6 +20,7 @@ const QuickConsultChat = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [lastResponse, setLastResponse] = useState<QuickConsultResponse | null>(null);
+  const [createClientDialogOpen, setCreateClientDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const { createSession, updateSessionTitle } = useQuickConsultSessions();
@@ -148,6 +150,17 @@ const QuickConsultChat = () => {
     }
   };
 
+  const handleCreateClient = (clientId: string, caseId: string) => {
+    // Clear the current session after successful client creation
+    setCurrentSessionId(null);
+    setLastResponse(null);
+    
+    toast({
+      title: "Success",
+      description: "Client created and chat imported successfully",
+    });
+  };
+
   const handleVoiceInput = async () => {
     await toggleRecording((text) => {
       setInput(text);
@@ -218,15 +231,27 @@ const QuickConsultChat = () => {
                 </Button>
                 <CardTitle className="text-xl text-teal-700">Quick Consult</CardTitle>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleClearChat}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Clear Chat
-              </Button>
+              <div className="flex items-center gap-2">
+                {currentSessionId && messages.length > 0 && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => setCreateClientDialogOpen(true)}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Create Client
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearChat}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Clear Chat
+                </Button>
+              </div>
             </div>
           </CardHeader>
           
@@ -367,6 +392,17 @@ const QuickConsultChat = () => {
           </div>
         </div>
       </div>
+
+      <CreateClientFromQuickConsultDialog
+        open={createClientDialogOpen}
+        onOpenChange={setCreateClientDialogOpen}
+        messages={messages.map(msg => ({
+          role: msg.role as "user" | "assistant",
+          content: msg.content,
+          timestamp: new Date(msg.created_at || Date.now()).toLocaleTimeString()
+        }))}
+        onSuccess={handleCreateClient}
+      />
     </div>
   );
 };
