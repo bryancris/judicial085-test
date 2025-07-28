@@ -116,77 +116,26 @@ const searchKnowledgeBase = async (query: string, clientId?: string, userId?: st
       }
     }
     
-    // Search public knowledge base documents (where client_id and case_id are null)
+    // Search public knowledge base documents using match_documents function
     console.log('Searching public knowledge base documents...');
     
-    // First try with similarity threshold of 0.5
-    let { data: publicDocs, error: publicError } = await supabase
-      .from('document_chunks')
-      .select(`
-        id,
-        document_id,
-        content,
-        metadata,
-        1 - (embedding <=> '[${queryEmbedding.join(',')}]') as similarity
-      `)
-      .is('client_id', null)
-      .is('case_id', null)
-      .gt('1 - (embedding <=> \'[' + queryEmbedding.join(',') + ']\')', 0.5)
-      .order('embedding <=> \'[' + queryEmbedding.join(',') + ']\'')
-      .limit(10);
+    // Use the match_documents RPC function to search the documents table
+    const { data: publicDocs, error: publicError } = await supabase.rpc('match_documents', {
+      query_embedding: queryEmbedding,
+      match_count: 10,
+      filter: {}
+    });
     
     if (publicError) {
       console.error('Public documents search error:', publicError);
     } else {
-      console.log('Found', publicDocs?.length || 0, 'public documents with similarity > 0.5');
-    }
-    
-    // If no results with 0.5 threshold, try with lower threshold of 0.3
-    if ((!publicDocs || publicDocs.length === 0) && !publicError) {
-      console.log('No results with 0.5 threshold, trying 0.3...');
-      const result = await supabase
-        .from('document_chunks')
-        .select(`
-          id,
-          document_id,
-          content,
-          metadata,
-          1 - (embedding <=> '[${queryEmbedding.join(',')}]') as similarity
-        `)
-        .is('client_id', null)
-        .is('case_id', null)
-        .gt('1 - (embedding <=> \'[' + queryEmbedding.join(',') + ']\')', 0.3)
-        .order('embedding <=> \'[' + queryEmbedding.join(',') + ']\'')
-        .limit(10);
-      
-      publicDocs = result.data;
-      publicError = result.error;
-      console.log('Found', publicDocs?.length || 0, 'public documents with similarity > 0.3');
-    }
-    
-    // If still no results, try a broader search for Texas law keywords
-    if ((!publicDocs || publicDocs.length === 0) && !publicError) {
-      console.log('No similarity results, trying keyword search for Texas laws...');
-      const texasKeywords = ['texas', 'property code', 'business commerce code', 'civil practice', 'penal code', 'statute'];
-      const keywordPattern = texasKeywords.join('|');
-      
-      const result = await supabase
-        .from('document_chunks')
-        .select(`
-          id,
-          document_id,
-          content,
-          metadata,
-          0.5 as similarity
-        `)
-        .is('client_id', null)
-        .is('case_id', null)
-        .or(`content.ilike.%${query}%,metadata->>file_title.ilike.%texas%`)
-        .limit(5);
-      
-      publicDocs = result.data;
-      publicError = result.error;
-      console.log('Found', publicDocs?.length || 0, 'documents via keyword search');
+      console.log('Found', publicDocs?.length || 0, 'public knowledge base documents');
+      // Log some details about found documents
+      if (publicDocs && publicDocs.length > 0) {
+        publicDocs.forEach((doc, index) => {
+          console.log(`Knowledge base doc ${index + 1}: similarity ${doc.similarity}, metadata:`, doc.metadata);
+        });
+      }
     }
     
     if (!publicError && publicDocs) {
