@@ -64,17 +64,16 @@ const Clients = () => {
     <div className="min-h-screen flex flex-col">
       <NavBar />
       <main className="flex-grow container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">
-          {firmInfo?.name && (
-            <span className="text-brand-burgundy dark:text-brand-gold">
-              {firmInfo.name}
-            </span>
-          )}
-        </h1>
-        
-        
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="mb-4">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold">
+            {firmInfo?.name && (
+              <span className="text-brand-burgundy dark:text-brand-gold">
+                {firmInfo.name}
+              </span>
+            )}
+          </h1>
+          
+          <TabsList>
             <TabsTrigger 
               value="view-clients" 
               className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white data-[state=active]:bg-purple-700 transition-colors"
@@ -97,6 +96,9 @@ const Clients = () => {
               Quick Consult
             </TabsTrigger>
           </TabsList>
+        </div>
+        
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           
           <TabsContent value="view-clients">
             <Card>
