@@ -6,6 +6,8 @@ import { ClientFormValues } from "@/components/clients/ClientFormSchema";
 import { CaseFormValues } from "@/components/clients/cases/CaseFormSchema";
 import { QuickConsultMessage } from "@/utils/api/quickConsultService";
 import { migrateQuickConsultMessages } from "@/utils/api/quickConsultMigrationService";
+import { generateLegalAnalysis } from "@/utils/api/analysisApiService";
+import { ChatMessageProps } from "@/components/clients/chat/ChatMessage";
 
 export const useCreateClientFromQuickConsult = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -81,22 +83,66 @@ export const useCreateClientFromQuickConsult = () => {
       // Step 3: Migrate Quick Consult messages to client intake
       if (messages.length > 0) {
         try {
-          await migrateQuickConsultMessages(messages, clientId, user.id, caseId);
+          const migrationResult = await migrateQuickConsultMessages(messages, clientId, user.id, caseId);
+          console.log(`Migrated ${migrationResult.migratedCount} messages`);
+          
+          // Step 4: Generate legal analysis if we have a valid conversation
+          if (migrationResult.hasValidConversation) {
+            console.log("Triggering legal analysis for migrated conversation...");
+            
+            try {
+              // Convert messages to the format expected by analysis generation
+              const conversationForAnalysis: ChatMessageProps[] = messages.map(msg => ({
+                content: msg.content,
+                role: (msg.role === "user" ? "attorney" : "client") as "attorney" | "client",
+                timestamp: msg.timestamp,
+              }));
+              
+              const analysisResult = await generateLegalAnalysis(clientId, conversationForAnalysis, caseId);
+              
+              if (analysisResult.error) {
+                console.error("Analysis generation failed:", analysisResult.error);
+                toast({
+                  title: "Analysis Generation Failed",
+                  description: "Chat imported successfully, but analysis generation failed. You can generate it manually.",
+                  variant: "destructive",
+                });
+              } else {
+                console.log("✅ Legal analysis generated successfully for migrated conversation");
+                toast({
+                  title: "Import Complete",
+                  description: "Client, case, and chat history imported with legal analysis generated successfully",
+                });
+              }
+            } catch (analysisError) {
+              console.error("Error during analysis generation:", analysisError);
+              toast({
+                title: "Analysis Generation Error",
+                description: "Chat imported successfully, but analysis generation failed. You can generate it manually.",
+                variant: "destructive",
+              });
+            }
+          } else {
+            toast({
+              title: "Import Complete",
+              description: "Client, case, and chat history imported successfully",
+            });
+          }
         } catch (migrationError) {
           console.error("Failed to migrate messages:", migrationError);
-          // Don't fail the entire operation if message migration fails
           toast({
             title: "Warning",
             description: "Client and case created successfully, but chat history migration failed",
             variant: "destructive",
           });
         }
+      } else {
+        toast({
+          title: "Success",
+          description: `Client ${clientData.first_name} ${clientData.last_name} and case "${caseData.case_title}" created successfully`,
+        });
       }
 
-      toast({
-        title: "Success",
-        description: `Client ${clientData.first_name} ${clientData.last_name} and case "${caseData.case_title}" created successfully`,
-      });
 
       // Navigate to the new client detail page
       navigate(`/clients/${clientId}`);

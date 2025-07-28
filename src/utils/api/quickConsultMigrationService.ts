@@ -12,9 +12,9 @@ export const migrateQuickConsultMessages = async (
   clientId: string,
   userId: string,
   caseId?: string
-): Promise<void> => {
+): Promise<{ migratedCount: number; hasValidConversation: boolean }> => {
   if (messages.length === 0) {
-    return;
+    return { migratedCount: 0, hasValidConversation: false };
   }
 
   // Transform messages to client intake format
@@ -39,4 +39,11 @@ export const migrateQuickConsultMessages = async (
   }
 
   console.log(`Successfully migrated ${messages.length} messages to client intake chat`);
+  
+  // Check if we have a valid conversation (both attorney and client messages)
+  const attorneyMessages = clientMessages.filter(msg => msg.role === "attorney");
+  const clientRoleMessages = clientMessages.filter(msg => msg.role === "client");
+  const hasValidConversation = attorneyMessages.length > 0 && clientRoleMessages.length > 0;
+  
+  return { migratedCount: messages.length, hasValidConversation };
 };
