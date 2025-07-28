@@ -246,7 +246,14 @@ Your capabilities include:
 
 ${knowledgeContext}
 
-When referencing information from the knowledge base documents, please cite them as [Document 1], [Document 2], etc. When citing Texas statutes, use proper legal citation format (e.g., Tex. Prop. Code § 101.021, Tex. Bus. & Com. Code § 17.46).
+CITATION FORMAT INSTRUCTIONS:
+- When referencing knowledge base documents, cite them inline as [Document 1], [Document 2], etc.
+- When citing Texas statutes, use proper legal citation format (e.g., Tex. Prop. Code § 101.021, Tex. Bus. & Com. Code § 17.46)
+- When citing cases, use standard legal citation format (e.g., Smith v. Jones, 123 S.W.3d 456 (Tex. 2009))
+- Integrate all citations naturally within your response text
+- DO NOT create a separate "References" or "Citations" section at the end
+- DO NOT repeat the same case or statute information multiple times
+- Provide a cohesive, single-format response without redundant summaries
 
 Respond professionally and concisely. Focus on practical assistance for Texas legal professionals.`
     };
