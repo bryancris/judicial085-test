@@ -266,28 +266,29 @@ const CreateClientFromQuickConsultDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="text-center">
-            Create Client from Quick Consult
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-w-4xl">
+        <div className="flex flex-col h-[90vh]">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="text-center">
+              Create Client from Quick Consult
+            </DialogTitle>
+          </DialogHeader>
 
-        <div className="flex-shrink-0">
-          {renderStepIndicator()}
-          
-          <div className="text-center mb-4">
-            <h3 className="text-lg font-semibold">{stepTitles[currentStep]}</h3>
+          <div className="flex-shrink-0">
+            {renderStepIndicator()}
+            
+            <div className="text-center mb-4">
+              <h3 className="text-lg font-semibold">{stepTitles[currentStep]}</h3>
+            </div>
           </div>
-        </div>
 
-        <ScrollArea className="min-h-0 flex-1 px-1">
-          <div className="pr-4">
-            {renderStepContent()}
-          </div>
-        </ScrollArea>
+          <ScrollArea className="flex-1 min-h-0 px-1">
+            <div className="pr-4">
+              {renderStepContent()}
+            </div>
+          </ScrollArea>
 
-        <div className="flex-shrink-0 flex justify-between pt-4 border-t">
+          <div className="flex-shrink-0 flex justify-between pt-4 border-t">
           <Button
             variant="outline"
             onClick={handlePreviousStep}
@@ -313,6 +314,7 @@ const CreateClientFromQuickConsultDialog = ({
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
