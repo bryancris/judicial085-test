@@ -5,9 +5,10 @@ import { supabase } from "@/integrations/supabase/client";
 import NavBar from '@/components/NavBar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, UserPlus } from 'lucide-react';
+import { User, UserPlus, MessageSquare } from 'lucide-react';
 import ClientForm from '@/components/clients/ClientForm';
 import ClientList from '@/components/clients/ClientList';
+import QuickConsultChat from '@/components/clients/chat/QuickConsultChat';
 import { useDocumentAuth } from '@/hooks/useDocumentAuth';
 import { useQuery } from '@tanstack/react-query';
 
@@ -89,6 +90,13 @@ const Clients = () => {
               <UserPlus className="h-4 w-4" />
               Add Client
             </TabsTrigger>
+            <TabsTrigger 
+              value="quick-consult" 
+              className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white data-[state=active]:bg-teal-700 transition-colors"
+            >
+              <MessageSquare className="h-4 w-4" />
+              Quick Consult
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="view-clients">
@@ -111,6 +119,18 @@ const Clients = () => {
               </CardHeader>
               <CardContent>
                 <ClientForm />
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="quick-consult">
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Consult</CardTitle>
+                <CardDescription>Chat with AI for legal research, drafting assistance, and quick consultations</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <QuickConsultChat />
               </CardContent>
             </Card>
           </TabsContent>
