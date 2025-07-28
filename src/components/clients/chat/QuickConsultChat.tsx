@@ -115,12 +115,6 @@ const QuickConsultChat = () => {
     }
   };
 
-  // Create initial session if none exists
-  useEffect(() => {
-    if (!currentSessionId) {
-      handleNewChat();
-    }
-  }, []);
 
   return (
     <div className="h-full flex">
