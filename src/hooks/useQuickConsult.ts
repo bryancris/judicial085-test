@@ -1,10 +1,11 @@
 import { useState, useCallback } from "react";
-import { QuickConsultMessage, sendQuickConsultMessage } from "@/utils/api/quickConsultService";
+import { QuickConsultMessage, QuickConsultResponse, sendQuickConsultMessage } from "@/utils/api/quickConsultService";
 import { useToast } from "@/hooks/use-toast";
 
-export const useQuickConsult = () => {
+export const useQuickConsult = (clientId?: string) => {
   const [messages, setMessages] = useState<QuickConsultMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [lastResponse, setLastResponse] = useState<QuickConsultResponse | null>(null);
   const { toast } = useToast();
 
   const sendMessage = useCallback(async (content: string) => {
@@ -21,24 +22,36 @@ export const useQuickConsult = () => {
 
     try {
       const currentMessages = [...messages, userMessage];
-      const { text, error } = await sendQuickConsultMessage(currentMessages);
+      const response = await sendQuickConsultMessage(currentMessages, clientId);
 
-      if (error) {
+      if (response.error) {
         toast({
           title: "Error",
-          description: error,
+          description: response.error,
           variant: "destructive",
         });
         return;
       }
 
+      // Store the full response for potential citation display
+      setLastResponse(response);
+
       const assistantMessage: QuickConsultMessage = {
         role: "assistant",
-        content: text,
+        content: response.text,
         timestamp: new Date().toLocaleTimeString(),
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+
+      // Show knowledge base usage toast
+      if (response.hasKnowledgeBase && response.documentsFound && response.documentsFound > 0) {
+        toast({
+          title: "Knowledge Base Used",
+          description: `Referenced ${response.documentsFound} document(s) from the knowledge base`,
+          variant: "default",
+        });
+      }
     } catch (error) {
       console.error("Error sending message:", error);
       toast({
@@ -49,10 +62,11 @@ export const useQuickConsult = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [messages, toast]);
+  }, [messages, toast, clientId]);
 
   const clearMessages = useCallback(() => {
     setMessages([]);
+    setLastResponse(null);
   }, []);
 
   return {
@@ -60,5 +74,6 @@ export const useQuickConsult = () => {
     isLoading,
     sendMessage,
     clearMessages,
+    lastResponse,
   };
 };
