@@ -125,10 +125,6 @@ const Clients = () => {
           
           <TabsContent value="quick-consult">
             <Card>
-              <CardHeader>
-                <CardTitle>Quick Consult</CardTitle>
-                <CardDescription>Chat with AI for legal research, drafting assistance, and quick consultations</CardDescription>
-              </CardHeader>
               <CardContent>
                 <QuickConsultChat />
               </CardContent>
