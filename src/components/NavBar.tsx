@@ -82,7 +82,7 @@ const NavBar: React.FC = () => {
           {session && (
             <>
               <Link to="/clients" className="font-medium hover:text-brand-burgundy dark:text-gray-200 dark:hover:text-brand-gold transition-colors">Clients</Link>
-              <Link to="/firm-documents" className="font-medium hover:text-brand-burgundy dark:text-gray-200 dark:hover:text-brand-gold transition-colors">Firm Documents</Link>
+              <Link to="/document-library" className="font-medium hover:text-brand-burgundy dark:text-gray-200 dark:hover:text-brand-gold transition-colors">Document Library</Link>
               {isSuperAdmin && (
                 <>
                   <Link to="/knowledge" className="font-medium hover:text-brand-burgundy dark:text-gray-200 dark:hover:text-brand-gold transition-colors">Knowledge</Link>

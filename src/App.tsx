@@ -10,7 +10,7 @@ import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Clients from "./pages/Clients";
 import ClientDetail from "./pages/ClientDetail";
-import FirmDocuments from "./pages/FirmDocuments";
+import DocumentLibrary from "./pages/DocumentLibrary";
 import Knowledge from "./pages/Knowledge";
 import Features from "./pages/Features";
 import Admin from "./pages/Admin";
@@ -34,7 +34,7 @@ const App = () => (
             <Route path="/clients/:id" element={<ClientDetail />} />
             <Route path="/clients/:clientId/discovery/:requestId" element={<DiscoveryRequestDetail />} />
             <Route path="/quick-consult" element={<QuickConsult />} />
-            <Route path="/firm-documents" element={<FirmDocuments />} />
+            <Route path="/document-library" element={<DocumentLibrary />} />
             <Route path="/knowledge" element={<Knowledge />} />
             <Route path="/features" element={<Features />} />
             <Route path="/admin" element={<Admin />} />
