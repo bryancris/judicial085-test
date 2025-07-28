@@ -144,7 +144,7 @@ const QuickConsultChat = () => {
                 >
                   {sidebarCollapsed ? <SidebarOpen className="h-4 w-4" /> : <SidebarClose className="h-4 w-4" />}
                 </Button>
-                <CardTitle className="text-xl text-teal-700">AI Legal Assistant</CardTitle>
+                <CardTitle className="text-xl text-teal-700">Quick Consult</CardTitle>
               </div>
               <Button
                 variant="outline"
@@ -167,7 +167,7 @@ const QuickConsultChat = () => {
                       <span className="text-2xl text-teal-600">⚖️</span>
                     </div>
                     <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      Welcome to AI Legal Assistant
+                      Welcome to Quick Consult
                     </h3>
                     <p className="text-gray-500">
                       Ask me any legal questions and I'll help provide insights and guidance. 
