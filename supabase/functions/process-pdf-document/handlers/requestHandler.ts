@@ -4,11 +4,36 @@ import { ProcessPdfRequest } from '../types.ts';
 export function validateRequest(requestBody: any): ProcessPdfRequest {
   const { documentId, clientId, caseId, title, fileUrl, fileName, userId, firmId } = requestBody;
   
+  // Log the received request for debugging
+  console.log('📋 Detailed request validation:', JSON.stringify({
+    documentId: documentId || 'MISSING',
+    clientId: clientId || 'NULL',
+    caseId: caseId || 'NULL', 
+    title: title || 'MISSING',
+    fileUrl: fileUrl || 'MISSING',
+    fileName: fileName || 'MISSING',
+    userId: userId || 'MISSING',
+    firmId: firmId || 'NULL'
+  }, null, 2));
+  
+  // Check required fields
+  const missingFields = [];
+  if (!documentId) missingFields.push('documentId');
+  if (!fileUrl) missingFields.push('fileUrl');
+  if (!fileName) missingFields.push('fileName');
+  
   // For firm documents, clientId can be null, but we need either clientId or userId
-  if (!documentId || (!clientId && !userId) || !fileUrl || !fileName) {
-    throw new Error('Missing required fields: documentId, (clientId or userId), fileUrl, or fileName');
+  if (!clientId && !userId) {
+    missingFields.push('clientId or userId');
   }
   
+  if (missingFields.length > 0) {
+    const errorMsg = `Missing required fields: ${missingFields.join(', ')}`;
+    console.error('❌ Validation failed:', errorMsg);
+    throw new Error(errorMsg);
+  }
+  
+  console.log('✅ Request validation passed');
   return { documentId, clientId, caseId, title, fileUrl, fileName, userId, firmId };
 }
 
