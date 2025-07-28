@@ -267,14 +267,14 @@ const CreateClientFromQuickConsultDialog = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl">
-        <div className="flex flex-col h-[90vh]">
-          <DialogHeader className="flex-shrink-0">
+        <div className="flex flex-col h-[85vh]">
+          <DialogHeader className="flex-shrink-0 pb-4">
             <DialogTitle className="text-center">
               Create Client from Quick Consult
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 pb-4">
             {renderStepIndicator()}
             
             <div className="text-center mb-4">
@@ -282,13 +282,13 @@ const CreateClientFromQuickConsultDialog = ({
             </div>
           </div>
 
-          <ScrollArea className="flex-1 min-h-0 px-1">
+          <ScrollArea className="flex-1 min-h-0 max-h-[60vh] px-1">
             <div className="pr-4">
               {renderStepContent()}
             </div>
           </ScrollArea>
 
-          <div className="flex-shrink-0 flex justify-between pt-4 border-t">
+          <div className="flex-shrink-0 flex justify-between pt-6 mt-auto border-t bg-background">
           <Button
             variant="outline"
             onClick={handlePreviousStep}
