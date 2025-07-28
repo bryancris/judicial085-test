@@ -43,29 +43,37 @@ const searchKnowledgeBase = async (query: string, clientId?: string): Promise<an
     
     // Generate embedding for the query
     const queryEmbedding = await generateEmbedding(query);
+    console.log('Generated embedding with', queryEmbedding.length, 'dimensions');
     
     // Search public documents (knowledge base) and client-specific documents
     let searchResults = [];
     
     if (clientId) {
+      console.log('Searching client-specific documents for client:', clientId);
       // Search client-specific documents
       const { data: clientDocs, error: clientError } = await supabase.rpc(
         'search_document_chunks_by_similarity',
         {
           query_embedding: queryEmbedding,
           client_id_param: clientId,
-          match_threshold: 0.7,
+          match_threshold: 0.5, // Lowered threshold for better recall
           match_count: 5
         }
       );
       
-      if (!clientError && clientDocs) {
+      if (clientError) {
+        console.error('Client documents search error:', clientError);
+      } else if (clientDocs) {
+        console.log('Found', clientDocs.length, 'client-specific documents');
         searchResults = [...searchResults, ...clientDocs];
       }
     }
     
     // Search public knowledge base documents (where client_id and case_id are null)
-    const { data: publicDocs, error: publicError } = await supabase
+    console.log('Searching public knowledge base documents...');
+    
+    // First try with similarity threshold of 0.5
+    let { data: publicDocs, error: publicError } = await supabase
       .from('document_chunks')
       .select(`
         id,
@@ -76,9 +84,63 @@ const searchKnowledgeBase = async (query: string, clientId?: string): Promise<an
       `)
       .is('client_id', null)
       .is('case_id', null)
-      .gt('1 - (embedding <=> \'[' + queryEmbedding.join(',') + ']\')', 0.7)
+      .gt('1 - (embedding <=> \'[' + queryEmbedding.join(',') + ']\')', 0.5)
       .order('embedding <=> \'[' + queryEmbedding.join(',') + ']\'')
-      .limit(5);
+      .limit(10);
+    
+    if (publicError) {
+      console.error('Public documents search error:', publicError);
+    } else {
+      console.log('Found', publicDocs?.length || 0, 'public documents with similarity > 0.5');
+    }
+    
+    // If no results with 0.5 threshold, try with lower threshold of 0.3
+    if ((!publicDocs || publicDocs.length === 0) && !publicError) {
+      console.log('No results with 0.5 threshold, trying 0.3...');
+      const result = await supabase
+        .from('document_chunks')
+        .select(`
+          id,
+          document_id,
+          content,
+          metadata,
+          1 - (embedding <=> '[${queryEmbedding.join(',')}]') as similarity
+        `)
+        .is('client_id', null)
+        .is('case_id', null)
+        .gt('1 - (embedding <=> \'[' + queryEmbedding.join(',') + ']\')', 0.3)
+        .order('embedding <=> \'[' + queryEmbedding.join(',') + ']\'')
+        .limit(10);
+      
+      publicDocs = result.data;
+      publicError = result.error;
+      console.log('Found', publicDocs?.length || 0, 'public documents with similarity > 0.3');
+    }
+    
+    // If still no results, try a broader search for Texas law keywords
+    if ((!publicDocs || publicDocs.length === 0) && !publicError) {
+      console.log('No similarity results, trying keyword search for Texas laws...');
+      const texasKeywords = ['texas', 'property code', 'business commerce code', 'civil practice', 'penal code', 'statute'];
+      const keywordPattern = texasKeywords.join('|');
+      
+      const result = await supabase
+        .from('document_chunks')
+        .select(`
+          id,
+          document_id,
+          content,
+          metadata,
+          0.5 as similarity
+        `)
+        .is('client_id', null)
+        .is('case_id', null)
+        .or(`content.ilike.%${query}%,metadata->>file_title.ilike.%texas%`)
+        .limit(5);
+      
+      publicDocs = result.data;
+      publicError = result.error;
+      console.log('Found', publicDocs?.length || 0, 'documents via keyword search');
+    }
     
     if (!publicError && publicDocs) {
       searchResults = [...searchResults, ...publicDocs];
@@ -86,7 +148,14 @@ const searchKnowledgeBase = async (query: string, clientId?: string): Promise<an
     
     // Sort by similarity and limit results
     searchResults.sort((a, b) => (b.similarity || 0) - (a.similarity || 0));
-    return searchResults.slice(0, 5);
+    const finalResults = searchResults.slice(0, 5);
+    
+    console.log('Final search results:', finalResults.length, 'documents');
+    finalResults.forEach((result, index) => {
+      console.log(`Document ${index + 1}: ${result.metadata?.file_title || result.document_id} (similarity: ${result.similarity})`);
+    });
+    
+    return finalResults;
     
   } catch (error) {
     console.error('Error searching knowledge base:', error);
@@ -155,27 +224,34 @@ Please reference these documents when relevant to the user's question and provid
 
     const systemPrompt = {
       role: 'system',
-      content: `You are a professional AI legal assistant designed to help attorneys with quick consultations, research, and drafting assistance. 
+      content: `You are a professional AI legal assistant specifically designed to help Texas attorneys with quick consultations, research, and drafting assistance focused on Texas law.
+
+TEXAS LEGAL FOCUS:
+- You specialize in Texas statutes, regulations, and case law
+- Prioritize Texas Property Code, Business & Commerce Code, Civil Practice & Remedies Code, Penal Code, and other Texas statutes
+- Reference Texas court decisions and precedents when applicable
+- Consider Texas-specific legal procedures and requirements
 
 IMPORTANT DISCLAIMERS:
 - You do not provide legal advice to clients
 - You assist attorneys with research, analysis, and document drafting
 - Always remind users that your responses are for informational purposes only
 - Encourage attorneys to verify information and apply their professional judgment
+- All analysis should be verified against current Texas statutes and case law
 
 Your capabilities include:
-- Legal research and case analysis
-- Document drafting assistance
-- Statutory and regulatory interpretation
-- Procedural guidance
-- Legal writing support
-- Citation formatting
+- Texas legal research and case analysis
+- Document drafting assistance for Texas practice
+- Texas statutory and regulatory interpretation
+- Texas court procedural guidance
+- Legal writing support with Texas citations
+- Texas-specific citation formatting
 
 ${knowledgeContext}
 
-When referencing information from the knowledge base documents, please cite them as [Document 1], [Document 2], etc.
+When referencing information from the knowledge base documents, please cite them as [Document 1], [Document 2], etc. When citing Texas statutes, use proper legal citation format (e.g., Tex. Prop. Code § 101.021, Tex. Bus. & Com. Code § 17.46).
 
-Respond professionally and concisely. Focus on practical assistance for legal professionals.`
+Respond professionally and concisely. Focus on practical assistance for Texas legal professionals.`
     };
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
