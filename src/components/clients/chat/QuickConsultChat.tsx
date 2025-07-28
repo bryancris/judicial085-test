@@ -5,9 +5,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Trash2, Send, Loader2, SidebarClose, SidebarOpen, FileText, ChevronDown, ChevronRight } from "lucide-react";
+import { Trash2, Send, Loader2, SidebarClose, SidebarOpen, FileText, ChevronDown, ChevronRight, Mic, MicOff } from "lucide-react";
 import { useQuickConsultSessions } from "@/hooks/useQuickConsultSessions";
 import { useQuickConsultMessages } from "@/hooks/useQuickConsultMessages";
+import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { sendQuickConsultMessage, QuickConsultResponse } from "@/utils/api/quickConsultService";
 import { useToast } from "@/hooks/use-toast";
 import QuickConsultSidebar from "./QuickConsultSidebar";
@@ -22,6 +23,7 @@ const QuickConsultChat = () => {
 
   const { createSession, updateSessionTitle } = useQuickConsultSessions();
   const { messages, addMessage, validateSession, clearMessages } = useQuickConsultMessages(currentSessionId);
+  const { isRecording, isRequestingPermission, isSupported, toggleRecording } = useVoiceInput();
 
   const handleNewChat = async () => {
     const sessionId = await createSession();
@@ -176,6 +178,12 @@ const QuickConsultChat = () => {
       setLastResponse(null);
       // Optionally delete the session or just clear messages
     }
+  };
+
+  const handleVoiceInput = async () => {
+    await toggleRecording((text) => {
+      setInput(text);
+    });
   };
 
   // Component to display citations
@@ -342,21 +350,52 @@ const QuickConsultChat = () => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask a legal question..."
+              placeholder="Ask a legal question or use voice input..."
               className="flex-1 min-h-[60px] max-h-[120px] resize-none"
               disabled={isLoading}
             />
-            <Button
-              onClick={handleSend}
-              disabled={!input.trim() || isLoading}
-              className="bg-teal-600 hover:bg-teal-700 text-white px-6"
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={handleVoiceInput}
+                disabled={!isSupported || isLoading}
+                variant={isRecording ? "destructive" : "outline"}
+                size="icon"
+                className={`transition-colors ${
+                  isRequestingPermission 
+                    ? "animate-pulse" 
+                    : isRecording 
+                    ? "bg-red-600 hover:bg-red-700 text-white" 
+                    : ""
+                }`}
+                title={
+                  !isSupported 
+                    ? "Voice input not supported" 
+                    : isRecording 
+                    ? "Stop recording" 
+                    : "Start voice input"
+                }
+              >
+                {isRequestingPermission ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : isRecording ? (
+                  <MicOff className="h-4 w-4" />
+                ) : (
+                  <Mic className="h-4 w-4" />
+                )}
+              </Button>
+              <Button
+                onClick={handleSend}
+                disabled={!input.trim() || isLoading}
+                className="bg-teal-600 hover:bg-teal-700 text-white"
+                size="icon"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
