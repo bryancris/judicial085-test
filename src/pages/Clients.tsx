@@ -66,11 +66,10 @@ const Clients = () => {
       <main className="flex-grow container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-6">
           {firmInfo?.name && (
-            <span className="text-brand-burgundy dark:text-brand-gold mr-3">
+            <span className="text-brand-burgundy dark:text-brand-gold">
               {firmInfo.name}
             </span>
           )}
-          Clients
         </h1>
         
         
