@@ -29,7 +29,7 @@ const QuickConsultChat = () => {
   const { toast } = useToast();
   const { session } = useAuthState();
 
-  const { createSession, updateSessionTitle } = useQuickConsultSessions();
+  const { createSession, updateSessionTitle, deleteSession } = useQuickConsultSessions();
   const { messages, addMessage, validateSession, clearMessages } = useQuickConsultMessages(currentSessionId);
   const { isRecording, isRequestingPermission, isSupported, toggleRecording } = useVoiceInput();
 
@@ -42,6 +42,16 @@ const QuickConsultChat = () => {
 
   const handleSessionSelect = (sessionId: string) => {
     setCurrentSessionId(sessionId);
+  };
+
+  const handleSessionDelete = (sessionId: string) => {
+    // If deleting the current session, clear the state
+    if (sessionId === currentSessionId) {
+      setCurrentSessionId(null);
+      clearMessages();
+      setLastResponse(null);
+    }
+    // The actual deletion is handled by the sidebar component
   };
 
   const generateSessionTitle = (userMessage: string): string => {
@@ -235,6 +245,7 @@ const QuickConsultChat = () => {
         currentSessionId={currentSessionId}
         onSessionSelect={handleSessionSelect}
         onNewChat={handleNewChat}
+        onSessionDelete={handleSessionDelete}
         isCollapsed={sidebarCollapsed}
       />
       

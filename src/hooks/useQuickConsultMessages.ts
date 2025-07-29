@@ -59,6 +59,12 @@ export const useQuickConsultMessages = (sessionId: string | null) => {
         .eq("id", sessionId)
         .single();
 
+      // Handle 406 (Not Acceptable) - session doesn't exist
+      if (error?.code === '406' || error?.code === 'PGRST116') {
+        console.log("Session not found (406 error):", sessionId);
+        return false;
+      }
+
       return !error && !!data;
     } catch (error) {
       console.error("Error validating session:", error);
@@ -93,7 +99,34 @@ export const useQuickConsultMessages = (sessionId: string | null) => {
     }
 
     try {
-      // First attempt to save the message
+      // Before saving message, validate that session still exists
+      const sessionExists = await validateSession(currentSessionId);
+      if (!sessionExists) {
+        console.log("Session no longer exists before saving message, attempting recovery...");
+        
+        if (onSessionInvalid) {
+          const newSessionId = await onSessionInvalid();
+          if (newSessionId) {
+            currentSessionId = newSessionId;
+          } else {
+            toast({
+              title: "Session Error",
+              description: "Unable to recover session. Please try again.",
+              variant: "destructive",
+            });
+            return null;
+          }
+        } else {
+          toast({
+            title: "Session Error", 
+            description: "Session no longer exists. Please start a new chat.",
+            variant: "destructive",
+          });
+          return null;
+        }
+      }
+
+      // Attempt to save the message
       const { data, error } = await supabase
         .from("quick_consult_messages")
         .insert({
@@ -112,11 +145,8 @@ export const useQuickConsultMessages = (sessionId: string | null) => {
             error.message?.includes("violates") ||
             error.code === "42501") {
           
-          // Validate if session exists
-          const sessionExists = await validateSession(currentSessionId);
-          
-          if (!sessionExists && onSessionInvalid) {
-            console.log("Session no longer exists, attempting to create new session...");
+          if (onSessionInvalid) {
+            console.log("RLS error detected, attempting to create new session...");
             const newSessionId = await onSessionInvalid();
             
             if (newSessionId) {

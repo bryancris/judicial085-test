@@ -10,6 +10,7 @@ interface QuickConsultSidebarProps {
   currentSessionId: string | null;
   onSessionSelect: (sessionId: string) => void;
   onNewChat: () => void;
+  onSessionDelete?: (sessionId: string) => void;
   isCollapsed: boolean;
 }
 
@@ -17,6 +18,7 @@ const QuickConsultSidebar = ({
   currentSessionId, 
   onSessionSelect, 
   onNewChat,
+  onSessionDelete,
   isCollapsed 
 }: QuickConsultSidebarProps) => {
   const { sessions, isLoading, deleteSession } = useQuickConsultSessions();
@@ -78,6 +80,9 @@ const QuickConsultSidebar = ({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
+                        // Notify parent component first for state cleanup
+                        onSessionDelete?.(session.id);
+                        // Then delete from database
                         deleteSession(session.id);
                       }}
                       className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 rounded"
