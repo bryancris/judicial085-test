@@ -21,12 +21,15 @@ const QuickConsultCitationLink: React.FC<QuickConsultCitationLinkProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   // Check if this is a docket number that should link directly to CourtListener
-  const isDocketNumber = citation.toLowerCase().includes('docket no.') || citation.toLowerCase().includes('case no.');
+  const isDocketNumber = citation.toLowerCase().includes('docket no.') || 
+                         citation.toLowerCase().includes('case no.') || 
+                         /^no\.\s+[\w-]+/i.test(citation.trim());
 
   const handleCitationClick = async () => {
     // For docket numbers, open CourtListener search directly in new tab
     if (isDocketNumber) {
-      const docketNumber = citation.replace(/^(?:Docket|Case)\s+No\.\s+/i, '').trim();
+      // Extract just the docket number part, removing "Docket No.", "Case No.", or just "No."
+      const docketNumber = citation.replace(/^(?:Docket\s+|Case\s+)?No\.\s+/i, '').trim();
       const courtListenerUrl = `https://www.courtlistener.com/?q=${encodeURIComponent(docketNumber)}&type=o&court=all`;
       window.open(courtListenerUrl, '_blank');
       return;

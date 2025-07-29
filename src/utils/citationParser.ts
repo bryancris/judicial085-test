@@ -4,9 +4,11 @@
 
 // Comprehensive regex patterns for legal citations
 const CITATION_PATTERNS = [
-  // Docket numbers (prioritize these for CourtListener links)
-  /Docket\s+No\.\s+[\d-]+(?:-[A-Z]+)?/gi,
-  /Case\s+No\.\s+[\d-]+(?:-[A-Z]+)?/gi,
+  // Docket numbers (prioritize these for CourtListener links) - more comprehensive patterns
+  /(?:Docket\s+)?No\.\s+[\d-]+(?:[A-Z]{1,4})?(?:-[\d-]+)*(?:-[A-Z]{1,4})*(?:-[A-Z]{3,4})?/gi,
+  /(?:Case\s+)?No\.\s+[\d-]+(?:[A-Z]{1,4})?(?:-[\d-]+)*(?:-[A-Z]{1,4})*(?:-[A-Z]{3,4})?/gi,
+  /Docket\s+No\.\s+[\w-]+/gi,
+  /Case\s+No\.\s+[\w-]+/gi,
   
   // Case citations with v. (versus)
   /\b[A-Z][a-zA-Z\s&.,-]+\s+v\.\s+[A-Z][a-zA-Z\s&.,-]+,?\s+\d+[\w\s.]+\d+/g,
@@ -95,9 +97,9 @@ export const cleanCitationText = (citation: string): string => {
 export const isValidCitation = (citation: string): boolean => {
   const cleanText = cleanCitationText(citation);
   
-  // Docket numbers are always valid if they match the pattern
-  if (cleanText.toLowerCase().includes('docket no.') || cleanText.toLowerCase().includes('case no.')) {
-    return /(?:Docket|Case)\s+No\.\s+[\d-]+/i.test(cleanText);
+  // Docket numbers are always valid if they match the pattern - updated for more complex formats
+  if (cleanText.toLowerCase().includes('docket no.') || cleanText.toLowerCase().includes('case no.') || /^no\.\s+[\w-]+/i.test(cleanText)) {
+    return /(?:Docket\s+|Case\s+)?No\.\s+[\w-]+/i.test(cleanText);
   }
   
   // Must be at least 10 characters for other citations
