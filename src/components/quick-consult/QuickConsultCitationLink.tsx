@@ -20,81 +20,21 @@ const QuickConsultCitationLink: React.FC<QuickConsultCitationLinkProps> = ({
   const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Check if this is a docket number that should link directly to CourtListener
-  const isDocketNumber = citation.toLowerCase().includes('docket no.') || 
-                         citation.toLowerCase().includes('case no.') || 
-                         /^no\.\s+[\w-]+/i.test(citation.trim());
-
   const handleCitationClick = async () => {
-    // For docket numbers, open CourtListener search directly in new tab
-    if (isDocketNumber) {
-      // Extract just the docket number part, removing "Docket No.", "Case No.", or just "No."
-      const docketNumber = citation.replace(/^(?:Docket\s+|Case\s+)?No\.\s+/i, '').trim();
-      const courtListenerUrl = `https://www.courtlistener.com/?q=${encodeURIComponent(docketNumber)}&type=o&court=all`;
-      window.open(courtListenerUrl, '_blank');
-      return;
-    }
-
-    // For other citations, use the existing resolution service
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      console.log("Resolving citation:", citation);
-      const result = await resolveCitationWithCache(citation);
-      
-      if (result.details) {
-        setCitationDetails(result.details);
-        setModalOpen(true);
-      } else {
-        setError(result.error || "Citation could not be resolved");
-      }
-    } catch (err: any) {
-      console.error("Error resolving citation:", err);
-      setError(err.message || "Failed to resolve citation");
-    } finally {
-      setIsLoading(false);
-    }
+    // All citations are now docket numbers, extract the number and link to CourtListener
+    const docketNumber = citation.replace(/^(?:Docket|Case)\s+No\.\s+/i, '').replace(/[,.]$/, '').trim();
+    const courtListenerUrl = `https://www.courtlistener.com/?q=${encodeURIComponent(docketNumber)}&type=o&court=all`;
+    window.open(courtListenerUrl, '_blank');
   };
 
   const getSourceIcon = () => {
-    // For docket numbers, always use external link icon
-    if (isDocketNumber) {
-      return <ExternalLink className="h-3 w-3" />;
-    }
-    
-    if (!citationDetails) return <Scale className="h-3 w-3" />;
-    
-    switch (citationDetails.source) {
-      case "courtlistener":
-        return <Scale className="h-3 w-3" />;
-      case "knowledge_base":
-        return <FileText className="h-3 w-3" />;
-      case "perplexity":
-        return <ExternalLink className="h-3 w-3" />;
-      default:
-        return <Scale className="h-3 w-3" />;
-    }
+    // All citations are docket numbers, always use external link icon
+    return <ExternalLink className="h-3 w-3" />;
   };
 
   const getSourceLabel = () => {
-    // For docket numbers, show CourtListener label
-    if (isDocketNumber) {
-      return "CourtListener";
-    }
-    
-    if (!citationDetails) return "Legal Citation";
-    
-    switch (citationDetails.source) {
-      case "courtlistener":
-        return "Court Opinion";
-      case "knowledge_base":
-        return "Legal Document";
-      case "perplexity":
-        return "AI Research";
-      default:
-        return "Legal Citation";
-    }
+    // All citations are docket numbers, show CourtListener label
+    return "CourtListener";
   };
 
   return (
@@ -116,11 +56,9 @@ const QuickConsultCitationLink: React.FC<QuickConsultCitationLinkProps> = ({
           getSourceIcon()
         )}
         <span className="underline">{citation}</span>
-        {(citationDetails || isDocketNumber) && (
-          <Badge variant="secondary" className="text-xs ml-1">
-            {getSourceLabel()}
-          </Badge>
-        )}
+        <Badge variant="secondary" className="text-xs ml-1">
+          {getSourceLabel()}
+        </Badge>
       </Button>
 
       {error && (
