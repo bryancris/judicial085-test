@@ -56,8 +56,8 @@ const searchKnowledgeBase = async (query: string, clientId?: string, userId?: st
         {
           query_embedding: queryEmbedding,
           client_id_param: clientId,
-          match_threshold: 0.5, // Lowered threshold for better recall
-          match_count: 5
+          match_threshold: 0.4, // Further lowered threshold for better recall
+          match_count: 10 // Increased from 5 to 10
         }
       );
       
@@ -102,9 +102,9 @@ const searchKnowledgeBase = async (query: string, clientId?: string, userId?: st
               1 - (embedding <=> '[${queryEmbedding.join(',')}]') as similarity
             `)
             .in('document_id', docIds)
-            .gt('1 - (embedding <=> \'[' + queryEmbedding.join(',') + ']\')', 0.5)
+            .gt('1 - (embedding <=> \'[' + queryEmbedding.join(',') + ']\')', 0.4)
             .order('embedding <=> \'[' + queryEmbedding.join(',') + ']\'')
-            .limit(5);
+            .limit(10); // Increased from 5 to 10
           
           if (firmError) {
             console.error('Firm documents search error:', firmError);
@@ -119,10 +119,10 @@ const searchKnowledgeBase = async (query: string, clientId?: string, userId?: st
     // Search public knowledge base documents using match_documents function
     console.log('Searching public knowledge base documents...');
     
-    // Use the match_documents RPC function to search the documents table
+    // Use the match_documents RPC function to search the documents table with increased limits
     const { data: publicDocs, error: publicError } = await supabase.rpc('match_documents', {
       query_embedding: queryEmbedding,
-      match_count: 10,
+      match_count: 20, // Increased from 10 to 20 for more cases
       filter: {}
     });
     
@@ -142,9 +142,9 @@ const searchKnowledgeBase = async (query: string, clientId?: string, userId?: st
       searchResults = [...searchResults, ...publicDocs];
     }
     
-    // Sort by similarity and limit results
+    // Sort by similarity and limit results - increased for more comprehensive responses
     searchResults.sort((a, b) => (b.similarity || 0) - (a.similarity || 0));
-    const finalResults = searchResults.slice(0, 5);
+    const finalResults = searchResults.slice(0, 15); // Increased from 5 to 15 for more cases
     
     console.log('Final search results:', finalResults.length, 'documents');
     finalResults.forEach((result, index) => {
@@ -171,57 +171,60 @@ const generateCitations = (searchResults: any[]): any[] => {
   }));
 };
 
-// Function to remove duplicate case citations from AI response
+// Function to surgically remove duplicate case citations while preserving formatting
 const removeDuplicateCitations = (text: string): string => {
-  // Extract all case citations from the text
-  const casePattern = /\b[A-Z][a-zA-Z\s&.,-]+\s+v\.\s+[A-Z][a-zA-Z\s&.,-]+(?:,?\s+\d+[\w\s.]+\d+)?/g;
-  const foundCases = new Set<string>();
-  const duplicatePatterns: string[] = [];
+  // Track case names we've seen (normalize for comparison)
+  const seenCases = new Set<string>();
+  const lines = text.split('\n');
+  const processedLines: string[] = [];
   
-  let match;
-  while ((match = casePattern.exec(text)) !== null) {
-    const caseName = match[0].trim();
-    const normalizedCase = caseName.replace(/[*_]/g, '').trim(); // Remove formatting
+  for (const line of lines) {
+    let processedLine = line;
     
-    if (foundCases.has(normalizedCase)) {
-      // Mark this as a duplicate pattern to remove
-      duplicatePatterns.push(caseName);
-    } else {
-      foundCases.add(normalizedCase);
+    // Find case citations in this line
+    const casePattern = /\b([A-Z][a-zA-Z\s&.,-]+\s+v\.\s+[A-Z][a-zA-Z\s&.,-]+)(?:,?\s+\d+[\w\s.]+\d+)?/g;
+    let match;
+    let shouldSkipLine = false;
+    
+    // Check if this line is just a bulleted/numbered case list
+    const trimmedLine = line.trim();
+    if (/^[•\-*]\s*[A-Z][a-zA-Z\s&.,-]+\s+v\.\s+[A-Z][a-zA-Z\s&.,-]+/.test(trimmedLine) ||
+        /^\d+\.\s*[A-Z][a-zA-Z\s&.,-]+\s+v\.\s+[A-Z][a-zA-Z\s&.,-]+/.test(trimmedLine)) {
+      shouldSkipLine = true;
+    }
+    
+    // Process individual case mentions in the line
+    while ((match = casePattern.exec(line)) !== null) {
+      const fullMatch = match[0];
+      const caseName = match[1];
+      const normalizedCase = caseName.toLowerCase().replace(/[,.\s]+/g, ' ').trim();
+      
+      if (seenCases.has(normalizedCase)) {
+        // Remove this duplicate case mention
+        const regex = new RegExp(fullMatch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+        processedLine = processedLine.replace(regex, '');
+        // Also remove any bold formatting around it
+        const boldRegex = new RegExp(`\\*\\*${fullMatch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\*\\*`, 'g');
+        processedLine = processedLine.replace(boldRegex, '');
+      } else {
+        seenCases.add(normalizedCase);
+      }
+    }
+    
+    // Clean up formatting but preserve paragraph structure
+    processedLine = processedLine.replace(/\*\*([^*]+v\.[^*]+)\*\*/g, '$1'); // Remove bold from case names
+    
+    // Only add the line if it's not a case list and has content after processing
+    if (!shouldSkipLine && processedLine.trim().length > 0) {
+      processedLines.push(processedLine);
     }
   }
   
-  // Remove duplicate mentions and formatting markers
-  let cleanedText = text;
-  
-  // Remove duplicate case mentions
-  duplicatePatterns.forEach(pattern => {
-    const regex = new RegExp(`\\*\\*${pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\*\\*`, 'g');
-    cleanedText = cleanedText.replace(regex, '');
-  });
-  
-  // Remove standalone formatting markers around case names
-  cleanedText = cleanedText.replace(/\*\*([^*]+v\.[^*]+)\*\*/g, '$1');
-  
-  // Remove bullet points or numbered lists that repeat case information
-  const lines = cleanedText.split('\n');
-  const filteredLines = lines.filter(line => {
-    const trimmedLine = line.trim();
-    // Skip lines that are just bullet points or numbers with case names
-    if (/^[•\-*]\s*[A-Z][a-zA-Z\s&.,-]+\s+v\.\s+[A-Z][a-zA-Z\s&.,-]+/.test(trimmedLine)) {
-      return false;
-    }
-    if (/^\d+\.\s*[A-Z][a-zA-Z\s&.,-]+\s+v\.\s+[A-Z][a-zA-Z\s&.,-]+/.test(trimmedLine)) {
-      return false;
-    }
-    return true;
-  });
-  
-  // Remove empty lines and excessive whitespace
-  return filteredLines
-    .filter(line => line.trim().length > 0)
+  // Join lines and clean up excessive whitespace while preserving paragraph breaks
+  return processedLines
     .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
+    .replace(/\n{3,}/g, '\n\n') // Max 2 consecutive newlines
+    .replace(/[ \t]+\n/g, '\n') // Remove trailing spaces
     .trim();
 };
 
@@ -300,31 +303,46 @@ Your capabilities include:
 
 ${knowledgeContext}
 
-CRITICAL RESPONSE REQUIREMENTS - FOLLOW EXACTLY:
-1. NEVER MENTION THE SAME CASE MORE THAN ONCE in your entire response
-2. DO NOT use asterisks (**) or bold formatting around case names
-3. DO NOT create numbered lists or bullet points with case names
-4. DO NOT create "References," "Citations," "Summary," or "Additional Cases" sections
-5. DO NOT repeat case information in any format
-6. If you mention "Smith v. Jones" once, NEVER mention it again
+MANDATORY RESPONSE STRUCTURE AND RULES:
 
-CITATION FORMAT:
-- Knowledge base documents: [Document 1], [Document 2], etc.
-- Texas statutes: Tex. Prop. Code § 101.021, Tex. Bus. & Com. Code § 17.46
-- Cases: Smith v. Jones, 123 S.W.3d 456 (Tex. 2009) - MENTION ONCE ONLY
-- Integrate citations naturally within sentences
+1. ANTI-DUPLICATION RULES (CRITICAL):
+   - NEVER mention the same case more than once in your entire response
+   - If you cite "Smith v. Jones" once, NEVER reference it again
+   - Track every case name you mention and avoid repeating them
+   - Each case gets exactly ONE mention in the entire response
 
-PROHIBITED FORMATS:
-❌ "The case Smith v. Jones established X... **Smith v. Jones** also held..."
-❌ "Key cases: 1. Smith v. Jones 2. Brown v. Green"
-❌ "**Smith v. Jones** - This case established..."
-❌ Any section that lists cases separately
+2. PROFESSIONAL FORMATTING (REQUIRED):
+   - Use proper paragraph breaks for readability
+   - Allow section headers like "Key Considerations" or "Analysis" when appropriate
+   - Use professional legal writing structure with clear organization
+   - Maintain proper spacing between paragraphs for clarity
+   
+3. FORBIDDEN FORMATTING:
+   - DO NOT use asterisks (**) or bold formatting around case names
+   - DO NOT create numbered or bulleted lists of cases
+   - DO NOT create "References," "Citations," "Summary," or "Additional Cases" sections
+   - DO NOT create any sections that list cases separately
 
-REQUIRED FORMAT:
-✅ "In Smith v. Jones, 123 S.W.3d 456 (Tex. 2009), the court established..."
-✅ Natural integration of one citation per case within the flow of text
+4. CITATION INTEGRATION:
+   - Knowledge base documents: [Document 1], [Document 2], etc.
+   - Texas statutes: Tex. Prop. Code § 101.021, Tex. Bus. & Com. Code § 17.46
+   - Cases: Smith v. Jones, 123 S.W.3d 456 (Tex. 2009) - integrate naturally
+   - Weave citations smoothly into the narrative flow
 
-Write a single, cohesive response with no redundancy. Each case mentioned once only.`
+5. COMPREHENSIVE COVERAGE:
+   - Provide thorough analysis covering multiple relevant cases and statutes
+   - Address different aspects and implications of the legal question
+   - Include practical considerations and procedural guidance where relevant
+   - Offer substantive legal research value
+
+RESPONSE QUALITY REQUIREMENTS:
+- Write in a professional, authoritative legal tone
+- Provide comprehensive coverage of the topic
+- Include multiple relevant authorities when available
+- Organize information logically with clear structure
+- Ensure each case citation adds unique value
+
+Remember: Professional legal writing with proper structure and formatting is required, but absolute elimination of case duplication is critical.`
     };
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -334,10 +352,10 @@ Write a single, cohesive response with no redundancy. Each case mentioned once o
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4.1-2025-04-14', // Switched to flagship model for better performance
         messages: [systemPrompt, ...messages],
-        temperature: 0.7,
-        max_tokens: 1500,
+        temperature: 0.2, // Lowered for more consistent instruction following
+        max_tokens: 2000, // Increased for comprehensive responses
       }),
     });
 
