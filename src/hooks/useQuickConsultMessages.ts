@@ -102,28 +102,13 @@ export const useQuickConsultMessages = (sessionId: string | null) => {
       // Before saving message, validate that session still exists
       const sessionExists = await validateSession(currentSessionId);
       if (!sessionExists) {
-        console.log("Session no longer exists before saving message, attempting recovery...");
-        
-        if (onSessionInvalid) {
-          const newSessionId = await onSessionInvalid();
-          if (newSessionId) {
-            currentSessionId = newSessionId;
-          } else {
-            toast({
-              title: "Session Error",
-              description: "Unable to recover session. Please try again.",
-              variant: "destructive",
-            });
-            return null;
-          }
-        } else {
-          toast({
-            title: "Session Error", 
-            description: "Session no longer exists. Please start a new chat.",
-            variant: "destructive",
-          });
-          return null;
-        }
+        console.log("Session no longer exists before saving message");
+        toast({
+          title: "Session Error", 
+          description: "Session no longer exists. Please start a new chat.",
+          variant: "destructive",
+        });
+        return null;
       }
 
       // Attempt to save the message

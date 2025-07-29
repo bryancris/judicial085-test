@@ -131,7 +131,7 @@ export const useQuickConsultSessions = () => {
     }
   }, [toast]);
 
-  const deleteSession = useCallback(async (sessionId: string) => {
+  const deleteSession = useCallback(async (sessionId: string): Promise<boolean> => {
     try {
       const { error } = await supabase
         .from("quick_consult_sessions")
@@ -144,7 +144,7 @@ export const useQuickConsultSessions = () => {
           description: "Failed to delete session",
           variant: "destructive",
         });
-        return;
+        return false;
       }
 
       setSessions(prev => prev.filter(session => session.id !== sessionId));
@@ -152,6 +152,7 @@ export const useQuickConsultSessions = () => {
         title: "Success",
         description: "Chat session deleted",
       });
+      return true;
     } catch (error) {
       console.error("Error deleting session:", error);
       toast({
@@ -159,6 +160,7 @@ export const useQuickConsultSessions = () => {
         description: "Failed to delete session",
         variant: "destructive",
       });
+      return false;
     }
   }, [toast]);
 

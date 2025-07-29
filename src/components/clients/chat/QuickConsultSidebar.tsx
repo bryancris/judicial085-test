@@ -78,12 +78,14 @@ const QuickConsultSidebar = ({
                   <>
                     <span className="text-sm truncate flex-1">{session.title}</span>
                     <button
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
-                        // Notify parent component first for state cleanup
-                        onSessionDelete?.(session.id);
-                        // Then delete from database
-                        deleteSession(session.id);
+                        // Delete from database first
+                        const success = await deleteSession(session.id);
+                        // Only notify parent for state cleanup if deletion was successful
+                        if (success) {
+                          onSessionDelete?.(session.id);
+                        }
                       }}
                       className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 rounded"
                     >
