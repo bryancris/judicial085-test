@@ -4,6 +4,10 @@
 
 // Comprehensive regex patterns for legal citations
 const CITATION_PATTERNS = [
+  // Docket numbers (prioritize these for CourtListener links)
+  /Docket\s+No\.\s+[\d-]+(?:-[A-Z]+)?/gi,
+  /Case\s+No\.\s+[\d-]+(?:-[A-Z]+)?/gi,
+  
   // Case citations with v. (versus)
   /\b[A-Z][a-zA-Z\s&.,-]+\s+v\.\s+[A-Z][a-zA-Z\s&.,-]+,?\s+\d+[\w\s.]+\d+/g,
   
@@ -31,7 +35,7 @@ export interface DetectedCitation {
   text: string;
   startIndex: number;
   endIndex: number;
-  type: 'case' | 'statute' | 'section' | 'unknown';
+  type: 'case' | 'statute' | 'section' | 'docket' | 'unknown';
 }
 
 /**
@@ -52,7 +56,9 @@ export const detectCitations = (text: string): DetectedCitation[] => {
       
       // Determine citation type
       let type: DetectedCitation['type'] = 'unknown';
-      if (citationText.includes(' v. ')) {
+      if (citationText.toLowerCase().includes('docket no.') || citationText.toLowerCase().includes('case no.')) {
+        type = 'docket';
+      } else if (citationText.includes(' v. ')) {
         type = 'case';
       } else if (citationText.includes('Code') || citationText.includes('U.S.C.')) {
         type = 'statute';
@@ -89,7 +95,12 @@ export const cleanCitationText = (citation: string): string => {
 export const isValidCitation = (citation: string): boolean => {
   const cleanText = cleanCitationText(citation);
   
-  // Must be at least 10 characters
+  // Docket numbers are always valid if they match the pattern
+  if (cleanText.toLowerCase().includes('docket no.') || cleanText.toLowerCase().includes('case no.')) {
+    return /(?:Docket|Case)\s+No\.\s+[\d-]+/i.test(cleanText);
+  }
+  
+  // Must be at least 10 characters for other citations
   if (cleanText.length < 10) return false;
   
   // Case citations should have v.
@@ -113,9 +124,9 @@ export const extractKeyCitations = (text: string, maxCitations: number = 10): De
   // Filter valid citations
   const validCitations = allCitations.filter(c => isValidCitation(c.text));
   
-  // Prioritize case citations, then statutes, then sections
+  // Prioritize docket numbers first (most reliable for CourtListener), then case citations, then statutes, then sections
   const prioritized = validCitations.sort((a, b) => {
-    const typeOrder = { case: 0, statute: 1, section: 2, unknown: 3 };
+    const typeOrder = { docket: 0, case: 1, statute: 2, section: 3, unknown: 4 };
     return typeOrder[a.type] - typeOrder[b.type];
   });
   

@@ -20,7 +20,19 @@ const QuickConsultCitationLink: React.FC<QuickConsultCitationLinkProps> = ({
   const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Check if this is a docket number that should link directly to CourtListener
+  const isDocketNumber = citation.toLowerCase().includes('docket no.') || citation.toLowerCase().includes('case no.');
+
   const handleCitationClick = async () => {
+    // For docket numbers, open CourtListener search directly in new tab
+    if (isDocketNumber) {
+      const docketNumber = citation.replace(/^(?:Docket|Case)\s+No\.\s+/i, '').trim();
+      const courtListenerUrl = `https://www.courtlistener.com/?q=${encodeURIComponent(docketNumber)}&type=o&court=all`;
+      window.open(courtListenerUrl, '_blank');
+      return;
+    }
+
+    // For other citations, use the existing resolution service
     setIsLoading(true);
     setError(null);
     
@@ -43,6 +55,11 @@ const QuickConsultCitationLink: React.FC<QuickConsultCitationLinkProps> = ({
   };
 
   const getSourceIcon = () => {
+    // For docket numbers, always use external link icon
+    if (isDocketNumber) {
+      return <ExternalLink className="h-3 w-3" />;
+    }
+    
     if (!citationDetails) return <Scale className="h-3 w-3" />;
     
     switch (citationDetails.source) {
@@ -58,6 +75,11 @@ const QuickConsultCitationLink: React.FC<QuickConsultCitationLinkProps> = ({
   };
 
   const getSourceLabel = () => {
+    // For docket numbers, show CourtListener label
+    if (isDocketNumber) {
+      return "CourtListener";
+    }
+    
     if (!citationDetails) return "Legal Citation";
     
     switch (citationDetails.source) {
@@ -91,7 +113,7 @@ const QuickConsultCitationLink: React.FC<QuickConsultCitationLinkProps> = ({
           getSourceIcon()
         )}
         <span className="underline">{citation}</span>
-        {citationDetails && (
+        {(citationDetails || isDocketNumber) && (
           <Badge variant="secondary" className="text-xs ml-1">
             {getSourceLabel()}
           </Badge>
