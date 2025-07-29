@@ -138,8 +138,8 @@ const QuickConsultChat = () => {
       // Store the full response for citation display
       setLastResponse(response);
 
-      // Add AI response to database using the session ID from user message
-      const aiMessage = await addMessage(response.text, "assistant", async () => activeSessionId);
+      // Add AI response to database using the established session
+      const aiMessage = await addMessage(response.text, "assistant");
       if (!aiMessage) {
         toast({
           title: "Error", 
