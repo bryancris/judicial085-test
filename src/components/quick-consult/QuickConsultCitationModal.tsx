@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { ExternalLink, Scale, FileText, Search } from "lucide-react";
+import { ExternalLink, Scale, FileText, Search, AlertCircle, Globe } from "lucide-react";
 import { CitationDetails } from "@/utils/api/citationResolutionService";
 
 interface QuickConsultCitationModalProps {
@@ -142,25 +142,84 @@ const QuickConsultCitationModal: React.FC<QuickConsultCitationModalProps> = ({
               </div>
             )}
 
-            {/* Full Text Link */}
-            {citationDetails.url && (
-              <div>
-                <Separator className="my-4" />
+            {/* Document Access Section */}
+            <Separator className="my-4" />
+            
+            {/* Show warning for AI analysis */}
+            {!citationDetails.hasActualDocument && citationDetails.source === "perplexity" && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-yellow-800">AI Analysis</p>
+                    <p className="text-xs text-yellow-700">
+                      This is an AI-generated analysis, not the original case document. 
+                      Use the search links below to find the actual case.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Primary Document Access */}
+            {citationDetails.url && citationDetails.hasActualDocument && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium">View Full Document</p>
-                    <p className="text-xs text-muted-foreground">{sourceInfo.description}</p>
+                    <p className="text-sm font-medium text-green-800">Original Document Available</p>
+                    <p className="text-xs text-green-700">{sourceInfo.description}</p>
                   </div>
                   <Button
-                    variant="outline"
                     size="sm"
                     onClick={() => window.open(citationDetails.url, '_blank')}
                     className="flex items-center gap-2"
                   >
                     <ExternalLink className="h-3 w-3" />
-                    Open Document
+                    View Case Document
                   </Button>
                 </div>
+              </div>
+            )}
+
+            {/* Alternative Search Options */}
+            {citationDetails.alternativeSearchUrls && citationDetails.alternativeSearchUrls.length > 0 && (
+              <div>
+                <h4 className="font-medium text-sm mb-2 flex items-center gap-1">
+                  <Globe className="h-4 w-4" />
+                  Search for Original Case
+                </h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {citationDetails.alternativeSearchUrls.map((searchUrl, index) => (
+                    <Button
+                      key={index}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(searchUrl.url, '_blank')}
+                      className="flex items-center gap-2 justify-start text-xs"
+                    >
+                      <Search className="h-3 w-3" />
+                      {searchUrl.name}
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Click any search option above to find the original case document
+                </p>
+              </div>
+            )}
+
+            {/* Show AI analysis if no document but has content */}
+            {citationDetails.url && !citationDetails.hasActualDocument && (
+              <div className="mt-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => window.open(citationDetails.url, '_blank')}
+                  className="flex items-center gap-2 text-muted-foreground"
+                >
+                  <Search className="h-3 w-3" />
+                  View AI Analysis
+                </Button>
               </div>
             )}
           </div>

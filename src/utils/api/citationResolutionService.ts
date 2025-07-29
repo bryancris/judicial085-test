@@ -13,6 +13,11 @@ export interface CitationDetails {
   relevantExcerpts?: string[];
   source: "courtlistener" | "perplexity" | "knowledge_base";
   confidence: "high" | "medium" | "low";
+  hasActualDocument?: boolean;
+  alternativeSearchUrls?: Array<{
+    name: string;
+    url: string;
+  }>;
 }
 
 export interface CitationResolutionResult {
@@ -181,6 +186,33 @@ export const searchKnowledgeBaseForCitation = async (
 };
 
 /**
+ * Generate alternative search URLs for manual case lookup
+ */
+const generateAlternativeSearchUrls = (caseName: string, citation: string) => {
+  const encodedCaseName = encodeURIComponent(caseName);
+  const encodedCitation = encodeURIComponent(citation);
+  
+  return [
+    {
+      name: "Google Scholar",
+      url: `https://scholar.google.com/scholar?q="${encodedCaseName}"+OR+"${encodedCitation}"`
+    },
+    {
+      name: "Justia",
+      url: `https://law.justia.com/search?q=${encodedCaseName}`
+    },
+    {
+      name: "FindLaw",
+      url: `https://caselaw.findlaw.com/search.html?query=${encodedCaseName}`
+    },
+    {
+      name: "Court Records",
+      url: `https://www.google.com/search?q="${encodedCitation}"+site:courtlistener.com+OR+site:justia.com+OR+site:findlaw.com`
+    }
+  ];
+};
+
+/**
  * Comprehensive citation resolution using multiple sources
  */
 export const resolveCitation = async (citation: string): Promise<CitationResolutionResult> => {
@@ -188,28 +220,49 @@ export const resolveCitation = async (citation: string): Promise<CitationResolut
   
   const parsedCitation = parseCitation(citation);
   const caseName = parsedCitation.caseName || citation;
+  const alternativeUrls = generateAlternativeSearchUrls(caseName, citation);
 
   // Try Court Listener first (most authoritative for case law)
   const courtListenerResult = await searchCourtListener(caseName, citation);
   if (courtListenerResult.details) {
+    // Mark as having actual document if URL is provided
+    courtListenerResult.details.hasActualDocument = !!courtListenerResult.details.url;
+    courtListenerResult.details.alternativeSearchUrls = alternativeUrls;
     return courtListenerResult;
   }
 
   // Try knowledge base (for statutes and local documents)
   const knowledgeBaseResult = await searchKnowledgeBaseForCitation(citation);
   if (knowledgeBaseResult.details) {
+    knowledgeBaseResult.details.hasActualDocument = !!knowledgeBaseResult.details.url;
+    knowledgeBaseResult.details.alternativeSearchUrls = alternativeUrls;
     return knowledgeBaseResult;
   }
 
-  // Fall back to Perplexity for general legal research
+  // Fall back to Perplexity ONLY as analysis, not as primary document
   const perplexityResult = await searchPerplexityForCase(caseName, citation);
   if (perplexityResult.details) {
+    perplexityResult.details.hasActualDocument = false; // Mark as AI analysis
+    perplexityResult.details.alternativeSearchUrls = alternativeUrls;
+    // Lower confidence since this is AI analysis, not original document
+    perplexityResult.details.confidence = "low";
     return perplexityResult;
   }
 
+  // If nothing found, return error with alternative search options
   return {
     searched: true,
-    error: "Citation could not be resolved from any source"
+    error: "Citation could not be resolved from any source",
+    details: {
+      id: `fallback_${Date.now()}`,
+      caseName,
+      citation,
+      summary: "Citation not found in available databases. Use the search links below to find this case manually.",
+      source: "knowledge_base",
+      confidence: "low",
+      hasActualDocument: false,
+      alternativeSearchUrls: alternativeUrls
+    }
   };
 };
 

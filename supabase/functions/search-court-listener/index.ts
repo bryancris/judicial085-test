@@ -36,8 +36,9 @@ serve(async (req) => {
     const response = await fetch(searchUrl.toString(), {
       method: 'GET',
       headers: {
-        'User-Agent': 'Lovable Legal Research Bot/1.0',
+        'User-Agent': 'Legal Research Application/1.0 (https://lovable.dev)',
         'Accept': 'application/json',
+        'Accept-Encoding': 'gzip, deflate',
       },
     });
 
