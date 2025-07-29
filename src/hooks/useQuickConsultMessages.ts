@@ -105,8 +105,13 @@ export const useQuickConsultMessages = (sessionId: string | null) => {
         .single();
 
       if (error) {
+        console.error("Failed to save message:", error);
+        
         // Check if the error is due to session not existing (RLS violation)
-        if (error.message?.includes("row-level security policy") || error.message?.includes("violates")) {
+        if (error.message?.includes("row-level security policy") || 
+            error.message?.includes("violates") ||
+            error.code === "42501") {
+          
           // Validate if session exists
           const sessionExists = await validateSession(currentSessionId);
           
@@ -127,7 +132,13 @@ export const useQuickConsultMessages = (sessionId: string | null) => {
                 .single();
 
               if (retryError) {
-                throw new Error(`Failed to save message after session recovery: ${retryError.message}`);
+                console.error("Failed to save message after session recovery:", retryError);
+                toast({
+                  title: "Error",
+                  description: "Failed to save message after session recovery",
+                  variant: "destructive",
+                });
+                return null;
               }
 
               setMessages(prev => [...prev, retryData as QuickConsultMessage]);
@@ -137,8 +148,8 @@ export const useQuickConsultMessages = (sessionId: string | null) => {
         }
 
         toast({
-          title: "Error",
-          description: "Failed to save message",
+          title: "Chat Error",
+          description: "Failed to save your message. Please try again.",
           variant: "destructive",
         });
         return null;

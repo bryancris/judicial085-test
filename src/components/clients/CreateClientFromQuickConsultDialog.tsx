@@ -113,7 +113,7 @@ const CreateClientFromQuickConsultDialog = ({
           (step === "case" && currentStep === "review");
 
         return (
-          <React.Fragment key={step}>
+          <div key={step} className="flex items-center">
             <div 
               className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
                 isActive 
@@ -136,7 +136,7 @@ const CreateClientFromQuickConsultDialog = ({
                 }`} 
               />
             )}
-          </React.Fragment>
+          </div>
         );
       })}
     </div>
