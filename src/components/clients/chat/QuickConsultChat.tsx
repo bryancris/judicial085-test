@@ -348,7 +348,7 @@ const QuickConsultChat = () => {
                         }`}
                       >
                         <div
-                          className={`max-w-[85%] sm:max-w-[75%] lg:max-w-[65%] p-3 rounded-lg break-words overflow-hidden ${
+                          className={`max-w-[95%] sm:max-w-[90%] lg:max-w-[85%] p-3 rounded-lg break-words overflow-hidden ${
                             message.role === "user"
                               ? "bg-teal-600 text-white"
                               : "bg-gray-100 text-gray-900"

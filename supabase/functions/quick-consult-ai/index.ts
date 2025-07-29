@@ -78,11 +78,11 @@ const searchKnowledgeBase = async (query: string, clientId?: string, userId?: st
     if (userId) {
       console.log(`Searching firm documents for user: ${userId}`);
       try {
-        const { data: firmDocs, error: firmError } = await supabase.rpc('search_firm_documents', {
+        const { data: firmDocs, error: firmError } = await supabase.rpc('match_documents', {
           query_embedding: embedding,
           match_threshold: 0.78,
           match_count: 3,
-          target_user_id: userId
+          user_id: userId
         });
 
         if (firmError) {
@@ -99,7 +99,7 @@ const searchKnowledgeBase = async (query: string, clientId?: string, userId?: st
     // Search public knowledge base documents
     console.log('Searching public knowledge base documents...');
     try {
-      const { data: publicDocs, error: publicError } = await supabase.rpc('search_knowledge_base', {
+      const { data: publicDocs, error: publicError } = await supabase.rpc('search_document_chunks', {
         query_embedding: embedding,
         match_threshold: 0.78,
         match_count: 5
@@ -294,15 +294,17 @@ MANDATORY RESPONSE STRUCTURE AND RULES:
    - Use proper paragraph breaks for readability
    - Maintain professional legal writing structure
 
-3. CASE FORMATTING REQUIREMENTS:
-   - Create a numbered list for cases (1., 2., 3., etc.)
-   - Format each case entry as:
-     **Case Name**
-     Court • Date • Docket No. [number] • Citation
-     Brief summary paragraph explaining relevance
-   - Include docket numbers when available
+3. CASE FORMATTING REQUIREMENTS (CRITICAL - FOLLOW EXACTLY):
+   - ALWAYS provide a numbered list for cases (1., 2., 3., etc.)
+   - MANDATORY format for each case entry:
+     1. **Case Name v. Opposing Party**
+        Court • Date • Docket No. [number] • Full Citation
+        Brief summary paragraph explaining relevance and legal principles
+   - MUST include docket numbers when available (e.g., Docket No. 123-456-789)
    - Use bullet points (•) to separate court, date, docket, and citation info
    - Bold case names for clarity
+   - PROVIDE MULTIPLE CASES (minimum 3-5 when available)
+   - Each case must add unique legal value to the analysis
 
 4. CITATION INTEGRATION:
    - Knowledge base documents: [Document 1], [Document 2], etc.
@@ -310,11 +312,13 @@ MANDATORY RESPONSE STRUCTURE AND RULES:
    - Cases: Include full citation with docket number when available
    - Format: Case Name, Citation (Court Year), Docket No. [number]
 
-5. COMPREHENSIVE COVERAGE:
-   - Provide thorough analysis covering multiple relevant cases and statutes
-   - Address different aspects and implications of the legal question
-   - Include practical considerations and procedural guidance where relevant
-   - Offer substantive legal research value
+5. COMPREHENSIVE COVERAGE (MANDATORY):
+   - MUST provide thorough analysis covering multiple relevant cases and statutes
+   - MUST address different aspects and implications of the legal question
+   - MUST include practical considerations and procedural guidance where relevant
+   - MUST offer substantive legal research value
+   - RETURN 3-5 CASES MINIMUM when available for comprehensive coverage
+   - Each case must demonstrate different legal principles or aspects of the issue
 
 RESPONSE QUALITY REQUIREMENTS:
 - Write in a professional, authoritative legal tone
@@ -336,8 +340,8 @@ Remember: Professional legal writing with proper structure and formatting is req
       body: JSON.stringify({
         model: 'gpt-4.1-2025-04-14', // Switched to flagship model for better performance
         messages: [systemPrompt, ...messages],
-        temperature: 0.2, // Lowered for more consistent instruction following
-        max_tokens: 2000, // Increased for comprehensive responses
+        temperature: 0.1, // Lowered further for strict instruction following
+        max_tokens: 3000, // Increased for comprehensive multi-case responses
       }),
     });
 
