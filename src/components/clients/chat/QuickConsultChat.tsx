@@ -139,8 +139,10 @@ const QuickConsultChat = () => {
       setLastResponse(response);
 
       // Add AI response to database using the established session
-      const aiMessage = await addMessage(response.text, "assistant");
+      // Pass the active session ID directly to prevent timing issues
+      const aiMessage = await addMessage(response.text, "assistant", () => Promise.resolve(activeSessionId));
       if (!aiMessage) {
+        console.error("Failed to save AI response for session:", activeSessionId);
         toast({
           title: "Error", 
           description: "Failed to save AI response",
