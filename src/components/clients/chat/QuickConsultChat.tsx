@@ -314,7 +314,7 @@ const QuickConsultChat = () => {
           </CardHeader>
           
           <CardContent className="flex-1 p-0">
-            <ScrollArea className="h-full p-4">
+            <ScrollArea className="h-full p-4 overflow-x-hidden">
               {messages.length === 0 ? (
                 <div className="flex items-center justify-center h-full text-center">
                   <div className="max-w-md">
@@ -331,7 +331,7 @@ const QuickConsultChat = () => {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-4 min-w-0">
                   {messages.map((message, index) => {
                     const isLastAssistantMessage = message.role === "assistant" && 
                       index === messages.length - 1;
@@ -346,7 +346,7 @@ const QuickConsultChat = () => {
                         }`}
                       >
                         <div
-                          className={`max-w-[80%] p-3 rounded-lg ${
+                          className={`max-w-[80%] p-3 rounded-lg break-words overflow-hidden ${
                             message.role === "user"
                               ? "bg-teal-600 text-white"
                               : "bg-gray-100 text-gray-900"

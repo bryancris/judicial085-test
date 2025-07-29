@@ -12,13 +12,13 @@ const QuickConsultMessageContent: React.FC<QuickConsultMessageContentProps> = ({
   enableCitationLinks = true
 }) => {
   if (!enableCitationLinks) {
-    return <div className="whitespace-pre-wrap">{content}</div>;
+    return <div className="whitespace-pre-wrap break-words overflow-wrap-break-word">{content}</div>;
   }
 
   const citations = extractKeyCitations(content);
   
   if (citations.length === 0) {
-    return <div className="whitespace-pre-wrap">{content}</div>;
+    return <div className="whitespace-pre-wrap break-words overflow-wrap-break-word">{content}</div>;
   }
 
   // Build content with citation links
@@ -58,7 +58,7 @@ const QuickConsultMessageContent: React.FC<QuickConsultMessageContentProps> = ({
   }
 
   return (
-    <div className="whitespace-pre-wrap leading-relaxed">
+    <div className="whitespace-pre-wrap leading-relaxed break-words overflow-wrap-break-word">
       {contentParts}
     </div>
   );
