@@ -75,9 +75,14 @@ export const useQuickConsultMessages = (sessionId: string | null) => {
   const addMessage = useCallback(async (
     content: string, 
     role: "user" | "assistant",
-    onSessionInvalid?: () => Promise<string | null>
+    onSessionInvalid?: () => Promise<string | null>,
+    explicitSessionId?: string // CRITICAL: Pass the active session ID directly to avoid stale state issues
   ): Promise<QuickConsultMessage | null> => {
-    let currentSessionId = sessionId;
+    // CRITICAL SESSION MANAGEMENT:
+    // For user messages: Use hook's sessionId and create new session if needed
+    // For AI messages: MUST use explicitSessionId to avoid React state timing issues
+    // The hook's sessionId may be stale when saving AI responses immediately after session creation
+    let currentSessionId = explicitSessionId || sessionId;
 
     // If no session ID and this is a user message, create a new session
     if (!currentSessionId && role === "user" && onSessionInvalid) {
@@ -94,9 +99,11 @@ export const useQuickConsultMessages = (sessionId: string | null) => {
     }
 
     if (!currentSessionId) {
-      console.error("No session ID available");
+      console.error("No session ID available", { role, explicitSessionId, hookSessionId: sessionId });
       return null;
     }
+
+    console.log(`Saving ${role} message to session:`, currentSessionId);
 
     try {
       // Before saving message, validate that session still exists

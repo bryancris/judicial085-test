@@ -138,9 +138,16 @@ const QuickConsultChat = () => {
       // Store the full response for citation display
       setLastResponse(response);
 
-      // Add AI response to database using the established session
-      // Pass the active session ID directly to prevent timing issues
-      const aiMessage = await addMessage(response.text, "assistant", () => Promise.resolve(activeSessionId));
+      // CRITICAL: Save AI response with explicit session ID to avoid stale state
+      // The addMessage hook may have stale sessionId due to React state timing
+      // Always pass the activeSessionId explicitly for AI responses
+      console.log("Saving AI response to messages with session ID:", activeSessionId);
+      const aiMessage = await addMessage(
+        response.text, 
+        "assistant", 
+        undefined, // onSessionInvalid not needed for AI messages
+        activeSessionId // CRITICAL: Pass explicit session ID to avoid stale state
+      );
       if (!aiMessage) {
         console.error("Failed to save AI response for session:", activeSessionId);
         toast({
