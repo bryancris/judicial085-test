@@ -256,7 +256,7 @@ const QuickConsultChat = () => {
 
 
   return (
-    <div className="h-full flex">
+    <div className="h-full flex max-w-7xl mx-auto w-full">
       <QuickConsultSidebar
         currentSessionId={currentSessionId}
         onSessionSelect={handleSessionSelect}
@@ -265,7 +265,7 @@ const QuickConsultChat = () => {
         isCollapsed={sidebarCollapsed}
       />
       
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         <Card className="flex-1 flex flex-col m-0 rounded-none border-0">
           <CardHeader className="border-b">
             <div className="flex items-center justify-between">
@@ -346,7 +346,7 @@ const QuickConsultChat = () => {
                         }`}
                       >
                         <div
-                          className={`max-w-[80%] p-3 rounded-lg break-words overflow-hidden ${
+                          className={`max-w-[85%] sm:max-w-[75%] lg:max-w-[65%] p-3 rounded-lg break-words overflow-hidden ${
                             message.role === "user"
                               ? "bg-teal-600 text-white"
                               : "bg-gray-100 text-gray-900"

@@ -122,12 +122,10 @@ const Clients = () => {
             </Card>
           </TabsContent>
           
-          <TabsContent value="quick-consult">
-            <Card>
-              <CardContent>
-                <QuickConsultChat />
-              </CardContent>
-            </Card>
+          <TabsContent value="quick-consult" className="h-full">
+            <div className="h-[calc(100vh-12rem)]">
+              <QuickConsultChat />
+            </div>
           </TabsContent>
         </Tabs>
       </main>
