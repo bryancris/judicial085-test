@@ -124,47 +124,9 @@ export const useQuickConsultMessages = (sessionId: string | null) => {
 
       if (error) {
         console.error("Failed to save message:", error);
-        
-        // Check if the error is due to session not existing (RLS violation)
-        if (error.message?.includes("row-level security policy") || 
-            error.message?.includes("violates") ||
-            error.code === "42501") {
-          
-          if (onSessionInvalid) {
-            console.log("RLS error detected, attempting to create new session...");
-            const newSessionId = await onSessionInvalid();
-            
-            if (newSessionId) {
-              // Retry with new session
-              const { data: retryData, error: retryError } = await supabase
-                .from("quick_consult_messages")
-                .insert({
-                  session_id: newSessionId,
-                  role,
-                  content,
-                })
-                .select()
-                .single();
-
-              if (retryError) {
-                console.error("Failed to save message after session recovery:", retryError);
-                toast({
-                  title: "Error",
-                  description: "Failed to save message after session recovery",
-                  variant: "destructive",
-                });
-                return null;
-              }
-
-              setMessages(prev => [...prev, retryData as QuickConsultMessage]);
-              return retryData as QuickConsultMessage;
-            }
-          }
-        }
-
         toast({
-          title: "Chat Error",
-          description: "Failed to save your message. Please try again.",
+          title: "Error",
+          description: "Failed to save message. Please start a new chat.",
           variant: "destructive",
         });
         return null;

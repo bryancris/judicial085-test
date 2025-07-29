@@ -54,6 +54,23 @@ const QuickConsultChat = () => {
     // The actual deletion is handled by the sidebar component
   };
 
+  // Validate current session on component mount and when sessionId changes
+  useEffect(() => {
+    const validateCurrentSession = async () => {
+      if (currentSessionId) {
+        const isValid = await validateSession(currentSessionId);
+        if (!isValid) {
+          console.log("Current session is invalid, clearing state");
+          setCurrentSessionId(null);
+          clearMessages();
+          setLastResponse(null);
+        }
+      }
+    };
+    
+    validateCurrentSession();
+  }, [currentSessionId, validateSession]);
+
   const generateSessionTitle = (userMessage: string): string => {
     // Generate a concise title from the first user message
     const words = userMessage.trim().split(/\s+/).slice(0, 6);
