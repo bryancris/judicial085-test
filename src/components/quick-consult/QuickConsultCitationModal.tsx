@@ -96,10 +96,16 @@ const QuickConsultCitationModal: React.FC<QuickConsultCitationModalProps> = ({
         <ScrollArea className="flex-1 pr-4">
           <div className="space-y-4">
             {/* Case Details */}
-            {(citationDetails.court || citationDetails.year) && (
+            {(citationDetails.court || citationDetails.year || citationDetails.docketNumber) && (
               <div className="bg-secondary/30 rounded-lg p-3">
                 <h4 className="font-medium text-sm mb-2">Case Information</h4>
                 <div className="grid grid-cols-2 gap-3 text-sm">
+                  {citationDetails.docketNumber && (
+                    <div>
+                      <span className="text-muted-foreground">Docket Number:</span>
+                      <div className="font-medium">{citationDetails.docketNumber}</div>
+                    </div>
+                  )}
                   {citationDetails.court && (
                     <div>
                       <span className="text-muted-foreground">Court:</span>

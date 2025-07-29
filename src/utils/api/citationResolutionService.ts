@@ -6,6 +6,7 @@ export interface CitationDetails {
   caseName: string;
   court?: string;
   year?: string;
+  docketNumber?: string;
   citation: string;
   summary?: string;
   url?: string;
@@ -27,7 +28,7 @@ export interface CitationResolutionResult {
 }
 
 /**
- * Parse case citation to extract case name, court, year, and citation number
+ * Parse case citation to extract case name, court, year, docket number, and citation number
  */
 export const parseCitation = (citation: string): Partial<CitationDetails> => {
   // Extract case name (everything before the first comma or citation pattern)
@@ -42,10 +43,28 @@ export const parseCitation = (citation: string): Partial<CitationDetails> => {
   const courtMatch = citation.match(/\b(S\.Ct\.|F\.Supp\.|F\.3d|F\.2d|Tex\.|S\.W\.3d|S\.W\.2d)\b/i);
   const court = courtMatch ? courtMatch[0] : undefined;
 
+  // Extract docket number (common patterns)
+  const docketPatterns = [
+    /(?:No\.|Case\s+No\.|Docket\s+No\.|Civil\s+Action\s+No\.)\s*([A-Z0-9:\-\.\s]+)/gi,
+    /\b(\d{2,4}-[A-Z]{1,3}-\d+)\b/g, // Format: 2023-CV-1234
+    /\b(\d+:\d+\-[a-z]+\-\d+)\b/gi, // Format: 2:23-cv-1234
+    /\bNo\.\s*([A-Z]?\d+[A-Z\d\-\.]*)\b/gi // Basic No. format
+  ];
+  
+  let docketNumber: string | undefined;
+  for (const pattern of docketPatterns) {
+    const match = citation.match(pattern);
+    if (match) {
+      docketNumber = match[1] ? match[1].trim() : match[0].replace(/^(No\.|Case\s+No\.|Docket\s+No\.|Civil\s+Action\s+No\.)\s*/i, '').trim();
+      break;
+    }
+  }
+
   return {
     caseName,
     court,
     year,
+    docketNumber,
     citation,
   };
 };
@@ -81,6 +100,7 @@ export const searchCourtListener = async (
           caseName: result.caseName || caseName,
           court: result.court,
           year: result.dateFiled ? new Date(result.dateFiled).getFullYear().toString() : undefined,
+          docketNumber: result.docketNumber,
           citation,
           summary: result.snippet,
           url: result.absolute_url,

@@ -15,6 +15,7 @@ export interface QuickConsultResponse {
     title: string;
     relevance: number;
     content_preview?: string;
+    docket_number?: string;
   }>;
   hasKnowledgeBase?: boolean;
   documentsFound?: number;

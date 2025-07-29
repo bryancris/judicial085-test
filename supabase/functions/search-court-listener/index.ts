@@ -11,6 +11,7 @@ interface CourtListenerResult {
   caseName: string;
   court: string;
   dateFiled: string;
+  docketNumber?: string;
   snippet: string;
   absolute_url: string;
 }
@@ -65,6 +66,7 @@ serve(async (req) => {
       caseName: item.caseName || item.case_name,
       court: item.court || "Unknown Court",
       dateFiled: item.dateFiled || item.date_filed,
+      docketNumber: item.docket_number || item.docketNumber,
       snippet: item.snippet || "",
       absolute_url: item.absolute_url || `https://www.courtlistener.com/opinion/${item.id}/`
     }));
