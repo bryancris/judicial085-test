@@ -138,17 +138,16 @@ const QuickConsultChat = () => {
       // Store the full response for citation display
       setLastResponse(response);
 
-      // Add AI response to database using the existing session ID
-      if (!activeSessionId) {
+      // Add AI response to database using the session ID from user message
+      const aiMessage = await addMessage(response.text, "assistant", async () => activeSessionId);
+      if (!aiMessage) {
         toast({
-          title: "Error",
-          description: "No session ID available for saving assistant response",
+          title: "Error", 
+          description: "Failed to save AI response",
           variant: "destructive",
         });
         return;
       }
-      
-      await addMessage(response.text, "assistant");
 
       // Show knowledge base usage notification
       if (response.hasKnowledgeBase && response.documentsFound && response.documentsFound > 0) {
