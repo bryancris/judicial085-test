@@ -83,16 +83,21 @@ const formatCaseNames = (text: string): string => {
   let formattedText = text;
   
   // First pattern: Handle verified cases with [Verified on CourtListener] marker
-  formattedText = formattedText.replace(/(\d+\.\s+)([^[\n]+?)\s+\[Verified on CourtListener\]/g, (match, number, caseName) => {
+  formattedText = formattedText.replace(/(\d+\.\s+)([A-Za-z][^[\n]*?)(\s+\[Verified on CourtListener\])/g, (match, number, caseName, verifiedText) => {
     caseName = caseName.trim().replace(/[,;:]+$/, '');
     const caseButton = `<span class="citation-case-link cursor-pointer text-blue-600 hover:text-blue-800 hover:underline font-semibold" data-case-name="${caseName.replace(/"/g, '&quot;')}" data-verified="true">${caseName}</span>`;
-    return `${number}${caseButton} [Verified on CourtListener]`;
+    return `${number}${caseButton}${verifiedText}`;
   });
   
-  // Second pattern: Handle unverified cases - only case names before court/date info
-  formattedText = formattedText.replace(/(\d+\.\s+)([A-Z][^•\n]+?)(?=\s+(?:Supreme Court|Court of|Fifth Court|\n|\d+\.\s))/g, (match, number, caseName) => {
+  // Second pattern: Handle unverified cases - match typical case name patterns like "Party v. Party"
+  formattedText = formattedText.replace(/(\d+\.\s+)([A-Za-z][^.\n]*?(?:\s+v\.\s+[A-Za-z][^.\n]*?)?)(?=\s|$|\n)/g, (match, number, caseName) => {
     // Skip if already processed (contains citation-case-link)
     if (match.includes('citation-case-link')) {
+      return match;
+    }
+    
+    // Skip if this looks like court information or dates
+    if (caseName.match(/(?:Supreme Court|Court of|Fifth Court|\d{4}|Inc\.|Corp\.|LLC)/i)) {
       return match;
     }
     
