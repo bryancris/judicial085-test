@@ -82,23 +82,23 @@ const removeDuplicateContent = (text: string): string => {
 const formatCaseNames = (text: string): string => {
   let formattedText = text;
   
-  // Simple pattern to catch ALL case names in numbered lists
-  // Matches: "1. Case Name v. Other Party" or "3. Hoover Slovacek LLP v. Walton & Johnson Properties, LLC"
-  formattedText = formattedText.replace(/(\d+\.\s+)([A-Z][^:\n]+?)(\s*(?::|$))/g, (match, number, caseName, ending) => {
-    // Skip if already processed
+  // First pattern: Handle verified cases with [Verified on CourtListener] marker
+  formattedText = formattedText.replace(/(\d+\.\s+)(.+?)\s+\[Verified on CourtListener\]/g, (match, number, caseName) => {
+    caseName = caseName.trim().replace(/[,;:]+$/, '');
+    const caseButton = `<span class="citation-case-link cursor-pointer text-blue-600 hover:text-blue-800 hover:underline font-semibold" data-case-name="${caseName.replace(/"/g, '&quot;')}" data-verified="true">${caseName}</span>`;
+    return `${number}${caseButton} [Verified on CourtListener]`;
+  });
+  
+  // Second pattern: Handle unverified cases (numbered list items without verification)
+  formattedText = formattedText.replace(/(\d+\.\s+)([A-Z][^0-9\n]+?)(?=\s*\n\s*\d+\.|\s*$)/g, (match, number, caseName) => {
+    // Skip if already processed (contains citation-case-link)
     if (match.includes('citation-case-link')) {
       return match;
     }
     
-    // Clean up case name
-    caseName = caseName.trim()
-      .replace(/\s*\[Verified on CourtListener\]\s*/, '') // Remove verification marker
-      .replace(/[,;:]+$/, ''); // Remove trailing punctuation
-    
-    // Make case name clickable
-    const caseButton = `<span class="citation-case-link cursor-pointer text-blue-600 hover:text-blue-800 hover:underline font-semibold" data-case-name="${caseName.replace(/"/g, '&quot;')}">${caseName}</span>`;
-    
-    return `${number}${caseButton}${ending}`;
+    caseName = caseName.trim().replace(/[,;:]+$/, '');
+    const caseButton = `<span class="citation-case-link cursor-pointer text-blue-600 hover:text-blue-800 hover:underline font-semibold" data-case-name="${caseName.replace(/"/g, '&quot;')}" data-verified="false">${caseName}</span>`;
+    return `${number}${caseButton}`;
   });
   
   return formattedText;
