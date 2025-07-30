@@ -37,8 +37,8 @@ const extractCitationContext = (content: string, startIndex: number, endIndex: n
 
 // Helper function to format case names with enhanced styling
 const formatCaseNames = (text: string): string => {
-  // Pattern to match numbered case entries with bold formatting: 1. **Case Name**
-  const caseNamePattern = /(\d+\.\s*)\*\*([^*]+)\*\*/g;
+  // Pattern to match numbered case entries: 1. Case Name v. Another Name
+  const caseNamePattern = /(\d+\.\s*)([A-Z][a-zA-Z\s&.,'-]+\s+v\.?\s+[A-Z][a-zA-Z\s&.,'-]+[^.\n]*)/g;
   
   return text.replace(caseNamePattern, (match, number, caseName) => {
     return `${number}<span class="font-semibold text-base">${caseName}</span>`;
