@@ -37,36 +37,44 @@ const extractCitationContext = (content: string, startIndex: number, endIndex: n
 
 // Helper function to remove duplicate content sections
 const removeDuplicateContent = (text: string): string => {
-  // Remove duplicate "**CASES**" sections and repeated case listings
-  const lines = text.split('\n');
-  const seen = new Set<string>();
+  // Split content into paragraphs for better deduplication
+  const paragraphs = text.split('\n\n');
   const result: string[] = [];
-  let inCaseSection = false;
+  const seenCases = new Set<string>();
+  const seenContent = new Set<string>();
   
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
+  for (const paragraph of paragraphs) {
+    const trimmed = paragraph.trim();
+    if (!trimmed) continue;
     
-    // Detect section headers
-    if (line.includes('**CASES**') || line.includes('**Cases**')) {
-      if (seen.has('cases-section')) {
-        // Skip duplicate cases section
-        inCaseSection = true;
-        continue;
-      }
-      seen.add('cases-section');
-      inCaseSection = false;
-    } else if (inCaseSection && line.match(/^\d+\./)) {
-      // Skip duplicate numbered cases
+    // Skip if we've seen this exact content before
+    if (seenContent.has(trimmed)) {
       continue;
-    } else if (line === '') {
-      // Reset case section flag on empty lines
-      inCaseSection = false;
     }
     
-    result.push(lines[i]);
+    // Check for case names and skip duplicates
+    const caseNameMatch = trimmed.match(/^\d+\.\s*([A-Za-z][^.\n]*(?:v\.?\s+[A-Za-z][^.\n]*)?)/);
+    if (caseNameMatch) {
+      const caseName = caseNameMatch[1].trim().toLowerCase();
+      if (seenCases.has(caseName)) {
+        continue; // Skip duplicate case
+      }
+      seenCases.add(caseName);
+    }
+    
+    // Skip duplicate section headers
+    if (trimmed.includes('**CASES**') || trimmed.includes('**Cases**')) {
+      if (seenContent.has('cases-header')) {
+        continue;
+      }
+      seenContent.add('cases-header');
+    }
+    
+    seenContent.add(trimmed);
+    result.push(paragraph);
   }
   
-  return result.join('\n');
+  return result.join('\n\n');
 };
 
 // Helper function to format case names with enhanced styling

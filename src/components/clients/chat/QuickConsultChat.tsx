@@ -377,7 +377,7 @@ const QuickConsultChat = () => {
                           </div>
                           <QuickConsultMessageContent 
                             content={message.content}
-                            enableCitationLinks={message.role === "assistant"}
+                            enableCitationLinks={false}
                           />
                           {showCitations && (
                             <CitationsDisplay citations={lastResponse.citations} />
