@@ -178,8 +178,27 @@ const QuickConsultMessageContent: React.FC<QuickConsultMessageContentProps> = ({
         const isVerified = caseLink.getAttribute('data-verified') === 'true';
         
         if (caseName && isVerified) {
-          // Open CourtListener search for verified cases
-          const searchUrl = `https://www.courtlistener.com/?q=${encodeURIComponent(caseName)}&type=o&court=all`;
+          // Clean up the case name for better CourtListener search
+          const cleanedCaseName = caseName
+            .replace(/[""]/g, '') // Remove quotes
+            .replace(/\s+/g, ' ') // Normalize whitespace
+            .trim();
+          
+          // Try multiple search strategies for better results
+          const searchStrategies = [
+            // Strategy 1: Use exact case name with quotes for precise matching
+            `"${cleanedCaseName}"`,
+            // Strategy 2: Just the case name without quotes
+            cleanedCaseName,
+            // Strategy 3: If it's a "v." case, try just the party names
+            cleanedCaseName.includes(' v. ') ? cleanedCaseName.replace(' v. ', ' ') : null
+          ].filter(Boolean);
+          
+          // Use the first strategy - exact match with quotes
+          const searchQuery = searchStrategies[0];
+          const searchUrl = `https://www.courtlistener.com/?q=${encodeURIComponent(searchQuery)}&type=o&order_by=score%20desc`;
+          
+          console.log('Opening CourtListener search for:', searchQuery, 'URL:', searchUrl);
           window.open(searchUrl, '_blank');
         }
       }
