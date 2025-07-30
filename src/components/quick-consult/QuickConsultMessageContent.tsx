@@ -35,26 +35,68 @@ const extractCitationContext = (content: string, startIndex: number, endIndex: n
   return content.substring(contextStart, contextEnd).trim();
 };
 
+// Helper function to remove duplicate content sections
+const removeDuplicateContent = (text: string): string => {
+  // Remove duplicate "**CASES**" sections and repeated case listings
+  const lines = text.split('\n');
+  const seen = new Set<string>();
+  const result: string[] = [];
+  let inCaseSection = false;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    
+    // Detect section headers
+    if (line.includes('**CASES**') || line.includes('**Cases**')) {
+      if (seen.has('cases-section')) {
+        // Skip duplicate cases section
+        inCaseSection = true;
+        continue;
+      }
+      seen.add('cases-section');
+      inCaseSection = false;
+    } else if (inCaseSection && line.match(/^\d+\./)) {
+      // Skip duplicate numbered cases
+      continue;
+    } else if (line === '') {
+      // Reset case section flag on empty lines
+      inCaseSection = false;
+    }
+    
+    result.push(lines[i]);
+  }
+  
+  return result.join('\n');
+};
+
 // Helper function to format case names with enhanced styling
 const formatCaseNames = (text: string): string => {
-  // Pattern to match numbered case entries: 1. Case Name v. Another Name
-  const caseNamePattern = /(\d+\.\s*)([A-Z][a-zA-Z\s&.,'-]+\s+v\.?\s+[A-Z][a-zA-Z\s&.,'-]+[^.\n]*)/g;
+  // More robust pattern to match numbered case entries
+  const caseNamePattern = /(\d+\.\s*)([A-Z][a-zA-Z\s&.,'-]+(?:\s+v\.?\s+[A-Z][a-zA-Z\s&.,'-]+)?[^.\n\d]*?)(?=\s*\n|\s*\d+\.|\s*$)/g;
   
   return text.replace(caseNamePattern, (match, number, caseName) => {
-    return `${number}<span class="font-semibold text-base">${caseName}</span>`;
+    // Clean up the case name (remove trailing punctuation except periods in abbreviations)
+    const cleanCaseName = caseName.trim().replace(/[,;:]+$/, '');
+    return `${number}<span class="font-semibold text-base">${cleanCaseName}</span>`;
   });
 };
 
 const QuickConsultMessageContent: React.FC<QuickConsultMessageContentProps> = ({
   content,
-  enableCitationLinks = true
+  enableCitationLinks = false
 }) => {
-  if (!enableCitationLinks) {
-    return <div className="whitespace-pre-wrap break-words overflow-wrap-break-word text-sm">{content}</div>;
-  }
+  // Clean up content first - remove duplicates and format case names
+  const cleanedContent = removeDuplicateContent(content);
+  const formattedContent = formatCaseNames(cleanedContent);
 
-  // First format case names, then process citations
-  const formattedContent = formatCaseNames(content);
+  if (!enableCitationLinks) {
+    return (
+      <div 
+        className="whitespace-pre-wrap break-words overflow-wrap-break-word text-sm"
+        dangerouslySetInnerHTML={{ __html: formattedContent }}
+      />
+    );
+  }
   const citations = extractKeyCitations(formattedContent);
   
   if (citations.length === 0) {
