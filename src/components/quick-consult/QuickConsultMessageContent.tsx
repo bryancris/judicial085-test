@@ -35,18 +35,35 @@ const extractCitationContext = (content: string, startIndex: number, endIndex: n
   return content.substring(contextStart, contextEnd).trim();
 };
 
+// Helper function to format case names with enhanced styling
+const formatCaseNames = (text: string): string => {
+  // Pattern to match numbered case entries with bold formatting: 1. **Case Name**
+  const caseNamePattern = /(\d+\.\s*)\*\*([^*]+)\*\*/g;
+  
+  return text.replace(caseNamePattern, (match, number, caseName) => {
+    return `${number}<span class="font-semibold text-base">${caseName}</span>`;
+  });
+};
+
 const QuickConsultMessageContent: React.FC<QuickConsultMessageContentProps> = ({
   content,
   enableCitationLinks = true
 }) => {
   if (!enableCitationLinks) {
-    return <div className="whitespace-pre-wrap break-words overflow-wrap-break-word">{content}</div>;
+    return <div className="whitespace-pre-wrap break-words overflow-wrap-break-word text-sm">{content}</div>;
   }
 
-  const citations = extractKeyCitations(content);
+  // First format case names, then process citations
+  const formattedContent = formatCaseNames(content);
+  const citations = extractKeyCitations(formattedContent);
   
   if (citations.length === 0) {
-    return <div className="whitespace-pre-wrap break-words overflow-wrap-break-word">{content}</div>;
+    return (
+      <div 
+        className="whitespace-pre-wrap break-words overflow-wrap-break-word text-sm"
+        dangerouslySetInnerHTML={{ __html: formattedContent }}
+      />
+    );
   }
 
   // Build content with citation links
@@ -56,10 +73,13 @@ const QuickConsultMessageContent: React.FC<QuickConsultMessageContentProps> = ({
   citations.forEach((citation, index) => {
     // Add text before citation
     if (citation.startIndex > lastIndex) {
+      const beforeText = formattedContent.substring(lastIndex, citation.startIndex);
       contentParts.push(
-        <span key={`text-${index}`}>
-          {content.substring(lastIndex, citation.startIndex)}
-        </span>
+        <span 
+          key={`text-${index}`}
+          className="text-sm"
+          dangerouslySetInnerHTML={{ __html: beforeText }}
+        />
       );
     }
 
@@ -85,11 +105,14 @@ const QuickConsultMessageContent: React.FC<QuickConsultMessageContentProps> = ({
   });
 
   // Add remaining text
-  if (lastIndex < content.length) {
+  if (lastIndex < formattedContent.length) {
+    const remainingText = formattedContent.substring(lastIndex);
     contentParts.push(
-      <span key="text-final">
-        {content.substring(lastIndex)}
-      </span>
+      <span 
+        key="text-final"
+        className="text-sm"
+        dangerouslySetInnerHTML={{ __html: remainingText }}
+      />
     );
   }
 
