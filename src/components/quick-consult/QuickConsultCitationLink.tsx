@@ -9,11 +9,17 @@ import QuickConsultCitationModal from "./QuickConsultCitationModal";
 interface QuickConsultCitationLinkProps {
   citation: string;
   className?: string;
+  caseName?: string;
+  aiSummary?: string;
+  citationType?: 'case' | 'statute' | 'section' | 'docket' | 'unknown';
 }
 
 const QuickConsultCitationLink: React.FC<QuickConsultCitationLinkProps> = ({ 
   citation, 
-  className 
+  className,
+  caseName,
+  aiSummary,
+  citationType = 'unknown'
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [citationDetails, setCitationDetails] = useState<CitationDetails | null>(null);
@@ -21,10 +27,49 @@ const QuickConsultCitationLink: React.FC<QuickConsultCitationLinkProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   const handleCitationClick = async () => {
-    // All citations are now docket numbers, extract the number and link to CourtListener
-    const docketNumber = citation.replace(/^(?:Docket|Case)\s+No\.\s+/i, '').replace(/[,.]$/, '').trim();
-    const courtListenerUrl = `https://www.courtlistener.com/?q=${encodeURIComponent(docketNumber)}&type=o&court=all`;
-    window.open(courtListenerUrl, '_blank');
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Use AI-enhanced matching for case names, fallback for docket numbers
+      if (citationType === 'case' && caseName && aiSummary) {
+        const result = await resolveCitationWithCache(caseName, aiSummary);
+        if (result.details) {
+          // Direct link to CourtListener if AI matched with high confidence
+          if (result.details.courtListenerUrl && result.details.aiMatchConfidence && result.details.aiMatchConfidence >= 75) {
+            window.open(result.details.courtListenerUrl, '_blank');
+            setCitationDetails(result.details);
+            return;
+          } else {
+            // Show modal for medium/low confidence matches
+            setCitationDetails(result.details);
+            setModalOpen(true);
+            return;
+          }
+        }
+      }
+
+      // Fallback behavior for docket numbers or when AI matching fails
+      if (citationType === 'docket' || citationType === 'unknown') {
+        const docketNumber = citation.replace(/^(?:Docket|Case)\s+No\.\s+/i, '').replace(/[,.]$/, '').trim();
+        const courtListenerUrl = `https://www.courtlistener.com/?q=${encodeURIComponent(docketNumber)}&type=o&court=all`;
+        window.open(courtListenerUrl, '_blank');
+      } else {
+        // Generic search for case names without AI context
+        const searchTerm = caseName || citation;
+        const courtListenerUrl = `https://www.courtlistener.com/?q=${encodeURIComponent(searchTerm)}&type=o&court=all`;
+        window.open(courtListenerUrl, '_blank');
+      }
+    } catch (err: any) {
+      console.error('Citation resolution error:', err);
+      setError('Link failed');
+      // Fallback to generic search
+      const searchTerm = caseName || citation;
+      const courtListenerUrl = `https://www.courtlistener.com/?q=${encodeURIComponent(searchTerm)}&type=o&court=all`;
+      window.open(courtListenerUrl, '_blank');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getSourceIcon = () => {

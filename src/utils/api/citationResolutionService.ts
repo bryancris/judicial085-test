@@ -19,6 +19,9 @@ export interface CitationDetails {
     name: string;
     url: string;
   }>;
+  matchingReasoning?: string;
+  courtListenerUrl?: string;
+  aiMatchConfidence?: number;
 }
 
 export interface CitationResolutionResult {
@@ -70,7 +73,61 @@ export const parseCitation = (citation: string): Partial<CitationDetails> => {
 };
 
 /**
- * Search Court Listener API via Supabase edge function
+ * Search Court Listener with AI-enhanced case matching
+ */
+export const searchCourtListenerWithAI = async (
+  caseName: string,
+  citation: string,
+  aiSummary?: string
+): Promise<CitationResolutionResult> => {
+  try {
+    console.log("AI-enhanced Court Listener search for:", { caseName, citation });
+    
+    const { data, error } = await supabase.functions.invoke('courtlistener-case-matcher', {
+      body: {
+        caseName,
+        aiSummary
+      }
+    });
+
+    if (error) {
+      console.error("AI case matcher error:", error);
+      return { searched: true, error: error.message };
+    }
+
+    if (data && data.success && data.bestMatch) {
+      const match = data.bestMatch;
+      const confidence = match.confidence >= 85 ? "high" : match.confidence >= 70 ? "medium" : "low";
+      
+      return {
+        searched: true,
+        details: {
+          id: `cl_ai_${match.case.id}`,
+          caseName: match.case.caseName || caseName,
+          court: match.case.court,
+          year: match.case.dateFiled ? new Date(match.case.dateFiled).getFullYear().toString() : undefined,
+          citation,
+          summary: match.case.snippet,
+          url: match.case.absolute_url,
+          courtListenerUrl: match.case.absolute_url,
+          source: "courtlistener",
+          confidence,
+          aiMatchConfidence: match.confidence,
+          matchingReasoning: match.reasoning,
+          hasActualDocument: true
+        }
+      };
+    }
+
+    return { searched: true, error: data?.error || "No AI matches found in Court Listener" };
+  } catch (err: any) {
+    console.error("Exception in AI Court Listener search:", err);
+    return { searched: true, error: err.message };
+  }
+};
+
+/**
+ * Search Court Listener API via Supabase edge function (legacy)
  */
 export const searchCourtListener = async (
   caseName: string, 
@@ -233,19 +290,33 @@ const generateAlternativeSearchUrls = (caseName: string, citation: string) => {
 };
 
 /**
- * Comprehensive citation resolution using multiple sources
+ * AI-enhanced citation resolution using case name matching
  */
-export const resolveCitation = async (citation: string): Promise<CitationResolutionResult> => {
-  console.log("Resolving citation:", citation);
+export const resolveCitationWithAI = async (
+  citation: string, 
+  aiSummary?: string
+): Promise<CitationResolutionResult> => {
+  console.log("AI-enhanced citation resolution:", citation);
   
   const parsedCitation = parseCitation(citation);
   const caseName = parsedCitation.caseName || citation;
   const alternativeUrls = generateAlternativeSearchUrls(caseName, citation);
 
-  // Try Court Listener first (most authoritative for case law)
+  // Check if this looks like a case name (contains "v." or "vs.")
+  const isLikelyCaseName = /\bv\.?\s/i.test(caseName) || /\bvs\.?\s/i.test(caseName);
+  
+  if (isLikelyCaseName && aiSummary) {
+    // Try AI-enhanced Court Listener search for case names
+    const aiCourtListenerResult = await searchCourtListenerWithAI(caseName, citation, aiSummary);
+    if (aiCourtListenerResult.details) {
+      aiCourtListenerResult.details.alternativeSearchUrls = alternativeUrls;
+      return aiCourtListenerResult;
+    }
+  }
+
+  // Fall back to regular Court Listener search
   const courtListenerResult = await searchCourtListener(caseName, citation);
   if (courtListenerResult.details) {
-    // Mark as having actual document if URL is provided
     courtListenerResult.details.hasActualDocument = !!courtListenerResult.details.url;
     courtListenerResult.details.alternativeSearchUrls = alternativeUrls;
     return courtListenerResult;
@@ -299,15 +370,18 @@ export const cacheCitationDetails = (citation: string, details: CitationDetails)
   citationCache.set(citation, details);
 };
 
-export const resolveCitationWithCache = async (citation: string): Promise<CitationResolutionResult> => {
+export const resolveCitationWithCache = async (
+  citation: string, 
+  aiSummary?: string
+): Promise<CitationResolutionResult> => {
   // Check cache first
   const cached = getCachedCitationDetails(citation);
   if (cached) {
     return { searched: false, details: cached };
   }
 
-  // Resolve and cache
-  const result = await resolveCitation(citation);
+  // Resolve and cache using AI-enhanced method
+  const result = await resolveCitationWithAI(citation, aiSummary);
   if (result.details) {
     cacheCitationDetails(citation, result.details);
   }
