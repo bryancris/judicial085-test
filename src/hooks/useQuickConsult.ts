@@ -68,6 +68,12 @@ export const useQuickConsult = (clientId?: string) => {
           description: `Added ${response.courtListenerCitations} verified citations with direct links`,
           variant: "default",
         });
+      } else if (response.verifiedCases === 0) {
+        toast({
+          title: "⚠️ Citation Verification Needed",
+          description: "CourtListener API requires setup for case verification",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Error sending message:", error);

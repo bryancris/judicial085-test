@@ -27,6 +27,23 @@ serve(async (req) => {
     
     console.log("Searching Court Listener for:", { query, citation });
 
+    // Get CourtListener API token from environment
+    const courtListenerToken = Deno.env.get('COURTLISTENER_API_TOKEN');
+    
+    if (!courtListenerToken) {
+      console.error("CourtListener API token not configured");
+      return new Response(
+        JSON.stringify({ 
+          error: "CourtListener API not configured",
+          results: []
+        }), 
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     // Court Listener API endpoint for opinions search
     const searchUrl = new URL("https://www.courtlistener.com/api/rest/v3/search/");
     searchUrl.searchParams.append("q", query);
@@ -37,18 +54,22 @@ serve(async (req) => {
     const response = await fetch(searchUrl.toString(), {
       method: 'GET',
       headers: {
-        'User-Agent': 'Legal Research Application/1.0 (https://lovable.dev)',
+        'Authorization': `Token ${courtListenerToken}`,
+        'User-Agent': 'Legal Research Application/1.0 (contact@yourfirm.com)',
         'Accept': 'application/json',
-        'Accept-Encoding': 'gzip, deflate',
       },
     });
 
     if (!response.ok) {
       console.error("Court Listener API error:", response.status, response.statusText);
+      const errorText = await response.text();
+      console.error("Error details:", errorText);
+      
       return new Response(
         JSON.stringify({ 
-          error: `Court Listener API error: ${response.status}`,
-          results: []
+          error: `Court Listener API error: ${response.status} - ${response.statusText}`,
+          results: [],
+          needsAuth: response.status === 403 || response.status === 401
         }), 
         {
           status: 200,
