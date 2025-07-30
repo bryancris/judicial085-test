@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { extractKeyCitations, cleanCitationText, extractCaseName } from "@/utils/citationParser";
 import QuickConsultCitationLink from "./QuickConsultCitationLink";
 
@@ -92,21 +92,29 @@ const formatCaseNames = (text: string): string => {
     const caseName = parts[0].trim().replace(/[,;:]+$/, '');
     const description = parts.length > 1 ? parts.slice(1).join(':').trim() : '';
     
-    // Add verification badge for verified cases
-    const verificationBadge = isVerified 
-      ? `<span class="inline-flex items-center px-2 py-1 ml-2 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-           <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-           </svg>
-           Verified
-         </span>` 
-      : '';
+    // Add verification badge and clickable case button for verified cases
+    let caseButton = '';
+    if (isVerified) {
+      caseButton = `<span class="inline-flex items-center ml-2">
+        <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full mr-2">
+          <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+          </svg>
+          Verified
+        </span>
+        <span class="citation-case-link cursor-pointer text-blue-600 hover:text-blue-800 hover:underline" data-case-name="${caseName.replace(/"/g, '&quot;')}" data-verified="true">
+          ${caseName}
+        </span>
+      </span>`;
+    } else {
+      caseButton = caseName;
+    }
     
     // Format with bold case name, verification badge, and add spacing after each case
     if (description) {
-      return `${number}<span class="font-semibold text-base">${caseName}</span>${verificationBadge}: ${description}<br/><br/>`;
+      return `${number}<span class="font-semibold text-base">${caseButton}</span>: ${description}<br/><br/>`;
     } else {
-      return `${number}<span class="font-semibold text-base">${caseName}</span>${verificationBadge}<br/><br/>`;
+      return `${number}<span class="font-semibold text-base">${caseButton}</span><br/><br/>`;
     }
   });
 };
@@ -115,13 +123,45 @@ const QuickConsultMessageContent: React.FC<QuickConsultMessageContentProps> = ({
   content,
   enableCitationLinks = false
 }) => {
+  const contentRef = useRef<HTMLDivElement>(null);
+  
   // Clean up content first - remove duplicates and format case names
   const cleanedContent = removeDuplicateContent(content);
   const formattedContent = formatCaseNames(cleanedContent);
 
+  // Add click handlers for verified case links
+  useEffect(() => {
+    if (!contentRef.current) return;
+
+    const handleCaseClick = (event: Event) => {
+      const target = event.target as HTMLElement;
+      const caseLink = target.closest('.citation-case-link');
+      
+      if (caseLink) {
+        event.preventDefault();
+        const caseName = caseLink.getAttribute('data-case-name');
+        const isVerified = caseLink.getAttribute('data-verified') === 'true';
+        
+        if (caseName && isVerified) {
+          // Open CourtListener search for verified cases
+          const searchUrl = `https://www.courtlistener.com/?q=${encodeURIComponent(caseName)}&type=o&court=all`;
+          window.open(searchUrl, '_blank');
+        }
+      }
+    };
+
+    const contentElement = contentRef.current;
+    contentElement.addEventListener('click', handleCaseClick);
+
+    return () => {
+      contentElement.removeEventListener('click', handleCaseClick);
+    };
+  }, [formattedContent]);
+
   if (!enableCitationLinks) {
     return (
       <div 
+        ref={contentRef}
         className="whitespace-pre-wrap break-words overflow-wrap-break-word text-sm"
         dangerouslySetInnerHTML={{ __html: formattedContent }}
       />
@@ -132,6 +172,7 @@ const QuickConsultMessageContent: React.FC<QuickConsultMessageContentProps> = ({
   if (citations.length === 0) {
     return (
       <div 
+        ref={contentRef}
         className="whitespace-pre-wrap break-words overflow-wrap-break-word text-sm"
         dangerouslySetInnerHTML={{ __html: formattedContent }}
       />
