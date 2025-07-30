@@ -125,27 +125,22 @@ const formatCaseNames = (text: string): string => {
       
       console.log('Processed case:', { caseName, isVerified, number, description });
       
-      // Create the formatted output
+      // Create the formatted output - simple clickable links without checkmarks
       if (isVerified) {
-        const caseButton = `<span class="citation-case-link cursor-pointer text-blue-600 hover:text-blue-800 hover:underline font-semibold inline-flex items-center gap-1" data-case-name="${caseName.replace(/"/g, '&quot;')}" data-verified="true">
-          ${caseName}
-          <svg class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-          </svg>
-        </span>`;
+        const caseButton = `<span class="citation-case-link cursor-pointer text-blue-600 hover:text-blue-800 hover:underline font-semibold" data-case-name="${caseName.replace(/"/g, '&quot;')}" data-verified="true">${caseName}</span>`;
         
         console.log('Created verified case link for:', caseName);
         
         if (description) {
-          return `${number}<span class="text-base">${caseButton}</span>: ${description}<br/>`;
+          return `${number}${caseButton}: ${description}`;
         } else {
-          return `${number}<span class="text-base">${caseButton}</span><br/>`;
+          return `${number}${caseButton}`;
         }
       } else {
         if (description) {
-          return `${number}<span class="font-semibold text-base">${caseName}</span>: ${description}<br/>`;
+          return `${number}<span class="font-semibold">${caseName}</span>: ${description}`;
         } else {
-          return `${number}<span class="font-semibold text-base">${caseName}</span><br/>`;
+          return `${number}<span class="font-semibold">${caseName}</span>`;
         }
       }
     });
