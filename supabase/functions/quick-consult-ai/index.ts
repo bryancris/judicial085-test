@@ -139,6 +139,143 @@ const generateCitations = (searchResults: any[]): any[] => {
 };
 
 /**
+ * Extract case names from AI response
+ */
+const extractCaseNames = (text: string): string[] => {
+  const caseNames: string[] = [];
+  
+  // Look for numbered case entries
+  const numberedCasePattern = /^\s*\d+\.\s*\*?\*?([A-Z][^v\n]*v\.?\s*[A-Z][^,\n\d]*)/gm;
+  let match;
+  
+  while ((match = numberedCasePattern.exec(text)) !== null) {
+    const caseName = match[1].trim().replace(/\*\*/g, '').replace(/[,:.]+$/, '');
+    if (caseName.length > 5) { // Filter out very short matches
+      caseNames.push(caseName);
+    }
+  }
+  
+  // Also look for inline case citations
+  const inlineCasePattern = /\b([A-Z][^v\n]*v\.?\s*[A-Z][^,\n()]*)/g;
+  while ((match = inlineCasePattern.exec(text)) !== null) {
+    const caseName = match[1].trim().replace(/\*\*/g, '').replace(/[,:.]+$/, '');
+    if (caseName.length > 5 && !caseNames.includes(caseName)) {
+      caseNames.push(caseName);
+    }
+  }
+  
+  return caseNames;
+};
+
+/**
+ * Verify cases with CourtListener
+ */
+const verifyCasesWithCourtListener = async (caseNames: string[]): Promise<any[]> => {
+  const verifiedCases: any[] = [];
+  
+  for (const caseName of caseNames) {
+    try {
+      console.log(`Verifying case: ${caseName}`);
+      
+      // Call the search-court-listener function
+      const { data, error } = await supabase.functions.invoke('search-court-listener', {
+        body: { 
+          query: caseName,
+          citation: caseName 
+        }
+      });
+      
+      if (error) {
+        console.log(`CourtListener search error for "${caseName}":`, error);
+        continue;
+      }
+      
+      if (data?.results && data.results.length > 0) {
+        // Find the best match based on case name similarity
+        const bestMatch = data.results[0];
+        
+        verifiedCases.push({
+          originalName: caseName,
+          verifiedCase: {
+            id: bestMatch.id,
+            caseName: bestMatch.caseName,
+            court: bestMatch.court,
+            dateFiled: bestMatch.dateFiled,
+            docketNumber: bestMatch.docketNumber,
+            url: bestMatch.absolute_url,
+            snippet: bestMatch.snippet,
+            confidence: calculateMatchConfidence(caseName, bestMatch.caseName)
+          }
+        });
+        
+        console.log(`Verified case: ${caseName} -> ${bestMatch.caseName}`);
+      } else {
+        console.log(`No CourtListener results found for: ${caseName}`);
+      }
+    } catch (error) {
+      console.log(`Error verifying case "${caseName}":`, error);
+    }
+  }
+  
+  return verifiedCases;
+};
+
+/**
+ * Calculate match confidence between original and verified case names
+ */
+const calculateMatchConfidence = (original: string, verified: string): number => {
+  const originalWords = original.toLowerCase().split(/\s+/);
+  const verifiedWords = verified.toLowerCase().split(/\s+/);
+  
+  let matchCount = 0;
+  for (const word of originalWords) {
+    if (verifiedWords.some(vw => vw.includes(word) || word.includes(vw))) {
+      matchCount++;
+    }
+  }
+  
+  return Math.min(100, Math.round((matchCount / originalWords.length) * 100));
+};
+
+/**
+ * Replace AI case mentions with verified CourtListener cases
+ */
+const replaceWithVerifiedCases = (text: string, verifiedCases: any[]): { text: string, citations: any[] } => {
+  let updatedText = text;
+  const courtListenerCitations: any[] = [];
+  
+  for (const { originalName, verifiedCase } of verifiedCases) {
+    if (verifiedCase.confidence >= 60) { // Only replace with high confidence matches
+      // Create citation object
+      courtListenerCitations.push({
+        id: `cl-${verifiedCase.id}`,
+        type: 'case',
+        source: 'CourtListener',
+        title: verifiedCase.caseName,
+        relevance: verifiedCase.confidence,
+        content_preview: verifiedCase.snippet,
+        docket_number: verifiedCase.docketNumber,
+        court: verifiedCase.court,
+        date_filed: verifiedCase.dateFiled,
+        url: verifiedCase.url,
+        verified: true
+      });
+      
+      // Replace the case name in the text with verified version
+      const originalPattern = new RegExp(
+        originalName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 
+        'gi'
+      );
+      
+      const verifiedText = `${verifiedCase.caseName} [Verified on CourtListener]`;
+      updatedText = updatedText.replace(originalPattern, verifiedText);
+    }
+  }
+  
+  return { text: updatedText, citations: courtListenerCitations };
+};
+
+/**
  * Remove duplicate case citations while preserving formatting
  */
 const removeDuplicateCitations = (text: string): string => {
@@ -357,14 +494,31 @@ Remember: Professional legal writing with proper structure and formatting is req
     // Post-process to remove duplicate citations
     aiResponse = removeDuplicateCitations(aiResponse);
     
+    // Extract case names from AI response and verify with CourtListener
+    console.log('Extracting and verifying case citations...');
+    const extractedCases = extractCaseNames(aiResponse);
+    console.log(`Found ${extractedCases.length} cases to verify:`, extractedCases);
+    
+    // Verify cases with CourtListener
+    const verifiedCases = await verifyCasesWithCourtListener(extractedCases);
+    console.log(`Verified ${verifiedCases.length} cases with CourtListener`);
+    
+    // Replace AI cases with verified CourtListener cases
+    const { text: finalText, citations: courtListenerCitations } = replaceWithVerifiedCases(aiResponse, verifiedCases);
+    
+    // Combine knowledge base citations with CourtListener citations
+    const allCitations = [...citations, ...courtListenerCitations];
+    
     console.log('Quick consult response generated successfully');
 
     return new Response(JSON.stringify({ 
-      text: aiResponse,
+      text: finalText,
       usage: data.usage,
-      citations: citations,
+      citations: allCitations,
       hasKnowledgeBase: searchResults.length > 0,
-      documentsFound: searchResults.length
+      documentsFound: searchResults.length,
+      verifiedCases: verifiedCases.length,
+      courtListenerCitations: courtListenerCitations.length
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

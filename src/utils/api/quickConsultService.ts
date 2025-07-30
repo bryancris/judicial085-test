@@ -16,9 +16,15 @@ export interface QuickConsultResponse {
     relevance: number;
     content_preview?: string;
     docket_number?: string;
+    court?: string;
+    date_filed?: string;
+    url?: string;
+    verified?: boolean;
   }>;
   hasKnowledgeBase?: boolean;
   documentsFound?: number;
+  verifiedCases?: number;
+  courtListenerCitations?: number;
   error?: string;
 }
 
@@ -34,6 +40,8 @@ export const sendQuickConsultMessage = async (
       citations?: any[];
       hasKnowledgeBase?: boolean;
       documentsFound?: number;
+      verifiedCases?: number;
+      courtListenerCitations?: number;
     }>("quick-consult-ai", { 
       messages: messages.map(msg => ({
         role: msg.role,
@@ -51,7 +59,9 @@ export const sendQuickConsultMessage = async (
       text: data?.text || "",
       citations: data?.citations || [],
       hasKnowledgeBase: data?.hasKnowledgeBase || false,
-      documentsFound: data?.documentsFound || 0
+      documentsFound: data?.documentsFound || 0,
+      verifiedCases: data?.verifiedCases || 0,
+      courtListenerCitations: data?.courtListenerCitations || 0
     };
   } catch (err: any) {
     console.error("Error in quick consult:", err);

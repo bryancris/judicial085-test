@@ -52,6 +52,23 @@ export const useQuickConsult = (clientId?: string) => {
           variant: "default",
         });
       }
+
+      // Show verification status for CourtListener cases
+      if (response.verifiedCases && response.verifiedCases > 0) {
+        toast({
+          title: "Cases Verified",
+          description: `Verified ${response.verifiedCases} case citations with CourtListener for legal accuracy`,
+          variant: "default",
+        });
+      }
+
+      if (response.courtListenerCitations && response.courtListenerCitations > 0) {
+        toast({
+          title: "CourtListener Citations Added",
+          description: `Added ${response.courtListenerCitations} verified citations with direct links`,
+          variant: "default",
+        });
+      }
     } catch (error) {
       console.error("Error sending message:", error);
       toast({

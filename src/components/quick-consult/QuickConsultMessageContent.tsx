@@ -77,22 +77,36 @@ const removeDuplicateContent = (text: string): string => {
   return result.join('\n\n');
 };
 
-// Helper function to format case names with enhanced styling
+// Helper function to format case names with enhanced styling and verification badges
 const formatCaseNames = (text: string): string => {
   // More robust pattern to match numbered case entries with their content
   const casePattern = /(\d+\.\s*)([A-Z][a-zA-Z\s&.,'-]+(?:\s+v\.?\s+[A-Z][a-zA-Z\s&.,'-]+)?[^.\n\d]*?)(?=\s*\n\s*\d+\.|\s*$)/g;
   
   return text.replace(casePattern, (match, number, content) => {
+    // Check if this case is verified on CourtListener
+    const isVerified = content.includes('[Verified on CourtListener]');
+    
     // Split the content to identify the case name (first part before detailed description)
-    const parts = content.split(/[:\-–]/);
+    const cleanContent = content.replace('[Verified on CourtListener]', '').trim();
+    const parts = cleanContent.split(/[:\-–]/);
     const caseName = parts[0].trim().replace(/[,;:]+$/, '');
     const description = parts.length > 1 ? parts.slice(1).join(':').trim() : '';
     
-    // Format with bold case name and add spacing after each case
+    // Add verification badge for verified cases
+    const verificationBadge = isVerified 
+      ? `<span class="inline-flex items-center px-2 py-1 ml-2 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+           <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+           </svg>
+           Verified
+         </span>` 
+      : '';
+    
+    // Format with bold case name, verification badge, and add spacing after each case
     if (description) {
-      return `${number}<span class="font-semibold text-base">${caseName}</span>: ${description}<br/><br/>`;
+      return `${number}<span class="font-semibold text-base">${caseName}</span>${verificationBadge}: ${description}<br/><br/>`;
     } else {
-      return `${number}<span class="font-semibold text-base">${caseName}</span><br/><br/>`;
+      return `${number}<span class="font-semibold text-base">${caseName}</span>${verificationBadge}<br/><br/>`;
     }
   });
 };
