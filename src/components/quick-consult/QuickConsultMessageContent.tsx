@@ -79,44 +79,79 @@ const removeDuplicateContent = (text: string): string => {
 
 // Helper function to format case names with enhanced styling and verification badges
 const formatCaseNames = (text: string): string => {
-  // More robust pattern to match numbered case entries with their content
-  const casePattern = /(\d+\.\s*)([A-Z][a-zA-Z\s&.,'-]+(?:\s+v\.?\s+[A-Z][a-zA-Z\s&.,'-]+)?[^.\n\d]*?)(?=\s*\n\s*\d+\.|\s*$)/g;
+  console.log('Original text for case formatting:', text);
   
-  return text.replace(casePattern, (match, number, content) => {
-    // Check if this case is verified on CourtListener
-    const isVerified = content.includes('[Verified on CourtListener]');
+  // More flexible patterns to catch different case formats with verification markers
+  const patterns = [
+    // Pattern 1: Numbered cases with verification (main pattern)
+    /(\d+\.\s*)([A-Z][a-zA-Z\s&.,'-]+(?:\s+v\.?\s+[A-Z][a-zA-Z\s&.,'-]+)?)\s*(\[Verified on CourtListener\])([^.\n\d]*?)(?=\s*\n\s*\d+\.|\s*$)/g,
+    // Pattern 2: Any case name followed by verification marker (fallback)
+    /([A-Z][a-zA-Z\s&.,'-]+(?:\s+v\.?\s+[A-Z][a-zA-Z\s&.,'-]+)?)\s*(\[Verified on CourtListener\])/g
+  ];
+
+  let formattedText = text;
+  
+  patterns.forEach((pattern, patternIndex) => {
+    console.log(`Applying pattern ${patternIndex + 1}:`, pattern);
     
-    // Split the content to identify the case name (first part before detailed description)
-    const cleanContent = content.replace('[Verified on CourtListener]', '').trim();
-    const parts = cleanContent.split(/[:\-–]/);
-    const caseName = parts[0].trim().replace(/[,;:]+$/, '');
-    const description = parts.length > 1 ? parts.slice(1).join(':').trim() : '';
-    
-    // Add verification badge and clickable case button for verified cases
-    let caseButton = '';
-    if (isVerified) {
-      caseButton = `<span class="inline-flex items-center ml-2">
-        <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full mr-2">
-          <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-          </svg>
-          Verified
-        </span>
-        <span class="citation-case-link cursor-pointer text-blue-600 hover:text-blue-800 hover:underline" data-case-name="${caseName.replace(/"/g, '&quot;')}" data-verified="true">
+    formattedText = formattedText.replace(pattern, (match, ...groups) => {
+      console.log('Pattern match found:', match, 'Groups:', groups);
+      
+      let number = '';
+      let caseName = '';
+      let description = '';
+      let isVerified = false;
+      
+      if (patternIndex === 0) {
+        // Pattern 1: numbered cases
+        number = groups[0] || '';
+        caseName = groups[1];
+        isVerified = groups[2] === '[Verified on CourtListener]';
+        description = groups[3] ? groups[3].trim() : '';
+      } else {
+        // Pattern 2: cases without numbers
+        caseName = groups[0];
+        isVerified = groups[1] === '[Verified on CourtListener]';
+      }
+      
+      // Clean up case name and description
+      caseName = caseName.trim().replace(/[,;:]+$/, '');
+      if (description) {
+        // Split description on common delimiters
+        const parts = description.split(/[:\-–]/);
+        description = parts.length > 1 ? parts.slice(1).join(':').trim() : description.trim();
+      }
+      
+      console.log('Processed case:', { caseName, isVerified, number, description });
+      
+      // Create the formatted output
+      if (isVerified) {
+        const caseButton = `<span class="citation-case-link cursor-pointer text-blue-600 hover:text-blue-800 hover:underline font-semibold" data-case-name="${caseName.replace(/"/g, '&quot;')}" data-verified="true">
           ${caseName}
         </span>
-      </span>`;
-    } else {
-      caseButton = caseName;
-    }
-    
-    // Format with bold case name, verification badge, and add spacing after each case
-    if (description) {
-      return `${number}<span class="font-semibold text-base">${caseButton}</span>: ${description}<br/><br/>`;
-    } else {
-      return `${number}<span class="font-semibold text-base">${caseButton}</span><br/><br/>`;
-    }
+        <span class="inline-flex items-center px-2 py-1 ml-2 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+          ✅ Verified
+        </span>`;
+        
+        console.log('Created verified case link for:', caseName);
+        
+        if (description) {
+          return `${number}<span class="text-base">${caseButton}</span>: ${description}<br/><br/>`;
+        } else {
+          return `${number}<span class="text-base">${caseButton}</span><br/><br/>`;
+        }
+      } else {
+        if (description) {
+          return `${number}<span class="font-semibold text-base">${caseName}</span>: ${description}<br/><br/>`;
+        } else {
+          return `${number}<span class="font-semibold text-base">${caseName}</span><br/><br/>`;
+        }
+      }
+    });
   });
+  
+  console.log('Final formatted text:', formattedText);
+  return formattedText;
 };
 
 const QuickConsultMessageContent: React.FC<QuickConsultMessageContentProps> = ({
