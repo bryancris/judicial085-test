@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { extractKeyCitations, cleanCitationText, extractCaseName } from "@/utils/citationParser";
 import QuickConsultCitationLink from "./QuickConsultCitationLink";
+import { Check } from "lucide-react";
 
 interface QuickConsultMessageContentProps {
   content: string;
@@ -126,11 +127,11 @@ const formatCaseNames = (text: string): string => {
       
       // Create the formatted output
       if (isVerified) {
-        const caseButton = `<span class="citation-case-link cursor-pointer text-blue-600 hover:text-blue-800 hover:underline font-semibold" data-case-name="${caseName.replace(/"/g, '&quot;')}" data-verified="true">
+        const caseButton = `<span class="citation-case-link cursor-pointer text-blue-600 hover:text-blue-800 hover:underline font-semibold inline-flex items-center gap-1" data-case-name="${caseName.replace(/"/g, '&quot;')}" data-verified="true">
           ${caseName}
-        </span>
-        <span class="inline-flex items-center px-2 py-1 ml-2 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-          ✅ Verified
+          <svg class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
         </span>`;
         
         console.log('Created verified case link for:', caseName);
