@@ -89,15 +89,10 @@ const formatCaseNames = (text: string): string => {
     return `${number}${caseButton}${verifiedText}`;
   });
   
-  // Second pattern: Handle unverified cases - match typical case name patterns like "Party v. Party"
-  formattedText = formattedText.replace(/(\d+\.\s+)([A-Za-z][^.\n]*?(?:\s+v\.\s+[A-Za-z][^.\n]*?)?)(?=\s|$|\n)/g, (match, number, caseName) => {
+  // Second pattern: Handle unverified cases - only match legitimate case names that end before court/date info
+  formattedText = formattedText.replace(/(\d+\.\s+)([A-Z][^.\n]*?(?:\s+v\.\s+[A-Z][^.\n]*?|Ass'n[^.\n]*?))(?=\s*\n\s*(?:Fifth Court|Supreme Court|\w+\s+Court|Texas Court))/g, (match, number, caseName) => {
     // Skip if already processed (contains citation-case-link)
     if (match.includes('citation-case-link')) {
-      return match;
-    }
-    
-    // Skip if this looks like court information or dates
-    if (caseName.match(/(?:Supreme Court|Court of|Fifth Court|\d{4}|Inc\.|Corp\.|LLC)/i)) {
       return match;
     }
     
