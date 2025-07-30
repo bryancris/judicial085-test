@@ -137,15 +137,15 @@ const formatCaseNames = (text: string): string => {
         console.log('Created verified case link for:', caseName);
         
         if (description) {
-          return `${number}<span class="text-base">${caseButton}</span>: ${description}<br/><br/>`;
+          return `${number}<span class="text-base">${caseButton}</span>: ${description}<br/>`;
         } else {
-          return `${number}<span class="text-base">${caseButton}</span><br/><br/>`;
+          return `${number}<span class="text-base">${caseButton}</span><br/>`;
         }
       } else {
         if (description) {
-          return `${number}<span class="font-semibold text-base">${caseName}</span>: ${description}<br/><br/>`;
+          return `${number}<span class="font-semibold text-base">${caseName}</span>: ${description}<br/>`;
         } else {
-          return `${number}<span class="font-semibold text-base">${caseName}</span><br/><br/>`;
+          return `${number}<span class="font-semibold text-base">${caseName}</span><br/>`;
         }
       }
     });
