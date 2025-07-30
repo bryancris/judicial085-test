@@ -25,6 +25,7 @@ serve(async (req) => {
   try {
     const { query, citation } = await req.json();
     
+    console.log("=== COURTLISTENER DEBUG START ===");
     console.log("Searching Court Listener for:", { query, citation });
 
     // Get CourtListener API token from environment
@@ -44,12 +45,22 @@ serve(async (req) => {
       );
     }
 
+    console.log("API Token configured:", courtListenerToken ? `Token present (${courtListenerToken.substring(0, 8)}...)` : "NO TOKEN");
+
     // Court Listener API endpoint for search - using V4
     const searchUrl = new URL("https://www.courtlistener.com/api/rest/v4/search/");
     searchUrl.searchParams.append("q", query);
     searchUrl.searchParams.append("type", "o"); // opinions
     searchUrl.searchParams.append("order_by", "score desc");
 
+    console.log("Making request to URL:", searchUrl.toString());
+    console.log("Request headers:", {
+      'Authorization': `Token ${courtListenerToken.substring(0, 8)}...`,
+      'User-Agent': 'Legal Research Application/1.0 (contact@yourfirm.com)',
+      'Accept': 'application/json',
+    });
+
+    console.log("About to make fetch request...");
     const response = await fetch(searchUrl.toString(), {
       method: 'GET',
       headers: {
@@ -58,6 +69,9 @@ serve(async (req) => {
         'Accept': 'application/json',
       },
     });
+
+    console.log("Fetch completed. Response status:", response.status);
+    console.log("Response headers:", Object.fromEntries(response.headers.entries()));
 
     if (!response.ok) {
       console.error("Court Listener API error:", response.status, response.statusText);
