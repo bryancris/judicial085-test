@@ -75,19 +75,19 @@ const removeDuplicateContent = (text: string): string => {
     result.push(paragraph);
   }
   
-  return result.join('\n\n');
+  return result.join('\n');
 };
 
 // Helper function to format case names with enhanced styling and verification badges
 const formatCaseNames = (text: string): string => {
   console.log('Original text for case formatting:', text);
   
-  // More flexible patterns to catch different case formats with verification markers
+  // Pattern to match numbered cases with checkmark verification
   const patterns = [
-    // Pattern 1: Numbered cases with verification (main pattern)
-    /(\d+\.\s*)([A-Z][a-zA-Z\s&.,'-]+(?:\s+v\.?\s+[A-Z][a-zA-Z\s&.,'-]+)?)\s*(\[Verified on CourtListener\])([^.\n\d]*?)(?=\s*\n\s*\d+\.|\s*$)/g,
-    // Pattern 2: Any case name followed by verification marker (fallback)
-    /([A-Z][a-zA-Z\s&.,'-]+(?:\s+v\.?\s+[A-Z][a-zA-Z\s&.,'-]+)?)\s*(\[Verified on CourtListener\])/g
+    // Pattern 1: Numbered cases with checkmark (main pattern)
+    /(\d+\.\s*)([A-Z][a-zA-Z\s&.,'-]+(?:\s+v\.?\s+[A-Z][a-zA-Z\s&.,'-]+)?)\s*(✓)([^.\n\d]*?)(?=\s*\n\s*\d+\.|\s*$)/g,
+    // Pattern 2: Any case name followed by checkmark (fallback)
+    /([A-Z][a-zA-Z\s&.,'-]+(?:\s+v\.?\s+[A-Z][a-zA-Z\s&.,'-]+)?)\s*(✓)/g
   ];
 
   let formattedText = text;
@@ -107,12 +107,12 @@ const formatCaseNames = (text: string): string => {
         // Pattern 1: numbered cases
         number = groups[0] || '';
         caseName = groups[1];
-        isVerified = groups[2] === '[Verified on CourtListener]';
+        isVerified = groups[2] === '✓';
         description = groups[3] ? groups[3].trim() : '';
       } else {
         // Pattern 2: cases without numbers
         caseName = groups[0];
-        isVerified = groups[1] === '[Verified on CourtListener]';
+        isVerified = groups[1] === '✓';
       }
       
       // Clean up case name and description
