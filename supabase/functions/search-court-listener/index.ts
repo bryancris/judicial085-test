@@ -44,12 +44,11 @@ serve(async (req) => {
       );
     }
 
-    // Court Listener API endpoint for opinions search
-    const searchUrl = new URL("https://www.courtlistener.com/api/rest/v3/search/");
+    // Court Listener API endpoint for search - using V4
+    const searchUrl = new URL("https://www.courtlistener.com/api/rest/v4/search/");
     searchUrl.searchParams.append("q", query);
     searchUrl.searchParams.append("type", "o"); // opinions
     searchUrl.searchParams.append("order_by", "score desc");
-    searchUrl.searchParams.append("format", "json");
 
     const response = await fetch(searchUrl.toString(), {
       method: 'GET',
@@ -81,15 +80,15 @@ serve(async (req) => {
     const data = await response.json();
     console.log("Court Listener raw response:", data);
 
-    // Transform the results to our expected format
+    // Transform the results to our expected format (V4 API response structure)
     const results: CourtListenerResult[] = (data.results || []).slice(0, 5).map((item: any) => ({
-      id: item.id,
-      caseName: item.caseName || item.case_name,
+      id: item.cluster_id || item.id,
+      caseName: item.caseName || item.caseNameFull || "Unknown Case",
       court: item.court || "Unknown Court",
-      dateFiled: item.dateFiled || item.date_filed,
-      docketNumber: item.docket_number || item.docketNumber,
-      snippet: item.snippet || "",
-      absolute_url: item.absolute_url || `https://www.courtlistener.com/opinion/${item.id}/`
+      dateFiled: item.dateFiled || "Unknown Date",
+      docketNumber: item.docketNumber || "Unknown Docket",
+      snippet: "", // V4 doesn't include snippet in search results
+      absolute_url: item.absolute_url ? `https://www.courtlistener.com${item.absolute_url}` : `https://www.courtlistener.com/opinion/${item.cluster_id || item.id}/`
     }));
 
     console.log("Processed Court Listener results:", results.length);
