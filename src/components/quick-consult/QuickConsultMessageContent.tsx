@@ -79,13 +79,21 @@ const removeDuplicateContent = (text: string): string => {
 
 // Helper function to format case names with enhanced styling
 const formatCaseNames = (text: string): string => {
-  // More robust pattern to match numbered case entries
-  const caseNamePattern = /(\d+\.\s*)([A-Z][a-zA-Z\s&.,'-]+(?:\s+v\.?\s+[A-Z][a-zA-Z\s&.,'-]+)?[^.\n\d]*?)(?=\s*\n|\s*\d+\.|\s*$)/g;
+  // More robust pattern to match numbered case entries with their content
+  const casePattern = /(\d+\.\s*)([A-Z][a-zA-Z\s&.,'-]+(?:\s+v\.?\s+[A-Z][a-zA-Z\s&.,'-]+)?[^.\n\d]*?)(?=\s*\n\s*\d+\.|\s*$)/g;
   
-  return text.replace(caseNamePattern, (match, number, caseName) => {
-    // Clean up the case name (remove trailing punctuation except periods in abbreviations)
-    const cleanCaseName = caseName.trim().replace(/[,;:]+$/, '');
-    return `${number}<span class="font-semibold text-base">${cleanCaseName}</span>`;
+  return text.replace(casePattern, (match, number, content) => {
+    // Split the content to identify the case name (first part before detailed description)
+    const parts = content.split(/[:\-–]/);
+    const caseName = parts[0].trim().replace(/[,;:]+$/, '');
+    const description = parts.length > 1 ? parts.slice(1).join(':').trim() : '';
+    
+    // Format with bold case name and add spacing after each case
+    if (description) {
+      return `${number}<span class="font-semibold text-base">${caseName}</span>: ${description}<br/><br/>`;
+    } else {
+      return `${number}<span class="font-semibold text-base">${caseName}</span><br/><br/>`;
+    }
   });
 };
 
