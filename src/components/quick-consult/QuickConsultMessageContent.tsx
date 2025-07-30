@@ -82,68 +82,48 @@ const removeDuplicateContent = (text: string): string => {
 const formatCaseNames = (text: string): string => {
   console.log('Original text for case formatting:', text);
   
-  // Pattern to match numbered cases with verification text
-  const patterns = [
-    // Pattern 1: Numbered cases with verification (main pattern)
-    /(\d+\.\s*)([A-Z][a-zA-Z\s&.,'-]+(?:\s+v\.?\s+[A-Z][a-zA-Z\s&.,'-]+)?)\s*(\[Verified on CourtListener\])([^.\n\d]*?)(?=\s*\n\s*\d+\.|\s*$)/g,
-    // Pattern 2: Any case name followed by verification marker (fallback)
-    /([A-Z][a-zA-Z\s&.,'-]+(?:\s+v\.?\s+[A-Z][a-zA-Z\s&.,'-]+)?)\s*(\[Verified on CourtListener\])/g
-  ];
-
   let formattedText = text;
   
-  patterns.forEach((pattern, patternIndex) => {
-    console.log(`Applying pattern ${patternIndex + 1}:`, pattern);
+  // First pass: Handle verified cases with CourtListener marker
+  formattedText = formattedText.replace(/(\d+\.\s*)([A-Z][a-zA-Z\s&.,'-]+(?:\s+v\.?\s+[A-Z][a-zA-Z\s&.,'-]+)?)\s*(\[Verified on CourtListener\])([^.\n\d]*?)(?=\s*\n\s*\d+\.|\s*$)/g, (match, number, caseName, verification, description) => {
+    console.log('Found verified case:', { match, number, caseName, verification, description });
     
-    formattedText = formattedText.replace(pattern, (match, ...groups) => {
-      console.log('Pattern match found:', match, 'Groups:', groups);
-      
-      let number = '';
-      let caseName = '';
-      let description = '';
-      let isVerified = false;
-      
-      if (patternIndex === 0) {
-        // Pattern 1: numbered cases
-        number = groups[0] || '';
-        caseName = groups[1];
-        isVerified = groups[2] === '[Verified on CourtListener]';
-        description = groups[3] ? groups[3].trim() : '';
-      } else {
-        // Pattern 2: cases without numbers
-        caseName = groups[0];
-        isVerified = groups[1] === '[Verified on CourtListener]';
-      }
-      
-      // Clean up case name and description
-      caseName = caseName.trim().replace(/[,;:]+$/, '');
-      if (description) {
-        // Split description on common delimiters
-        const parts = description.split(/[:\-–]/);
-        description = parts.length > 1 ? parts.slice(1).join(':').trim() : description.trim();
-      }
-      
-      console.log('Processed case:', { caseName, isVerified, number, description });
-      
-      // Create the formatted output - simple clickable links without checkmarks
-      if (isVerified) {
-        const caseButton = `<span class="citation-case-link cursor-pointer text-blue-600 hover:text-blue-800 hover:underline font-semibold" data-case-name="${caseName.replace(/"/g, '&quot;')}" data-verified="true">${caseName}</span>`;
-        
-        console.log('Created verified case link for:', caseName);
-        
-        if (description) {
-          return `${number}${caseButton}: ${description}`;
-        } else {
-          return `${number}${caseButton}`;
-        }
-      } else {
-        if (description) {
-          return `${number}<span class="font-semibold">${caseName}</span>: ${description}`;
-        } else {
-          return `${number}<span class="font-semibold">${caseName}</span>`;
-        }
-      }
-    });
+    caseName = caseName.trim().replace(/[,;:]+$/, '');
+    description = description ? description.trim() : '';
+    
+    const caseButton = `<span class="citation-case-link cursor-pointer text-blue-600 hover:text-blue-800 hover:underline font-semibold" data-case-name="${caseName.replace(/"/g, '&quot;')}" data-verified="true">${caseName}</span>`;
+    
+    console.log('Created verified case link for:', caseName);
+    
+    if (description) {
+      return `${number}${caseButton}: ${description}`;
+    } else {
+      return `${number}${caseButton}`;
+    }
+  });
+  
+  // Second pass: Handle any remaining unverified cases (like case #3)
+  formattedText = formattedText.replace(/(\d+\.\s*)([A-Z][a-zA-Z\s&.,'-]+(?:\s+v\.?\s+[A-Z][a-zA-Z\s&.,'-]+)?)(?!\s*\[Verified|\s*<span class="citation-case-link")([^.\n\d]*?)(?=\s*\n\s*\d+\.|\s*$)/g, (match, number, caseName, description) => {
+    // Skip if this was already processed as a verified case
+    if (match.includes('citation-case-link') || match.includes('[Verified')) {
+      return match;
+    }
+    
+    console.log('Found unverified case:', { match, number, caseName, description });
+    
+    caseName = caseName.trim().replace(/[,;:]+$/, '');
+    description = description ? description.trim() : '';
+    
+    // Make all case names clickable for legal compliance
+    const caseButton = `<span class="citation-case-link cursor-pointer text-blue-600 hover:text-blue-800 hover:underline font-semibold" data-case-name="${caseName.replace(/"/g, '&quot;')}" data-verified="false">${caseName}</span>`;
+    
+    console.log('Created unverified case link for:', caseName);
+    
+    if (description) {
+      return `${number}${caseButton}: ${description}`;
+    } else {
+      return `${number}${caseButton}`;
+    }
   });
   
   console.log('Final formatted text:', formattedText);
@@ -173,7 +153,7 @@ const QuickConsultMessageContent: React.FC<QuickConsultMessageContentProps> = ({
         const caseName = caseLink.getAttribute('data-case-name');
         const isVerified = caseLink.getAttribute('data-verified') === 'true';
         
-        if (caseName && isVerified) {
+        if (caseName) {
           // Clean up the case name for better CourtListener search
           const cleanedCaseName = caseName
             .replace(/[""]/g, '') // Remove quotes
