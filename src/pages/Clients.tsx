@@ -1,19 +1,33 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { Navigate } from 'react-router-dom';
 import { supabase } from "@/integrations/supabase/client";
 import NavBar from '@/components/NavBar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, UserPlus, MessageSquare, Brain } from 'lucide-react';
+import { User, UserPlus, MessageSquare, Brain, Loader2 } from 'lucide-react';
 import ClientForm from '@/components/clients/ClientForm';
 import ClientList from '@/components/clients/ClientList';
-import { AI3AgentDemo } from '@/components/ai-agents/AI3AgentDemo';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import QuickConsultFallback from '@/components/fallbacks/QuickConsultFallback';
+import AIAgentsFallback from '@/components/fallbacks/AIAgentsFallback';
 import { useAuthState } from '@/hooks/useAuthState';
 import { useQuery } from '@tanstack/react-query';
+
+// Lazy load the AI3AgentDemo component
+const AI3AgentDemo = React.lazy(() => 
+  import('@/components/ai-agents/AI3AgentDemo').then(module => ({ default: module.AI3AgentDemo }))
+    .catch(error => {
+      console.error('Failed to load AI3AgentDemo:', error);
+      return { default: () => <AIAgentsFallback /> };
+    })
+);
 
 const Clients = () => {
   const { session, isLoading } = useAuthState();
   const [activeTab, setActiveTab] = useState("view-clients");
+  
+  // Add version tracking for debugging
+  console.log('Clients component loaded - Version: 2025-01-31-v4-tabs');
 
   // Fetch user's firm information
   const { data: firmInfo } = useQuery({
@@ -130,29 +144,47 @@ const Clients = () => {
           </TabsContent>
           
           <TabsContent value="quick-consult" className="h-full">
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Consult</CardTitle>
-                <CardDescription>Quick consultation functionality is being updated</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Quick Consult feature is temporarily unavailable while we integrate the new 3-Agent AI system.</p>
-              </CardContent>
-            </Card>
+            <ErrorBoundary 
+              componentName="Quick Consult" 
+              fallback={<QuickConsultFallback />}
+            >
+              <Suspense fallback={
+                <Card>
+                  <CardContent className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                    Loading Quick Consult...
+                  </CardContent>
+                </Card>
+              }>
+                <QuickConsultFallback />
+              </Suspense>
+            </ErrorBoundary>
           </TabsContent>
           
           <TabsContent value="ai-agents">
-            <Card>
-              <CardHeader>
-                <CardTitle>3-Agent AI Legal Research System</CardTitle>
-                <CardDescription>
-                  Advanced legal research using OpenAI, Perplexity, and Gemini working together
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AI3AgentDemo />
-              </CardContent>
-            </Card>
+            <ErrorBoundary 
+              componentName="AI Agents" 
+              fallback={<AIAgentsFallback />}
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle>3-Agent AI Legal Research System</CardTitle>
+                  <CardDescription>
+                    Advanced legal research using OpenAI, Perplexity, and Gemini working together
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Suspense fallback={
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                      Loading AI Research System...
+                    </div>
+                  }>
+                    <AI3AgentDemo />
+                  </Suspense>
+                </CardContent>
+              </Card>
+            </ErrorBoundary>
           </TabsContent>
         </Tabs>
       </main>
