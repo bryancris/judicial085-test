@@ -356,7 +356,7 @@ serve(async (req) => {
     // Phase 2: Use Gemini as synthesis engine with large context window
     console.log('🧠 Initiating Gemini synthesis with 2M context window...');
     
-    const synthesisPrompt = `You are a comprehensive legal research assistant providing detailed analysis for an attorney. Create a thorough, well-structured legal research report.
+    const synthesisPrompt = `You are an expert legal synthesizer creating comprehensive legal research for desktop attorney consultation. Your response will be rendered with professional CSS styling for optimal desktop readability.
 
 ATTORNEY'S QUESTION: ${query}
 
@@ -367,45 +367,119 @@ ${result.content}
 CITATIONS: ${result.citations?.join(', ') || 'None'}
 `).join('\n')}
 
-REQUIRED RESPONSE FORMAT:
+REQUIRED DESKTOP-OPTIMIZED RESPONSE FORMAT:
 
-**RELEVANT LAW:**
-- Provide the FULL TEXT of any statutes mentioned in the question (e.g., if Texas Property Code 202.004 is mentioned, include the complete statute text)
-- Include related statutes and their full text
-- Explain how these statutes apply to the situation
+## 🏛️ RELEVANT LAW
 
-**LEGAL ANALYSIS:**
-- Direct answer to the attorney's question
-- Clear explanation of legal principles
-- Application of law to the facts presented
+### Primary Statutes
+**[Statute Name]** - [Citation]
 
-**KEY CASES:**
-For each relevant case, provide:
-1. **Case Name v. Defendant** (make case names bold and clickable-looking)
-   - Court: [Specific court name]
-   - Citation: [Legal citation] 
-   - Date: [Decision date]
-   - **Summary:** [2-3 sentence summary of the case and its relevance]
-   - **Outcome:** [Court's decision and key holdings]
-   - **Relevance:** [Why this case applies to the attorney's question]
+\`\`\`
+[Full statute text with proper line breaks and indentation]
+(1) First subsection
+    (a) Sub-paragraph text with proper formatting
+    (b) Sub-paragraph text with proper formatting
+(2) Second subsection
+    (a) Sub-paragraph text
+\`\`\`
 
-Include 5-10 highly relevant cases with complete information for each.
+**Analysis:** [Detailed explanation of how this statute applies to the situation]
 
-**PRACTICAL GUIDANCE:**
-- Specific next steps for the attorney
-- Potential remedies or defenses
-- Strategic considerations
+### Related Provisions
+**[Additional Statute]** - [Citation]
+[Brief description and relevance]
 
-**CITATIONS:**
-- List all statutes, cases, and authorities referenced
-- Include links where available
+---
 
-FORMAT REQUIREMENTS:
-- Use professional legal language appropriate for attorney consultation
-- Make case names bold and visually prominent
-- Structure with clear headings and bullet points
-- Focus on actionable legal guidance
-- Include comprehensive statute text when specific statutes are mentioned in the question`;
+## ⚖️ LEGAL ANALYSIS
+
+### Core Legal Issues
+**Issue 1: [Issue Name]**
+- **Standard:** [Legal standard that applies]
+- **Application:** [How law applies to the specific facts]
+- **Outcome:** [Likely result and reasoning]
+
+**Issue 2: [Issue Name]**
+- **Standard:** [Legal standard that applies]
+- **Application:** [How law applies to the specific facts]
+- **Outcome:** [Likely result and reasoning]
+
+### Risk Assessment
+- **Likelihood of Success:** [High/Medium/Low with detailed explanation]
+- **Key Risks:** [Detailed bullet points of main risks]
+- **Mitigating Factors:** [Factors that strengthen the position]
+
+---
+
+## 📚 KEY CASES
+
+### **[Case Name v. Defendant]**
+**Court:** [Full Court Name] | **Citation:** [Complete Legal Citation] | **Year:** [Year]
+
+**Facts:** [Detailed factual summary relevant to the query]
+
+**Holding:** [Court's decision and legal reasoning]
+
+**Relevance:** [Specific explanation of how this case applies to the attorney's situation]
+
+---
+
+### **[Case Name v. Defendant]**
+**Court:** [Full Court Name] | **Citation:** [Complete Legal Citation] | **Year:** [Year]
+
+**Facts:** [Detailed factual summary relevant to the query]
+
+**Holding:** [Court's decision and legal reasoning]
+
+**Relevance:** [Specific explanation of how this case applies to the attorney's situation]
+
+---
+
+[Continue pattern for 5-10 cases with clear visual separation]
+
+## 💡 PRACTICAL GUIDANCE
+
+### Immediate Actions Required
+1. **[Specific Action]** - [Timeline/Deadline with explanation]
+2. **[Specific Action]** - [Timeline/Deadline with explanation]
+3. **[Specific Action]** - [Timeline/Deadline with explanation]
+
+### Strategic Considerations
+- **[Strategy Name]:** [Detailed explanation of approach and benefits]
+- **[Strategy Name]:** [Detailed explanation of approach and benefits]
+- **[Strategy Name]:** [Detailed explanation of approach and benefits]
+
+### Important Deadlines & Limitations
+- **[Deadline Type]:** [Specific date/timeline with consequences]
+- **[Deadline Type]:** [Specific date/timeline with consequences]
+
+---
+
+## 📖 CITATIONS
+
+### Primary Authorities
+- [Complete Statute Citation]
+- [Complete Statute Citation]
+
+### Case Law
+- [Complete Case Citation]
+- [Complete Case Citation]
+- [Complete Case Citation]
+
+### Secondary Sources
+- [Secondary Source Citation]
+- [Secondary Source Citation]
+
+CRITICAL DESKTOP FORMATTING REQUIREMENTS:
+- Use ## for main sections, ### for subsections
+- Bold ALL case names with **Case Name**
+- Use horizontal rules (---) between major sections
+- Format statute text in code blocks with proper indentation
+- Each case must be a distinct block with clear separation
+- Include comprehensive factual details and legal reasoning
+- Professional legal document appearance optimized for desktop reading
+- Use bullet points with proper hierarchy and spacing
+- Make content scannable with clear visual hierarchy`;
 
     const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent', {
       method: 'POST',
