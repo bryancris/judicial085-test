@@ -4,8 +4,8 @@ import { marked } from 'marked';
 export const processMarkdown = (text: string): string => {
   if (!text) return '';
   
-  // Configure marked with proper options for consistent rendering
-  marked.setOptions({
+  // Configure marked with modern API for consistent rendering
+  marked.use({
     breaks: true,           // Convert line breaks to <br>
     gfm: true,             // GitHub Flavored Markdown
     pedantic: false,       // Use relaxed parsing rules
