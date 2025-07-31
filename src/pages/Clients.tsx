@@ -8,11 +8,11 @@ import { User, UserPlus, MessageSquare, Brain } from 'lucide-react';
 import ClientForm from '@/components/clients/ClientForm';
 import ClientList from '@/components/clients/ClientList';
 import { AI3AgentDemo } from '@/components/ai-agents/AI3AgentDemo';
-import { useDocumentAuth } from '@/hooks/useDocumentAuth';
+import { useAuthState } from '@/hooks/useAuthState';
 import { useQuery } from '@tanstack/react-query';
 
 const Clients = () => {
-  const { session, loading } = useDocumentAuth();
+  const { session, isLoading } = useAuthState();
   const [activeTab, setActiveTab] = useState("view-clients");
 
   // Fetch user's firm information
@@ -50,7 +50,7 @@ const Clients = () => {
   });
 
   // If not authenticated, redirect to auth page
-  if (!loading && !session) {
+  if (!isLoading && !session) {
     return <Navigate to="/auth" />;
   }
 
