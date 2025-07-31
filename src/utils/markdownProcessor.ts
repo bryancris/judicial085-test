@@ -2,6 +2,13 @@
 import { marked } from 'marked';
 
 export const processMarkdown = (text: string): string => {
+  console.log('=== MARKDOWN PROCESSING DEBUG START ===');
+  console.log('Input text length:', text.length);
+  console.log('First 500 characters:', text.substring(0, 500));
+  console.log('Contains ## headers:', text.includes('##'));
+  console.log('Contains ### headers:', text.includes('###'));
+  console.log('Contains ** bold:', text.includes('**'));
+  
   if (!text) return '';
   
   // Preserve paragraphs by ensuring double line breaks
@@ -11,20 +18,34 @@ export const processMarkdown = (text: string): string => {
     .replace(/## /g, '\n\n## ')  // Also ensure proper spacing for h2 headers
     .replace(/# /g, '\n\n# ');   // Also ensure proper spacing for h1 headers
 
+  console.log('After preprocessing - first 500 chars:', preprocessedText.substring(0, 500));
+
   // Process numbered lists to ensure proper rendering
   const processedLists = preprocessedText
     .replace(/(\d+\.\s+)/g, '\n$1'); // Add newline before numbered list items
+
+  console.log('After list processing - first 500 chars:', processedLists.substring(0, 500));
 
   // Use marked to process markdown with enhanced options
   marked.setOptions({
     breaks: true,      // Add line breaks on single newlines
     gfm: true,         // Use GitHub Flavored Markdown
+    pedantic: false,   // Ensure modern markdown parsing
   });
   
   let processedContent = marked(processedLists) as string;
   
+  console.log('After marked processing - length:', processedContent.length);
+  console.log('After marked processing - first 500 chars:', processedContent.substring(0, 500));
+  console.log('Contains <h2> tags:', processedContent.includes('<h2>'));
+  console.log('Contains <h3> tags:', processedContent.includes('<h3>'));
+  console.log('Contains <strong> tags:', processedContent.includes('<strong>'));
+  
   // Post-process to make follow-up questions clickable
   processedContent = makeFollowUpQuestionsClickable(processedContent);
+  
+  console.log('Final output length:', processedContent.length);
+  console.log('=== MARKDOWN PROCESSING DEBUG END ===');
   
   return processedContent;
 };
