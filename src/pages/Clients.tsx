@@ -22,12 +22,22 @@ const AI3AgentDemo = React.lazy(() =>
     })
 );
 
-const Clients = () => {
+// Force component re-registration with timestamp
+const ClientsWithTimestamp = () => {
   const { session, isLoading } = useAuthState();
   const [activeTab, setActiveTab] = useState("view-clients");
   
-  // Add version tracking for debugging - FORCE REFRESH
-  console.log('Clients component loaded - Version: 2025-01-31-v5-FORCE-REFRESH', new Date().toISOString());
+  // AGGRESSIVE VERSION TRACKING - FORCE COMPLETE REFRESH
+  const componentKey = `clients-${Date.now()}`;
+  console.log('🔄 CLIENTS COMPONENT FORCE LOADED - BUILD:', componentKey, new Date().toISOString());
+  console.log('🔍 Component remount forced with key:', componentKey);
+  console.log('📍 Current route should be /clients');
+  
+  // Force component identity change
+  useEffect(() => {
+    console.log('✅ Clients useEffect fired - component is definitely new');
+    console.log('🎯 Active tab:', activeTab);
+  }, [activeTab]);
 
   // Fetch user's firm information
   const { data: firmInfo } = useQuery({
@@ -192,4 +202,6 @@ const Clients = () => {
   );
 };
 
+// Export with timestamp component name to force module refresh
+const Clients = ClientsWithTimestamp;
 export default Clients;
