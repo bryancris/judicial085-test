@@ -2,9 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Loader2, UserPlus } from "lucide-react";
+import { Send, Loader2, UserPlus, Mic, MicOff } from "lucide-react";
 import { useQuickConsult } from "@/hooks/useQuickConsult";
 import { useQuickConsultSessions } from "@/hooks/useQuickConsultSessions";
+import { useVoiceInput } from "@/hooks/useVoiceInput";
 import QuickConsultSidebar from "./QuickConsultSidebar";
 
 const QuickConsultChat = () => {
@@ -18,6 +19,8 @@ const QuickConsultChat = () => {
     deleteSession, 
     selectSession 
   } = useQuickConsultSessions();
+  
+  const { isRecording, isRequestingPermission, isSupported, toggleRecording } = useVoiceInput();
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -69,6 +72,12 @@ const QuickConsultChat = () => {
 
   const handleClearChat = () => {
     clearMessages();
+  };
+
+  const handleVoiceToggle = () => {
+    toggleRecording((text) => {
+      setInput(prev => prev + text);
+    });
   };
 
   return (
@@ -156,9 +165,33 @@ const QuickConsultChat = () => {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask a legal question..."
-                className="flex-1 min-h-[48px] max-h-32 resize-none border-2 focus:border-emerald-500 rounded-xl"
+                className={`flex-1 min-h-[48px] max-h-32 resize-none border-2 focus:border-emerald-500 rounded-xl ${
+                  isRecording ? 'border-red-500 border-2' : ''
+                }`}
                 disabled={isLoading}
               />
+              {isSupported && (
+                <Button
+                  type="button"
+                  size="icon"
+                  onClick={handleVoiceToggle}
+                  className={`h-12 w-12 rounded-xl ${
+                    isRecording 
+                      ? 'bg-red-500 hover:bg-red-600' 
+                      : 'bg-muted hover:bg-muted/80'
+                  }`}
+                  disabled={isLoading}
+                  title={isRecording ? "Stop recording" : "Start voice input"}
+                >
+                  {isRequestingPermission ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : isRecording ? (
+                    <MicOff className="h-5 w-5 text-white" />
+                  ) : (
+                    <Mic className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </Button>
+              )}
               <Button 
                 type="submit" 
                 size="icon"
@@ -172,6 +205,10 @@ const QuickConsultChat = () => {
                 )}
               </Button>
             </form>
+            <div className="text-xs text-muted-foreground mt-2 text-center">
+              {isSupported && "Click the microphone to use voice input • "}
+              Shift + Enter for new line
+            </div>
           </div>
         </div>
       </div>
