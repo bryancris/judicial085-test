@@ -1,14 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Loader2 } from "lucide-react";
+import { Send, Loader2, UserPlus } from "lucide-react";
 import { useQuickConsult } from "@/hooks/useQuickConsult";
+import { useQuickConsultSessions } from "@/hooks/useQuickConsultSessions";
+import QuickConsultSidebar from "./QuickConsultSidebar";
 
 const QuickConsultChat = () => {
   const [input, setInput] = useState("");
   const { messages, isLoading, sendMessage, clearMessages } = useQuickConsult();
+  const { 
+    sessions, 
+    currentSessionId, 
+    createNewSession, 
+    updateSession, 
+    deleteSession, 
+    selectSession 
+  } = useQuickConsultSessions();
+  
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -18,9 +28,27 @@ const QuickConsultChat = () => {
     }
   }, [messages]);
 
+  useEffect(() => {
+    // Update session with latest message when messages change
+    if (currentSessionId && messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      const firstUserMessage = messages.find(m => m.role === 'user');
+      updateSession(
+        currentSessionId, 
+        firstUserMessage?.content.slice(0, 50) + (firstUserMessage?.content.length > 50 ? '...' : ''),
+        lastMessage.content.slice(0, 100) + (lastMessage.content.length > 100 ? '...' : '')
+      );
+    }
+  }, [messages, currentSessionId, updateSession]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
+    
+    // Create new session if none selected
+    if (!currentSessionId) {
+      createNewSession();
+    }
     
     await sendMessage(input);
     setInput("");
@@ -34,29 +62,52 @@ const QuickConsultChat = () => {
     }
   };
 
+  const handleNewChat = () => {
+    createNewSession();
+    clearMessages();
+  };
+
+  const handleClearChat = () => {
+    clearMessages();
+  };
+
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Quick Consult</CardTitle>
-            <CardDescription>
-              Get quick legal research and consultation assistance
-            </CardDescription>
-          </div>
-          {messages.length > 0 && (
-            <Button variant="outline" size="sm" onClick={clearMessages}>
-              Clear Chat
-            </Button>
-          )}
-        </div>
-      </CardHeader>
+    <div className="h-full flex bg-background">
+      {/* Sidebar */}
+      <QuickConsultSidebar
+        sessions={sessions}
+        currentSessionId={currentSessionId}
+        onSessionSelect={selectSession}
+        onNewChat={handleNewChat}
+        onSessionDelete={deleteSession}
+      />
       
-      <CardContent className="flex-1 flex flex-col min-h-0 p-0">
-        <ScrollArea className="flex-1 px-6" ref={scrollRef}>
-          <div className="space-y-4 py-4">
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <div className="border-b bg-background p-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-semibold">Quick Consult</h1>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="gap-2">
+                <UserPlus className="h-4 w-4" />
+                Create Client
+              </Button>
+              {messages.length > 0 && (
+                <Button variant="outline" size="sm" onClick={handleClearChat}>
+                  Clear Chat
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        {/* Chat Messages */}
+        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+          <div className="max-w-4xl mx-auto space-y-4">
             {messages.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">
+              <div className="text-center text-muted-foreground py-12">
+                <h3 className="text-lg font-medium mb-2">Welcome to Quick Consult</h3>
                 <p>Start a conversation by typing your legal question below.</p>
               </div>
             ) : (
@@ -66,55 +117,65 @@ const QuickConsultChat = () => {
                   className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                    className={`max-w-[70%] rounded-2xl px-4 py-3 ${
                       message.role === 'user'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-muted-foreground'
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-muted border text-foreground'
                     }`}
                   >
-                    <div className="whitespace-pre-wrap break-words">{message.content}</div>
-                    <div className="text-xs opacity-70 mt-1">{message.timestamp}</div>
+                    <div className="whitespace-pre-wrap break-words leading-relaxed">
+                      {message.content}
+                    </div>
+                    <div className={`text-xs mt-2 ${
+                      message.role === 'user' ? 'text-emerald-100' : 'text-muted-foreground'
+                    }`}>
+                      {message.timestamp}
+                    </div>
                   </div>
                 </div>
               ))
             )}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-muted text-muted-foreground rounded-lg px-4 py-2 flex items-center gap-2">
+                <div className="bg-muted border rounded-2xl px-4 py-3 flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Thinking...
+                  <span className="text-muted-foreground">AI is thinking...</span>
                 </div>
               </div>
             )}
           </div>
         </ScrollArea>
         
-        <div className="border-t p-4">
-          <form onSubmit={handleSubmit} className="flex gap-2">
-            <Textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Type your legal question here..."
-              className="flex-1 min-h-[44px] max-h-32 resize-none"
-              disabled={isLoading}
-            />
-            <Button 
-              type="submit" 
-              size="icon"
-              disabled={!input.trim() || isLoading}
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
-          </form>
+        {/* Input Area */}
+        <div className="border-t bg-background p-4">
+          <div className="max-w-4xl mx-auto">
+            <form onSubmit={handleSubmit} className="flex gap-3">
+              <Textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask a legal question..."
+                className="flex-1 min-h-[48px] max-h-32 resize-none border-2 focus:border-emerald-500 rounded-xl"
+                disabled={isLoading}
+              />
+              <Button 
+                type="submit" 
+                size="icon"
+                className="h-12 w-12 rounded-xl bg-emerald-500 hover:bg-emerald-600"
+                disabled={!input.trim() || isLoading}
+              >
+                {isLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Send className="h-5 w-5" />
+                )}
+              </Button>
+            </form>
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 
