@@ -8,9 +8,6 @@ import { cn } from "@/lib/utils";
 import { processMarkdown } from "@/utils/markdownProcessor";
 import { processLawReferencesSync } from "@/utils/lawReferenceUtils";
 import ResearchFindingsButton from "./ResearchFindingsButton";
-import ResearchActions from "./ResearchActions";
-import CaseDiscussionCitations from "./CaseDiscussionCitations";
-import { useCaseDiscussionCitations } from "@/hooks/useCaseDiscussionCitations";
 
 interface CaseDiscussionMessageItemProps {
   message: CaseDiscussionMessage;
@@ -25,26 +22,10 @@ const CaseDiscussionMessageItem: React.FC<CaseDiscussionMessageItemProps> = ({
 }) => {
   const isAttorney = message.role === "attorney";
   
-  // Fetch citations for this message if it contains research
-  const { citations } = useCaseDiscussionCitations(clientId || '', message.content);
-  
   // Check if message contains research results (updated for new format)
   const hasResearchSection = message.content.includes("🔍 Legal Research Analysis") || message.content.includes("## 📚 Legal Research Results");
   const researchType = hasResearchSection ? 
     (message.content.includes("similar court cases") || message.content.includes("Find similar court cases") ? "similar-cases" : "legal-research") : null;
-  
-  // Extract confidence from research content if available
-  const extractConfidence = (content: string): number | undefined => {
-    const confidenceMatch = content.match(/🟢 High Confidence|🟡 Medium Confidence|🟠 Low Confidence/);
-    if (!confidenceMatch) return undefined;
-    
-    if (confidenceMatch[0].includes('High')) return 0.9;
-    if (confidenceMatch[0].includes('Medium')) return 0.7;
-    if (confidenceMatch[0].includes('Low')) return 0.4;
-    return undefined;
-  };
-  
-  const confidence = hasResearchSection ? extractConfidence(message.content) : undefined;
   
   // Process content with markdown and law references
   const processedContent = React.useMemo(() => {
@@ -101,24 +82,8 @@ const CaseDiscussionMessageItem: React.FC<CaseDiscussionMessageItemProps> = ({
             dangerouslySetInnerHTML={{ __html: processedContent }}
           />
           
-          {/* Enhanced Research Actions for AI messages with research */}
-          {!isAttorney && clientId && hasResearchSection && (
-            <ResearchActions
-              messageContent={message.content}
-              clientId={clientId}
-              researchType={researchType}
-              confidence={confidence}
-              researchId={undefined} // Will be enhanced when message metadata is available
-              onSaveToAnalysis={onFindingsAdded}
-              onResearchFurther={() => {
-                // This could trigger additional research
-                console.log('Research further requested');
-              }}
-            />
-          )}
-          
-          {/* Original Research Findings Button for non-research messages */}
-          {!isAttorney && clientId && !hasResearchSection && (
+          {/* Research Findings Button for all AI messages */}
+          {!isAttorney && clientId && (
             <div className="mt-3 flex justify-end">
               <ResearchFindingsButton
                 messageContent={message.content}
@@ -128,15 +93,6 @@ const CaseDiscussionMessageItem: React.FC<CaseDiscussionMessageItemProps> = ({
             </div>
           )}
         </div>
-        
-        {/* Display citations for research messages */}
-        {!isAttorney && hasResearchSection && citations.length > 0 && (
-          <CaseDiscussionCitations
-            citations={citations}
-            researchType={researchType}
-            isCompact={true}
-          />
-        )}
         
         <span className="text-xs mt-1 text-muted-foreground">{message.timestamp}</span>
       </div>
