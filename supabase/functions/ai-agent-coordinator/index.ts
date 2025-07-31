@@ -330,28 +330,26 @@ serve(async (req) => {
     // Phase 2: Use Gemini as synthesis engine with large context window
     console.log('🧠 Initiating Gemini synthesis with 2M context window...');
     
-    const synthesisPrompt = `You are a senior legal AI assistant synthesizing research from multiple sources for an attorney. Your task is to create a comprehensive, organized, and actionable legal analysis.
+    const synthesisPrompt = `You are a legal research assistant providing a direct, professional response to an attorney's legal question. Your response should be immediately actionable and focused.
 
-ATTORNEY QUERY: ${query}
+ATTORNEY'S QUESTION: ${query}
 
-RESEARCH SOURCES ANALYZED:
+RESEARCH SOURCES:
 ${researchResults.map((result, index) => `
---- ${result.source.toUpperCase()} RESEARCH (${result.type}) ---
+--- ${result.source.toUpperCase()} RESEARCH ---
 ${result.content}
-
 CITATIONS: ${result.citations?.join(', ') || 'None'}
-${result.metadata ? `METADATA: ${JSON.stringify(result.metadata)}` : ''}
 `).join('\n')}
 
-SYNTHESIS INSTRUCTIONS:
-1. Provide a comprehensive legal analysis that combines insights from all research sources
-2. Organize the response with clear sections: Summary, Key Legal Issues, Analysis, Recommendations
-3. Maintain all citations and source attributions
-4. Highlight any conflicts or agreements between sources
-5. Provide actionable next steps for the attorney
-6. Use professional legal language appropriate for attorney consultation
+RESPONSE FORMAT REQUIREMENTS:
+- Start with a direct answer to the legal question asked
+- Use clear, professional legal language  
+- Structure with: Legal Answer, Relevant Law, Key Cases, Next Steps, Citations
+- Be concise and actionable - avoid meta-commentary about sources or research process
+- Do not mention conflicts between research sources or analysis methodology
+- Focus on what the attorney needs to know to advise their client
 
-Please synthesize this research into a cohesive, well-organized response that maximizes the value of all research sources.`;
+Provide a clean, structured legal response that directly addresses the attorney's question.`;
 
     const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent', {
       method: 'POST',
