@@ -26,8 +26,8 @@ const Clients = () => {
   const { session, isLoading } = useAuthState();
   const [activeTab, setActiveTab] = useState("view-clients");
   
-  // Add version tracking for debugging
-  console.log('Clients component loaded - Version: 2025-01-31-v4-tabs');
+  // Add version tracking for debugging - FORCE REFRESH
+  console.log('Clients component loaded - Version: 2025-01-31-v5-FORCE-REFRESH', new Date().toISOString());
 
   // Fetch user's firm information
   const { data: firmInfo } = useQuery({
