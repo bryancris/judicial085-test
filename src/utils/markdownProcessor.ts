@@ -2,52 +2,51 @@
 import { marked } from 'marked';
 
 export const processMarkdown = (text: string): string => {
-  console.log('=== MARKDOWN PROCESSING DEBUG START ===');
-  console.log('Input text length:', text.length);
-  console.log('First 500 characters:', text.substring(0, 500));
-  console.log('Contains ## headers:', text.includes('##'));
-  console.log('Contains ### headers:', text.includes('###'));
-  console.log('Contains ** bold:', text.includes('**'));
-  
   if (!text) return '';
   
-  // Preserve paragraphs by ensuring double line breaks
-  const preprocessedText = text
-    .replace(/\n\s*\n/g, '\n\n') // Normalize multiple line breaks to double line breaks
-    .replace(/### /g, '\n\n### ') // Ensure headers have proper spacing before them
-    .replace(/## /g, '\n\n## ')  // Also ensure proper spacing for h2 headers
-    .replace(/# /g, '\n\n# ');   // Also ensure proper spacing for h1 headers
-
-  console.log('After preprocessing - first 500 chars:', preprocessedText.substring(0, 500));
-
-  // Process numbered lists to ensure proper rendering
-  const processedLists = preprocessedText
-    .replace(/(\d+\.\s+)/g, '\n$1'); // Add newline before numbered list items
-
-  console.log('After list processing - first 500 chars:', processedLists.substring(0, 500));
-
-  // Use marked to process markdown with enhanced options
+  // Configure marked with proper options for consistent rendering
   marked.setOptions({
-    breaks: true,      // Add line breaks on single newlines
-    gfm: true,         // Use GitHub Flavored Markdown
-    pedantic: false,   // Ensure modern markdown parsing
+    breaks: true,           // Convert line breaks to <br>
+    gfm: true,             // GitHub Flavored Markdown
+    pedantic: false,       // Use relaxed parsing rules
   });
-  
-  let processedContent = marked(processedLists) as string;
-  
-  console.log('After marked processing - length:', processedContent.length);
-  console.log('After marked processing - first 500 chars:', processedContent.substring(0, 500));
-  console.log('Contains <h2> tags:', processedContent.includes('<h2>'));
-  console.log('Contains <h3> tags:', processedContent.includes('<h3>'));
-  console.log('Contains <strong> tags:', processedContent.includes('<strong>'));
-  
-  // Post-process to make follow-up questions clickable
-  processedContent = makeFollowUpQuestionsClickable(processedContent);
-  
-  console.log('Final output length:', processedContent.length);
-  console.log('=== MARKDOWN PROCESSING DEBUG END ===');
-  
-  return processedContent;
+
+  // Clean and normalize the text first
+  let cleanedText = text
+    .trim()
+    .replace(/\r\n/g, '\n')           // Normalize line endings
+    .replace(/\n{3,}/g, '\n\n')       // Collapse multiple newlines to double
+    .replace(/^[\s\n]+|[\s\n]+$/g, ''); // Remove leading/trailing whitespace
+
+  // Ensure proper spacing around headers
+  cleanedText = cleanedText
+    .replace(/([^\n])(#{1,6}\s)/g, '$1\n\n$2')  // Add newlines before headers
+    .replace(/(#{1,6}[^\n]*)\n([^\n#])/g, '$1\n\n$2'); // Add newlines after headers
+
+  // Process the markdown using marked
+  try {
+    const htmlContent = marked(cleanedText) as string;
+    
+    // Post-process to make follow-up questions clickable
+    const processedContent = makeFollowUpQuestionsClickable(htmlContent);
+    
+    return processedContent;
+  } catch (error) {
+    console.error('Markdown processing error:', error);
+    // Fallback: return escaped HTML with basic formatting
+    return cleanedText
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+      .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+      .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/^(.)/gm, '<p>$1')
+      .replace(/(.*)$/gm, '$1</p>');
+  }
 };
 
 // Completely rewritten function with better debugging and simpler patterns
