@@ -8,7 +8,7 @@ import DiscoveryTabContent from "./DiscoveryTabContent";
 import ContractsTabContent from "./ContractsTabContent";
 import DocumentsTabContent from "./DocumentsTabContent";
 import KnowledgeTabContent from "./KnowledgeTabContent";
-import TemplatesTabContent from "./TemplatesTabContent";
+import { TemplatesTabContent } from "./TemplatesTabContent";
 import { Client } from "@/types/client";
 import { useCase } from "@/contexts/CaseContext";
 
