@@ -22,7 +22,213 @@ interface CoordinatorRequest {
   caseId?: string;
   context?: any;
   researchTypes?: string[];
+  userId?: string;
+  messages?: Array<{ role: string; content: string; timestamp?: string }>;
 }
+
+/**
+ * Extract case names from synthesized content
+ */
+const extractCaseNames = (text: string): string[] => {
+  const caseNames: string[] = [];
+  
+  // Look for numbered case entries
+  const numberedCasePattern = /^\s*\d+\.\s*\*?\*?([A-Z][^v\n]*v\.?\s*[A-Z][^,\n\d]*)/gm;
+  let match;
+  
+  while ((match = numberedCasePattern.exec(text)) !== null) {
+    const caseName = match[1].trim().replace(/\*\*/g, '').replace(/[,:.]+$/, '');
+    if (caseName.length > 5) { // Filter out very short matches
+      caseNames.push(caseName);
+    }
+  }
+  
+  // Also look for inline case citations
+  const inlineCasePattern = /\b([A-Z][^v\n]*v\.?\s*[A-Z][^,\n()]*)/g;
+  while ((match = inlineCasePattern.exec(text)) !== null) {
+    const caseName = match[1].trim().replace(/\*\*/g, '').replace(/[,:.]+$/, '');
+    if (caseName.length > 5 && !caseNames.includes(caseName)) {
+      caseNames.push(caseName);
+    }
+  }
+  
+  return caseNames;
+};
+
+/**
+ * Verify cases with CourtListener
+ */
+const verifyCasesWithCourtListener = async (caseNames: string[], supabaseClient: any): Promise<any[]> => {
+  const verifiedCases: any[] = [];
+  
+  for (const caseName of caseNames) {
+    try {
+      console.log(`Verifying case: ${caseName}`);
+      
+      // Call the search-court-listener function
+      const { data, error } = await supabaseClient.functions.invoke('search-court-listener', {
+        body: { 
+          query: caseName,
+          citation: caseName 
+        }
+      });
+      
+      if (error) {
+        console.log(`CourtListener search error for "${caseName}":`, error);
+        continue;
+      }
+      
+      if (data?.results && data.results.length > 0) {
+        // Find the best match based on case name similarity
+        const bestMatch = data.results[0];
+        
+        verifiedCases.push({
+          originalName: caseName,
+          verifiedCase: {
+            id: bestMatch.id,
+            caseName: bestMatch.caseName,
+            court: bestMatch.court,
+            dateFiled: bestMatch.dateFiled,
+            docketNumber: bestMatch.docketNumber,
+            url: bestMatch.absolute_url,
+            snippet: bestMatch.snippet,
+            confidence: calculateMatchConfidence(caseName, bestMatch.caseName)
+          }
+        });
+        
+        console.log(`Verified case: ${caseName} -> ${bestMatch.caseName}`);
+      } else {
+        console.log(`No CourtListener results found for: ${caseName}`);
+      }
+    } catch (error) {
+      console.log(`Error verifying case "${caseName}":`, error);
+    }
+  }
+  
+  return verifiedCases;
+};
+
+/**
+ * Calculate match confidence between original and verified case names
+ */
+const calculateMatchConfidence = (original: string, verified: string): number => {
+  const originalWords = original.toLowerCase().split(/\s+/);
+  const verifiedWords = verified.toLowerCase().split(/\s+/);
+  
+  let matchCount = 0;
+  for (const word of originalWords) {
+    if (verifiedWords.some(vw => vw.includes(word) || word.includes(vw))) {
+      matchCount++;
+    }
+  }
+  
+  return Math.min(100, Math.round((matchCount / originalWords.length) * 100));
+};
+
+/**
+ * Replace AI case mentions with verified CourtListener cases
+ */
+const replaceWithVerifiedCases = (text: string, verifiedCases: any[]): { text: string, citations: any[] } => {
+  let updatedText = text;
+  const courtListenerCitations: any[] = [];
+  
+  for (const { originalName, verifiedCase } of verifiedCases) {
+    if (verifiedCase.confidence >= 60) { // Only replace with high confidence matches
+      // Create citation object
+      courtListenerCitations.push({
+        id: `cl-${verifiedCase.id}`,
+        type: 'case',
+        source: 'CourtListener',
+        title: verifiedCase.caseName,
+        relevance: verifiedCase.confidence,
+        content_preview: verifiedCase.snippet,
+        docket_number: verifiedCase.docketNumber,
+        court: verifiedCase.court,
+        date_filed: verifiedCase.dateFiled,
+        url: verifiedCase.url,
+        verified: true
+      });
+      
+      // Replace the case name in the text with verified version
+      const originalPattern = new RegExp(
+        originalName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 
+        'gi'
+      );
+      
+      const verifiedText = `${verifiedCase.caseName} [Verified on CourtListener]`;
+      updatedText = updatedText.replace(originalPattern, verifiedText);
+    }
+  }
+  
+  return { text: updatedText, citations: courtListenerCitations };
+};
+
+/**
+ * Remove duplicate case citations while preserving formatting
+ */
+const removeDuplicateCitations = (text: string): string => {
+  const lines = text.split('\n');
+  const processedLines: string[] = [];
+  const seenCases = new Set<string>();
+  
+  for (let line of lines) {
+    let processedLine = line;
+    let shouldSkipLine = false;
+    
+    // Check for numbered case lists (1., 2., 3., etc.)
+    const numberedCaseMatch = line.match(/^\s*\d+\.\s*(.+)/);
+    if (numberedCaseMatch) {
+      // This is a numbered case item, check if we've seen this case before
+      const caseContent = numberedCaseMatch[1];
+      const caseNameMatch = caseContent.match(/^(.+?v\..+?)(?:\s|,|$)/i);
+      if (caseNameMatch) {
+        const caseName = caseNameMatch[1].trim();
+        const normalizedCase = caseName.toLowerCase().replace(/[,.\s]+/g, ' ').trim();
+        
+        if (seenCases.has(normalizedCase)) {
+          shouldSkipLine = true; // Skip this entire case entry
+        } else {
+          seenCases.add(normalizedCase);
+        }
+      }
+    }
+    
+    // Find all case citations in format "Name v. Name"
+    const caseMatches = line.match(/\b[A-Z][^v]*v\.[^,\n()]+/g);
+    if (caseMatches) {
+      for (const fullMatch of caseMatches) {
+        const caseName = fullMatch.trim();
+        const normalizedCase = caseName.toLowerCase().replace(/[,.\s]+/g, ' ').trim();
+        
+        if (seenCases.has(normalizedCase)) {
+          // Remove this duplicate case mention
+          const regex = new RegExp(fullMatch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+          processedLine = processedLine.replace(regex, '');
+          // Also remove any bold formatting around it
+          const boldRegex = new RegExp(`\\*\\*${fullMatch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\*\\*`, 'g');
+          processedLine = processedLine.replace(boldRegex, '');
+        } else {
+          seenCases.add(normalizedCase);
+        }
+      }
+    }
+    
+    // Clean up formatting but preserve paragraph structure
+    processedLine = processedLine.replace(/\*\*([^*]+v\.[^*]+)\*\*/g, '$1'); // Remove bold from case names
+    
+    // Only add the line if it's not a case list and has content after processing
+    if (!shouldSkipLine && processedLine.trim().length > 0) {
+      processedLines.push(processedLine);
+    }
+  }
+  
+  // Join lines and clean up excessive whitespace while preserving paragraph breaks
+  return processedLines
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n') // Max 2 consecutive newlines
+    .replace(/[ \t]+\n/g, '\n') // Remove trailing spaces
+    .trim();
+};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -189,8 +395,32 @@ Please synthesize this research into a cohesive, well-organized response that ma
 
     console.log('✅ Gemini synthesis completed:', { contentLength: synthesizedContent.length });
 
-    // Combine all citations from research sources
-    const allCitations = researchResults.flatMap(result => result.citations || []);
+    // Phase 3: CourtListener verification for legal accuracy
+    console.log('⚖️ Initiating CourtListener verification for case citations...');
+    
+    const extractedCases = extractCaseNames(synthesizedContent);
+    console.log('Extracted cases for verification:', extractedCases);
+    
+    let verifiedCases: any[] = [];
+    let courtListenerCitations: any[] = [];
+    let finalContent = synthesizedContent;
+    
+    if (extractedCases.length > 0) {
+      verifiedCases = await verifyCasesWithCourtListener(extractedCases, supabaseClient);
+      console.log(`✅ CourtListener verification completed: ${verifiedCases.length} cases verified`);
+      
+      if (verifiedCases.length > 0) {
+        const verificationResult = replaceWithVerifiedCases(synthesizedContent, verifiedCases);
+        finalContent = removeDuplicateCitations(verificationResult.text);
+        courtListenerCitations = verificationResult.citations;
+      }
+    }
+
+    // Combine all citations from research sources plus CourtListener
+    const allCitations = [
+      ...researchResults.flatMap(result => result.citations || []),
+      ...courtListenerCitations
+    ];
     const uniqueCitations = [...new Set(allCitations)];
 
     // Store the coordinated research result
@@ -202,7 +432,7 @@ Please synthesize this research into a cohesive, well-organized response that ma
           case_id: caseId,
           search_type: 'ai-agent-coordination',
           query,
-          content: synthesizedContent,
+          content: finalContent,
           citations: uniqueCitations,
           metadata: {
             researchSources: researchResults.map(r => ({ source: r.source, type: r.type })),
@@ -219,8 +449,13 @@ Please synthesize this research into a cohesive, well-organized response that ma
 
     return new Response(JSON.stringify({
       success: true,
-      synthesizedContent,
-      citations: uniqueCitations,
+      text: finalContent, // For Quick Consult compatibility
+      synthesizedContent: finalContent,
+      citations: courtListenerCitations, // CourtListener verified citations for Quick Consult
+      hasKnowledgeBase: researchResults.some(r => r.source === 'openai' && r.metadata?.documentsUsed > 0),
+      documentsFound: researchResults.find(r => r.source === 'openai')?.metadata?.documentsUsed || 0,
+      verifiedCases: verifiedCases.length,
+      courtListenerCitations: verifiedCases.length,
       researchSources: researchResults.map(r => ({
         source: r.source,
         type: r.type,
@@ -229,6 +464,7 @@ Please synthesize this research into a cohesive, well-organized response that ma
       metadata: {
         totalResearchAgents: researchResults.length,
         synthesisEngine: 'gemini-1.5-pro',
+        verificationEngine: 'courtlistener',
         timestamp: new Date().toISOString()
       }
     }), {
