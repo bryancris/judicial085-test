@@ -1,1 +1,13 @@
 project_id = "ghpljdgecjmhkwkfctgy"
+
+[functions.ai-agent-coordinator]
+verify_jwt = true
+
+[functions.perplexity-research]
+verify_jwt = true
+
+[functions.search-similar-cases]
+verify_jwt = true
+
+[functions.review-uploaded-document]
+verify_jwt = true

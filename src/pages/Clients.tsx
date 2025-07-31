@@ -4,10 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import NavBar from '@/components/NavBar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, UserPlus, MessageSquare } from 'lucide-react';
+import { User, UserPlus, MessageSquare, Brain } from 'lucide-react';
 import ClientForm from '@/components/clients/ClientForm';
 import ClientList from '@/components/clients/ClientList';
-import QuickConsultChat from '@/components/clients/chat/QuickConsultChat';
+import { AI3AgentDemo } from '@/components/ai-agents/AI3AgentDemo';
 import { useDocumentAuth } from '@/hooks/useDocumentAuth';
 import { useQuery } from '@tanstack/react-query';
 
@@ -95,6 +95,13 @@ const Clients = () => {
                 <MessageSquare className="h-4 w-4" />
                 Quick Consult
               </TabsTrigger>
+              <TabsTrigger 
+                value="ai-agents" 
+                className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white data-[state=active]:bg-amber-700 transition-colors"
+              >
+                <Brain className="h-4 w-4" />
+                AI Agents
+              </TabsTrigger>
             </TabsList>
           </div>
           
@@ -123,9 +130,29 @@ const Clients = () => {
           </TabsContent>
           
           <TabsContent value="quick-consult" className="h-full">
-            <div className="h-[calc(100vh-12rem)]">
-              <QuickConsultChat />
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Consult</CardTitle>
+                <CardDescription>Quick consultation functionality is being updated</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">Quick Consult feature is temporarily unavailable while we integrate the new 3-Agent AI system.</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="ai-agents">
+            <Card>
+              <CardHeader>
+                <CardTitle>3-Agent AI Legal Research System</CardTitle>
+                <CardDescription>
+                  Advanced legal research using OpenAI, Perplexity, and Gemini working together
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AI3AgentDemo />
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </main>
