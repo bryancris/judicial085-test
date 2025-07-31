@@ -2,7 +2,7 @@
 import React, { useState, useCallback } from "react";
 import { TabsContent } from "@/components/ui/tabs";
 import ClientIntakeChat from "@/components/clients/chat/ClientIntakeChat";
-import CaseAnalysisContainer from "@/components/case-analysis/CaseAnalysisContainer";
+
 import CaseDiscussionContainer from "@/components/case-discussion/CaseDiscussionContainer";
 import DiscoveryTabContent from "./DiscoveryTabContent";
 import ContractsTabContent from "./ContractsTabContent";
@@ -40,12 +40,9 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
       </TabsContent>
 
       <TabsContent value="case-analysis" className="mt-6">
-        <CaseAnalysisContainer 
-          clientId={client.id}
-          clientName={`${client.first_name} ${client.last_name}`}
-          caseId={currentCase?.id}
-          refreshTrigger={analysisRefreshTrigger}
-        />
+        <div className="p-6 text-center text-muted-foreground">
+          <p>Case Analysis feature is temporarily unavailable while we integrate the new 3-Agent AI system.</p>
+        </div>
       </TabsContent>
 
       <TabsContent value="case-discussion" className="mt-6">

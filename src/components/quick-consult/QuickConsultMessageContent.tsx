@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from "react";
 import { extractKeyCitations, cleanCitationText, extractCaseName } from "@/utils/citationParser";
-import QuickConsultCitationLink from "./QuickConsultCitationLink";
 import { Check } from "lucide-react";
 
 interface QuickConsultMessageContentProps {
@@ -200,22 +199,16 @@ const QuickConsultMessageContent: React.FC<QuickConsultMessageContentProps> = ({
       );
     }
 
-    // Add citation link with AI context
+    // Add citation as simple text since citation link component was removed
     const cleanText = cleanCitationText(citation.text);
-    const caseName = extractCaseName(cleanText);
-    
-    // Extract AI summary context (paragraph containing the citation)
-    const summaryContext = extractCitationContext(content, citation.startIndex, citation.endIndex);
     
     contentParts.push(
-      <QuickConsultCitationLink
+      <span 
         key={`citation-${index}`}
-        citation={cleanText}
-        caseName={caseName}
-        aiSummary={summaryContext}
-        citationType={citation.type}
-        className="mx-0.5"
-      />
+        className="inline-flex items-center px-2 py-1 mx-0.5 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-md"
+      >
+        {cleanText}
+      </span>
     );
 
     lastIndex = citation.endIndex;
