@@ -51,6 +51,7 @@ export const sendQuickConsultMessage = async (
       documentsFound?: number;
       verifiedCases?: number;
       courtListenerCitations?: number;
+      courtListenerStatus?: string;
       success: boolean;
       researchSources?: Array<{
         source: string;
@@ -63,7 +64,7 @@ export const sendQuickConsultMessage = async (
         verificationEngine: string;
         timestamp: string;
       };
-    }>("ai-agent-coordinator", { 
+    }>("ai-agent-coordinator", {
       query: userQuery,
       clientId,
       userId,
@@ -85,10 +86,29 @@ export const sendQuickConsultMessage = async (
       return { text: "", error: "Failed to coordinate AI agents" };
     }
 
+    // Handle CourtListener verification status gracefully
+    if (data.courtListenerStatus) {
+      switch (data.courtListenerStatus) {
+        case 'success':
+          console.log(`⚖️ ${data.verifiedCases || 0} legal cases verified with CourtListener`);
+          break;
+        case 'token_missing':
+          console.warn('⚠️ CourtListener verification unavailable - API token not configured');
+          break;
+        case 'failed':
+          console.warn('⚠️ CourtListener verification temporarily unavailable');
+          break;
+        case 'not_attempted':
+          // No cases to verify, this is normal
+          break;
+      }
+    }
+
     console.log('✅ 3-Agent Quick Consult completed:', {
       agentsUsed: data.metadata?.totalResearchAgents || 0,
       verifiedCases: data.verifiedCases || 0,
-      documentsFound: data.documentsFound || 0
+      documentsFound: data.documentsFound || 0,
+      courtListenerStatus: data.courtListenerStatus || 'unknown'
     });
 
     return { 

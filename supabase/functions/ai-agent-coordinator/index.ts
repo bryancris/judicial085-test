@@ -404,15 +404,41 @@ Please synthesize this research into a cohesive, well-organized response that ma
     let verifiedCases: any[] = [];
     let courtListenerCitations: any[] = [];
     let finalContent = synthesizedContent;
+    let courtListenerStatus = 'not_attempted';
     
     if (extractedCases.length > 0) {
-      verifiedCases = await verifyCasesWithCourtListener(extractedCases, supabaseClient);
-      console.log(`✅ CourtListener verification completed: ${verifiedCases.length} cases verified`);
-      
-      if (verifiedCases.length > 0) {
-        const verificationResult = replaceWithVerifiedCases(synthesizedContent, verifiedCases);
-        finalContent = removeDuplicateCitations(verificationResult.text);
-        courtListenerCitations = verificationResult.citations;
+      try {
+        // Check if CourtListener API token is available
+        const courtListenerToken = Deno.env.get('COURTLISTENER_API_TOKEN');
+        if (!courtListenerToken) {
+          console.warn('⚠️ CourtListener API token not found - skipping verification');
+          courtListenerStatus = 'token_missing';
+        } else {
+          verifiedCases = await verifyCasesWithCourtListener(extractedCases, supabaseClient);
+          console.log(`✅ CourtListener verification completed: ${verifiedCases.length} cases verified`);
+          courtListenerStatus = 'success';
+          
+          if (verifiedCases.length > 0) {
+            const verificationResult = replaceWithVerifiedCases(synthesizedContent, verifiedCases);
+            finalContent = removeDuplicateCitations(verificationResult.text);
+            courtListenerCitations = verificationResult.citations;
+          }
+        }
+      } catch (error) {
+        console.error('❌ CourtListener verification failed:', error);
+        courtListenerStatus = 'failed';
+        
+        // Log detailed error information
+        if (error instanceof Error) {
+          console.error('CourtListener error details:', {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          });
+        }
+        
+        // Continue without verification - don't fail the entire request
+        console.log('🔄 Continuing without CourtListener verification to ensure response delivery');
       }
     }
 
@@ -456,6 +482,7 @@ Please synthesize this research into a cohesive, well-organized response that ma
       documentsFound: researchResults.find(r => r.source === 'openai')?.metadata?.documentsUsed || 0,
       verifiedCases: verifiedCases.length,
       courtListenerCitations: verifiedCases.length,
+      courtListenerStatus: courtListenerStatus,
       researchSources: researchResults.map(r => ({
         source: r.source,
         type: r.type,
