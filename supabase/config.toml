@@ -11,3 +11,6 @@ verify_jwt = true
 
 [functions.review-uploaded-document]
 verify_jwt = true
+
+[functions.statute-retrieval]
+verify_jwt = false

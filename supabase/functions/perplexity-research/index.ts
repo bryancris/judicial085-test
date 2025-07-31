@@ -63,7 +63,21 @@ serve(async (req) => {
     // Enhance query based on search type
     let enhancedQuery = query;
     if (searchType === 'legal-research') {
-      enhancedQuery = `Legal research: ${query}. Focus on current Texas law, recent cases, statutes, and legal precedents. Provide citations and sources.`;
+      enhancedQuery = `Comprehensive legal research for: ${query}
+
+Requirements:
+1. If specific Texas statutes are mentioned (like Property Code 202.004), provide the FULL TEXT of those statutes
+2. Find and summarize 5-10 relevant legal cases with:
+   - Complete case names (Plaintiff v. Defendant)
+   - Court names and jurisdictions  
+   - Legal citations
+   - Brief case summaries
+   - Outcomes/holdings
+   - Relevance to the query
+3. Provide current Texas law analysis
+4. Include practical legal guidance
+
+Focus on verified, authoritative sources and comprehensive coverage.`;
     } else if (searchType === 'similar-cases') {
       enhancedQuery = `Find verified legal cases similar to: ${query}
 
@@ -97,27 +111,29 @@ Requirements:
       headers: {
         'Authorization': `Bearer ${perplexityApiKey}`,
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'Legal-Research/1.0'
       },
       body: JSON.stringify({
-        model: searchType === 'similar-cases' ? 'sonar-pro' : model,
+        model: searchType === 'similar-cases' ? 'llama-3.1-sonar-large-128k-online' : 'llama-3.1-sonar-large-128k-online',
         messages: [
           {
             role: 'system',
             content: searchType === 'similar-cases' 
               ? 'You are a legal case database. Return only verified case information in the requested JSON format. Do not include analysis, reasoning, or explanations.'
-              : 'You are a legal research expert. Provide accurate, well-cited legal information with proper source attribution. Focus on current law and relevant precedents.'
+              : 'You are a legal research expert. Provide comprehensive legal information including: 1) Full statute text when statutes are mentioned, 2) Multiple relevant cases with detailed summaries, 3) Clear legal analysis with actionable guidance. Always include 5-10 relevant cases with case names, courts, citations, and brief summaries.'
           },
           {
             role: 'user',
             content: enhancedQuery
           }
         ],
-        max_tokens: model === 'sonar-deep-research' ? 4000 : 2000,
-        temperature: 0.2,
+        max_tokens: 4000,
+        temperature: 0.1,
         top_p: 0.9,
         return_citations: true,
         return_images: false,
-        search_domain_filter: ['justia.com', 'caselaw.findlaw.com', 'scholar.google.com', 'courtlistener.com', 'law.cornell.edu'],
+        search_domain_filter: ['justia.com', 'caselaw.findlaw.com', 'scholar.google.com', 'courtlistener.com', 'law.cornell.edu', 'statutes.capitol.texas.gov'],
         search_recency_filter: 'year'
       }),
     });
@@ -131,6 +147,20 @@ Requirements:
           details: errorText 
         }),
         { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check content type to ensure we got JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const responseText = await response.text();
+      console.error('Perplexity returned non-JSON response:', responseText.substring(0, 200));
+      return new Response(
+        JSON.stringify({ 
+          error: 'Perplexity API returned invalid response format',
+          details: 'Expected JSON but received: ' + (contentType || 'unknown')
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

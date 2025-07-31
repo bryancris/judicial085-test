@@ -32,27 +32,53 @@ interface CoordinatorRequest {
 const extractCaseNames = (text: string): string[] => {
   const caseNames: string[] = [];
   
-  // Look for numbered case entries
-  const numberedCasePattern = /^\s*\d+\.\s*\*?\*?([A-Z][^v\n]*v\.?\s*[A-Z][^,\n\d]*)/gm;
-  let match;
+  // Enhanced patterns for case extraction
+  const patterns = [
+    // Standard numbered case format: "1. Case v. Other"
+    /^\s*\d+\.\s*\*?\*?([A-Z][^v\n]*v\.?\s*[A-Z][^,\n\d]*)/gm,
+    
+    // Bullet point cases: "• Case v. Other" or "- Case v. Other"
+    /^[\s•\-*]+\*?\*?([A-Z][^v\n]*v\.?\s*[A-Z][^,\n\d]*)/gm,
+    
+    // Bold case names: **Case v. Other**
+    /\*\*([A-Z][^v*\n]*v\.?\s*[A-Z][^,*\n\d]*)\*\*/g,
+    
+    // Inline case citations with proper capitalization
+    /\b([A-Z][a-zA-Z\s&,.']*v\.?\s*[A-Z][a-zA-Z\s&,.']*?)(?:\s*[,;:]|\s*\(|\s*$)/g,
+    
+    // Cases mentioned after "In" or "See": "In Case v. Other"
+    /(?:In\s+|See\s+)([A-Z][^v\n]*v\.?\s*[A-Z][^,\n\d]*)/gi,
+    
+    // Texas-specific patterns: "Texas Court of Appeals" cases
+    /([A-Z][^v\n]*v\.?\s*[A-Z][^,\n\d]*)\s*,?\s*(?:Tex\.|Texas)/gi
+  ];
   
-  while ((match = numberedCasePattern.exec(text)) !== null) {
-    const caseName = match[1].trim().replace(/\*\*/g, '').replace(/[,:.]+$/, '');
-    if (caseName.length > 5) { // Filter out very short matches
-      caseNames.push(caseName);
+  patterns.forEach(pattern => {
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      let caseName = match[1].trim()
+        .replace(/\*\*/g, '')
+        .replace(/[,:.;"']+$/, '')
+        .replace(/\s+/g, ' ');
+      
+      // Clean up common artifacts
+      caseName = caseName
+        .replace(/^(In\s+|See\s+)/i, '')
+        .replace(/\s+(Tex\.|Texas).*$/i, '')
+        .trim();
+      
+      // Validate case name quality
+      if (caseName.length > 8 && 
+          caseName.includes('v') && 
+          !caseNames.some(existing => existing.toLowerCase() === caseName.toLowerCase()) &&
+          !/^\d+/.test(caseName) && // Not starting with numbers
+          !/^(The|A|An)\s+v\./i.test(caseName)) { // Not starting with articles + v.
+        caseNames.push(caseName);
+      }
     }
-  }
+  });
   
-  // Also look for inline case citations
-  const inlineCasePattern = /\b([A-Z][^v\n]*v\.?\s*[A-Z][^,\n()]*)/g;
-  while ((match = inlineCasePattern.exec(text)) !== null) {
-    const caseName = match[1].trim().replace(/\*\*/g, '').replace(/[,:.]+$/, '');
-    if (caseName.length > 5 && !caseNames.includes(caseName)) {
-      caseNames.push(caseName);
-    }
-  }
-  
-  return caseNames;
+  return caseNames.slice(0, 15); // Limit to prevent overwhelming CourtListener
 };
 
 /**
@@ -330,7 +356,7 @@ serve(async (req) => {
     // Phase 2: Use Gemini as synthesis engine with large context window
     console.log('🧠 Initiating Gemini synthesis with 2M context window...');
     
-    const synthesisPrompt = `You are a legal research assistant providing a direct, professional response to an attorney's legal question. Your response should be immediately actionable and focused.
+    const synthesisPrompt = `You are a comprehensive legal research assistant providing detailed analysis for an attorney. Create a thorough, well-structured legal research report.
 
 ATTORNEY'S QUESTION: ${query}
 
@@ -341,15 +367,45 @@ ${result.content}
 CITATIONS: ${result.citations?.join(', ') || 'None'}
 `).join('\n')}
 
-RESPONSE FORMAT REQUIREMENTS:
-- Start with a direct answer to the legal question asked
-- Use clear, professional legal language  
-- Structure with: Legal Answer, Relevant Law, Key Cases, Next Steps, Citations
-- Be concise and actionable - avoid meta-commentary about sources or research process
-- Do not mention conflicts between research sources or analysis methodology
-- Focus on what the attorney needs to know to advise their client
+REQUIRED RESPONSE FORMAT:
 
-Provide a clean, structured legal response that directly addresses the attorney's question.`;
+**RELEVANT LAW:**
+- Provide the FULL TEXT of any statutes mentioned in the question (e.g., if Texas Property Code 202.004 is mentioned, include the complete statute text)
+- Include related statutes and their full text
+- Explain how these statutes apply to the situation
+
+**LEGAL ANALYSIS:**
+- Direct answer to the attorney's question
+- Clear explanation of legal principles
+- Application of law to the facts presented
+
+**KEY CASES:**
+For each relevant case, provide:
+1. **Case Name v. Defendant** (make case names bold and clickable-looking)
+   - Court: [Specific court name]
+   - Citation: [Legal citation] 
+   - Date: [Decision date]
+   - **Summary:** [2-3 sentence summary of the case and its relevance]
+   - **Outcome:** [Court's decision and key holdings]
+   - **Relevance:** [Why this case applies to the attorney's question]
+
+Include 5-10 highly relevant cases with complete information for each.
+
+**PRACTICAL GUIDANCE:**
+- Specific next steps for the attorney
+- Potential remedies or defenses
+- Strategic considerations
+
+**CITATIONS:**
+- List all statutes, cases, and authorities referenced
+- Include links where available
+
+FORMAT REQUIREMENTS:
+- Use professional legal language appropriate for attorney consultation
+- Make case names bold and visually prominent
+- Structure with clear headings and bullet points
+- Focus on actionable legal guidance
+- Include comprehensive statute text when specific statutes are mentioned in the question`;
 
     const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent', {
       method: 'POST',
