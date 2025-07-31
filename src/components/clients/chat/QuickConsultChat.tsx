@@ -117,7 +117,7 @@ const QuickConsultChat = () => {
                   className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[70%] rounded-2xl px-4 py-3 ${
+                    className={`max-w-[90%] rounded-2xl px-4 py-3 ${
                       message.role === 'user'
                         ? 'bg-emerald-500 text-white'
                         : 'bg-muted border text-foreground'
