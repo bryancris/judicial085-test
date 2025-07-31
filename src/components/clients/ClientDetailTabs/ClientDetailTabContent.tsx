@@ -70,7 +70,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
       </TabsContent>
 
       <TabsContent value="templates" className="mt-6">
-        <TemplatesTabContent clientId={client.id} />
+        <TemplatesTabContent />
       </TabsContent>
     </>
   );

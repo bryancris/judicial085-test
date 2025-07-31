@@ -4,23 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import NavBar from '@/components/NavBar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, UserPlus, MessageSquare, Brain, Loader2 } from 'lucide-react';
+import { User, UserPlus, MessageSquare, Loader2 } from 'lucide-react';
 import ClientForm from '@/components/clients/ClientForm';
 import ClientList from '@/components/clients/ClientList';
-import ErrorBoundary from '@/components/ErrorBoundary';
-import QuickConsultFallback from '@/components/fallbacks/QuickConsultFallback';
-import AIAgentsFallback from '@/components/fallbacks/AIAgentsFallback';
+import QuickConsultChat from '@/components/clients/chat/QuickConsultChat';
 import { useAuthState } from '@/hooks/useAuthState';
 import { useQuery } from '@tanstack/react-query';
-
-// Lazy load the AI3AgentDemo component
-const AI3AgentDemo = React.lazy(() => 
-  import('@/components/ai-agents/AI3AgentDemo').then(module => ({ default: module.AI3AgentDemo }))
-    .catch(error => {
-      console.error('Failed to load AI3AgentDemo:', error);
-      return { default: () => <AIAgentsFallback /> };
-    })
-);
 
 // Force component re-registration with timestamp
 const ClientsWithTimestamp = () => {
@@ -119,13 +108,6 @@ const ClientsWithTimestamp = () => {
                 <MessageSquare className="h-4 w-4" />
                 Quick Consult
               </TabsTrigger>
-              <TabsTrigger 
-                value="ai-agents" 
-                className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white data-[state=active]:bg-amber-700 transition-colors"
-              >
-                <Brain className="h-4 w-4" />
-                AI Agents
-              </TabsTrigger>
             </TabsList>
           </div>
           
@@ -154,47 +136,7 @@ const ClientsWithTimestamp = () => {
           </TabsContent>
           
           <TabsContent value="quick-consult" className="h-full">
-            <ErrorBoundary 
-              componentName="Quick Consult" 
-              fallback={<QuickConsultFallback />}
-            >
-              <Suspense fallback={
-                <Card>
-                  <CardContent className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                    Loading Quick Consult...
-                  </CardContent>
-                </Card>
-              }>
-                <QuickConsultFallback />
-              </Suspense>
-            </ErrorBoundary>
-          </TabsContent>
-          
-          <TabsContent value="ai-agents">
-            <ErrorBoundary 
-              componentName="AI Agents" 
-              fallback={<AIAgentsFallback />}
-            >
-              <Card>
-                <CardHeader>
-                  <CardTitle>3-Agent AI Legal Research System</CardTitle>
-                  <CardDescription>
-                    Advanced legal research using OpenAI, Perplexity, and Gemini working together
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Suspense fallback={
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                      Loading AI Research System...
-                    </div>
-                  }>
-                    <AI3AgentDemo />
-                  </Suspense>
-                </CardContent>
-              </Card>
-            </ErrorBoundary>
+            <QuickConsultChat />
           </TabsContent>
         </Tabs>
       </main>
