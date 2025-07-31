@@ -1,15 +1,48 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { QuickConsultMessage, QuickConsultResponse, sendQuickConsultMessage } from "@/utils/api/quickConsultService";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
-export const useQuickConsult = (clientId?: string) => {
+export const useQuickConsult = (clientId?: string, sessionId?: string) => {
   const [messages, setMessages] = useState<QuickConsultMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [lastResponse, setLastResponse] = useState<QuickConsultResponse | null>(null);
   const { toast } = useToast();
 
+  // Load messages for current session
+  useEffect(() => {
+    const loadMessages = async () => {
+      if (!sessionId) {
+        setMessages([]);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('quick_consult_messages')
+          .select('*')
+          .eq('session_id', sessionId)
+          .order('created_at', { ascending: true });
+
+        if (error) throw error;
+
+        const formattedMessages: QuickConsultMessage[] = (data || []).map(msg => ({
+          role: msg.role as "user" | "assistant",
+          content: msg.content,
+          timestamp: new Date(msg.created_at).toLocaleTimeString(),
+        }));
+
+        setMessages(formattedMessages);
+      } catch (error) {
+        console.error('Error loading messages:', error);
+      }
+    };
+
+    loadMessages();
+  }, [sessionId]);
+
   const sendMessage = useCallback(async (content: string) => {
-    if (!content.trim()) return;
+    if (!content.trim() || !sessionId) return;
 
     const userMessage: QuickConsultMessage = {
       role: "user",
@@ -19,6 +52,19 @@ export const useQuickConsult = (clientId?: string) => {
 
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
+
+    // Save user message to database
+    try {
+      await supabase
+        .from('quick_consult_messages')
+        .insert({
+          session_id: sessionId,
+          role: 'user',
+          content: content.trim(),
+        });
+    } catch (error) {
+      console.error('Error saving user message:', error);
+    }
 
     try {
       const currentMessages = [...messages, userMessage];
@@ -43,6 +89,19 @@ export const useQuickConsult = (clientId?: string) => {
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+
+      // Save assistant message to database
+      try {
+        await supabase
+          .from('quick_consult_messages')
+          .insert({
+            session_id: sessionId,
+            role: 'assistant',
+            content: response.text,
+          });
+      } catch (error) {
+        console.error('Error saving assistant message:', error);
+      }
 
       // Show knowledge base usage toast
       if (response.hasKnowledgeBase && response.documentsFound && response.documentsFound > 0) {
@@ -85,7 +144,7 @@ export const useQuickConsult = (clientId?: string) => {
     } finally {
       setIsLoading(false);
     }
-  }, [messages, toast, clientId]);
+  }, [messages, toast, clientId, sessionId]);
 
   const clearMessages = useCallback(() => {
     setMessages([]);

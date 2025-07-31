@@ -10,15 +10,16 @@ import QuickConsultSidebar from "./QuickConsultSidebar";
 
 const QuickConsultChat = () => {
   const [input, setInput] = useState("");
-  const { messages, isLoading, sendMessage, clearMessages } = useQuickConsult();
   const { 
     sessions, 
     currentSessionId, 
     createNewSession, 
     updateSession, 
     deleteSession, 
-    selectSession 
+    selectSession,
+    isLoading: sessionsLoading
   } = useQuickConsultSessions();
+  const { messages, isLoading, sendMessage, clearMessages } = useQuickConsult(undefined, currentSessionId || undefined);
   
   const { isRecording, isRequestingPermission, isSupported, toggleRecording } = useVoiceInput();
   
@@ -49,8 +50,10 @@ const QuickConsultChat = () => {
     if (!input.trim() || isLoading) return;
     
     // Create new session if none selected
-    if (!currentSessionId) {
-      createNewSession();
+    let sessionId = currentSessionId;
+    if (!sessionId) {
+      sessionId = await createNewSession();
+      if (!sessionId) return; // Failed to create session
     }
     
     await sendMessage(input);
@@ -65,8 +68,8 @@ const QuickConsultChat = () => {
     }
   };
 
-  const handleNewChat = () => {
-    createNewSession();
+  const handleNewChat = async () => {
+    await createNewSession();
     clearMessages();
   };
 
@@ -114,7 +117,12 @@ const QuickConsultChat = () => {
         {/* Chat Messages */}
         <ScrollArea className="flex-1 p-4" ref={scrollRef}>
           <div className="max-w-4xl mx-auto space-y-4">
-            {messages.length === 0 ? (
+            {sessionsLoading ? (
+              <div className="text-center text-muted-foreground py-12">
+                <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                <p>Loading sessions...</p>
+              </div>
+            ) : messages.length === 0 ? (
               <div className="text-center text-muted-foreground py-12">
                 <h3 className="text-lg font-medium mb-2">Welcome to Quick Consult</h3>
                 <p>Start a conversation by typing your legal question below.</p>
