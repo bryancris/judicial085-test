@@ -61,8 +61,10 @@ export const processLawReferencesSync = (text: string): string => {
   return processedText;
 };
 
-// Process markdown in text with enhanced options
-export const processMarkdown = (text: string): string => {
+// Process markdown in text with enhanced options (deprecated - use markdownProcessor.ts)
+export const processMarkdownLegacy = (text: string): string => {
+  console.warn('processMarkdownLegacy is deprecated. Use processMarkdown from markdownProcessor.ts instead.');
+  
   if (!text) return '';
   
   // Preprocess text to preserve paragraph structure
@@ -72,14 +74,17 @@ export const processMarkdown = (text: string): string => {
     .replace(/## /g, '\n\n## ')    // Also ensure proper spacing for h2 headers
     .replace(/# /g, '\n\n# ');     // Also ensure proper spacing for h1 headers
 
-  // Configure marked options to enhance rendering
-  marked.setOptions({
-    breaks: true,            // Add line breaks on single newlines
-    gfm: true,               // Use GitHub Flavored Markdown
-  });
-  
-  // Use marked to process markdown
-  return marked(preprocessedText) as string;
+  try {
+    // Use the newer marked API
+    const html = marked.parse(preprocessedText, {
+      breaks: true,
+      gfm: true,
+    });
+    return html as string;
+  } catch (error) {
+    console.error('Error processing markdown:', error);
+    return text;
+  }
 };
 
 // Enhance formatting for issue sections

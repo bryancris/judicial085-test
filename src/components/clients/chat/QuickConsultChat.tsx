@@ -6,6 +6,7 @@ import { Send, Loader2, UserPlus, Mic, MicOff } from "lucide-react";
 import { useQuickConsult } from "@/hooks/useQuickConsult";
 import { useQuickConsultSessions } from "@/hooks/useQuickConsultSessions";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
+import { processMarkdown } from "@/utils/markdownProcessor";
 import QuickConsultSidebar from "./QuickConsultSidebar";
 
 const QuickConsultChat = () => {
@@ -140,9 +141,18 @@ const QuickConsultChat = () => {
                         : 'bg-muted border text-foreground'
                     }`}
                   >
-                    <div className="whitespace-pre-wrap break-words leading-relaxed">
-                      {message.content}
-                    </div>
+                    {message.role === 'user' ? (
+                      <div className="whitespace-pre-wrap break-words leading-relaxed">
+                        {message.content}
+                      </div>
+                    ) : (
+                      <div 
+                        className="legal-analysis-content prose prose-sm max-w-none dark:prose-invert"
+                        dangerouslySetInnerHTML={{ 
+                          __html: processMarkdown(message.content)
+                        }} 
+                      />
+                    )}
                     <div className={`text-xs mt-2 ${
                       message.role === 'user' ? 'text-emerald-100' : 'text-muted-foreground'
                     }`}>
