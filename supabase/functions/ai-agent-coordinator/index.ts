@@ -356,7 +356,7 @@ serve(async (req) => {
     // Phase 2: Use Gemini as synthesis engine with large context window
     console.log('🧠 Initiating Gemini synthesis with 2M context window...');
     
-    const synthesisPrompt = `You are an expert legal synthesizer creating comprehensive legal research for desktop attorney consultation. Your response will be rendered with professional CSS styling for optimal desktop readability.
+    const synthesisPrompt = `You are an expert legal synthesizer creating comprehensive legal research for desktop attorney consultation. Generate ONLY clean markdown content - no CSS, no formatting instructions, no code blocks with styling.
 
 ATTORNEY'S QUESTION: ${query}
 
@@ -367,7 +367,7 @@ ${result.content}
 CITATIONS: ${result.citations?.join(', ') || 'None'}
 `).join('\n')}
 
-REQUIRED DESKTOP-OPTIMIZED RESPONSE FORMAT:
+REQUIRED RESPONSE FORMAT (MARKDOWN ONLY):
 
 ## 🏛️ RELEVANT LAW
 
@@ -435,8 +435,6 @@ REQUIRED DESKTOP-OPTIMIZED RESPONSE FORMAT:
 
 ---
 
-[Continue pattern for 5-10 cases with clear visual separation]
-
 ## 💡 PRACTICAL GUIDANCE
 
 ### Immediate Actions Required
@@ -470,16 +468,15 @@ REQUIRED DESKTOP-OPTIMIZED RESPONSE FORMAT:
 - [Secondary Source Citation]
 - [Secondary Source Citation]
 
-CRITICAL DESKTOP FORMATTING REQUIREMENTS:
+CRITICAL REQUIREMENTS:
+- Generate ONLY markdown content
+- Do NOT include any CSS code blocks
 - Use ## for main sections, ### for subsections
 - Bold ALL case names with **Case Name**
 - Use horizontal rules (---) between major sections
 - Format statute text in code blocks with proper indentation
 - Each case must be a distinct block with clear separation
-- Include comprehensive factual details and legal reasoning
-- Professional legal document appearance optimized for desktop reading
-- Use bullet points with proper hierarchy and spacing
-- Make content scannable with clear visual hierarchy`;
+- Include comprehensive factual details and legal reasoning`;
 
     const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent', {
       method: 'POST',
