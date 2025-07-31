@@ -1,253 +1,272 @@
-import React, { useState, useCallback } from "react";
+
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogHeader, 
-  DialogTitle 
-} from "@/components/ui/dialog";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, FileText, X } from "lucide-react";
-import { useDropzone } from "react-dropzone";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuthState } from "@/hooks/useAuthState";
+import { templateService } from "@/utils/templateService";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TemplateUploadProps {
-  onClose: () => void;
-  onSuccess: () => void;
+  onUploadComplete: () => void;
 }
 
 const TEMPLATE_CATEGORIES = [
-  "general",
-  "contracts",
-  "legal-briefs",
-  "correspondence",
-  "forms",
-  "motions",
+  "contract",
+  "motion",
+  "pleading",
   "discovery",
-  "pleadings"
+  "correspondence",
+  "general"
 ];
 
-const TemplateUpload: React.FC<TemplateUploadProps> = ({ onClose, onSuccess }) => {
+export const TemplateUpload = ({ onUploadComplete }: TemplateUploadProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("general");
-  const [uploading, setUploading] = useState(false);
+  const [category, setCategory] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { session } = useAuthState();
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const selectedFile = acceptedFiles[0];
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
     if (selectedFile) {
+      // Validate file type (documents only)
+      const allowedTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain'
+      ];
+      
+      if (!allowedTypes.includes(selectedFile.type)) {
+        toast({
+          title: "Invalid File Type",
+          description: "Please upload only PDF, Word, or text documents",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validate file size (10MB limit)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (selectedFile.size > maxSize) {
+        toast({
+          title: "File Too Large",
+          description: "Please upload files smaller than 10MB",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setFile(selectedFile);
+      
+      // Auto-populate name from filename if empty
       if (!name) {
-        // Auto-fill name from filename (without extension)
-        const fileName = selectedFile.name.replace(/\.[^/.]+$/, "");
+        const fileName = selectedFile.name.replace(/\.[^/.]+$/, ""); // Remove extension
         setName(fileName);
       }
     }
-  }, [name]);
+  };
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-      'application/msword': ['.doc']
-    },
-    multiple: false,
-    maxSize: 30 * 1024 * 1024, // 30MB
-  });
+  const handleRemoveFile = () => {
+    setFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
-  const handleUpload = async () => {
-    if (!file || !name.trim()) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!file || !name || !category || !session?.user?.id) {
       toast({
-        title: "Error",
-        description: "Please select a file and provide a name.",
+        title: "Missing Information",
+        description: "Please fill in all required fields and select a file",
         variant: "destructive",
       });
       return;
     }
 
+    setIsUploading(true);
+    
     try {
-      setUploading(true);
-
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      // Create file path
+      // Generate unique file path
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `${user.id}/${fileName}`;
+      const fileName = `${session.user.id}/${Date.now()}-${file.name}`;
+      const filePath = `${fileName}`;
 
-      // Upload file to storage
+      // Upload file to Supabase storage
       const { error: uploadError } = await supabase.storage
         .from('templates')
         .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        throw new Error(`Upload failed: ${uploadError.message}`);
+      }
 
-      // Save template metadata to database
-      const { error: dbError } = await supabase
-        .from('templates')
-        .insert({
-          user_id: user.id,
-          name: name.trim(),
-          description: description.trim() || null,
-          category,
-          file_path: filePath,
-          file_name: file.name,
-          file_size: file.size,
-        });
-
-      if (dbError) throw dbError;
-
-      toast({
-        title: "Success",
-        description: "Template uploaded successfully!",
+      // Save template metadata to database using the service
+      const { data, error: dbError } = await templateService.insertTemplate({
+        name: name.trim(),
+        description: description.trim() || undefined,
+        category,
+        file_path: filePath,
+        file_name: file.name,
+        file_size: file.size,
+        user_id: session.user.id,
+        firm_id: null // TODO: Add firm support if needed
       });
 
-      onSuccess();
-    } catch (error) {
-      console.error('Error uploading template:', error);
+      if (dbError) {
+        // Clean up uploaded file if database insert fails
+        await supabase.storage.from('templates').remove([filePath]);
+        throw new Error(`Database error: ${dbError}`);
+      }
+
       toast({
-        title: "Error",
-        description: "Failed to upload template. Please try again.",
+        title: "Template Uploaded",
+        description: `${name} has been saved successfully`,
+      });
+
+      // Reset form
+      setFile(null);
+      setName("");
+      setDescription("");
+      setCategory("");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
+      onUploadComplete();
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "Could not upload template",
         variant: "destructive",
       });
     } finally {
-      setUploading(false);
+      setIsUploading(false);
     }
   };
 
-  const removeFile = () => {
-    setFile(null);
-  };
-
   return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Upload Template</DialogTitle>
-          <DialogDescription>
-            Upload a Word document to add to your template library.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4">
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center space-x-2">
+          <Upload className="h-5 w-5" />
+          <span>Upload Template</span>
+        </CardTitle>
+        <CardDescription>
+          Upload document templates for reuse in client matters
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* File Upload */}
-          <div>
-            <Label>Document File</Label>
+          <div className="space-y-2">
+            <Label htmlFor="file">Document File *</Label>
             {!file ? (
-              <div
-                {...getRootProps()}
-                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors
-                  ${isDragActive 
-                    ? 'border-primary bg-primary/5' 
-                    : 'border-muted-foreground/25 hover:border-primary/50'
-                  }`}
+              <div 
+                className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400 transition-colors"
+                onClick={() => fileInputRef.current?.click()}
               >
-                <input {...getInputProps()} />
-                <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  Drop your .docx file here, or click to select
+                <FileText className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                <p className="text-sm text-gray-600">
+                  Click to upload or drag and drop
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Max file size: 30MB
+                <p className="text-xs text-gray-500 mt-1">
+                  PDF, Word, or Text files (max 10MB)
                 </p>
               </div>
             ) : (
-              <Card>
-                <CardContent className="p-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-blue-600" />
-                      <div>
-                        <p className="text-sm font-medium">{file.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {(file.size / 1024 / 1024).toFixed(1)} MB
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={removeFile}
-                      className="h-8 w-8 p-0"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <FileText className="h-5 w-5 text-blue-500" />
+                  <div>
+                    <p className="text-sm font-medium">{file.name}</p>
+                    <p className="text-xs text-gray-500">
+                      {(file.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRemoveFile}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleFileSelect}
+              className="hidden"
+              accept=".pdf,.doc,.docx,.txt"
+            />
           </div>
 
           {/* Template Name */}
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="name">Template Name *</Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Enter template name"
-              required
-            />
-          </div>
-
-          {/* Description */}
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brief description of this template"
-              rows={2}
+              maxLength={100}
             />
           </div>
 
           {/* Category */}
-          <div>
-            <Label>Category</Label>
+          <div className="space-y-2">
+            <Label htmlFor="category">Category *</Label>
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
                 {TEMPLATE_CATEGORIES.map((cat) => (
                   <SelectItem key={cat} value={cat}>
-                    {cat.charAt(0).toUpperCase() + cat.slice(1).replace('-', ' ')}
+                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={onClose} disabled={uploading}>
-              Cancel
-            </Button>
-            <Button onClick={handleUpload} disabled={!file || !name.trim() || uploading}>
-              {uploading ? "Uploading..." : "Upload Template"}
-            </Button>
+          {/* Description */}
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Optional description of the template"
+              rows={3}
+              maxLength={500}
+            />
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+
+          <Button 
+            type="submit" 
+            className="w-full" 
+            disabled={isUploading || !file || !name || !category}
+          >
+            {isUploading ? "Uploading..." : "Upload Template"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 };
-
-export default TemplateUpload;

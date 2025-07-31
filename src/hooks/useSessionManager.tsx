@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -27,7 +28,7 @@ export const useSessionManager = () => {
     const userAgent = navigator.userAgent;
     
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('user_sessions')
         .insert({
           user_id: session.user.id,
@@ -38,7 +39,7 @@ export const useSessionManager = () => {
 
       if (error) {
         console.error('Error registering session:', error);
-        throw error; // Re-throw to allow calling code to handle
+        throw error;
       }
 
       setCurrentSessionId(sessionToken);
@@ -47,7 +48,7 @@ export const useSessionManager = () => {
       return sessionToken;
     } catch (err) {
       console.error('Unexpected error registering session:', err);
-      throw err; // Re-throw to allow calling code to handle
+      throw err;
     }
   }, [generateSessionToken, currentSessionId]);
 
@@ -56,7 +57,7 @@ export const useSessionManager = () => {
     if (!sessionToken) return false;
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('user_sessions')
         .select('is_active, revoked_at')
         .eq('session_token', sessionToken)
@@ -81,7 +82,7 @@ export const useSessionManager = () => {
     if (!sessionToken) return;
 
     try {
-      await supabase
+      await (supabase as any)
         .from('user_sessions')
         .update({ last_activity: new Date().toISOString() })
         .eq('session_token', sessionToken);
@@ -95,7 +96,7 @@ export const useSessionManager = () => {
     if (!sessionToken) return;
 
     try {
-      await supabase
+      await (supabase as any)
         .from('user_sessions')
         .update({
           is_active: false,

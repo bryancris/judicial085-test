@@ -1,161 +1,121 @@
-import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+import { useState } from "react";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Layout, 
-  Download, 
-  Eye, 
-  Trash2, 
-  Calendar,
-  FileText,
-  MoreVertical,
-  Edit
-} from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { formatDistanceToNow } from "date-fns";
-import { supabase } from "@/integrations/supabase/client";
+import { Download, Trash2, FileText, Calendar, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-interface Template {
-  id: string;
-  name: string;
-  description?: string;
-  category: string;
-  file_path: string;
-  file_name: string;
-  file_size?: number;
-  created_at: string;
-  updated_at: string;
-}
+import { format } from "date-fns";
+import { templateService, type Template } from "@/utils/templateService";
 
 interface TemplateCardProps {
   template: Template;
-  onUpdate: () => void;
-  onEdit?: (template: Template) => void;
+  onDelete: () => void;
 }
 
-const TemplateCard: React.FC<TemplateCardProps> = ({ template, onUpdate, onEdit }) => {
-  const [loading, setLoading] = useState(false);
+export const TemplateCard = ({ template, onDelete }: TemplateCardProps) => {
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const { toast } = useToast();
 
-  const formatFileSize = (bytes?: number) => {
-    if (!bytes) return "Unknown size";
-    const mb = bytes / (1024 * 1024);
-    return `${mb.toFixed(1)} MB`;
-  };
-
   const handleDownload = async () => {
+    setIsDownloading(true);
     try {
-      setLoading(true);
-      const { data, error } = await supabase.storage
+      // Create download URL from Supabase storage
+      const { data } = await supabase.storage
         .from('templates')
-        .download(template.file_path);
+        .createSignedUrl(template.file_path, 60);
 
-      if (error) throw error;
-
-      // Create download link
-      const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = template.file_name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      if (data?.signedUrl) {
+        // Create temporary link and trigger download
+        const link = document.createElement('a');
+        link.href = data.signedUrl;
+        link.download = template.file_name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast({
+          title: "Download Started",
+          description: `Downloading ${template.file_name}`,
+        });
+      } else {
+        throw new Error('Failed to generate download URL');
+      }
     } catch (error) {
-      console.error('Error downloading template:', error);
+      console.error('Download error:', error);
       toast({
-        title: "Error",
-        description: "Failed to download template. Please try again.",
+        title: "Download Failed",
+        description: "Could not download the template file",
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setIsDownloading(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this template?")) return;
+    if (!confirm(`Are you sure you want to delete "${template.name}"?`)) {
+      return;
+    }
 
+    setIsDeleting(true);
     try {
-      setLoading(true);
-      
-      // Delete from storage
+      // Delete file from storage
       const { error: storageError } = await supabase.storage
         .from('templates')
         .remove([template.file_path]);
 
-      if (storageError) throw storageError;
+      if (storageError) {
+        console.warn('Storage deletion error:', storageError);
+        // Continue with database deletion even if storage fails
+      }
 
-      // Delete from database
-      const { error: dbError } = await supabase
-        .from('templates')
-        .delete()
-        .eq('id', template.id);
+      // Delete from database using the service
+      const { success, error } = await templateService.deleteTemplate(template.id);
 
-      if (dbError) throw dbError;
-
-      toast({
-        title: "Success",
-        description: "Template deleted successfully.",
-      });
-      
-      onUpdate();
+      if (success) {
+        toast({
+          title: "Template Deleted",
+          description: `${template.name} has been removed`,
+        });
+        onDelete();
+      } else {
+        throw new Error(error || 'Failed to delete template');
+      }
     } catch (error) {
-      console.error('Error deleting template:', error);
+      console.error('Delete error:', error);
       toast({
-        title: "Error",
-        description: "Failed to delete template. Please try again.",
+        title: "Delete Failed",
+        description: "Could not delete the template",
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setIsDeleting(false);
     }
   };
 
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return 'Unknown size';
+    const kb = bytes / 1024;
+    if (kb < 1024) return `${kb.toFixed(1)} KB`;
+    const mb = kb / 1024;
+    return `${mb.toFixed(1)} MB`;
+  };
+
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className="h-full flex flex-col">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
-            <Layout className="h-5 w-5 text-blue-600" />
-            <div className="flex-1 min-w-0">
-              <CardTitle className="text-base truncate">{template.name}</CardTitle>
-            </div>
+          <div className="flex items-center space-x-2">
+            <FileText className="h-5 w-5 text-blue-500" />
+            <CardTitle className="text-lg font-medium truncate">
+              {template.name}
+            </CardTitle>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {onEdit && (
-                <DropdownMenuItem onClick={() => onEdit(template)} disabled={loading}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Template
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem onClick={handleDownload} disabled={loading}>
-                <Download className="h-4 w-4 mr-2" />
-                Download
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={handleDelete} 
-                disabled={loading}
-                className="text-destructive"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Badge variant="secondary" className="ml-2 whitespace-nowrap">
+            {template.category}
+          </Badge>
         </div>
         {template.description && (
           <p className="text-sm text-muted-foreground line-clamp-2">
@@ -163,53 +123,44 @@ const TemplateCard: React.FC<TemplateCardProps> = ({ template, onUpdate, onEdit 
           </p>
         )}
       </CardHeader>
-      <CardContent className="pt-0">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between text-sm">
-            <Badge variant="secondary" className="capitalize">
-              {template.category}
-            </Badge>
-            <span className="text-muted-foreground">
-              {formatFileSize(template.file_size)}
-            </span>
+      
+      <CardContent className="flex-1 pb-3">
+        <div className="space-y-2 text-sm text-muted-foreground">
+          <div className="flex items-center space-x-2">
+            <Calendar className="h-4 w-4" />
+            <span>Created {format(new Date(template.created_at), 'MMM d, yyyy')}</span>
           </div>
-          
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              {formatDistanceToNow(new Date(template.created_at), { addSuffix: true })}
-            </div>
-            <div className="flex items-center gap-1">
-              <FileText className="h-3 w-3" />
-              .docx
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="flex-1"
-              onClick={handleDownload}
-              disabled={loading}
-            >
-              <Download className="h-4 w-4 mr-1" />
-              Download
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleDelete}
-              disabled={loading}
-              className="text-destructive hover:text-destructive"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+          <div className="flex items-center space-x-2">
+            <User className="h-4 w-4" />
+            <span>{formatFileSize(template.file_size)}</span>
           </div>
         </div>
       </CardContent>
+      
+      <CardFooter className="pt-3 border-t">
+        <div className="flex space-x-2 w-full">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownload}
+            disabled={isDownloading}
+            className="flex-1"
+          >
+            <Download className="h-4 w-4 mr-1" />
+            {isDownloading ? 'Downloading...' : 'Download'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            <Trash2 className="h-4 w-4" />
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </Button>
+        </div>
+      </CardFooter>
     </Card>
   );
 };
-
-export default TemplateCard;
