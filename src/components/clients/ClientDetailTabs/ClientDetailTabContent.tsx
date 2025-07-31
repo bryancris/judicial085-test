@@ -11,6 +11,11 @@ import KnowledgeTabContent from "./KnowledgeTabContent";
 import { TemplatesTabContent } from "./TemplatesTabContent";
 import { Client } from "@/types/client";
 import { useCase } from "@/contexts/CaseContext";
+import { useCaseAnalysis } from "@/hooks/useCaseAnalysis";
+import EmptyAnalysisState from "@/components/case-analysis/EmptyAnalysisState";
+import CaseAnalysisLoadingSkeleton from "@/components/case-analysis/CaseAnalysisLoadingSkeleton";
+import CaseAnalysisErrorState from "@/components/case-analysis/CaseAnalysisErrorState";
+import TabsContainer from "@/components/case-analysis/tabs/TabsContainer";
 
 interface ClientDetailTabContentProps {
   client: Client;
@@ -23,6 +28,15 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
 }) => {
   const { currentCase } = useCase();
   const [analysisRefreshTrigger, setAnalysisRefreshTrigger] = useState(0);
+  const [analysisTab, setAnalysisTab] = useState("analysis");
+  
+  // Use case analysis hook
+  const {
+    analysisData,
+    isLoading: isAnalysisLoading,
+    error: analysisError,
+    generateNewAnalysis
+  } = useCaseAnalysis(client.id, currentCase?.id);
   
   // Callback to trigger analysis refresh when findings are added
   const handleAnalysisRefresh = useCallback(() => {
@@ -40,9 +54,43 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
       </TabsContent>
 
       <TabsContent value="case-analysis" className="mt-6">
-        <div className="p-6 text-center text-muted-foreground">
-          <p>Case Analysis feature is temporarily unavailable while we integrate the new 3-Agent AI system.</p>
-        </div>
+        {isAnalysisLoading ? (
+          <CaseAnalysisLoadingSkeleton />
+        ) : analysisError ? (
+          <CaseAnalysisErrorState 
+            error={analysisError} 
+            onRefresh={generateNewAnalysis}
+          />
+        ) : !analysisData ? (
+          <EmptyAnalysisState 
+            clientName={`${client.first_name} ${client.last_name}`}
+            clientId={client.id}
+            caseId={currentCase?.id}
+            selectedTab={analysisTab}
+            setSelectedTab={setAnalysisTab}
+            isGenerating={isAnalysisLoading}
+            onGenerate={generateNewAnalysis}
+          />
+        ) : (
+          <TabsContainer
+            selectedTab="analysis"
+            analysisData={analysisData}
+            isLoading={isAnalysisLoading}
+            clientId={client.id}
+            caseId={currentCase?.id}
+            conversation={[]}
+            conversationLoading={false}
+            notes={[]}
+            notesLoading={false}
+            scholarlyReferences={[]}
+            isScholarlyReferencesLoading={false}
+            onScholarSearch={() => {}}
+            similarCases={[]}
+            isSimilarCasesLoading={false}
+            analysisFound={true}
+            fallbackUsed={false}
+          />
+        )}
       </TabsContent>
 
       <TabsContent value="case-discussion" className="mt-6">
