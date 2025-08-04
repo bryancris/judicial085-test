@@ -15,10 +15,29 @@
   background: linear-gradient(to right, hsl(var(--muted)), hsl(var(--accent))) !important;
 }
 
-.legal-analysis-content h3 {
-  @apply text-xl font-semibold pb-2 mb-4 mt-6;
+/* Section headers (like "Core Legal Issues") - keep large */
+.legal-analysis-content h2 + h3:not(h2 ~ h3),
+.legal-analysis-content > h3:first-of-type {
+  font-size: 1.25rem !important;
+  font-weight: 600 !important;
+  padding-bottom: 0.5rem !important;
+  margin-bottom: 1rem !important;
+  margin-top: 1.5rem !important;
   color: hsl(var(--primary)) !important;
   border-bottom: 1px solid hsl(var(--border)) !important;
+}
+
+/* Statute references in Related Provisions - keep small */
+.legal-analysis-content h2 ~ h3 {
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  margin-bottom: 0.25rem !important;
+  margin-top: 0.75rem !important;
+  padding-bottom: 0.25rem !important;
+  color: hsl(var(--primary)) !important;
+  border-bottom: 1px solid hsl(var(--border)) !important;
+  background: none !important;
+  line-height: 1.4 !important;
 }
 
 .legal-analysis-content h4 {
@@ -78,18 +97,6 @@
   border-top: 2px solid hsl(var(--border)) !important;
 }
 
-/* Fix Related Provisions formatting by targeting h3 elements after h2 */
-.legal-analysis-content h2 ~ h3 {
-  font-size: 0.875rem !important;
-  font-weight: 500 !important;
-  margin-bottom: 0.25rem !important;
-  margin-top: 0.75rem !important;
-  padding-bottom: 0.25rem !important;
-  color: hsl(var(--primary)) !important;
-  border-bottom: 1px solid hsl(var(--border)) !important;
-  background: none !important;
-  line-height: 1.4 !important;
-}
 
 /* Style paragraphs that follow h3 elements (statute descriptions) */
 .legal-analysis-content h2 ~ h3 + p {
