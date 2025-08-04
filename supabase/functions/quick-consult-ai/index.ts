@@ -403,8 +403,7 @@ TEXAS LEGAL FOCUS:
 IMPORTANT DISCLAIMERS:
 - You do not provide legal advice to clients
 - You assist attorneys with research, analysis, and document drafting
-- Always remind users that your responses are for informational purposes only
-- Encourage attorneys to verify information and apply their professional judgment
+- Include professional guidance: "Please verify all authorities and apply your professional judgment in light of current Texas law"
 - All analysis should be verified against current Texas statutes and case law
 
 Your capabilities include:
@@ -491,8 +490,13 @@ Remember: Professional legal writing with proper structure and formatting is req
     const data = await response.json();
     let aiResponse = data.choices[0].message.content;
 
-    // Post-process to remove duplicate citations
+    // Post-process to remove duplicate citations and unwanted disclaimer text
     aiResponse = removeDuplicateCitations(aiResponse);
+    
+    // Remove "informational purposes only" disclaimer text while preserving professional guidance
+    aiResponse = aiResponse.replace(/This response is for informational purposes only\.\s*/gi, '');
+    aiResponse = aiResponse.replace(/\*\*Disclaimer:\*\*\s*This response is for informational purposes only\.\s*/gi, '**Disclaimer:** ');
+    aiResponse = aiResponse.replace(/Disclaimer:\s*This response is for informational purposes only\.\s*/gi, 'Disclaimer: ');
     
     // Extract case names from AI response and verify with CourtListener
     console.log('Extracting and verifying case citations...');
