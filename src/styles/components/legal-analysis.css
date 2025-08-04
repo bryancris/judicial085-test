@@ -1,163 +1,154 @@
-
-/* Legal analysis content styling - Desktop optimized with high specificity */
+/* Legal analysis content styling - Complete rewrite without prose classes */
 .legal-analysis-content {
-  line-height: 1.7 !important;
-  color: hsl(var(--foreground)) !important;
-  overflow: visible !important;
-  max-width: none !important;
+  line-height: 1.7;
+  color: hsl(var(--foreground));
+  overflow: visible;
+  max-width: none;
 }
 
-/* Enhanced section headers for better hierarchy */
+/* Main section headers (like "Related Provisions", "KEY CASES") */
 .legal-analysis-content h2 {
-  @apply text-2xl font-bold pb-3 mb-6 mt-8 px-4 py-3 rounded-t-lg;
-  color: hsl(var(--primary)) !important;
-  border-bottom: 2px solid hsl(var(--border)) !important;
-  background: linear-gradient(to right, hsl(var(--muted)), hsl(var(--accent))) !important;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: hsl(var(--primary));
+  border-bottom: 2px solid hsl(var(--border));
+  background: linear-gradient(to right, hsl(var(--muted)), hsl(var(--accent)));
+  padding: 0.75rem 1rem;
+  margin: 2rem 0 1.5rem 0;
+  border-radius: 0.5rem 0.5rem 0 0;
 }
 
-/* Section headers (like "Core Legal Issues") - keep large */
-.legal-analysis-content.prose.prose-sm h2 + h3:not(h2 ~ h3),
-.legal-analysis-content.prose.prose-sm > h3:first-of-type,
-.legal-analysis-content.prose h2 + h3:not(h2 ~ h3),
-.legal-analysis-content.prose > h3:first-of-type {
-  font-size: 1.25rem !important;
-  font-weight: 600 !important;
-  padding-bottom: 0.5rem !important;
-  margin-bottom: 1rem !important;
-  margin-top: 1.5rem !important;
-  color: hsl(var(--primary)) !important;
-  border-bottom: 1px solid hsl(var(--border)) !important;
-}
-
-/* Statute and case references in Related Provisions and KEY CASES - Target actual HTML structure with extra div wrapper */
-.legal-analysis-content.prose.prose-sm.max-w-none > div h2 ~ p,
-.legal-analysis-content.prose.max-w-none > div h2 ~ p,
-div.legal-analysis-content.prose.prose-sm > div h2 ~ p,
-div.legal-analysis-content.prose > div h2 ~ p,
-.legal-analysis-content.prose.prose-sm.max-w-none h2 ~ p,
-.legal-analysis-content.prose.max-w-none h2 ~ p,
-div.legal-analysis-content.prose.prose-sm h2 ~ p,
-div.legal-analysis-content.prose h2 ~ p {
-  font-size: 0.875rem !important;
-  font-weight: 400 !important;
-  margin-bottom: 0.5rem !important;
-  margin-top: 0.5rem !important;
-  line-height: 1.5 !important;
-}
-
-/* Strong elements (statute/case names) within Related Provisions and KEY CASES */
-.legal-analysis-content.prose.prose-sm.max-w-none > div h2 ~ p strong,
-.legal-analysis-content.prose.max-w-none > div h2 ~ p strong,
-div.legal-analysis-content.prose.prose-sm > div h2 ~ p strong,
-div.legal-analysis-content.prose > div h2 ~ p strong,
-.legal-analysis-content.prose.prose-sm.max-w-none h2 ~ p strong,
-.legal-analysis-content.prose.max-w-none h2 ~ p strong,
-div.legal-analysis-content.prose.prose-sm h2 ~ p strong,
-div.legal-analysis-content.prose h2 ~ p strong {
-  font-size: 0.875rem !important;
-  font-weight: 600 !important;
-  color: hsl(var(--primary)) !important;
+/* Subsection headers */
+.legal-analysis-content h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: hsl(var(--primary));
+  border-bottom: 1px solid hsl(var(--border));
+  padding-bottom: 0.5rem;
+  margin: 1.5rem 0 1rem 0;
 }
 
 .legal-analysis-content h4 {
-  @apply text-lg font-medium mb-3 mt-4;
+  font-size: 1rem;
+  font-weight: 500;
+  color: hsl(var(--primary));
+  margin: 1rem 0 0.75rem 0;
+}
+
+/* Regular paragraphs */
+.legal-analysis-content p {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: hsl(var(--foreground));
+  margin: 1rem 0;
+}
+
+/* CRITICAL: Statute and case references after h2 elements - Force small font size */
+.legal-analysis-content h2 + p,
+.legal-analysis-content h2 ~ p {
+  font-size: 0.875rem !important;
+  line-height: 1.6 !important;
+  margin: 0.5rem 0 !important;
+  padding: 0.75rem !important;
+  border-left: 4px solid hsl(var(--primary)) !important;
+  background-color: hsl(var(--muted)) !important;
+  border-radius: 0.375rem !important;
+}
+
+/* CRITICAL: Strong elements within statute/case references */
+.legal-analysis-content h2 + p strong,
+.legal-analysis-content h2 ~ p strong {
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
   color: hsl(var(--primary)) !important;
 }
 
-/* Professional paragraph styling */
-.legal-analysis-content p {
-  @apply my-4 leading-relaxed;
-  color: hsl(var(--foreground)) !important;
+/* Regular strong elements (not in statute sections) */
+.legal-analysis-content strong {
+  font-weight: 700;
+  color: hsl(var(--foreground));
 }
 
-/* Enhanced list styling */
+/* Lists */
 .legal-analysis-content ol {
-  @apply list-decimal pl-8 my-5 space-y-3;
+  list-style-type: decimal;
+  padding-left: 2rem;
+  margin: 1.25rem 0;
 }
 
 .legal-analysis-content ul {
-  @apply list-disc pl-8 my-5 space-y-2;
+  list-style-type: disc;
+  padding-left: 2rem;
+  margin: 1.25rem 0;
 }
 
 .legal-analysis-content li {
-  @apply my-2 pl-2 leading-relaxed;
+  margin: 0.5rem 0;
+  padding-left: 0.5rem;
+  line-height: 1.7;
 }
 
-/* Professional case name and legal term styling */
-.legal-analysis-content strong {
-  @apply font-bold;
-  color: hsl(var(--foreground)) !important;
-}
-
-/* Case block styling for desktop */
-.legal-analysis-content h3 + p,
-.legal-analysis-content h3 + div {
-  @apply p-4 rounded-lg my-4;
-  background-color: hsl(var(--muted)) !important;
-  border-left: 4px solid hsl(var(--primary)) !important;
-}
-
-/* Statute text blocks with improved contrast and proper spacing */
-.legal-analysis-content pre,
-.legal-analysis-content code {
-  @apply p-4 rounded-lg font-mono text-sm my-4;
-  background-color: hsl(var(--muted)) !important;
-  color: hsl(var(--foreground)) !important;
-  border: 1px solid hsl(var(--border)) !important;
-  line-height: 1.6 !important;
-  white-space: pre-wrap !important;
-  overflow: visible !important;
-  display: block !important;
-}
-
-/* Horizontal rule styling */
-.legal-analysis-content hr {
-  @apply my-8 w-full;
-  border-top: 2px solid hsl(var(--border)) !important;
-}
-
-
-/* Style paragraphs that follow h3 elements (statute descriptions) */
-.legal-analysis-content h2 ~ h3 + p {
-  font-size: 0.875rem !important;
-  line-height: 1.6 !important;
-  padding: 0.75rem !important;
-  border-radius: 0.375rem !important;
-  margin-top: 0.25rem !important;
-  margin-bottom: 0.5rem !important;
-  border-left: 4px solid hsl(var(--primary)) !important;
-  background-color: hsl(var(--muted)) !important;
-}
-
-/* Numbered items in legal analysis with better color contrast */
 .legal-analysis-content ol > li::marker,
 .legal-analysis-content ul > li::marker {
-  @apply font-bold;
-  color: hsl(var(--primary)) !important;
+  font-weight: 700;
+  color: hsl(var(--primary));
 }
 
-/* Clickable follow-up questions styling */
+/* Code blocks and statute text */
+.legal-analysis-content pre,
+.legal-analysis-content code {
+  font-family: ui-monospace, 'Courier New', monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  background-color: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.375rem;
+  padding: 1rem;
+  margin: 1rem 0;
+  white-space: pre-wrap;
+  overflow: visible;
+  display: block;
+}
+
+/* Horizontal rules */
+.legal-analysis-content hr {
+  border: none;
+  border-top: 2px solid hsl(var(--border));
+  margin: 2rem 0;
+  width: 100%;
+}
+
+/* Case blocks and highlighted content */
+.legal-analysis-content h3 + p,
+.legal-analysis-content h3 + div {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+  background-color: hsl(var(--muted));
+  border-left: 4px solid hsl(var(--primary));
+}
+
+/* Clickable follow-up questions */
 .question-item {
-  @apply cursor-pointer transition-colors duration-200;
-  color: hsl(var(--primary)) !important;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: hsl(var(--primary));
+  font-weight: 500;
+  display: inline-block;
 }
 
 .question-item:hover {
-  @apply underline;
-  color: hsl(var(--primary)) !important;
+  text-decoration: underline;
   opacity: 0.8;
 }
 
 .question-item:focus {
-  @apply outline-none rounded;
-  box-shadow: 0 0 0 2px hsl(var(--ring)) !important;
+  outline: none;
+  border-radius: 0.25rem;
+  box-shadow: 0 0 0 2px hsl(var(--ring));
 }
 
 .clickable-question {
-  @apply inline-block;
-}
-
-/* Ensure questions stand out */
-.legal-analysis-content .question-item {
-  @apply font-medium;
+  display: inline-block;
 }
