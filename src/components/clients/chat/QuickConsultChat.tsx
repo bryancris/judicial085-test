@@ -143,7 +143,7 @@ const QuickConsultChat = () => {
                       </div>
                     ) : (
                       <div 
-                        className="legal-analysis-content prose prose-sm max-w-none dark:prose-invert"
+                        className="legal-analysis-content prose prose-sm max-w-none"
                         dangerouslySetInnerHTML={{ 
                           __html: processMarkdown(message.content)
                         }} 

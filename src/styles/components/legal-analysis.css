@@ -1,9 +1,10 @@
 
 /* Legal analysis content styling - Desktop optimized with high specificity */
 .legal-analysis-content {
-  @apply prose prose-slate max-w-none dark:prose-invert;
+  @apply prose prose-slate max-w-none;
   line-height: 1.7 !important;
   color: hsl(var(--foreground)) !important;
+  overflow: visible !important;
 }
 
 /* Enhanced section headers for better hierarchy */
@@ -58,13 +59,17 @@
   border-left: 4px solid hsl(var(--primary)) !important;
 }
 
-/* Statute text blocks with improved contrast */
+/* Statute text blocks with improved contrast and proper spacing */
 .legal-analysis-content pre,
 .legal-analysis-content code {
-  @apply p-4 rounded-lg font-mono text-sm leading-relaxed my-4;
+  @apply p-4 rounded-lg font-mono text-sm my-4;
   background-color: hsl(var(--muted)) !important;
   color: hsl(var(--foreground)) !important;
   border: 1px solid hsl(var(--border)) !important;
+  line-height: 1.6 !important;
+  white-space: pre-wrap !important;
+  overflow: visible !important;
+  display: block !important;
 }
 
 /* Horizontal rule styling */
