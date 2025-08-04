@@ -28,7 +28,10 @@ export const processMarkdown = (text: string): string => {
     const htmlContent = marked(cleanedText) as string;
     
     // Post-process to make follow-up questions clickable
-    const processedContent = makeFollowUpQuestionsClickable(htmlContent);
+    let processedContent = makeFollowUpQuestionsClickable(htmlContent);
+    
+    // NUCLEAR OPTION: Force inline styles on statute/case references
+    processedContent = forceStatuteStyles(processedContent);
     
     return processedContent;
   } catch (error) {
@@ -218,3 +221,22 @@ const processPlainNumberedText = (html: string): string => {
   console.log('Plain text questions processed:', matchCount);
   return beforeHeader + processedAfter;
 };
+
+function forceStatuteStyles(html: string): string {
+  // Target statute and case references after h2 headers with multiple patterns
+  let result = html;
+  
+  // Pattern 1: h2 followed by p with strong containing legal references
+  result = result.replace(
+    /(<h2[^>]*>.*?<\/h2>\s*<p[^>]*>)\s*(<strong[^>]*>)(.*?(?:Texas Civil Practice|Code Chapter|Tex\.|Civil Practice|§|Section|Article).*?)(<\/strong>)/gi,
+    '$1$2<span style="font-size: 14px !important; line-height: 1.6 !important; display: inline-block; border: 2px solid red !important; background-color: yellow !important;">$3</span>$4'
+  );
+  
+  // Pattern 2: Any strong element containing legal references
+  result = result.replace(
+    /(<strong[^>]*>)(.*?(?:Texas Civil Practice|Code Chapter|Tex\.|Civil Practice|§|Section|Article).*?)(<\/strong>)/gi,
+    '$1<span style="font-size: 14px !important; line-height: 1.6 !important; display: inline-block; border: 2px solid red !important; background-color: yellow !important;">$2</span>$3'
+  );
+  
+  return result;
+}

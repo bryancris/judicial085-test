@@ -13,10 +13,41 @@ const AnalysisItem: React.FC<AnalysisItemProps> = ({ content, timestamp, onQuest
 
   // Set up click handler for the follow-up questions when they're rendered
   useEffect(() => {
-    if (!onQuestionClick || !contentRef.current) return;
+    if (!contentRef.current) return;
     
+    // NUCLEAR OPTION: Force statute/case text to 14px using DOM manipulation
+    const forceStatuteStyles = () => {
+      const h2Elements = contentRef.current?.querySelectorAll('h2');
+      h2Elements?.forEach(h2 => {
+        const nextElement = h2.nextElementSibling;
+        if (nextElement?.tagName === 'P') {
+          const strongElements = nextElement.querySelectorAll('strong');
+          strongElements.forEach(strong => {
+            const text = strong.textContent || '';
+            if (text.includes('Texas Civil Practice') || 
+                text.includes('Code Chapter') || 
+                text.includes('Tex.') || 
+                text.includes('Civil Practice') || 
+                text.includes('§') || 
+                text.includes('Section') || 
+                text.includes('Article')) {
+              // Force styles directly via DOM
+              strong.style.fontSize = '14px';
+              strong.style.lineHeight = '1.6';
+              strong.style.fontWeight = '600';
+              strong.style.display = 'inline-block';
+              // Add debugging border
+              strong.style.border = '2px solid red';
+              strong.style.backgroundColor = 'yellow';
+            }
+          });
+        }
+      });
+    };
+
     // Function to add click handlers to question elements
     const setupClickHandlers = () => {
+      if (!onQuestionClick) return;
       const questionElements = contentRef.current?.querySelectorAll('.question-item');
       console.log(`Found ${questionElements?.length} question elements to attach handlers to`);
       
@@ -32,7 +63,8 @@ const AnalysisItem: React.FC<AnalysisItemProps> = ({ content, timestamp, onQuest
       });
     };
     
-    // Run setup after rendering completes
+    // Run both setup functions after rendering completes
+    forceStatuteStyles();
     setupClickHandlers();
     
     // Cleanup function to remove event listeners
