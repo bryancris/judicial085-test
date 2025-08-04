@@ -29,20 +29,26 @@
   border-bottom: 1px solid hsl(var(--border)) !important;
 }
 
-/* Statute references in Related Provisions - Maximum specificity override */
-.legal-analysis-content.prose.prose-sm.max-w-none h2 ~ h3,
-.legal-analysis-content.prose.max-w-none h2 ~ h3,
-div.legal-analysis-content.prose.prose-sm h2 ~ h3,
-div.legal-analysis-content.prose h2 ~ h3 {
+/* Statute and case references in Related Provisions and KEY CASES - Target actual HTML structure */
+.legal-analysis-content.prose.prose-sm.max-w-none h2 ~ p,
+.legal-analysis-content.prose.max-w-none h2 ~ p,
+div.legal-analysis-content.prose.prose-sm h2 ~ p,
+div.legal-analysis-content.prose h2 ~ p {
   font-size: 0.875rem !important;
-  font-weight: 500 !important;
-  margin-bottom: 0.25rem !important;
-  margin-top: 0.75rem !important;
-  padding-bottom: 0.25rem !important;
+  font-weight: 400 !important;
+  margin-bottom: 0.5rem !important;
+  margin-top: 0.5rem !important;
+  line-height: 1.5 !important;
+}
+
+/* Strong elements (statute/case names) within Related Provisions and KEY CASES */
+.legal-analysis-content.prose.prose-sm.max-w-none h2 ~ p strong,
+.legal-analysis-content.prose.max-w-none h2 ~ p strong,
+div.legal-analysis-content.prose.prose-sm h2 ~ p strong,
+div.legal-analysis-content.prose h2 ~ p strong {
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
   color: hsl(var(--primary)) !important;
-  border-bottom: 1px solid hsl(var(--border)) !important;
-  background: none !important;
-  line-height: 1.4 !important;
 }
 
 .legal-analysis-content h4 {
