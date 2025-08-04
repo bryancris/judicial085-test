@@ -78,6 +78,32 @@
   border-top: 2px solid hsl(var(--border)) !important;
 }
 
+/* Statute reference styling for Related Provisions section */
+.legal-analysis-content h3:contains("Texas"),
+.legal-analysis-content h4:contains("Texas"),
+.legal-analysis-content p:contains("Texas Estates Code"),
+.legal-analysis-content p:contains("Texas Probate Code"),
+.legal-analysis-content strong:contains("Texas") {
+  @apply text-base font-medium mb-2 mt-3;
+  color: hsl(var(--primary)) !important;
+  line-height: 1.5 !important;
+}
+
+/* Statute content blocks styling */
+.legal-analysis-content h3 + p:contains("§"),
+.legal-analysis-content h4 + p:contains("§") {
+  @apply text-sm leading-relaxed p-3 rounded-md my-2;
+  background-color: hsl(var(--muted)) !important;
+  border-left: 3px solid hsl(var(--primary)) !important;
+  font-family: inherit !important;
+}
+
+/* Related Provisions section specific styling */
+.legal-analysis-content h2:contains("Related Provisions") + *,
+.legal-analysis-content h3:contains("Related Provisions") + * {
+  @apply text-sm;
+}
+
 /* Numbered items in legal analysis with better color contrast */
 .legal-analysis-content ol > li::marker,
 .legal-analysis-content ul > li::marker {
