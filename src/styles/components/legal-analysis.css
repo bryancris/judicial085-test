@@ -1,32 +1,34 @@
 
-/* Legal analysis content styling - Desktop optimized */
+/* Legal analysis content styling - Desktop optimized with high specificity */
 .legal-analysis-content {
   @apply prose prose-slate max-w-none dark:prose-invert;
-  line-height: 1.7;
+  line-height: 1.7 !important;
+  color: hsl(var(--foreground)) !important;
 }
 
 /* Enhanced section headers for better hierarchy */
 .legal-analysis-content h2 {
-  @apply text-2xl font-bold text-blue-900 dark:text-blue-200 
-    border-b-2 border-blue-300 dark:border-blue-600 
-    pb-3 mb-6 mt-8
-    bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950
-    px-4 py-3 rounded-t-lg;
+  @apply text-2xl font-bold pb-3 mb-6 mt-8 px-4 py-3 rounded-t-lg;
+  color: hsl(var(--primary)) !important;
+  border-bottom: 2px solid hsl(var(--border)) !important;
+  background: linear-gradient(to right, hsl(var(--muted)), hsl(var(--accent))) !important;
 }
 
 .legal-analysis-content h3 {
-  @apply text-xl font-semibold text-blue-800 dark:text-blue-300 
-    border-b border-blue-200 dark:border-blue-700 
-    pb-2 mb-4 mt-6;
+  @apply text-xl font-semibold pb-2 mb-4 mt-6;
+  color: hsl(var(--primary)) !important;
+  border-bottom: 1px solid hsl(var(--border)) !important;
 }
 
 .legal-analysis-content h4 {
-  @apply text-lg font-medium text-blue-700 dark:text-blue-400 mb-3 mt-4;
+  @apply text-lg font-medium mb-3 mt-4;
+  color: hsl(var(--primary)) !important;
 }
 
 /* Professional paragraph styling */
 .legal-analysis-content p {
-  @apply text-gray-800 dark:text-gray-100 my-4 leading-relaxed;
+  @apply my-4 leading-relaxed;
+  color: hsl(var(--foreground)) !important;
 }
 
 /* Enhanced list styling */
@@ -44,44 +46,55 @@
 
 /* Professional case name and legal term styling */
 .legal-analysis-content strong {
-  @apply font-bold text-gray-900 dark:text-gray-50;
+  @apply font-bold;
+  color: hsl(var(--foreground)) !important;
 }
 
 /* Case block styling for desktop */
 .legal-analysis-content h3 + p,
 .legal-analysis-content h3 + div {
-  @apply bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border-l-4 border-blue-300 dark:border-blue-600 my-4;
+  @apply p-4 rounded-lg my-4;
+  background-color: hsl(var(--muted)) !important;
+  border-left: 4px solid hsl(var(--primary)) !important;
 }
 
-/* Statute text blocks */
+/* Statute text blocks with improved contrast */
 .legal-analysis-content pre,
 .legal-analysis-content code {
-  @apply bg-gray-100 dark:bg-gray-800 p-4 rounded-lg border border-gray-300 dark:border-gray-600 
-    font-mono text-sm leading-relaxed my-4;
+  @apply p-4 rounded-lg font-mono text-sm leading-relaxed my-4;
+  background-color: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
 }
 
 /* Horizontal rule styling */
 .legal-analysis-content hr {
-  @apply border-t-2 border-gray-300 dark:border-gray-600 my-8 w-full;
+  @apply my-8 w-full;
+  border-top: 2px solid hsl(var(--border)) !important;
 }
 
 /* Numbered items in legal analysis with better color contrast */
 .legal-analysis-content ol > li::marker,
 .legal-analysis-content ul > li::marker {
-  @apply text-blue-600 dark:text-blue-300 font-bold;
+  @apply font-bold;
+  color: hsl(var(--primary)) !important;
 }
 
 /* Clickable follow-up questions styling */
 .question-item {
-  @apply text-blue-600 dark:text-blue-400 cursor-pointer transition-colors duration-200;
+  @apply cursor-pointer transition-colors duration-200;
+  color: hsl(var(--primary)) !important;
 }
 
 .question-item:hover {
-  @apply text-blue-800 dark:text-blue-300 underline;
+  @apply underline;
+  color: hsl(var(--primary)) !important;
+  opacity: 0.8;
 }
 
 .question-item:focus {
-  @apply outline-none ring-2 ring-blue-500 ring-opacity-50 rounded;
+  @apply outline-none rounded;
+  box-shadow: 0 0 0 2px hsl(var(--ring)) !important;
 }
 
 .clickable-question {
