@@ -3,7 +3,7 @@ import { QuickConsultMessage, QuickConsultResponse, sendQuickConsultMessage } fr
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-export const useQuickConsult = (clientId?: string, sessionId?: string) => {
+export const useQuickConsult = (clientId?: string, sessionId?: string, createNewSession?: () => Promise<string | null>) => {
   const [messages, setMessages] = useState<QuickConsultMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [lastResponse, setLastResponse] = useState<QuickConsultResponse | null>(null);
@@ -42,7 +42,52 @@ export const useQuickConsult = (clientId?: string, sessionId?: string) => {
   }, [sessionId]);
 
   const sendMessage = useCallback(async (content: string) => {
-    if (!content.trim() || !sessionId) return;
+    if (!content.trim()) {
+      console.log("Quick Consult: Empty message, not sending");
+      return;
+    }
+
+    console.log("Quick Consult: Starting to send message", { content: content.slice(0, 50), sessionId, hasCreateFunction: !!createNewSession });
+
+    // If no session ID and we can create one, do so
+    let currentSessionId = sessionId;
+    if (!currentSessionId && createNewSession) {
+      console.log("Quick Consult: No session ID, creating new session");
+      setIsLoading(true);
+      try {
+        currentSessionId = await createNewSession();
+        console.log("Quick Consult: New session created", { sessionId: currentSessionId });
+        if (!currentSessionId) {
+          console.error("Quick Consult: Failed to create new session");
+          toast({
+            title: "Error",
+            description: "Failed to create chat session. Please try again.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+      } catch (error) {
+        console.error("Quick Consult: Error creating session:", error);
+        toast({
+          title: "Error",
+          description: "Failed to create chat session. Please try again.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    if (!currentSessionId) {
+      console.error("Quick Consult: No session ID available and cannot create one");
+      toast({
+        title: "Error",
+        description: "No chat session available. Please refresh the page.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const userMessage: QuickConsultMessage = {
       role: "user",
@@ -55,20 +100,24 @@ export const useQuickConsult = (clientId?: string, sessionId?: string) => {
 
     // Save user message to database
     try {
+      console.log("Quick Consult: Saving user message to database", { sessionId: currentSessionId });
       await supabase
         .from('quick_consult_messages')
         .insert({
-          session_id: sessionId,
+          session_id: currentSessionId,
           role: 'user',
           content: content.trim(),
         });
+      console.log("Quick Consult: User message saved successfully");
     } catch (error) {
-      console.error('Error saving user message:', error);
+      console.error('Quick Consult: Error saving user message:', error);
     }
 
     try {
+      console.log("Quick Consult: Sending message to AI service");
       const currentMessages = [...messages, userMessage];
       const response = await sendQuickConsultMessage(currentMessages, clientId);
+      console.log("Quick Consult: Received AI response", { hasResponse: !!response, hasError: !!response?.error });
 
       if (response.error) {
         toast({
@@ -92,15 +141,17 @@ export const useQuickConsult = (clientId?: string, sessionId?: string) => {
 
       // Save assistant message to database
       try {
+        console.log("Quick Consult: Saving assistant message to database");
         await supabase
           .from('quick_consult_messages')
           .insert({
-            session_id: sessionId,
+            session_id: currentSessionId,
             role: 'assistant',
             content: response.text,
           });
+        console.log("Quick Consult: Assistant message saved successfully");
       } catch (error) {
-        console.error('Error saving assistant message:', error);
+        console.error('Quick Consult: Error saving assistant message:', error);
       }
 
       // Show knowledge base usage toast
@@ -144,7 +195,7 @@ export const useQuickConsult = (clientId?: string, sessionId?: string) => {
     } finally {
       setIsLoading(false);
     }
-  }, [messages, toast, clientId, sessionId]);
+  }, [messages, toast, clientId, sessionId, createNewSession]);
 
   const clearMessages = useCallback(() => {
     setMessages([]);

@@ -20,7 +20,7 @@ const QuickConsultChat = () => {
     selectSession,
     isLoading: sessionsLoading
   } = useQuickConsultSessions();
-  const { messages, isLoading, sendMessage, clearMessages } = useQuickConsult(undefined, currentSessionId || undefined);
+  const { messages, isLoading, sendMessage, clearMessages } = useQuickConsult(undefined, currentSessionId || undefined, createNewSession);
   
   const { isRecording, isRequestingPermission, isSupported, toggleRecording } = useVoiceInput();
   
@@ -50,13 +50,9 @@ const QuickConsultChat = () => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
     
-    // Create new session if none selected
-    let sessionId = currentSessionId;
-    if (!sessionId) {
-      sessionId = await createNewSession();
-      if (!sessionId) return; // Failed to create session
-    }
+    console.log("Quick Consult: Form submitted", { hasInput: !!input.trim(), currentSessionId, isLoading });
     
+    // Send message - it will handle session creation internally if needed
     await sendMessage(input);
     setInput("");
     textareaRef.current?.focus();
