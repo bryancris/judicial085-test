@@ -29,7 +29,11 @@
   border-bottom: 1px solid hsl(var(--border)) !important;
 }
 
-/* Statute and case references in Related Provisions and KEY CASES - Target actual HTML structure */
+/* Statute and case references in Related Provisions and KEY CASES - Target actual HTML structure with extra div wrapper */
+.legal-analysis-content.prose.prose-sm.max-w-none > div h2 ~ p,
+.legal-analysis-content.prose.max-w-none > div h2 ~ p,
+div.legal-analysis-content.prose.prose-sm > div h2 ~ p,
+div.legal-analysis-content.prose > div h2 ~ p,
 .legal-analysis-content.prose.prose-sm.max-w-none h2 ~ p,
 .legal-analysis-content.prose.max-w-none h2 ~ p,
 div.legal-analysis-content.prose.prose-sm h2 ~ p,
@@ -42,6 +46,10 @@ div.legal-analysis-content.prose h2 ~ p {
 }
 
 /* Strong elements (statute/case names) within Related Provisions and KEY CASES */
+.legal-analysis-content.prose.prose-sm.max-w-none > div h2 ~ p strong,
+.legal-analysis-content.prose.max-w-none > div h2 ~ p strong,
+div.legal-analysis-content.prose.prose-sm > div h2 ~ p strong,
+div.legal-analysis-content.prose > div h2 ~ p strong,
 .legal-analysis-content.prose.prose-sm.max-w-none h2 ~ p strong,
 .legal-analysis-content.prose.max-w-none h2 ~ p strong,
 div.legal-analysis-content.prose.prose-sm h2 ~ p strong,
