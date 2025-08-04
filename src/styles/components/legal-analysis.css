@@ -29,9 +29,11 @@
   border-bottom: 1px solid hsl(var(--border)) !important;
 }
 
-/* Statute references in Related Provisions - keep small */
-.legal-analysis-content.prose.prose-sm h2 ~ h3,
-.legal-analysis-content.prose h2 ~ h3 {
+/* Statute references in Related Provisions - Maximum specificity override */
+.legal-analysis-content.prose.prose-sm.max-w-none h2 ~ h3,
+.legal-analysis-content.prose.max-w-none h2 ~ h3,
+div.legal-analysis-content.prose.prose-sm h2 ~ h3,
+div.legal-analysis-content.prose h2 ~ h3 {
   font-size: 0.875rem !important;
   font-weight: 500 !important;
   margin-bottom: 0.25rem !important;
