@@ -16,8 +16,10 @@
 }
 
 /* Section headers (like "Core Legal Issues") - keep large */
-.legal-analysis-content h2 + h3:not(h2 ~ h3),
-.legal-analysis-content > h3:first-of-type {
+.legal-analysis-content.prose.prose-sm h2 + h3:not(h2 ~ h3),
+.legal-analysis-content.prose.prose-sm > h3:first-of-type,
+.legal-analysis-content.prose h2 + h3:not(h2 ~ h3),
+.legal-analysis-content.prose > h3:first-of-type {
   font-size: 1.25rem !important;
   font-weight: 600 !important;
   padding-bottom: 0.5rem !important;
@@ -28,7 +30,8 @@
 }
 
 /* Statute references in Related Provisions - keep small */
-.legal-analysis-content h2 ~ h3 {
+.legal-analysis-content.prose.prose-sm h2 ~ h3,
+.legal-analysis-content.prose h2 ~ h3 {
   font-size: 0.875rem !important;
   font-weight: 500 !important;
   margin-bottom: 0.25rem !important;
