@@ -78,30 +78,38 @@
   border-top: 2px solid hsl(var(--border)) !important;
 }
 
-/* Statute reference styling for Related Provisions section */
-.legal-analysis-content h3:contains("Texas"),
-.legal-analysis-content h4:contains("Texas"),
-.legal-analysis-content p:contains("Texas Estates Code"),
-.legal-analysis-content p:contains("Texas Probate Code"),
-.legal-analysis-content strong:contains("Texas") {
-  @apply text-base font-medium mb-2 mt-3;
+/* Related Provisions section formatting - target elements after Related Provisions header */
+.legal-analysis-content h2:has-text("Related Provisions") ~ h3,
+.legal-analysis-content h2:has-text("Related Provisions") ~ h4 {
+  @apply text-base font-medium mb-2 mt-4 pb-2;
   color: hsl(var(--primary)) !important;
-  line-height: 1.5 !important;
+  border-bottom: 1px solid hsl(var(--border)) !important;
+  background: none !important;
 }
 
-/* Statute content blocks styling */
-.legal-analysis-content h3 + p:contains("§"),
-.legal-analysis-content h4 + p:contains("§") {
+/* Style paragraphs that follow Related Provisions headers */
+.legal-analysis-content h2:has-text("Related Provisions") ~ h3 + p,
+.legal-analysis-content h2:has-text("Related Provisions") ~ h4 + p {
+  @apply text-sm leading-relaxed p-3 rounded-md my-2 border-l-4;
+  background-color: hsl(var(--muted)) !important;
+  border-left-color: hsl(var(--primary)) !important;
+  font-size: 0.875rem !important;
+  line-height: 1.6 !important;
+}
+
+/* Alternative targeting: assume Related Provisions comes after Core Legal Issues */
+.legal-analysis-content h2 + h3 {
+  @apply text-base font-medium mb-2 mt-4;
+  color: hsl(var(--primary)) !important;
+  font-size: 1rem !important;
+}
+
+.legal-analysis-content h2 + h3 + p,
+.legal-analysis-content h3:nth-of-type(n+3) + p {
   @apply text-sm leading-relaxed p-3 rounded-md my-2;
   background-color: hsl(var(--muted)) !important;
   border-left: 3px solid hsl(var(--primary)) !important;
-  font-family: inherit !important;
-}
-
-/* Related Provisions section specific styling */
-.legal-analysis-content h2:contains("Related Provisions") + *,
-.legal-analysis-content h3:contains("Related Provisions") + * {
-  @apply text-sm;
+  font-size: 0.875rem !important;
 }
 
 /* Numbered items in legal analysis with better color contrast */
