@@ -27,4 +27,5 @@ export interface CaseAnalysisData {
   documents: any[]
   messages: any[]
   perplexityResearch: any[] // Additional case law and research from Perplexity
+  additionalCaseLaw: any[] // Additional case law from the persistent storage
 }

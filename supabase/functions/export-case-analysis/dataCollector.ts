@@ -58,6 +58,9 @@ export async function collectCaseData(supabase: any, clientId: string, caseId?: 
   // Get perplexity research data (additional case law)
   const perplexityResearch = analysisData ? await fetchPerplexityResearch(supabase, clientId, analysisData.id) : []
 
+  // Get additional case law from the new table
+  const additionalCaseLaw = await fetchAdditionalCaseLaw(supabase, clientId)
+
   console.log('Data collection complete:', {
     hasClient: !!client,
     hasCase: !!caseData,
@@ -67,7 +70,8 @@ export async function collectCaseData(supabase: any, clientId: string, caseId?: 
     notesCount: notes.length,
     documentsCount: documents.length,
     messagesCount: messages.length,
-    perplexityResearchCount: perplexityResearch.length
+    perplexityResearchCount: perplexityResearch.length,
+    additionalCaseLawCount: additionalCaseLaw.length
   })
 
   return {
@@ -80,7 +84,8 @@ export async function collectCaseData(supabase: any, clientId: string, caseId?: 
     notes,
     documents,
     messages,
-    perplexityResearch
+    perplexityResearch,
+    additionalCaseLaw
   }
 }
 
@@ -196,4 +201,14 @@ async function fetchPerplexityResearch(supabase: any, clientId: string, analysis
     .order('created_at', { ascending: false })
 
   return researchData || []
+}
+
+async function fetchAdditionalCaseLaw(supabase: any, clientId: string) {
+  const { data: caseLawData } = await supabase
+    .from('additional_case_law')
+    .select('*')
+    .eq('client_id', clientId)
+    .order('created_at', { ascending: false })
+
+  return caseLawData || []
 }

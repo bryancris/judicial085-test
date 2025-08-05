@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      additional_case_law: {
+        Row: {
+          case_name: string
+          citation: string | null
+          client_id: string
+          court: string | null
+          created_at: string
+          date_decided: string | null
+          id: string
+          legal_analysis_id: string | null
+          outcome: string | null
+          perplexity_research_id: string | null
+          relevant_facts: string | null
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          case_name: string
+          citation?: string | null
+          client_id: string
+          court?: string | null
+          created_at?: string
+          date_decided?: string | null
+          id?: string
+          legal_analysis_id?: string | null
+          outcome?: string | null
+          perplexity_research_id?: string | null
+          relevant_facts?: string | null
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          case_name?: string
+          citation?: string | null
+          client_id?: string
+          court?: string | null
+          created_at?: string
+          date_decided?: string | null
+          id?: string
+          legal_analysis_id?: string | null
+          outcome?: string | null
+          perplexity_research_id?: string | null
+          relevant_facts?: string | null
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
       case_analysis_notes: {
         Row: {
           client_id: string

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, ExternalLink, AlertCircle } from 'lucide-react';
+import { RefreshCw, ExternalLink, AlertCircle, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { invokeFunction } from '@/utils/api/baseApiService';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,10 +35,94 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
   caseType
 }) => {
   const [cases, setCases] = useState<PerplexityCase[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Start with loading true to show loading state while fetching
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Load existing additional case law on component mount
+  useEffect(() => {
+    const loadExistingCases = async () => {
+      if (!clientId) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // Check for existing saved additional case law
+        const { data: existingCases, error } = await supabase
+          .from('additional_case_law')
+          .select('*')
+          .eq('client_id', clientId)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error loading existing cases:', error);
+          setIsLoading(false);
+          return;
+        }
+
+        if (existingCases && existingCases.length > 0) {
+          // Convert database format to component format
+          const formattedCases: PerplexityCase[] = existingCases.map(dbCase => ({
+            caseName: dbCase.case_name,
+            court: dbCase.court || "Court information not available",
+            citation: dbCase.citation || "Citation pending",
+            date: dbCase.date_decided || "Date not available",
+            relevantFacts: dbCase.relevant_facts || "",
+            outcome: dbCase.outcome || "",
+            url: dbCase.url || undefined
+          }));
+
+          setCases(formattedCases);
+          setHasSearched(true);
+          setLastUpdated(new Date(existingCases[0].created_at).toLocaleDateString());
+        }
+      } catch (error) {
+        console.error('Error loading existing cases:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadExistingCases();
+  }, [clientId]);
+
+  // Function to save new cases to the database
+  const saveNewCasesToDatabase = async (newCases: PerplexityCase[], clientId: string) => {
+    try {
+      // First, clear existing cases for this client to avoid duplicates
+      await supabase
+        .from('additional_case_law')
+        .delete()
+        .eq('client_id', clientId);
+
+      // Insert new cases
+      const casesToInsert = newCases.map(caseItem => ({
+        client_id: clientId,
+        case_name: caseItem.caseName,
+        court: caseItem.court,
+        citation: caseItem.citation,
+        date_decided: caseItem.date,
+        relevant_facts: caseItem.relevantFacts,
+        outcome: caseItem.outcome,
+        url: caseItem.url
+      }));
+
+      const { error } = await supabase
+        .from('additional_case_law')
+        .insert(casesToInsert);
+
+      if (error) {
+        console.error('Error saving cases to database:', error);
+      } else {
+        console.log('Successfully saved', newCases.length, 'cases to database');
+      }
+    } catch (error) {
+      console.error('Error in saveNewCasesToDatabase:', error);
+    }
+  };
 
   const searchAdditionalCases = async () => {
     if (!analysisData?.summary && !caseType) {
@@ -110,20 +194,29 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
 
       const result = data as PerplexityResult;
       if (result?.content) {
+        let newCases: PerplexityCase[] = [];
+        
         try {
           // Try to parse as JSON first (for similar-cases search type)
           const parsedCases = JSON.parse(result.content);
           if (Array.isArray(parsedCases)) {
-            setCases(parsedCases.slice(0, 5)); // Limit to 5 cases
+            newCases = parsedCases.slice(0, 5); // Limit to 5 cases
           } else {
             throw new Error('Invalid JSON format');
           }
         } catch (parseError) {
           // If JSON parsing fails, it might be text content with citations
           // Extract case information from text
-          const extractedCases = extractCasesFromText(result.content, result.citations || []);
-          setCases(extractedCases);
+          newCases = extractCasesFromText(result.content, result.citations || []);
         }
+
+        // Save the new cases to the database
+        if (newCases.length > 0 && clientId) {
+          await saveNewCasesToDatabase(newCases, clientId);
+        }
+
+        setCases(newCases);
+        setLastUpdated(new Date().toLocaleDateString());
       }
 
       setHasSearched(true);
@@ -289,9 +382,15 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
 
         {hasSearched && (
           <div className="mt-4 pt-4 border-t border-border">
-            <p className="text-xs text-muted-foreground">
-              Results powered by comprehensive legal database search. Click refresh to search again with updated criteria.
-            </p>
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <p>Results powered by comprehensive legal database search. Click refresh to search again with updated criteria.</p>
+              {lastUpdated && (
+                <div className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  <span>Last updated: {lastUpdated}</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </CardContent>
