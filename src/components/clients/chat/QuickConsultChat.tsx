@@ -7,6 +7,7 @@ import { useQuickConsult } from "@/hooks/useQuickConsult";
 import { useQuickConsultSessions } from "@/hooks/useQuickConsultSessions";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { processMarkdown } from "@/utils/markdownProcessor";
+import { QuickConsultExportButton } from "@/components/quick-consult/export/QuickConsultExportButton";
 import QuickConsultSidebar from "./QuickConsultSidebar";
 
 const QuickConsultChat = () => {
@@ -102,6 +103,12 @@ const QuickConsultChat = () => {
                 <UserPlus className="h-4 w-4" />
                 Create Client
               </Button>
+              {messages.length > 0 && currentSessionId && (
+                <QuickConsultExportButton 
+                  sessionId={currentSessionId} 
+                  disabled={isLoading}
+                />
+              )}
               {messages.length > 0 && (
                 <Button variant="outline" size="sm" onClick={handleClearChat}>
                   Clear Chat
