@@ -128,9 +128,6 @@ function createWordDocumentContent(data: CaseAnalysisData, docxElements: any) {
         // Conversation History (if exists)
         ...(data.messages.length > 0 ? createConversationSection(data.messages, docxElements) : []),
         
-        // Outcome Prediction (if parsed analysis exists)
-        ...(data.parsedAnalysis ? createOutcomePredictionSection(data.parsedAnalysis, docxElements) : []),
-        
         // Strengths & Weaknesses (if parsed analysis exists)
         ...(data.parsedAnalysis ? createStrengthsWeaknessesSection(data.parsedAnalysis, docxElements) : []),
         
@@ -345,31 +342,6 @@ function createFormattedAnalysisSection(analysis: any, parsedAnalysis: any, docx
   return content
 }
 
-function createOutcomePredictionSection(parsedAnalysis: any, docxElements: any) {
-  const { Paragraph, TextRun, HeadingLevel } = docxElements
-  
-  return [
-    new Paragraph({
-      text: "Case Outcome Prediction",
-      heading: HeadingLevel.HEADING_1,
-      spacing: { before: 400 }
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: "Favorable Outcome Likelihood: ", bold: true }),
-        new TextRun(`${parsedAnalysis.outcomeDefense}%`)
-      ],
-      spacing: { after: 100 }
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: "Unfavorable Outcome Likelihood: ", bold: true }),
-        new TextRun(`${parsedAnalysis.outcomeProsecution}%`)
-      ],
-      spacing: { after: 200 }
-    })
-  ]
-}
 
 function createStrengthsWeaknessesSection(parsedAnalysis: any, docxElements: any) {
   const { Paragraph, TextRun, HeadingLevel } = docxElements

@@ -17,8 +17,6 @@ export interface CaseAnalysisData {
     followUpQuestions: string[]
     strengths: string[]
     weaknesses: string[]
-    outcomeDefense: number
-    outcomeProsecution: number
     caseType: string
   }
   similarCases: any[]

@@ -25,7 +25,6 @@ export async function collectCaseData(supabase: any, clientId: string, caseId?: 
     const caseType = detectCaseType(analysisData.content)
     const analysisSections = extractAnalysisSections(analysisData.content)
     const strengthsWeaknesses = extractStrengthsWeaknesses(analysisData.content, caseType)
-    const outcomePercentages = calculatePredictionPercentages(analysisData.content, strengthsWeaknesses, caseType)
     
     parsedAnalysis = {
       relevantLaw: analysisSections.relevantLaw,
@@ -34,8 +33,6 @@ export async function collectCaseData(supabase: any, clientId: string, caseId?: 
       followUpQuestions: analysisSections.followUpQuestions,
       strengths: strengthsWeaknesses.strengths,
       weaknesses: strengthsWeaknesses.weaknesses,
-      outcomeDefense: outcomePercentages.defense,
-      outcomeProsecution: outcomePercentages.prosecution,
       caseType: caseType
     }
   }
