@@ -115,7 +115,7 @@ Requirements:
         'User-Agent': 'Legal-Research/1.0'
       },
       body: JSON.stringify({
-        model: searchType === 'similar-cases' ? 'llama-3.1-sonar-large-128k-online' : 'llama-3.1-sonar-large-128k-online',
+        model: searchType === 'similar-cases' ? 'sonar-deep-research' : 'sonar-pro',
         messages: [
           {
             role: 'system',
