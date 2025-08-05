@@ -1,10 +1,10 @@
 
-/* Import all component styles */
+/* Import all component styles - legal-analysis.css MUST load LAST */
 @import './components/utils.css';
 @import './components/cards.css';
-@import './components/legal-document.css';
-@import './components/legal-analysis.css';
 @import './components/references.css';
 @import './components/tables.css';
 @import './components/severity.css';
 @import './components/review.css';
+@import './components/legal-document.css';
+@import './components/legal-analysis.css';

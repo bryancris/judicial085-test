@@ -5,7 +5,3 @@
 @import './styles/components.css';
 @import './styles/dark-mode.css';
 @import './styles/accessibility.css';
-@import './styles/components/legal-analysis.css';
-@import './styles/components/legal-document.css';
-@import './styles/components/references.css';
-@import './styles/components/tables.css';

@@ -1,11 +1,18 @@
-/* Legal analysis content styling - Complete rewrite without prose classes */
+/* STATUTE TEXT FONT SIZE FIREWALL - ABSOLUTELY NO OVERRIDE ALLOWED */
+:root {
+  --statute-font-size: 14px !important;
+  --statute-line-height: 1.6 !important;
+  --statute-font-weight: 400 !important;
+}
+
+/* Legal analysis content styling - CSS ISOLATION */
 .legal-analysis-content {
   line-height: 1.7;
   color: hsl(var(--foreground));
   overflow: visible;
   max-width: none;
-  --statute-font-size: 14px;
-  --statute-line-height: 1.6;
+  font-size: inherit;
+  contain: style;
 }
 
 /* Main section headers (like "Related Provisions", "KEY CASES") */
@@ -45,20 +52,37 @@
   margin: 1rem 0;
 }
 
-/* NUCLEAR OPTION: Ultra-high specificity selectors for statute/case references */
-html body div.legal-analysis-content h2 + p,
-html body div.legal-analysis-content h2 ~ p,
-html body .legal-analysis-content h2 + p,
-html body .legal-analysis-content h2 ~ p,
-div.legal-analysis-content[class] h2 + p[class],
-div.legal-analysis-content[class] h2 ~ p[class] {
-  font-size: var(--statute-font-size, 14px) !important;
-  line-height: var(--statute-line-height, 1.6) !important;
+/* ULTRA NUCLEAR: STATUTE/CASE CONTENT ABSOLUTE FONT SIZE CONTROL */
+html[data-theme] body .legal-analysis-content[class*="legal"] h2 + p,
+html[data-theme] body .legal-analysis-content[class*="legal"] h2 ~ p,
+html[data-theme] body .legal-analysis-content[class*="legal"] h2 + ul,
+html[data-theme] body .legal-analysis-content[class*="legal"] h2 ~ ul,
+html[data-theme] body .legal-analysis-content[class*="legal"] h2 + ol,
+html[data-theme] body .legal-analysis-content[class*="legal"] h2 ~ ol,
+html[data-theme] body .legal-analysis-content[class*="legal"] h2 + div,
+html[data-theme] body .legal-analysis-content[class*="legal"] h2 ~ div,
+.legal-analysis-content[data-statute="content"] h2 + *,
+.legal-analysis-content[data-statute="content"] h2 ~ *,
+div.legal-analysis-content[style*="font"] h2 + *,
+div.legal-analysis-content[style*="font"] h2 ~ * {
+  font-size: var(--statute-font-size) !important;
+  line-height: var(--statute-line-height) !important;
+  font-weight: var(--statute-font-weight) !important;
   margin: 0.5rem 0 !important;
   padding: 0.75rem !important;
   border-left: 4px solid hsl(var(--primary)) !important;
   background-color: hsl(var(--muted)) !important;
   border-radius: 0.375rem !important;
+}
+
+/* ULTRA NUCLEAR: ALL CHILDREN OF STATUTE SECTIONS */
+html[data-theme] body .legal-analysis-content h2 + * *,
+html[data-theme] body .legal-analysis-content h2 ~ * *,
+.legal-analysis-content[data-statute="content"] h2 + * *,
+.legal-analysis-content[data-statute="content"] h2 ~ * * {
+  font-size: var(--statute-font-size) !important;
+  line-height: var(--statute-line-height) !important;
+  font-weight: var(--statute-font-weight) !important;
 }
 
 /* NUCLEAR OPTION: Ultra-high specificity for strong elements in statute sections */

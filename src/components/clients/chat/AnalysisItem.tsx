@@ -18,46 +18,39 @@ const AnalysisItem: React.FC<AnalysisItemProps> = ({ content, timestamp, onQuest
     const forceStatuteStyles = () => {
       if (!contentRef.current) return;
       
-      // Set CSS custom properties on the container
-      contentRef.current.style.setProperty('--statute-font-size', '14px');
-      contentRef.current.style.setProperty('--statute-line-height', '1.6');
-      contentRef.current.setAttribute('data-processed', 'true');
+      // ULTIMATE FONT SIZE ENFORCEMENT - CSS VARIABLES
+      contentRef.current.setAttribute('data-statute', 'content');
+      contentRef.current.style.setProperty('--statute-font-size', '14px', 'important');
+      contentRef.current.style.setProperty('--statute-line-height', '1.6', 'important');
+      contentRef.current.style.setProperty('--statute-font-weight', '400', 'important');
       
-      // NUCLEAR OPTION: Force styles with maximum specificity
+      // TARGET SPECIFIC SECTIONS: Related Provisions and KEY CASES
       const h2Elements = contentRef.current.querySelectorAll('h2');
       h2Elements.forEach(h2 => {
-        let nextElement = h2.nextElementSibling;
-        while (nextElement && nextElement.tagName !== 'H2') {
-          if (nextElement.tagName === 'P') {
-            // Force paragraph styles
+        const headerText = h2.textContent?.toLowerCase() || '';
+        if (headerText.includes('related provisions') || headerText.includes('key cases')) {
+          
+          // Keep h2 header size normal
+          h2.style.setProperty('font-size', '1.5rem', 'important');
+          
+          // NUCLEAR ENFORCEMENT: Get ALL following siblings until next h2
+          let nextElement = h2.nextElementSibling;
+          while (nextElement && nextElement.tagName !== 'H2') {
+            // Force 14px on the element itself
             (nextElement as HTMLElement).style.setProperty('font-size', '14px', 'important');
             (nextElement as HTMLElement).style.setProperty('line-height', '1.6', 'important');
+            (nextElement as HTMLElement).style.setProperty('font-weight', '400', 'important');
             
-            // Force all strong elements in this paragraph
-            const strongElements = nextElement.querySelectorAll('strong');
-            strongElements.forEach(strong => {
-              strong.style.setProperty('font-size', '14px', 'important');
-              strong.style.setProperty('line-height', '1.6', 'important');
-              strong.style.setProperty('font-weight', '600', 'important');
-              strong.setAttribute('data-statute', 'true');
-              strong.setAttribute('title', strong.textContent || '');
+            // Force 14px on ALL descendants (p, li, strong, em, etc.)
+            const allDescendants = nextElement.querySelectorAll('*');
+            allDescendants.forEach(child => {
+              (child as HTMLElement).style.setProperty('font-size', '14px', 'important');
+              (child as HTMLElement).style.setProperty('line-height', '1.6', 'important');
+              (child as HTMLElement).style.setProperty('font-weight', '400', 'important');
             });
+            
+            nextElement = nextElement.nextElementSibling;
           }
-          nextElement = nextElement.nextElementSibling;
-        }
-      });
-      
-      // Additional content-based targeting
-      const allStrong = contentRef.current.querySelectorAll('strong');
-      allStrong.forEach(strong => {
-        const text = strong.textContent || '';
-        if (text.includes('Texas') || text.includes('Civil Practice') || text.includes('Code') || 
-            text.includes('Deceptive Trade') || text.includes('DTPA') || text.includes('§')) {
-          strong.style.setProperty('font-size', '14px', 'important');
-          strong.style.setProperty('line-height', '1.6', 'important');
-          strong.style.setProperty('font-weight', '600', 'important');
-          strong.setAttribute('data-statute', 'true');
-          strong.setAttribute('title', text);
         }
       });
     };
