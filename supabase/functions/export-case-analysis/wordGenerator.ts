@@ -140,8 +140,11 @@ function createWordDocumentContent(data: CaseAnalysisData, docxElements: any) {
         // Similar Cases (if exist)
         ...(data.similarCases.length > 0 ? createSimilarCasesSection(data.similarCases, docxElements) : createEmptySimilarCasesSection(docxElements)),
     
-    // Additional Case Law (if exists)
-    ...(data.perplexityResearch.length > 0 ? createAdditionalCaseLawSection(data.perplexityResearch, docxElements) : []),
+    // Additional Case Law (using the correct data source)
+    ...(data.additionalCaseLaw.length > 0 ? createAdditionalCaseLawSection(data.additionalCaseLaw, docxElements) : createEmptyAdditionalCaseLawSection(docxElements)),
+    
+    // Perplexity Research (if exists)
+    ...(data.perplexityResearch.length > 0 ? createPerplexityResearchSection(data.perplexityResearch, docxElements) : []),
     
     // Scholarly References (if exist)
     ...(data.scholarlyReferences.length > 0 ? createScholarlyReferencesSection(data.scholarlyReferences, docxElements) : createEmptyScholarlyReferencesSection(docxElements)),
@@ -789,7 +792,88 @@ function createEmptyScholarlyReferencesSection(docxElements: any) {
   ]
 }
 
-function createAdditionalCaseLawSection(perplexityResearch: any[], docxElements: any) {
+function createAdditionalCaseLawSection(additionalCaseLaw: any[], docxElements: any) {
+  const { Paragraph, TextRun, HeadingLevel } = docxElements
+  
+  if (!additionalCaseLaw || additionalCaseLaw.length === 0) {
+    return []
+  }
+  
+  return [
+    new Paragraph({
+      text: "Additional Case Law",
+      heading: HeadingLevel.HEADING_1,
+      spacing: { before: 400 }
+    }),
+    new Paragraph({
+      children: [new TextRun({ text: "The following Texas case law was found to be relevant to this analysis.", italic: true })],
+      spacing: { after: 200 }
+    }),
+    ...additionalCaseLaw.slice(0, 10).map((caseItem: any, index: number) => {
+      const content = []
+      
+      // Case name and court
+      content.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: `${index + 1}. `, bold: true }),
+            new TextRun({ text: caseItem.case_name || 'Unknown Case', bold: true }),
+            new TextRun(caseItem.court ? ` (${caseItem.court})` : '')
+          ],
+          spacing: { after: 100 },
+          indent: { left: 360 }
+        })
+      )
+      
+      // Citation and date
+      if (caseItem.citation || caseItem.date_decided) {
+        content.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: "Citation: ", bold: true }),
+              new TextRun(caseItem.citation || 'No citation'),
+              caseItem.date_decided ? new TextRun(` (${caseItem.date_decided})`) : new TextRun('')
+            ],
+            spacing: { after: 100 },
+            indent: { left: 720 }
+          })
+        )
+      }
+      
+      // Relevant facts
+      if (caseItem.relevant_facts) {
+        content.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: "Relevant Facts: ", bold: true }),
+              new TextRun(caseItem.relevant_facts)
+            ],
+            spacing: { after: 100 },
+            indent: { left: 720 }
+          })
+        )
+      }
+      
+      // Outcome
+      if (caseItem.outcome) {
+        content.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: "Outcome: ", bold: true }),
+              new TextRun(caseItem.outcome)
+            ],
+            spacing: { after: 150 },
+            indent: { left: 720 }
+          })
+        )
+      }
+      
+      return content
+    }).flat()
+  ]
+}
+
+function createPerplexityResearchSection(perplexityResearch: any[], docxElements: any) {
   const { Paragraph, TextRun, HeadingLevel } = docxElements
   
   if (!perplexityResearch || perplexityResearch.length === 0) {
@@ -798,7 +882,7 @@ function createAdditionalCaseLawSection(perplexityResearch: any[], docxElements:
   
   return [
     new Paragraph({
-      text: "Additional Case Law Research",
+      text: "Legal Research",
       heading: HeadingLevel.HEADING_1,
       spacing: { before: 400 }
     }),
@@ -848,6 +932,22 @@ function createAdditionalCaseLawSection(perplexityResearch: any[], docxElements:
       
       return content
     }).flat()
+  ]
+}
+
+function createEmptyAdditionalCaseLawSection(docxElements: any) {
+  const { Paragraph, TextRun, HeadingLevel } = docxElements
+  
+  return [
+    new Paragraph({
+      text: "Additional Case Law",
+      heading: HeadingLevel.HEADING_1,
+      spacing: { before: 400 }
+    }),
+    new Paragraph({
+      children: [new TextRun({ text: "No additional case law has been researched for this analysis yet.", italic: true })],
+      spacing: { after: 200 }
+    })
   ]
 }
 
