@@ -108,6 +108,8 @@ async function fetchCaseData(supabase: any, caseId: string) {
 }
 
 async function fetchAnalysisData(supabase: any, clientId: string, caseId?: string) {
+  console.log('Fetching analysis data for client:', clientId, 'case:', caseId)
+  
   let analysisQuery = supabase
     .from('legal_analyses')
     .select('*')
@@ -115,15 +117,17 @@ async function fetchAnalysisData(supabase: any, clientId: string, caseId?: strin
 
   if (caseId) {
     analysisQuery = analysisQuery.eq('case_id', caseId)
-  } else {
-    analysisQuery = analysisQuery.is('case_id', null)
   }
+  // When no caseId is provided, get the most recent analysis regardless of case_id
+  // This fixes the issue where we were filtering for case_id IS NULL
 
   const { data: analysis } = await analysisQuery
     .order('created_at', { ascending: false })
     .limit(1)
 
-  return analysis && analysis.length > 0 ? analysis[0] : null
+  const result = analysis && analysis.length > 0 ? analysis[0] : null
+  console.log('Found analysis:', result ? `ID: ${result.id}, case_id: ${result.case_id}` : 'None')
+  return result
 }
 
 async function fetchSimilarCases(supabase: any, analysisId: string) {
@@ -161,13 +165,35 @@ async function fetchSimilarCases(supabase: any, analysisId: string) {
 }
 
 async function fetchScholarlyReferences(supabase: any, analysisId: string) {
-  const { data: scholarlyData } = await supabase
+  // First try to get scholarly references for the specific analysis
+  let { data: scholarlyData } = await supabase
     .from('scholarly_references')
     .select('*')
     .eq('legal_analysis_id', analysisId)
     .order('created_at', { ascending: false })
     .limit(1)
 
+  // If no data found for this analysis, try to get any scholarly references for this client
+  if (!scholarlyData || scholarlyData.length === 0) {
+    const { data: clientAnalysis } = await supabase
+      .from('legal_analyses')
+      .select('client_id')
+      .eq('id', analysisId)
+      .single()
+    
+    if (clientAnalysis?.client_id) {
+      const { data: fallbackData } = await supabase
+        .from('scholarly_references')
+        .select('*')
+        .eq('client_id', clientAnalysis.client_id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+      
+      scholarlyData = fallbackData
+    }
+  }
+
+  console.log('Scholarly references data:', scholarlyData)
   return (scholarlyData && scholarlyData.length > 0) ? 
     (scholarlyData[0].reference_data || []) : []
 }
