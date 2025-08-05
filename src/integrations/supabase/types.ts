@@ -1631,6 +1631,34 @@ export type Database = {
         Args: { "": unknown }
         Returns: unknown
       }
+      hybrid_search_courtlistener_cases: {
+        Args: {
+          query_text: string
+          query_embedding?: string
+          match_threshold?: number
+          match_count?: number
+          semantic_weight?: number
+        }
+        Returns: {
+          id: string
+          courtlistener_id: string
+          case_name: string
+          court: string
+          court_name: string
+          citation: string
+          date_filed: string
+          date_decided: string
+          snippet: string
+          absolute_url: string
+          jurisdiction: string
+          case_type: string
+          precedential_status: string
+          api_fetch_count: number
+          similarity: number
+          text_rank: number
+          combined_score: number
+        }[]
+      }
       ivfflat_bit_support: {
         Args: { "": unknown }
         Returns: unknown
@@ -1745,6 +1773,30 @@ export type Database = {
           chunk_index: number
           content: string
           metadata: Json
+          similarity: number
+        }[]
+      }
+      search_similar_courtlistener_cases: {
+        Args: {
+          query_embedding: string
+          match_threshold?: number
+          match_count?: number
+        }
+        Returns: {
+          id: string
+          courtlistener_id: string
+          case_name: string
+          court: string
+          court_name: string
+          citation: string
+          date_filed: string
+          date_decided: string
+          snippet: string
+          absolute_url: string
+          jurisdiction: string
+          case_type: string
+          precedential_status: string
+          api_fetch_count: number
           similarity: number
         }[]
       }

@@ -280,6 +280,33 @@ export const convertToSimilarCases = (
   }));
 };
 
+// Generate query embedding using OpenAI
+export const generateQueryEmbedding = async (query: string): Promise<number[] | null> => {
+  try {
+    const response = await fetch('https://api.openai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'text-embedding-ada-002',
+        input: query,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data[0].embedding;
+  } catch (error) {
+    console.error('Error generating query embedding:', error);
+    return null;
+  }
+};
+
 // Semantic search using embeddings
 export const semanticSearchCases = async (
   query: string,
@@ -287,23 +314,48 @@ export const semanticSearchCases = async (
   threshold: number = 0.7
 ): Promise<CourtListenerCase[]> => {
   try {
-    // This would typically generate embeddings in an edge function
-    // For now, we'll do a simple text search as fallback
-    const { data: cases, error } = await supabase
-      .from("courtlistener_cases")
-      .select("*")
-      .or(`case_name.ilike.%${query}%,snippet.ilike.%${query}%`)
-      .limit(limit);
+    // Generate embedding for the search query
+    const queryEmbedding = await generateQueryEmbedding(query);
+    
+    if (!queryEmbedding) {
+      // Fall back to text search if embedding generation fails
+      const { data: cases, error } = await supabase
+        .from('courtlistener_cases')
+        .select('*')
+        .or(`case_name.ilike.%${query}%,snippet.ilike.%${query}%`)
+        .limit(limit);
 
-    if (error) {
-      console.error("Error in semantic search:", error);
-      return [];
+      if (error) throw error;
+      return cases || [];
     }
 
-    return cases || [];
+    // Use semantic search with embeddings
+    const { data: results, error } = await supabase.rpc(
+      'search_similar_courtlistener_cases',
+      {
+        query_embedding: JSON.stringify(queryEmbedding),
+        match_threshold: threshold,
+        match_count: limit
+      }
+    );
+
+    if (error) {
+      console.warn('Semantic search failed, falling back to text search:', error);
+      // Fall back to text search
+      const { data: cases, error: textError } = await supabase
+        .from('courtlistener_cases')
+        .select('*')
+        .or(`case_name.ilike.%${query}%,snippet.ilike.%${query}%`)
+        .limit(limit);
+
+      if (textError) throw textError;
+      return cases || [];
+    }
+
+    return results || [];
   } catch (error) {
-    console.error("Error in semantic search:", error);
-    return [];
+    console.error('Error in semantic search:', error);
+    throw error;
   }
 };
 
