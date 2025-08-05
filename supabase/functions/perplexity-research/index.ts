@@ -96,7 +96,30 @@ serve(async (req) => {
     // Enhance query based on search type
     let enhancedQuery = query;
     if (searchType === 'legal-research') {
-      enhancedQuery = `Comprehensive legal research for: ${query}
+      // Check if this is a contract/construction case based on query content
+      const isContractCase = query.toLowerCase().includes('contract') || 
+                           query.toLowerCase().includes('construction') ||
+                           query.toLowerCase().includes('warranty') ||
+                           query.toLowerCase().includes('breach');
+      
+      if (isContractCase) {
+        enhancedQuery = `Texas construction and contract law research for: ${query}
+
+Requirements:
+1. Find 5-8 relevant TEXAS legal cases with:
+   - Complete case names (Plaintiff v. Defendant)
+   - Texas court names (Supreme Court of Texas, Texas Court of Appeals, District Courts)
+   - Legal citations (Tex. citation format)
+   - Brief case summaries focusing on construction/contract issues
+   - Outcomes/holdings related to warranties, breach, or construction
+   - Relevance to construction contracts and warranty law
+2. Include Texas statutes (Property Code, Business & Commerce Code)
+3. Focus on Texas construction law, warranty law, and contract law
+4. Include practical legal guidance for construction/warranty disputes
+
+Focus on Texas jurisdiction only and verified, authoritative sources.`;
+      } else {
+        enhancedQuery = `Comprehensive legal research for: ${query}
 
 Requirements:
 1. If specific Texas statutes are mentioned (like Property Code 202.004), provide the FULL TEXT of those statutes
@@ -111,6 +134,7 @@ Requirements:
 4. Include practical legal guidance
 
 Focus on verified, authoritative sources and comprehensive coverage.`;
+      }
     } else if (searchType === 'similar-cases') {
       enhancedQuery = `Find 3-5 verified legal cases from TEXAS COURTS ONLY similar to: ${query}
 
@@ -179,7 +203,7 @@ Requirements:
           top_p: 0.9,
           return_citations: true,
           return_images: false,
-          search_domain_filter: ['justia.com', 'caselaw.findlaw.com', 'scholar.google.com', 'courtlistener.com', 'law.cornell.edu', 'statutes.capitol.texas.gov', 'txcourts.gov', 'search.txcourts.gov'],
+          search_domain_filter: ['justia.com', 'caselaw.findlaw.com', 'scholar.google.com', 'courtlistener.com', 'law.cornell.edu', 'statutes.capitol.texas.gov', 'txcourts.gov', 'search.txcourts.gov', 'texasbar.com', 'txcourts.gov/supreme-court', 'coa.courts.state.tx.us'],
           search_recency_filter: 'year'
         }),
         signal: controller.signal

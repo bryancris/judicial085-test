@@ -126,6 +126,58 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
     }
   };
 
+  // Extract legal concepts from preliminary analysis
+  const extractLegalConcepts = (analysisData: any) => {
+    const concepts = {
+      contractTerms: [] as string[],
+      legalIssues: [] as string[],
+      statutes: [] as string[],
+      jurisdiction: 'Texas',
+      caseType: 'contract'
+    };
+
+    const analysisText = (analysisData?.summary || analysisData?.preliminaryAnalysis || '').toLowerCase();
+    
+    // Detect contract-related terms
+    const contractTerms = [
+      'breach of contract', 'express warranty', 'implied warranty', 'construction contract',
+      'home renovation', 'material substitution', 'contractual obligations',
+      'performance', 'damages', 'remedies', 'consideration'
+    ];
+    
+    // Detect specific legal issues
+    const legalIssues = [
+      'warranty breach', 'material breach', 'substantial performance',
+      'construction defects', 'consumer protection', 'deceptive trade practices'
+    ];
+    
+    // Detect Texas statutes
+    const statutePatterns = [
+      'property code', 'business.*commerce code', 'dtpa', 'deceptive trade practices'
+    ];
+    
+    contractTerms.forEach(term => {
+      if (analysisText.includes(term)) {
+        concepts.contractTerms.push(term);
+      }
+    });
+    
+    legalIssues.forEach(issue => {
+      if (analysisText.includes(issue)) {
+        concepts.legalIssues.push(issue);
+      }
+    });
+    
+    statutePatterns.forEach(pattern => {
+      const regex = new RegExp(pattern, 'i');
+      if (regex.test(analysisText)) {
+        concepts.statutes.push(pattern.replace('.*', ' & '));
+      }
+    });
+    
+    return concepts;
+  };
+
   const searchAdditionalCases = async () => {
     if (!analysisData?.summary && !caseType) {
       toast({
@@ -164,25 +216,52 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
         }
       }
 
-      // Create search query from analysis data
-      const searchQuery = analysisData?.summary 
-        ? `Find additional legal cases similar to: ${analysisData.summary.substring(0, 500)}`
-        : `Find legal cases related to ${caseType} law`;
+      // Extract legal concepts from preliminary analysis
+      const concepts = extractLegalConcepts(analysisData);
+      
+      // Build enhanced search query with specific legal concepts
+      let searchQuery = '';
+      if (concepts.contractTerms.length > 0 || concepts.legalIssues.length > 0) {
+        const combinedTerms = [...concepts.contractTerms, ...concepts.legalIssues].join(' OR ');
+        searchQuery = `Texas construction contract and warranty cases involving: ${combinedTerms}`;
+        
+        if (concepts.statutes.length > 0) {
+          searchQuery += ` AND ${concepts.statutes.join(' OR ')}`;
+        }
+      } else {
+        // Fallback to original logic
+        searchQuery = analysisData?.summary 
+          ? `Find additional legal cases similar to: ${analysisData.summary.substring(0, 500)}`
+          : `Find legal cases related to ${caseType} law`;
+      }
+
+      // Prepare enhanced context with legal concepts
+      const enhancedContext = [
+        ...(analysisData?.keyFacts || []),
+        ...concepts.contractTerms,
+        ...concepts.legalIssues,
+        'Texas jurisdiction',
+        'construction law',
+        'contract law',
+        'warranty law'
+      ].join(', ');
 
       console.log('=== Calling perplexity-research ===');
       console.log('Parameters:', {
         query: searchQuery.substring(0, 100) + '...',
-        searchType: 'similar-cases',
-        context: (analysisData?.keyFacts?.join(', ') || '').substring(0, 100) + '...',
-        limit: 5
+        searchType: 'legal-research', // Changed to legal-research for better case law
+        context: enhancedContext.substring(0, 100) + '...',
+        limit: 5,
+        concepts: concepts
       });
 
       // Try the function call with detailed error logging
       const { data, error: functionError } = await invokeFunction('perplexity-research', {
         query: searchQuery,
-        searchType: 'similar-cases',
-        context: analysisData?.keyFacts?.join(', ') || '',
-        limit: 5
+        searchType: 'legal-research', // Use legal-research for more comprehensive results
+        context: enhancedContext,
+        limit: 5,
+        concepts: concepts
       });
 
       console.log('=== Function Response ===');
