@@ -89,36 +89,57 @@ function processInlineFormatting(text: string): TextElement[] {
   return elements;
 }
 
-function processMarkdownContent(content: string, TextRun: any): any[] {
-  const lines = content.split('\n');
-  const textRuns: any[] = [];
+function processMarkdownContent(content: string, docxElements: any): any[] {
+  const { Paragraph, TextRun } = docxElements;
+  const paragraphs: any[] = [];
   
-  lines.forEach(line => {
-    const trimmedLine = line.trim();
-    if (!trimmedLine) return;
+  // Split content by double line breaks to identify paragraph boundaries
+  const blocks = content.split('\n\n').filter(block => block.trim());
+  
+  blocks.forEach(block => {
+    const lines = block.split('\n').filter(line => line.trim());
     
-    // Process inline formatting for each line
-    const elements = processInlineFormatting(trimmedLine);
-    
-    elements.forEach(element => {
-      textRuns.push(new TextRun({
-        text: element.text,
-        bold: element.bold,
-        italics: element.italic,
-        underline: element.underline
-      }));
+    lines.forEach(line => {
+      const trimmedLine = line.trim();
+      if (!trimmedLine) return;
+      
+      // Check if it's a header
+      if (trimmedLine.startsWith('##')) {
+        const headerText = trimmedLine.replace(/^#+\s*/, '');
+        const elements = processInlineFormatting(headerText);
+        const textRuns = elements.map(element => new TextRun({
+          text: element.text,
+          bold: true,
+          size: 28,
+          italics: element.italic,
+          underline: element.underline
+        }));
+        
+        paragraphs.push(new Paragraph({
+          children: textRuns,
+          spacing: { before: 240, after: 120 },
+          indent: { left: 360 }
+        }));
+      } else {
+        // Regular paragraph
+        const elements = processInlineFormatting(trimmedLine);
+        const textRuns = elements.map(element => new TextRun({
+          text: element.text,
+          bold: element.bold,
+          italics: element.italic,
+          underline: element.underline
+        }));
+        
+        paragraphs.push(new Paragraph({
+          children: textRuns,
+          spacing: { after: 120 },
+          indent: { left: 360 }
+        }));
+      }
     });
-    
-    // Add line break if not the last line
-    textRuns.push(new TextRun({ text: '\n' }));
   });
   
-  // Remove the last line break
-  if (textRuns.length > 0 && textRuns[textRuns.length - 1].text === '\n') {
-    textRuns.pop();
-  }
-  
-  return textRuns;
+  return paragraphs;
 }
 
 Deno.serve(async (req) => {
@@ -360,15 +381,12 @@ function createQuickConsultDocumentContent(data: QuickConsultData, docxElements:
       )
       
       // Message content with markdown processing
-      const formattedTextRuns = processMarkdownContent(message.content, TextRun)
+      const formattedParagraphs = processMarkdownContent(message.content, docxElements)
       
-      content.push(
-        new Paragraph({
-          children: formattedTextRuns,
-          spacing: { after: 200 },
-          indent: { left: 360 }
-        })
-      )
+      // Add all the formatted paragraphs
+      formattedParagraphs.forEach(paragraph => {
+        content.push(paragraph)
+      })
     })
   } else {
     content.push(
