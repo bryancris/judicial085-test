@@ -52,22 +52,23 @@
   margin: 1rem 0;
 }
 
-/* ULTRA NUCLEAR: STATUTE/CASE CONTENT ABSOLUTE FONT SIZE CONTROL */
-html[data-theme] body .legal-analysis-content[class*="legal"] h2 + p,
-html[data-theme] body .legal-analysis-content[class*="legal"] h2 ~ p,
-html[data-theme] body .legal-analysis-content[class*="legal"] h2 + ul,
-html[data-theme] body .legal-analysis-content[class*="legal"] h2 ~ ul,
-html[data-theme] body .legal-analysis-content[class*="legal"] h2 + ol,
-html[data-theme] body .legal-analysis-content[class*="legal"] h2 ~ ol,
-html[data-theme] body .legal-analysis-content[class*="legal"] h2 + div,
-html[data-theme] body .legal-analysis-content[class*="legal"] h2 ~ div,
-.legal-analysis-content[data-statute="content"] h2 + *,
-.legal-analysis-content[data-statute="content"] h2 ~ *,
-div.legal-analysis-content[style*="font"] h2 + *,
-div.legal-analysis-content[style*="font"] h2 ~ * {
-  font-size: var(--statute-font-size) !important;
-  line-height: var(--statute-line-height) !important;
-  font-weight: var(--statute-font-weight) !important;
+/* ULTIMATE NUCLEAR: ULTRA-HIGH SPECIFICITY FOR STATUTE CONTENT */
+html[data-theme="dark"] body div.legal-analysis-content[data-statute="content"] h2 + *,
+html[data-theme="light"] body div.legal-analysis-content[data-statute="content"] h2 + *,
+html[data-theme] body div.legal-analysis-content[data-statute="content"] h2 ~ *,
+html body div.legal-analysis-content[class*="legal"] h2 + *,
+html body div.legal-analysis-content[class*="legal"] h2 ~ *,
+body div.legal-analysis-content[data-statute] h2 + p,
+body div.legal-analysis-content[data-statute] h2 ~ p,
+body div.legal-analysis-content[data-statute] h2 + ul,
+body div.legal-analysis-content[data-statute] h2 ~ ul,
+body div.legal-analysis-content[data-statute] h2 + ol,
+body div.legal-analysis-content[data-statute] h2 ~ ol,
+body div.legal-analysis-content[data-statute] h2 + div,
+body div.legal-analysis-content[data-statute] h2 ~ div {
+  font-size: var(--statute-font-size, 14px) !important;
+  line-height: var(--statute-line-height, 1.6) !important;
+  font-weight: var(--statute-font-weight, 400) !important;
   margin: 0.5rem 0 !important;
   padding: 0.75rem !important;
   border-left: 4px solid hsl(var(--primary)) !important;
@@ -76,13 +77,19 @@ div.legal-analysis-content[style*="font"] h2 ~ * {
 }
 
 /* ULTRA NUCLEAR: ALL CHILDREN OF STATUTE SECTIONS */
-html[data-theme] body .legal-analysis-content h2 + * *,
-html[data-theme] body .legal-analysis-content h2 ~ * *,
-.legal-analysis-content[data-statute="content"] h2 + * *,
-.legal-analysis-content[data-statute="content"] h2 ~ * * {
-  font-size: var(--statute-font-size) !important;
-  line-height: var(--statute-line-height) !important;
-  font-weight: var(--statute-font-weight) !important;
+html[data-theme] body div.legal-analysis-content[data-statute] h2 + * *,
+html[data-theme] body div.legal-analysis-content[data-statute] h2 ~ * *,
+body div.legal-analysis-content[data-statute="content"] h2 + * *,
+body div.legal-analysis-content[data-statute="content"] h2 ~ * *,
+html body .legal-analysis-content h2 + * strong,
+html body .legal-analysis-content h2 ~ * strong,
+html body .legal-analysis-content h2 + * p,
+html body .legal-analysis-content h2 ~ * p,
+html body .legal-analysis-content h2 + * li,
+html body .legal-analysis-content h2 ~ * li {
+  font-size: var(--statute-font-size, 14px) !important;
+  line-height: var(--statute-line-height, 1.6) !important;
+  font-weight: var(--statute-font-weight, 400) !important;
 }
 
 /* NUCLEAR OPTION: Ultra-high specificity for strong elements in statute sections */
@@ -103,13 +110,20 @@ div.legal-analysis-content[class] h2 ~ p strong,
   display: inline !important;
 }
 
-/* Content-based targeting for legal references */
-.legal-analysis-content strong[data-statute="true"],
-.legal-analysis-content strong[title*="Texas"],
-.legal-analysis-content strong[title*="Civil Practice"],
-.legal-analysis-content p strong:is([class], [style]) {
+/* ULTIMATE CONTENT-BASED TARGETING */
+html body div.legal-analysis-content strong[data-statute="true"],
+html body div.legal-analysis-content strong[title*="Texas"],
+html body div.legal-analysis-content strong[title*="Civil Practice"],
+html body div.legal-analysis-content strong[data-forced-size="true"],
+html body div.legal-analysis-content p strong:is([class], [style]),
+html body div.legal-analysis-content *[data-forced-size="true"] {
   font-size: var(--statute-font-size, 14px) !important;
   line-height: var(--statute-line-height, 1.6) !important;
+  font-weight: 400 !important;
+}
+
+html body div.legal-analysis-content strong[data-forced-size="true"] {
+  font-weight: 600 !important;
 }
 
 /* Regular strong elements (not in statute sections) */

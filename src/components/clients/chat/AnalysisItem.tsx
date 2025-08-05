@@ -18,41 +18,79 @@ const AnalysisItem: React.FC<AnalysisItemProps> = ({ content, timestamp, onQuest
     const forceStatuteStyles = () => {
       if (!contentRef.current) return;
       
-      // ULTIMATE FONT SIZE ENFORCEMENT - CSS VARIABLES
+      // ULTIMATE CSS ENFORCEMENT
       contentRef.current.setAttribute('data-statute', 'content');
       contentRef.current.style.setProperty('--statute-font-size', '14px', 'important');
       contentRef.current.style.setProperty('--statute-line-height', '1.6', 'important');
       contentRef.current.style.setProperty('--statute-font-weight', '400', 'important');
       
-      // TARGET SPECIFIC SECTIONS: Related Provisions and KEY CASES
-      const h2Elements = contentRef.current.querySelectorAll('h2');
-      h2Elements.forEach(h2 => {
-        const headerText = h2.textContent?.toLowerCase() || '';
-        if (headerText.includes('related provisions') || headerText.includes('key cases')) {
-          
-          // Keep h2 header size normal
-          h2.style.setProperty('font-size', '1.5rem', 'important');
-          
-          // NUCLEAR ENFORCEMENT: Get ALL following siblings until next h2
-          let nextElement = h2.nextElementSibling;
-          while (nextElement && nextElement.tagName !== 'H2') {
-            // Force 14px on the element itself
-            (nextElement as HTMLElement).style.setProperty('font-size', '14px', 'important');
-            (nextElement as HTMLElement).style.setProperty('line-height', '1.6', 'important');
-            (nextElement as HTMLElement).style.setProperty('font-weight', '400', 'important');
-            
-            // Force 14px on ALL descendants (p, li, strong, em, etc.)
-            const allDescendants = nextElement.querySelectorAll('*');
-            allDescendants.forEach(child => {
-              (child as HTMLElement).style.setProperty('font-size', '14px', 'important');
-              (child as HTMLElement).style.setProperty('line-height', '1.6', 'important');
-              (child as HTMLElement).style.setProperty('font-weight', '400', 'important');
-            });
-            
-            nextElement = nextElement.nextElementSibling;
-          }
-        }
+      // Remove any conflicting prose classes
+      contentRef.current.classList.remove('prose', 'prose-slate', 'prose-lg', 'prose-xl');
+      
+      // Add MutationObserver to catch dynamic changes
+      const observer = new MutationObserver(() => {
+        applyForcedStyles();
       });
+      
+      observer.observe(contentRef.current, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'class']
+      });
+      
+      const applyForcedStyles = () => {
+        if (!contentRef.current) return;
+        
+        // TARGET RELATED PROVISIONS AND KEY CASES WITH EXTREME SPECIFICITY
+        const h2Elements = contentRef.current.querySelectorAll('h2');
+        h2Elements.forEach(h2 => {
+          const headerText = h2.textContent?.toLowerCase() || '';
+          if (headerText.includes('related provisions') || headerText.includes('key cases')) {
+            
+            // Keep h2 header size normal
+            h2.style.setProperty('font-size', '1.5rem', 'important');
+            h2.style.setProperty('font-weight', '700', 'important');
+            
+            // ULTIMATE NUCLEAR OPTION: Force styles on ALL following content
+            let nextElement = h2.nextElementSibling;
+            while (nextElement && nextElement.tagName !== 'H2') {
+              // Apply to the element itself
+              const element = nextElement as HTMLElement;
+              element.style.setProperty('font-size', '14px', 'important');
+              element.style.setProperty('line-height', '1.6', 'important');
+              element.style.setProperty('font-weight', '400', 'important');
+              element.style.setProperty('color', 'hsl(var(--foreground))', 'important');
+              
+              // Apply to ALL descendants with maximum specificity
+              const allDescendants = element.querySelectorAll('*');
+              allDescendants.forEach((child, index) => {
+                const childElement = child as HTMLElement;
+                childElement.style.setProperty('font-size', '14px', 'important');
+                childElement.style.setProperty('line-height', '1.6', 'important');
+                
+                // Special handling for strong elements
+                if (child.tagName === 'STRONG') {
+                  childElement.style.setProperty('font-weight', '600', 'important');
+                  childElement.style.setProperty('color', 'hsl(var(--primary))', 'important');
+                } else {
+                  childElement.style.setProperty('font-weight', '400', 'important');
+                }
+                
+                // Add data attribute for CSS targeting
+                childElement.setAttribute('data-forced-size', 'true');
+              });
+              
+              nextElement = nextElement.nextElementSibling;
+            }
+          }
+        });
+      };
+      
+      // Apply styles immediately and again after a delay
+      applyForcedStyles();
+      setTimeout(applyForcedStyles, 100);
+      setTimeout(applyForcedStyles, 500);
     };
 
     // Function to add click handlers to question elements

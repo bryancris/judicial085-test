@@ -1,18 +1,26 @@
 
 /* Legal document styling */
 .legal-document {
-  @apply prose prose-slate max-w-none 
-    prose-headings:font-semibold prose-headings:text-green-800 dark:prose-headings:text-green-300
-    prose-p:my-3 prose-p:leading-relaxed
-    prose-li:my-1;
+  @apply max-w-none;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  line-height: 1.7;
+  color: hsl(var(--foreground));
 }
 
 .legal-document h3 {
-  @apply text-xl mt-6 mb-3 border-b pb-2 border-gray-200 dark:border-gray-700 font-bold;
+  font-size: 1.25rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid hsl(var(--border));
+  padding-bottom: 0.5rem;
+  font-weight: 700;
 }
 
 .legal-document h4 {
-  @apply text-lg mt-4 mb-2 font-semibold;
+  font-size: 1.125rem;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
 }
 
 .legal-document ul {
