@@ -39,26 +39,51 @@ serve(async (req) => {
   }
 
   try {
+    console.log('Perplexity research function called');
+    console.log('Request method:', req.method);
+    console.log('Request URL:', req.url);
+    
     const perplexityApiKey = Deno.env.get('PERPLEXITY_API_KEY');
     
     if (!perplexityApiKey) {
-      console.error('PERPLEXITY_API_KEY not configured');
+      console.error('PERPLEXITY_API_KEY not configured in environment variables');
       return new Response(
-        JSON.stringify({ error: 'Perplexity API key not configured' }),
+        JSON.stringify({ 
+          error: 'Perplexity API key not configured',
+          details: 'Please add PERPLEXITY_API_KEY to your Supabase Edge Function secrets'
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const { query, model = 'sonar-pro', searchType = 'general', context, limit }: PerplexityRequest = await req.json();
+    console.log('Perplexity API key found, length:', perplexityApiKey.length);
+
+    let requestBody;
+    try {
+      requestBody = await req.json();
+      console.log('Request body parsed:', JSON.stringify(requestBody, null, 2));
+    } catch (parseError) {
+      console.error('Error parsing request body:', parseError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid JSON in request body',
+          details: parseError.message 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { query, model = 'sonar-pro', searchType = 'general', context, limit }: PerplexityRequest = requestBody;
 
     if (!query) {
+      console.error('Query is missing from request');
       return new Response(
         JSON.stringify({ error: 'Query is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Perplexity ${model} request for ${searchType}:`, query);
+    console.log(`Perplexity ${model} request for ${searchType}:`, query.substring(0, 100) + '...');
 
     // Enhance query based on search type
     let enhancedQuery = query;
@@ -105,6 +130,8 @@ Requirements:
     if (context) {
       enhancedQuery += ` Context: ${context}`;
     }
+
+    console.log('Making request to Perplexity API with model:', searchType === 'similar-cases' ? 'sonar-deep-research' : 'sonar-pro');
 
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',

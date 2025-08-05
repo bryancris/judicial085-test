@@ -58,12 +58,21 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
         ? `Find additional legal cases similar to: ${analysisData.summary.substring(0, 500)}`
         : `Find legal cases related to ${caseType} law`;
 
+      console.log('Calling perplexity-research with:', {
+        query: searchQuery.substring(0, 100) + '...',
+        searchType: 'similar-cases',
+        context: (analysisData?.keyFacts?.join(', ') || '').substring(0, 100) + '...',
+        limit: 5
+      });
+
       const { data, error: functionError } = await invokeFunction('perplexity-research', {
         query: searchQuery,
         searchType: 'similar-cases',
         context: analysisData?.keyFacts?.join(', ') || '',
         limit: 5
       });
+
+      console.log('Perplexity function response:', { data, error: functionError });
 
       if (functionError) {
         throw new Error(functionError);
