@@ -39,10 +39,10 @@ serve(async (req) => {
     // Initialize Supabase client
     const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
     
-    // Get legal analysis content
+    // Get legal analysis content with ID
     const { data: analysisData, error: analysisError } = await supabase
       .from("legal_analyses")
-      .select("content, case_type")
+      .select("id, content, case_type")
       .eq("client_id", clientId)
       .order("created_at", { ascending: false })
       .limit(1);
@@ -165,6 +165,48 @@ serve(async (req) => {
     }
     
     console.log(`✅ Found ${formattedCases.length} similar cases using ${fallbackUsed ? 'intelligent fallback' : 'AI-powered search'}`);
+    
+    // Save similar cases to database
+    try {
+      const legalAnalysisId = analysisData[0].id || analysis.id;
+      
+      if (legalAnalysisId && formattedCases.length > 0) {
+        // First, delete existing similar cases for this analysis
+        const { error: deleteError } = await supabase
+          .from("similar_cases")
+          .delete()
+          .eq("client_id", clientId)
+          .eq("legal_analysis_id", legalAnalysisId);
+
+        if (deleteError) {
+          console.error("Error deleting existing similar cases:", deleteError);
+        }
+
+        // Insert new similar cases
+        const { error: insertError } = await supabase
+          .from("similar_cases")
+          .insert({
+            client_id: clientId,
+            legal_analysis_id: legalAnalysisId,
+            case_data: formattedCases,
+            search_metadata: {
+              fallbackUsed: fallbackUsed,
+              analysisFound: true,
+              searchStrategy: fallbackUsed ? "intelligent-fallback" : "ai-agent-powered",
+              caseType: finalCaseType
+            }
+          });
+
+        if (insertError) {
+          console.error("Error saving similar cases:", insertError);
+        } else {
+          console.log("✅ Successfully saved similar cases to database");
+        }
+      }
+    } catch (saveError) {
+      console.error("Error saving similar cases to database:", saveError);
+      // Don't fail the request if saving fails
+    }
     
     return new Response(JSON.stringify({
       similarCases: formattedCases,

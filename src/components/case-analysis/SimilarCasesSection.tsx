@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import SearchSimilarCasesSection from "./SearchSimilarCasesSection";
 
 
 export interface SimilarCase {
@@ -29,6 +30,8 @@ export interface SimilarCasesSectionProps {
   caseType?: string;
   analysisFound?: boolean;
   fallbackUsed?: boolean;
+  clientId?: string;
+  legalAnalysisId?: string;
 }
 
 const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
@@ -36,7 +39,9 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
   isLoading = false,
   caseType,
   analysisFound = true,
-  fallbackUsed = false
+  fallbackUsed = false,
+  clientId,
+  legalAnalysisId
 }) => {
   
   // Separate cases by source
@@ -114,6 +119,17 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
 
   return (
     <>
+      {/* Search Similar Cases Section */}
+      {clientId && (
+        <div className="mb-6">
+          <SearchSimilarCasesSection 
+            clientId={clientId}
+            caseType={caseType}
+            legalAnalysisId={legalAnalysisId}
+          />
+        </div>
+      )}
+      
       <Card className="mb-6 shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-xl font-semibold flex items-center justify-between">

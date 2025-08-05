@@ -65,6 +65,8 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
         caseType={analysisData.caseType}
         analysisFound={analysisFound}
         fallbackUsed={fallbackUsed}
+        clientId={clientId}
+        legalAnalysisId={analysisData.id}
       />
 
       {/* Scholarly Legal References - ONLY HERE AT THE BOTTOM */}

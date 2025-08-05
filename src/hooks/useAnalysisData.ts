@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Json } from "@/integrations/supabase/types";
 
 export interface AnalysisData {
+  id?: string; // Add analysis ID for database operations
   outcome: {
     defense: number;
     prosecution: number;
@@ -167,6 +168,7 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
       
       // Create analysis data with raw content for direct rendering
       const completeAnalysisData: AnalysisData = {
+        id: analysis.id, // Include analysis ID for database operations
         // Keep minimal parsed data for backward compatibility
         legalAnalysis: {
           relevantLaw: "",

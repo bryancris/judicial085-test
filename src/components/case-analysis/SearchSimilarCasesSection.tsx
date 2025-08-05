@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { SimilarCase } from "./SimilarCasesDialog";
 import { searchSimilarCases } from "@/utils/openaiService";
+import { saveSimilarCases } from "@/utils/api/similarCasesApiService";
 import { useToast } from "@/hooks/use-toast";
 import SearchSimilarCasesButton from "./SearchSimilarCasesButton";
 import SimilarCasesDialog from "./SimilarCasesDialog";
@@ -9,11 +10,13 @@ import SimilarCasesDialog from "./SimilarCasesDialog";
 export interface SearchSimilarCasesSectionProps {
   clientId: string;
   caseType?: string;
+  legalAnalysisId?: string;
 }
 
 const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({ 
   clientId,
-  caseType
+  caseType,
+  legalAnalysisId
 }) => {
   const [isSearchingCases, setIsSearchingCases] = useState(false);
   const [similarCases, setSimilarCases] = useState<SimilarCase[]>([]);
@@ -79,6 +82,25 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
         } else {
           // Determine case type from results
           const detectedCaseType = result.caseType || determineCaseTypeFromResults(result.similarCases);
+          
+          // Save similar cases to database if we have a legal analysis ID
+          if (legalAnalysisId && result.similarCases.length > 0) {
+            console.log("Saving similar cases to database after manual search");
+            saveSimilarCases(
+              clientId,
+              legalAnalysisId,
+              result.similarCases,
+              {
+                fallbackUsed: result.fallbackUsed,
+                analysisFound: result.analysisFound,
+                searchStrategy: result.searchStrategy,
+                caseType: result.caseType
+              }
+            ).catch(error => {
+              console.error("Failed to save similar cases:", error);
+              // Don't show error to user as this is background operation
+            });
+          }
           
           toast({
             title: `Similar ${detectedCaseType} Cases Found`,
