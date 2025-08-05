@@ -15,32 +15,49 @@ const AnalysisItem: React.FC<AnalysisItemProps> = ({ content, timestamp, onQuest
   useEffect(() => {
     if (!contentRef.current) return;
     
-    // NUCLEAR OPTION: Force statute/case text to 14px using DOM manipulation
     const forceStatuteStyles = () => {
-      const h2Elements = contentRef.current?.querySelectorAll('h2');
-      h2Elements?.forEach(h2 => {
-        const nextElement = h2.nextElementSibling;
-        if (nextElement?.tagName === 'P') {
-          const strongElements = nextElement.querySelectorAll('strong');
-          strongElements.forEach(strong => {
-            const text = strong.textContent || '';
-            if (text.includes('Texas Civil Practice') || 
-                text.includes('Code Chapter') || 
-                text.includes('Tex.') || 
-                text.includes('Civil Practice') || 
-                text.includes('§') || 
-                text.includes('Section') || 
-                text.includes('Article')) {
-              // Force styles directly via DOM
-              strong.style.fontSize = '14px';
-              strong.style.lineHeight = '1.6';
-              strong.style.fontWeight = '600';
-              strong.style.display = 'inline-block';
-              // Add debugging border
-              strong.style.border = '2px solid red';
-              strong.style.backgroundColor = 'yellow';
-            }
-          });
+      if (!contentRef.current) return;
+      
+      // Set CSS custom properties on the container
+      contentRef.current.style.setProperty('--statute-font-size', '14px');
+      contentRef.current.style.setProperty('--statute-line-height', '1.6');
+      contentRef.current.setAttribute('data-processed', 'true');
+      
+      // NUCLEAR OPTION: Force styles with maximum specificity
+      const h2Elements = contentRef.current.querySelectorAll('h2');
+      h2Elements.forEach(h2 => {
+        let nextElement = h2.nextElementSibling;
+        while (nextElement && nextElement.tagName !== 'H2') {
+          if (nextElement.tagName === 'P') {
+            // Force paragraph styles
+            (nextElement as HTMLElement).style.setProperty('font-size', '14px', 'important');
+            (nextElement as HTMLElement).style.setProperty('line-height', '1.6', 'important');
+            
+            // Force all strong elements in this paragraph
+            const strongElements = nextElement.querySelectorAll('strong');
+            strongElements.forEach(strong => {
+              strong.style.setProperty('font-size', '14px', 'important');
+              strong.style.setProperty('line-height', '1.6', 'important');
+              strong.style.setProperty('font-weight', '600', 'important');
+              strong.setAttribute('data-statute', 'true');
+              strong.setAttribute('title', strong.textContent || '');
+            });
+          }
+          nextElement = nextElement.nextElementSibling;
+        }
+      });
+      
+      // Additional content-based targeting
+      const allStrong = contentRef.current.querySelectorAll('strong');
+      allStrong.forEach(strong => {
+        const text = strong.textContent || '';
+        if (text.includes('Texas') || text.includes('Civil Practice') || text.includes('Code') || 
+            text.includes('Deceptive Trade') || text.includes('DTPA') || text.includes('§')) {
+          strong.style.setProperty('font-size', '14px', 'important');
+          strong.style.setProperty('line-height', '1.6', 'important');
+          strong.style.setProperty('font-weight', '600', 'important');
+          strong.setAttribute('data-statute', 'true');
+          strong.setAttribute('title', text);
         }
       });
     };

@@ -30,8 +30,8 @@ export const processMarkdown = (text: string): string => {
     // Post-process to make follow-up questions clickable
     let processedContent = makeFollowUpQuestionsClickable(htmlContent);
     
-    // NUCLEAR OPTION: Force inline styles on statute/case references
-    processedContent = forceStatuteStyles(processedContent);
+    // Apply nuclear font size enforcement for statute/case references
+    processedContent = enforceStatuteFontSize(processedContent);
     
     return processedContent;
   } catch (error) {
@@ -222,21 +222,33 @@ const processPlainNumberedText = (html: string): string => {
   return beforeHeader + processedAfter;
 };
 
-function forceStatuteStyles(html: string): string {
-  // Target statute and case references after h2 headers with multiple patterns
-  let result = html;
-  
-  // Pattern 1: h2 followed by p with strong containing legal references
-  result = result.replace(
-    /(<h2[^>]*>.*?<\/h2>\s*<p[^>]*>)\s*(<strong[^>]*>)(.*?(?:Texas Civil Practice|Code Chapter|Tex\.|Civil Practice|§|Section|Article).*?)(<\/strong>)/gi,
-    '$1$2<span style="font-size: 14px !important; line-height: 1.6 !important; display: inline-block; border: 2px solid red !important; background-color: yellow !important;">$3</span>$4'
+/**
+ * Nuclear option: Force 14px font size on statute and case references
+ */
+function enforceStatuteFontSize(html: string): string {
+  // Strategy 1: Target ANY strong element after h2
+  let processedHtml = html.replace(
+    /(<h2[^>]*>.*?<\/h2>)([\s\S]*?)(?=<h2|$)/g,
+    (match, h2, content) => {
+      const processedContent = content.replace(
+        /<strong([^>]*)>/g,
+        '<strong$1 style="font-size: 14px !important; line-height: 1.6 !important; font-weight: 600 !important;" data-statute="true">'
+      );
+      return h2 + processedContent;
+    }
   );
-  
-  // Pattern 2: Any strong element containing legal references
-  result = result.replace(
-    /(<strong[^>]*>)(.*?(?:Texas Civil Practice|Code Chapter|Tex\.|Civil Practice|§|Section|Article).*?)(<\/strong>)/gi,
-    '$1<span style="font-size: 14px !important; line-height: 1.6 !important; display: inline-block; border: 2px solid red !important; background-color: yellow !important;">$2</span>$3'
+
+  // Strategy 2: Target paragraphs after h2 elements
+  processedHtml = processedHtml.replace(
+    /(<h2[^>]*>.*?<\/h2>\s*)(<p[^>]*>)/g,
+    '$1<p style="font-size: 14px !important; line-height: 1.6 !important;">'
   );
-  
-  return result;
+
+  // Strategy 3: Content-based targeting for legal references
+  processedHtml = processedHtml.replace(
+    /<strong([^>]*)>([^<]*(?:Texas|Civil Practice|Code|DTPA|Deceptive Trade|§)[^<]*)<\/strong>/g,
+    '<strong$1 style="font-size: 14px !important; line-height: 1.6 !important; font-weight: 600 !important;" data-statute="true" title="$2">$2</strong>'
+  );
+
+  return processedHtml;
 }
