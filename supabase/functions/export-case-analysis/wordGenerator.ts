@@ -750,64 +750,6 @@ function createSimilarCasesSection(similarCases: any[], docxElements: any) {
   })
 
   return content
-              new Paragraph({
-                children: [
-                  new TextRun({ text: "Citation: ", bold: true }),
-                  new TextRun(caseItem.citation || 'No citation'),
-                  caseItem.dateDecided ? new TextRun(` (${caseItem.dateDecided})`) : new TextRun('')
-                ],
-                spacing: { after: 100 },
-                indent: { left: 720 }
-              })
-            )
-          }
-          
-          // Relevant facts
-          if (caseItem.relevantFacts) {
-            caseContent.push(
-              new Paragraph({
-                children: [
-                  new TextRun({ text: "Relevant Facts: ", bold: true }),
-                  new TextRun(caseItem.relevantFacts)
-                ],
-                spacing: { after: 100 },
-                indent: { left: 720 }
-              })
-            )
-          }
-          
-          // Outcome
-          if (caseItem.outcome) {
-            caseContent.push(
-              new Paragraph({
-                children: [
-                  new TextRun({ text: "Outcome: ", bold: true }),
-                  new TextRun(caseItem.outcome)
-                ],
-                spacing: { after: 150 },
-                indent: { left: 720 }
-              })
-            )
-          }
-          
-          return caseContent
-        }).flat()
-      } else {
-        // Fallback for old data structure
-        return [
-          new Paragraph({
-            children: [
-              new TextRun({ text: `${index + 1}. `, bold: true }),
-              new TextRun({ text: `${similarCase.clientName || 'Unknown Case'}: `, bold: true }),
-              new TextRun(similarCase.relevantFacts || 'No details available.')
-            ],
-            spacing: { after: 150 },
-            indent: { left: 360 }
-          })
-        ]
-      }
-    }).flat()
-  ]
 }
 
 function createScholarlyReferencesSection(scholarlyReferences: any[], docxElements: any) {
