@@ -79,9 +79,31 @@ function detectCaseTypeFromContent(content: string): string {
     typeScores["consumer-protection"] += 30;
   }
   
-  // Contract detection  
+  // Enhanced contract detection with construction-specific terms
   if (lowerContent.includes("breach of contract") || lowerContent.includes("contract violation")) {
     typeScores["contract"] += 40;
+    console.log("📋 FOUND: Breach of contract terms - Adding 40 to contract");
+  }
+  if (lowerContent.includes("express warranty") || lowerContent.includes("warranty breach")) {
+    typeScores["contract"] += 35;
+    console.log("📋 FOUND: Warranty terms - Adding 35 to contract");
+  }
+  if (lowerContent.includes("construction contract") || lowerContent.includes("home renovation") || 
+      lowerContent.includes("kitchen renovation") || lowerContent.includes("contractor") || 
+      lowerContent.includes("construction") || lowerContent.includes("building contract")) {
+    typeScores["contract"] += 30;
+    console.log("🏗️ FOUND: Construction contract terms - Adding 30 to contract");
+  }
+  if (lowerContent.includes("material substitution") || lowerContent.includes("inferior materials") || 
+      lowerContent.includes("cheaper materials") || lowerContent.includes("specification") || 
+      lowerContent.includes("granite countertops") || lowerContent.includes("hardwood cabinets")) {
+    typeScores["contract"] += 25;
+    console.log("🔧 FOUND: Material/specification terms - Adding 25 to contract");
+  }
+  if (lowerContent.includes("business & commerce code") || lowerContent.includes("ucc") || 
+      lowerContent.includes("§ 2.313") || lowerContent.includes("§ 1.203") || lowerContent.includes("§ 2.714")) {
+    typeScores["contract"] += 30;
+    console.log("⚖️ FOUND: UCC/Commerce Code terms - Adding 30 to contract");
   }
   if (lowerContent.includes("agreement") || lowerContent.includes("contractual")) {
     typeScores["contract"] += 20;

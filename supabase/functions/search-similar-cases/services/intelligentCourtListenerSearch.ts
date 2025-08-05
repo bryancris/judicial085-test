@@ -142,6 +142,17 @@ function generateEnhancedSearchQueries(agentAnalysis: AgentAnalysis, caseType: s
       "actual constructive knowledge",
       "Wal-Mart premises liability"
     );
+  } else if (caseType.includes("contract") || caseType.includes("construction") || caseType.includes("warranty")) {
+    queries.push(
+      "breach of contract express warranty Texas",
+      "construction contract material substitution",
+      "home renovation contractor breach",
+      "express warranty construction materials",
+      "Texas Business Commerce Code warranty",
+      "material specification breach contract",
+      "contractor warranty violation Texas",
+      "UCC express warranty breach"
+    );
   }
   
   // Add common legal terms that appear in court opinions
@@ -150,6 +161,19 @@ function generateEnhancedSearchQueries(agentAnalysis: AgentAnalysis, caseType: s
       "slip fall retail store",
       "spilled substance floor",
       "unsafe condition premises"
+    );
+  }
+  
+  // Add construction/contract specific terms
+  if (agentAnalysis.keyFacts.some(fact => 
+    fact.includes("construction") || fact.includes("renovation") || 
+    fact.includes("contractor") || fact.includes("material") ||
+    fact.includes("specification") || fact.includes("warranty"))) {
+    queries.push(
+      "construction contract breach Texas",
+      "home renovation material defect",
+      "contractor warranty breach",
+      "building contract specification"
     );
   }
   

@@ -15,31 +15,32 @@ export class LegalCaseAgent {
   }
 
   async analyzeCaseForSimilarity(caseContent: string, caseType?: string): Promise<AgentAnalysis> {
-    const prompt = `Please analyze this case content for similarity searching. Generate BROADER search terms that will find relevant cases in legal databases.
+    const prompt = `Please analyze this case content for similarity searching. Pay special attention to the PRELIMINARY ANALYSIS section to understand the core legal issues. Generate BROADER search terms that will find relevant cases in legal databases.
 
 CASE TYPE: ${caseType || 'Unknown'}
 
 CASE CONTENT:
 ${caseContent}
 
-For this analysis, I need you to focus on generating search terms that practicing attorneys would use to find similar cases. 
-
-IMPORTANT GUIDELINES:
-1. For premises liability cases involving slips/falls: Include terms like "premises liability", "slip and fall", "negligence", "dangerous condition", "invitee", "business premises"
-2. Use broader legal concepts rather than very specific facts
-3. Include relevant Texas statutes and common case citations
-4. Generate 5-7 practical search queries that cast a wider net
-5. Focus on legal standards and elements rather than specific factual details
+CRITICAL INSTRUCTIONS:
+1. FOCUS HEAVILY on the PRELIMINARY ANALYSIS section - this contains the key legal issues and case theory
+2. Extract the main legal concepts from the preliminary analysis (e.g., breach of contract, express warranty, construction defects)
+3. For CONTRACT CASES: Include terms like "breach of contract", "express warranty", "construction contract", "material substitution", "contractor liability", "UCC", "Business Commerce Code"
+4. For CONSTRUCTION CASES: Include "home renovation", "construction defects", "contractor breach", "material specification", "building contract", "construction warranty"
+5. For PREMISES LIABILITY: Include "premises liability", "slip and fall", "negligence", "dangerous condition", "invitee", "business premises"
+6. Include relevant Texas statutes (especially UCC sections like 2.313, 1.203, 2.714 for contracts)
+7. Generate 5-7 practical search queries that will find similar legal issues
+8. Use legal terminology that appears in court opinions and case law
 
 CRITICAL: Format your response EXACTLY like this (no bullets, no numbers, no markdown):
 
-Legal Concepts: premises liability, negligence, dangerous condition, duty of care, invitee status
-Key Facts: slip and fall, spilled substance, retail store, customer injury, notice requirement
-Relevant Statutes: Texas Civil Practice Remedies Code 75.002
-Search Queries: premises liability Texas, slip and fall negligence store, dangerous condition notice, invitee duty care, negligence retail establishment
-Case Theory: Premises liability case involving store owner duty to maintain safe conditions for business invitees
+Legal Concepts: breach of contract, express warranty, construction defects, material substitution, good faith obligation
+Key Facts: kitchen renovation contract, inferior materials, specification violation, contractor substitution, warranty breach
+Relevant Statutes: Texas Business & Commerce Code § 2.313, Texas Business & Commerce Code § 1.203, Texas Business & Commerce Code § 2.714
+Search Queries: breach of contract express warranty Texas, construction contract material substitution, home renovation contractor breach, express warranty construction materials, Texas Business Commerce Code warranty
+Case Theory: Construction contract breach involving express warranty violation and material substitution
 
-Focus on terms that will find cases with similar legal issues and standards, even if the specific facts vary.`;
+Focus on the core legal issues from the PRELIMINARY ANALYSIS to find cases with similar legal standards and elements.`;
 
     const content = await this.assistantService.runAssistantAnalysis(prompt);
     console.log('✅ Received assistant response');
