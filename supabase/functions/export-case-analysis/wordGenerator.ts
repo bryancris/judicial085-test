@@ -661,7 +661,23 @@ function createFormattedList(items: string[], docxElements: any) {
 function createSimilarCasesSection(similarCases: any[], docxElements: any) {
   const { Paragraph, TextRun, HeadingLevel } = docxElements
   
-  return [
+  console.log('Processing similar cases for Word export:', similarCases)
+  
+  if (!similarCases || similarCases.length === 0) {
+    return [
+      new Paragraph({
+        text: "Similar Cases",
+        heading: HeadingLevel.HEADING_1,
+        spacing: { before: 400 }
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: "No similar cases have been identified for this client.", italic: true })],
+        spacing: { after: 200 }
+      })
+    ]
+  }
+
+  const content = [
     new Paragraph({
       text: "Similar Cases",
       heading: HeadingLevel.HEADING_1,
@@ -670,34 +686,70 @@ function createSimilarCasesSection(similarCases: any[], docxElements: any) {
     new Paragraph({
       children: [new TextRun({ text: "The following cases were identified as similar based on the case analysis.", italic: true })],
       spacing: { after: 200 }
-    }),
-    ...similarCases.slice(0, 5).map((similarCase: any, index: number) => {
-      const content = []
+    })
+  ]
+
+  // Process each similar case
+  similarCases.slice(0, 5).forEach((caseItem: any, index: number) => {
+    console.log(`Processing case ${index + 1}:`, caseItem)
+    
+    // Case header with name and court
+    content.push(
+      new Paragraph({
+        children: [
+          new TextRun({ text: `${index + 1}. `, bold: true }),
+          new TextRun({ text: caseItem.clientName || 'Unknown Case', bold: true }),
+          caseItem.court ? new TextRun({ text: ` (${caseItem.court})` }) : new TextRun('')
+        ],
+        spacing: { after: 100 }
+      })
+    )
+    
+    // Citation and date
+    if (caseItem.citation || caseItem.dateDecided) {
+      const citationParts = []
+      if (caseItem.citation) citationParts.push(caseItem.citation)
+      if (caseItem.dateDecided) citationParts.push(`decided ${caseItem.dateDecided}`)
       
-      // Parse case data - it's stored in a JSON structure
-      const caseData = similarCase.case_data || {}
-      const cases = Array.isArray(caseData) ? caseData : (caseData.similarCases || [])
-      
-      if (Array.isArray(cases) && cases.length > 0) {
-        return cases.slice(0, 5).map((caseItem: any, caseIndex: number) => {
-          const caseContent = []
-          
-          // Case title and client
-          caseContent.push(
-            new Paragraph({
-              children: [
-                new TextRun({ text: `${caseIndex + 1}. `, bold: true }),
-                new TextRun({ text: caseItem.clientName || 'Unknown Case', bold: true }),
-                caseItem.court ? new TextRun(` (${caseItem.court})`) : new TextRun('')
-              ],
-              spacing: { after: 100 },
-              indent: { left: 360 }
-            })
-          )
-          
-          // Citation and date
-          if (caseItem.citation || caseItem.dateDecided) {
-            caseContent.push(
+      content.push(
+        new Paragraph({
+          children: [new TextRun({ text: citationParts.join(', '), italic: true })],
+          spacing: { after: 100 },
+          indent: { left: 360 }
+        })
+      )
+    }
+    
+    // Relevant facts
+    if (caseItem.relevantFacts) {
+      content.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: 'Relevant Facts: ', bold: true }),
+            new TextRun({ text: caseItem.relevantFacts })
+          ],
+          spacing: { after: 100 },
+          indent: { left: 360 }
+        })
+      )
+    }
+    
+    // Outcome
+    if (caseItem.outcome) {
+      content.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: 'Outcome: ', bold: true }),
+            new TextRun({ text: caseItem.outcome })
+          ],
+          spacing: { after: 200 },
+          indent: { left: 360 }
+        })
+      )
+    }
+  })
+
+  return content
               new Paragraph({
                 children: [
                   new TextRun({ text: "Citation: ", bold: true }),

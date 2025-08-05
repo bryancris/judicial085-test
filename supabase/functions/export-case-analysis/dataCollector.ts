@@ -127,13 +127,35 @@ async function fetchAnalysisData(supabase: any, clientId: string, caseId?: strin
 }
 
 async function fetchSimilarCases(supabase: any, analysisId: string) {
-  const { data: similarCasesData } = await supabase
+  // First try to get similar cases for the specific analysis
+  let { data: similarCasesData } = await supabase
     .from('similar_cases')
     .select('*')
     .eq('legal_analysis_id', analysisId)
     .order('created_at', { ascending: false })
     .limit(1)
 
+  // If no data found for this analysis, try to get any similar cases for this client
+  if (!similarCasesData || similarCasesData.length === 0) {
+    const { data: clientAnalysis } = await supabase
+      .from('legal_analyses')
+      .select('client_id')
+      .eq('id', analysisId)
+      .single()
+    
+    if (clientAnalysis?.client_id) {
+      const { data: fallbackData } = await supabase
+        .from('similar_cases')
+        .select('*')
+        .eq('client_id', clientAnalysis.client_id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+      
+      similarCasesData = fallbackData
+    }
+  }
+
+  console.log('Similar cases data:', similarCasesData)
   return (similarCasesData && similarCasesData.length > 0) ? 
     (similarCasesData[0].case_data || []) : []
 }
