@@ -27,6 +27,8 @@ interface PerplexityResult {
   content: string;
   citations: string[];
   model: string;
+  timeout?: boolean;
+  error?: string;
 }
 
 export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
@@ -189,10 +191,31 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
       console.log('Full response object keys:', data ? Object.keys(data) : 'No data');
 
       if (functionError) {
+        // Handle specific timeout errors
+        if (functionError.includes('timeout') || functionError.includes('504') || functionError.includes('Request timeout')) {
+          toast({
+            title: "Search Timed Out",
+            description: "The search took too long. Please try again with a simpler query or wait a moment before retrying.",
+            variant: "destructive",
+          });
+          setError("The search took too long and was cancelled. This can happen with complex queries. Try again or simplify your search.");
+          return;
+        }
+        
         throw new Error(functionError);
       }
 
+      // Check if the response indicates a timeout
       const result = data as PerplexityResult;
+      if (result?.timeout || result?.error === 'Request timeout') {
+        toast({
+          title: "Search Timed Out",
+          description: "The search took too long. Please try again with a simpler query.",
+          variant: "destructive",
+        });
+        setError("The search took too long and was cancelled. This can happen with complex queries. Try again or simplify your search.");
+        return;
+      }
       if (result?.content) {
         let newCases: PerplexityCase[] = [];
         

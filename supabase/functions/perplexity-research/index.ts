@@ -139,39 +139,69 @@ Requirements:
       enhancedQuery += ` Context: ${context}`;
     }
 
-    console.log('Making request to Perplexity API with model:', searchType === 'similar-cases' ? 'sonar-deep-research' : 'sonar-pro');
+    // Use faster model for similar-cases to prevent timeouts
+    const selectedModel = searchType === 'similar-cases' ? 'sonar-pro' : 'sonar-pro';
+    console.log('Making request to Perplexity API with model:', selectedModel);
 
-    const response = await fetch('https://api.perplexity.ai/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${perplexityApiKey}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'User-Agent': 'Legal-Research/1.0'
-      },
-      body: JSON.stringify({
-        model: searchType === 'similar-cases' ? 'sonar-deep-research' : 'sonar-pro',
-        messages: [
-          {
-            role: 'system',
-            content: searchType === 'similar-cases' 
-              ? 'You are a legal case database. Return only verified case information in the requested JSON format. Do not include analysis, reasoning, or explanations.'
-              : 'You are a legal research expert. Provide comprehensive legal information including: 1) Full statute text when statutes are mentioned, 2) Multiple relevant cases with detailed summaries, 3) Clear legal analysis with actionable guidance. Always include 5-10 relevant cases with case names, courts, citations, and brief summaries.'
-          },
-          {
-            role: 'user',
-            content: enhancedQuery
-          }
-        ],
-        max_tokens: 4000,
-        temperature: 0.1,
-        top_p: 0.9,
-        return_citations: true,
-        return_images: false,
-        search_domain_filter: ['justia.com', 'caselaw.findlaw.com', 'scholar.google.com', 'courtlistener.com', 'law.cornell.edu', 'statutes.capitol.texas.gov'],
-        search_recency_filter: 'year'
-      }),
-    });
+    // Create timeout wrapper for the API call
+    const timeoutMs = 35000; // 35 second timeout to stay within Edge Function limits
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    let response;
+    try {
+      response = await fetch('https://api.perplexity.ai/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${perplexityApiKey}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'User-Agent': 'Legal-Research/1.0'
+        },
+        body: JSON.stringify({
+          model: selectedModel,
+          messages: [
+            {
+              role: 'system',
+              content: searchType === 'similar-cases' 
+                ? 'You are a legal case database. Return only verified case information in the requested JSON format. Do not include analysis, reasoning, or explanations.'
+                : 'You are a legal research expert. Provide comprehensive legal information including: 1) Full statute text when statutes are mentioned, 2) Multiple relevant cases with detailed summaries, 3) Clear legal analysis with actionable guidance. Always include 5-10 relevant cases with case names, courts, citations, and brief summaries.'
+            },
+            {
+              role: 'user',
+              content: enhancedQuery
+            }
+          ],
+          max_tokens: searchType === 'similar-cases' ? 2000 : 4000, // Reduced tokens for similar-cases
+          temperature: 0.1,
+          top_p: 0.9,
+          return_citations: true,
+          return_images: false,
+          search_domain_filter: ['justia.com', 'caselaw.findlaw.com', 'scholar.google.com', 'courtlistener.com', 'law.cornell.edu', 'statutes.capitol.texas.gov'],
+          search_recency_filter: 'year'
+        }),
+        signal: controller.signal
+      });
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      
+      if (fetchError.name === 'AbortError') {
+        console.error('Perplexity API request timed out after', timeoutMs, 'ms');
+        return new Response(
+          JSON.stringify({ 
+            error: 'Request timeout',
+            details: `The search took too long and was cancelled after ${timeoutMs / 1000} seconds. Try using a simpler search query.`,
+            timeout: true,
+            retryable: true
+          }),
+          { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      throw fetchError; // Re-throw other errors
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
