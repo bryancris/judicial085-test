@@ -1483,6 +1483,10 @@ export type Database = {
         Args: { "": string } | { "": unknown }
         Returns: unknown
       }
+      cleanup_old_job_runs: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       delete_client_contract_reviews: {
         Args: { client_id_param: string }
         Returns: undefined
