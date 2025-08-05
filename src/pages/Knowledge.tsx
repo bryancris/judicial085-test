@@ -11,11 +11,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ScholarlyResearch from '@/components/knowledge/ScholarlyResearch';
 import TexasLawDocuments from '@/components/knowledge/TexasLawDocuments';
 import CourtListenerStats from '@/components/knowledge/CourtListenerStats';
+import BackgroundEnrichmentDashboard from '@/components/knowledge/BackgroundEnrichmentDashboard';
 
 const Knowledge = () => {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [debugMode, setDebugMode] = useState(false);
-  const [activeTab, setActiveTab] = useState<"documents" | "scholarly" | "law">("documents");
+  const [activeTab, setActiveTab] = useState<"documents" | "scholarly" | "law" | "enrichment">("documents");
   
   const {
     session,
@@ -103,7 +104,7 @@ const Knowledge = () => {
         
         <Tabs 
           value={activeTab} 
-          onValueChange={(value) => setActiveTab(value as "documents" | "scholarly" | "law")}
+          onValueChange={(value) => setActiveTab(value as "documents" | "scholarly" | "law" | "enrichment")}
           className="mb-6"
         >
           <TabsList>
@@ -118,6 +119,10 @@ const Knowledge = () => {
             <TabsTrigger value="law" className="flex items-center gap-1">
               <Scale className="h-4 w-4" />
               Texas Law Documents
+            </TabsTrigger>
+            <TabsTrigger value="enrichment" className="flex items-center gap-1">
+              <Database className="h-4 w-4" />
+              Dataset Management
             </TabsTrigger>
           </TabsList>
           
@@ -190,6 +195,10 @@ const Knowledge = () => {
 
           <TabsContent value="law" className="mt-6">
             <TexasLawDocuments />
+          </TabsContent>
+
+          <TabsContent value="enrichment" className="mt-6">
+            <BackgroundEnrichmentDashboard />
           </TabsContent>
         </Tabs>
       </main>

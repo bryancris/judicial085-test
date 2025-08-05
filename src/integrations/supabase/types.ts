@@ -73,6 +73,42 @@ export type Database = {
           },
         ]
       }
+      background_job_runs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_count: number | null
+          id: string
+          job_name: string
+          metadata: Json | null
+          processed_count: number | null
+          started_at: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_count?: number | null
+          id?: string
+          job_name: string
+          metadata?: Json | null
+          processed_count?: number | null
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_count?: number | null
+          id?: string
+          job_name?: string
+          metadata?: Json | null
+          processed_count?: number | null
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
       case_analysis_notes: {
         Row: {
           client_id: string
@@ -1492,6 +1528,17 @@ export type Database = {
           case_id: string
         }[]
       }
+      get_cases_needing_enrichment: {
+        Args: { batch_size?: number }
+        Returns: {
+          id: string
+          courtlistener_id: string
+          case_name: string
+          snippet: string
+          api_fetch_count: number
+          last_updated_at: string
+        }[]
+      }
       get_client_documents_with_cases: {
         Args: { client_id_param: string; case_id_filter?: string }
         Returns: {
@@ -1525,6 +1572,16 @@ export type Database = {
           legal_research_count: number
           recent_research_count: number
           avg_confidence: number
+        }[]
+      }
+      get_enrichment_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          total_cases: number
+          cases_with_embeddings: number
+          cases_with_concepts: number
+          cases_needing_enrichment: number
+          last_enrichment_run: string
         }[]
       }
       get_user_firm_id: {
@@ -1592,6 +1649,24 @@ export type Database = {
       }
       link_research_to_analysis: {
         Args: { research_id_param: string; legal_analysis_id_param: string }
+        Returns: boolean
+      }
+      log_background_job_complete: {
+        Args: {
+          job_run_id_param: string
+          status_param?: string
+          processed_count_param?: number
+          error_count_param?: number
+          metadata_param?: Json
+        }
+        Returns: boolean
+      }
+      log_background_job_start: {
+        Args: { job_name_param: string; metadata_param?: Json }
+        Returns: string
+      }
+      mark_case_processing_status: {
+        Args: { case_id_param: string; status?: string }
         Returns: boolean
       }
       match_documents: {
