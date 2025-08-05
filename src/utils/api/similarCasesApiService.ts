@@ -31,7 +31,7 @@ export interface SimilarCasesRecord {
   updated_at: string;
 }
 
-// Save similar cases to database
+// Save similar cases to database with global case references
 export const saveSimilarCases = async (
   clientId: string,
   legalAnalysisId: string,
@@ -41,7 +41,8 @@ export const saveSimilarCases = async (
     analysisFound?: boolean;
     searchStrategy?: string;
     caseType?: string;
-  }
+  },
+  searchCacheId?: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     console.log("Saving similar cases to database:", { clientId, legalAnalysisId, count: similarCases.length });
@@ -58,14 +59,42 @@ export const saveSimilarCases = async (
       return { success: false, error: deleteError.message };
     }
 
-    // Insert new similar cases with proper JSON conversion
+    // Try to find global case IDs for CourtListener cases
+    const globalCaseIds: string[] = [];
+    for (const case_ of similarCases) {
+      if (case_.source === "courtlistener" && case_.url) {
+        try {
+          // Extract CourtListener ID from URL or use other identifying info
+          const courtListenerIdMatch = case_.url.match(/\/(\d+)\//);
+          if (courtListenerIdMatch) {
+            const courtListenerId = courtListenerIdMatch[1];
+            
+            const { data: globalCase } = await supabase
+              .from("courtlistener_cases")
+              .select("id")
+              .eq("courtlistener_id", courtListenerId)
+              .limit(1);
+
+            if (globalCase && globalCase.length > 0) {
+              globalCaseIds.push(globalCase[0].id);
+            }
+          }
+        } catch (error) {
+          console.error("Error finding global case ID:", error);
+        }
+      }
+    }
+
+    // Insert new similar cases with global case references
     const { error: insertError } = await supabase
       .from("similar_cases")
       .insert({
         client_id: clientId,
         legal_analysis_id: legalAnalysisId,
         case_data: similarCases as any, // Cast to any to bypass strict typing
-        search_metadata: metadata as any
+        search_metadata: metadata as any,
+        global_case_ids: globalCaseIds,
+        search_cache_id: searchCacheId
       });
 
     if (insertError) {
@@ -73,7 +102,7 @@ export const saveSimilarCases = async (
       return { success: false, error: insertError.message };
     }
 
-    console.log("✅ Successfully saved similar cases to database");
+    console.log(`✅ Successfully saved similar cases to database (${globalCaseIds.length} linked to global dataset)`);
     return { success: true };
   } catch (err: any) {
     console.error("Exception saving similar cases:", err);

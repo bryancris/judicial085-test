@@ -20,6 +20,7 @@ export type Database = {
           citation: string | null
           client_id: string
           court: string | null
+          courtlistener_case_id: string | null
           created_at: string
           date_decided: string | null
           id: string
@@ -35,6 +36,7 @@ export type Database = {
           citation?: string | null
           client_id: string
           court?: string | null
+          courtlistener_case_id?: string | null
           created_at?: string
           date_decided?: string | null
           id?: string
@@ -50,6 +52,7 @@ export type Database = {
           citation?: string | null
           client_id?: string
           court?: string | null
+          courtlistener_case_id?: string | null
           created_at?: string
           date_decided?: string | null
           id?: string
@@ -60,7 +63,15 @@ export type Database = {
           updated_at?: string
           url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "additional_case_law_courtlistener_case_id_fkey"
+            columns: ["courtlistener_case_id"]
+            isOneToOne: false
+            referencedRelation: "courtlistener_cases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       case_analysis_notes: {
         Row: {
@@ -370,6 +381,217 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      courtlistener_case_citations: {
+        Row: {
+          citation_context: string | null
+          citation_type: string | null
+          cited_case_id: string
+          citing_case_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          citation_context?: string | null
+          citation_type?: string | null
+          cited_case_id: string
+          citing_case_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          citation_context?: string | null
+          citation_type?: string | null
+          cited_case_id?: string
+          citing_case_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courtlistener_case_citations_cited_case_id_fkey"
+            columns: ["cited_case_id"]
+            isOneToOne: false
+            referencedRelation: "courtlistener_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courtlistener_case_citations_citing_case_id_fkey"
+            columns: ["citing_case_id"]
+            isOneToOne: false
+            referencedRelation: "courtlistener_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      courtlistener_case_concepts: {
+        Row: {
+          case_id: string
+          concept_type: string
+          concept_value: string
+          confidence: number | null
+          created_at: string
+          extracted_by: string | null
+          id: string
+        }
+        Insert: {
+          case_id: string
+          concept_type: string
+          concept_value: string
+          confidence?: number | null
+          created_at?: string
+          extracted_by?: string | null
+          id?: string
+        }
+        Update: {
+          case_id?: string
+          concept_type?: string
+          concept_value?: string
+          confidence?: number | null
+          created_at?: string
+          extracted_by?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courtlistener_case_concepts_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "courtlistener_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      courtlistener_case_embeddings: {
+        Row: {
+          case_id: string
+          content: string
+          content_type: string
+          created_at: string
+          embedding: string | null
+          id: string
+        }
+        Insert: {
+          case_id: string
+          content: string
+          content_type: string
+          created_at?: string
+          embedding?: string | null
+          id?: string
+        }
+        Update: {
+          case_id?: string
+          content?: string
+          content_type?: string
+          created_at?: string
+          embedding?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courtlistener_case_embeddings_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "courtlistener_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      courtlistener_cases: {
+        Row: {
+          absolute_url: string | null
+          api_fetch_count: number | null
+          case_name: string
+          case_type: string | null
+          citation: string | null
+          court: string | null
+          court_name: string | null
+          courtlistener_id: string
+          date_decided: string | null
+          date_filed: string | null
+          first_indexed_at: string
+          full_text: string | null
+          id: string
+          jurisdiction: string | null
+          last_updated_at: string
+          precedential_status: string | null
+          snippet: string | null
+        }
+        Insert: {
+          absolute_url?: string | null
+          api_fetch_count?: number | null
+          case_name: string
+          case_type?: string | null
+          citation?: string | null
+          court?: string | null
+          court_name?: string | null
+          courtlistener_id: string
+          date_decided?: string | null
+          date_filed?: string | null
+          first_indexed_at?: string
+          full_text?: string | null
+          id?: string
+          jurisdiction?: string | null
+          last_updated_at?: string
+          precedential_status?: string | null
+          snippet?: string | null
+        }
+        Update: {
+          absolute_url?: string | null
+          api_fetch_count?: number | null
+          case_name?: string
+          case_type?: string | null
+          citation?: string | null
+          court?: string | null
+          court_name?: string | null
+          courtlistener_id?: string
+          date_decided?: string | null
+          date_filed?: string | null
+          first_indexed_at?: string
+          full_text?: string | null
+          id?: string
+          jurisdiction?: string | null
+          last_updated_at?: string
+          precedential_status?: string | null
+          snippet?: string | null
+        }
+        Relationships: []
+      }
+      courtlistener_search_cache: {
+        Row: {
+          cached_at: string
+          expires_at: string
+          hit_count: number | null
+          id: string
+          original_query: string
+          query_hash: string
+          result_case_ids: string[] | null
+          search_parameters: Json | null
+          total_results: number | null
+        }
+        Insert: {
+          cached_at?: string
+          expires_at?: string
+          hit_count?: number | null
+          id?: string
+          original_query: string
+          query_hash: string
+          result_case_ids?: string[] | null
+          search_parameters?: Json | null
+          total_results?: number | null
+        }
+        Update: {
+          cached_at?: string
+          expires_at?: string
+          hit_count?: number | null
+          id?: string
+          original_query?: string
+          query_hash?: string
+          result_case_ids?: string[] | null
+          search_parameters?: Json | null
+          total_results?: number | null
+        }
+        Relationships: []
       }
       discovery_documents: {
         Row: {
@@ -1028,8 +1250,10 @@ export type Database = {
           case_data: Json
           client_id: string
           created_at: string
+          global_case_ids: string[] | null
           id: string
           legal_analysis_id: string
+          search_cache_id: string | null
           search_metadata: Json | null
           updated_at: string
         }
@@ -1037,8 +1261,10 @@ export type Database = {
           case_data: Json
           client_id: string
           created_at?: string
+          global_case_ids?: string[] | null
           id?: string
           legal_analysis_id: string
+          search_cache_id?: string | null
           search_metadata?: Json | null
           updated_at?: string
         }
@@ -1046,8 +1272,10 @@ export type Database = {
           case_data?: Json
           client_id?: string
           created_at?: string
+          global_case_ids?: string[] | null
           id?: string
           legal_analysis_id?: string
+          search_cache_id?: string | null
           search_metadata?: Json | null
           updated_at?: string
         }
@@ -1064,6 +1292,13 @@ export type Database = {
             columns: ["legal_analysis_id"]
             isOneToOne: false
             referencedRelation: "legal_analyses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "similar_cases_search_cache_id_fkey"
+            columns: ["search_cache_id"]
+            isOneToOne: false
+            referencedRelation: "courtlistener_search_cache"
             referencedColumns: ["id"]
           },
         ]

@@ -1,5 +1,6 @@
 
 import { LegalCaseAgent, AgentAnalysis } from "./legalCaseAgent.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.23.0";
 
 export interface CourtListenerSearchResult {
   results: any[];
@@ -15,8 +16,14 @@ export async function intelligentCourtListenerSearch(
 ): Promise<CourtListenerSearchResult> {
   console.log("=== INTELLIGENT COURTLISTENER SEARCH START ===");
   
+  // Initialize Supabase client for cache access
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
+  
   try {
-    console.log("🤖 USING AI AGENT-POWERED SEARCH");
+    console.log("🤖 USING AI AGENT-POWERED SEARCH WITH GLOBAL CACHE");
     
     // Step 1: Analyze the case with AI agent
     console.log("Step 1: Analyzing case with AI agent...");
@@ -25,12 +32,12 @@ export async function intelligentCourtListenerSearch(
     
     console.log(`Agent analysis complete: { legalConcepts: ${agentAnalysis.legalConcepts.length}, keyFacts: ${agentAnalysis.keyFacts.length}, searchQueries: ${agentAnalysis.searchQueries.length} }`);
     
-    // Step 2: Use agent's search queries to search CourtListener V4
-    console.log("Step 2: Searching CourtListener with agent queries...");
-    console.log(`Agent provided ${agentAnalysis.searchQueries.length} search queries`);
+    // Step 2: Enhanced search with cache integration
+    console.log("Step 2: Searching with cache-first strategy...");
     
     const allResults: any[] = [];
     const searchQueries: string[] = [];
+    const cachedResults: any[] = [];
     
     // Enhanced search strategy with broader terms
     const enhancedQueries = generateEnhancedSearchQueries(agentAnalysis, caseType);
@@ -48,11 +55,23 @@ export async function intelligentCourtListenerSearch(
       console.log(`Executing search query ${i + 1}: ${query}`);
       
       try {
-        const queryResults = await searchCourtListenerV4(query, courtListenerApiKey);
-        console.log(`Query ${i + 1} returned ${queryResults.length} results`);
+        // First check cache
+        const cacheResults = await checkGlobalCache(supabase, query);
         
-        allResults.push(...queryResults);
-        searchQueries.push(query);
+        if (cacheResults.length > 0) {
+          console.log(`📦 Cache hit for query "${query}": ${cacheResults.length} cases`);
+          cachedResults.push(...cacheResults);
+          allResults.push(...cacheResults);
+          searchQueries.push(query);
+        } else {
+          // Cache miss - search CourtListener API
+          console.log(`🌐 Cache miss - searching CourtListener API for: ${query}`);
+          const queryResults = await searchCourtListenerV4WithCache(supabase, query, courtListenerApiKey);
+          console.log(`Query ${i + 1} returned ${queryResults.length} results`);
+          
+          allResults.push(...queryResults);
+          searchQueries.push(query);
+        }
         
         // Stop if we found enough results
         if (allResults.length >= 10) {
@@ -60,8 +79,8 @@ export async function intelligentCourtListenerSearch(
           break;
         }
         
-        // Add delay between requests to avoid rate limiting
-        if (i < enhancedQueries.length - 1) {
+        // Add delay between requests to avoid rate limiting (only for API calls)
+        if (cachedResults.length === 0 && i < enhancedQueries.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
       } catch (error) {
@@ -263,4 +282,189 @@ function deduplicateResults(results: any[]): any[] {
   }
   
   return unique;
+}
+
+// Generate MD5 hash for query caching
+async function generateQueryHash(query: string): Promise<string> {
+  const normalizedQuery = query.toLowerCase().trim();
+  const encoder = new TextEncoder();
+  const data = encoder.encode(normalizedQuery);
+  const hashBuffer = await crypto.subtle.digest('MD5', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Check global cache for search results
+async function checkGlobalCache(supabase: any, query: string): Promise<any[]> {
+  try {
+    const queryHash = await generateQueryHash(query);
+    
+    // Check for valid cache entry
+    const { data: cacheData, error: cacheError } = await supabase
+      .from("courtlistener_search_cache")
+      .select("*")
+      .eq("query_hash", queryHash)
+      .gt("expires_at", new Date().toISOString())
+      .limit(1);
+
+    if (cacheError || !cacheData || cacheData.length === 0) {
+      return [];
+    }
+
+    const cacheEntry = cacheData[0];
+    
+    // Increment hit count
+    await supabase
+      .from("courtlistener_search_cache")
+      .update({ hit_count: cacheEntry.hit_count + 1 })
+      .eq("id", cacheEntry.id);
+
+    // Fetch the actual case data
+    if (!cacheEntry.result_case_ids || cacheEntry.result_case_ids.length === 0) {
+      return [];
+    }
+
+    const { data: cases, error: casesError } = await supabase
+      .from("courtlistener_cases")
+      .select("*")
+      .in("id", cacheEntry.result_case_ids);
+
+    if (casesError) {
+      console.error("Error fetching cached cases:", casesError);
+      return [];
+    }
+
+    // Convert to expected format
+    return (cases || []).map((case_: any) => ({
+      id: case_.courtlistener_id,
+      caseName: case_.case_name,
+      case_name: case_.case_name,
+      court: case_.court,
+      court_name: case_.court_name || case_.court,
+      citation: case_.citation,
+      dateFiled: case_.date_filed,
+      date_filed: case_.date_filed,
+      absolute_url: case_.absolute_url,
+      snippet: case_.snippet,
+      text: case_.snippet
+    }));
+  } catch (error) {
+    console.error("Error checking global cache:", error);
+    return [];
+  }
+}
+
+// Search CourtListener with cache storage
+async function searchCourtListenerV4WithCache(supabase: any, query: string, apiKey: string): Promise<any[]> {
+  try {
+    // Perform the API search
+    const results = await searchCourtListenerV4(query, apiKey);
+    
+    if (results.length === 0) {
+      return [];
+    }
+    
+    // Store results in global dataset
+    const storedCaseIds = await storeGlobalCases(supabase, results);
+    
+    // Cache the search query and results
+    await cacheSearchResults(supabase, query, storedCaseIds, results.length);
+    
+    return results;
+  } catch (error) {
+    console.error("Error in cached search:", error);
+    return [];
+  }
+}
+
+// Store cases in global dataset
+async function storeGlobalCases(supabase: any, courtListenerResults: any[]): Promise<string[]> {
+  const storedCaseIds: string[] = [];
+
+  for (const result of courtListenerResults) {
+    try {
+      // Check if case already exists by courtlistener_id
+      const { data: existingCase } = await supabase
+        .from("courtlistener_cases")
+        .select("id, api_fetch_count")
+        .eq("courtlistener_id", result.id?.toString())
+        .limit(1);
+
+      let caseId: string;
+
+      if (existingCase && existingCase.length > 0) {
+        // Update existing case and increment fetch count
+        caseId = existingCase[0].id;
+        await supabase
+          .from("courtlistener_cases")
+          .update({ 
+            api_fetch_count: (existingCase[0].api_fetch_count || 0) + 1,
+            last_updated_at: new Date().toISOString()
+          })
+          .eq("id", caseId);
+      } else {
+        // Insert new case
+        const caseData = {
+          courtlistener_id: result.id?.toString() || `temp_${Date.now()}_${Math.random()}`,
+          case_name: result.caseName || result.case_name || 'Unknown Case',
+          court: result.court,
+          court_name: result.court_name,
+          citation: result.citation,
+          date_filed: result.dateFiled || result.date_filed,
+          date_decided: result.dateDecided || result.date_decided,
+          absolute_url: result.absolute_url,
+          snippet: result.snippet,
+          full_text: result.text || result.full_text,
+          jurisdiction: result.jurisdiction || 'Texas',
+          case_type: result.case_type,
+          precedential_status: result.precedential_status,
+          api_fetch_count: 1
+        };
+
+        const { data: newCase, error: insertError } = await supabase
+          .from("courtlistener_cases")
+          .insert(caseData)
+          .select("id")
+          .single();
+
+        if (insertError) {
+          console.error("Error inserting case:", insertError);
+          continue;
+        }
+
+        caseId = newCase.id;
+      }
+
+      storedCaseIds.push(caseId);
+    } catch (error) {
+      console.error("Error storing case:", error);
+    }
+  }
+
+  return storedCaseIds;
+}
+
+// Cache search results
+async function cacheSearchResults(supabase: any, query: string, caseIds: string[], totalResults: number): Promise<void> {
+  try {
+    const queryHash = await generateQueryHash(query);
+    
+    const cacheData = {
+      query_hash: queryHash,
+      original_query: query,
+      search_parameters: {},
+      result_case_ids: caseIds,
+      total_results: totalResults,
+      expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
+      hit_count: 0
+    };
+
+    await supabase
+      .from("courtlistener_search_cache")
+      .insert(cacheData);
+
+    console.log(`📦 Cached search results for query: ${query} (${caseIds.length} cases)`);
+  } catch (error) {
+    console.error("Error caching search results:", error);
+  }
 }
