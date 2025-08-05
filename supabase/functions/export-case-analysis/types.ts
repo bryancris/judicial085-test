@@ -26,4 +26,5 @@ export interface CaseAnalysisData {
   notes: any[]
   documents: any[]
   messages: any[]
+  perplexityResearch: any[] // Additional case law and research from Perplexity
 }

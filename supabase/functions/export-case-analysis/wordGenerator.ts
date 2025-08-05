@@ -140,6 +140,9 @@ function createWordDocumentContent(data: CaseAnalysisData, docxElements: any) {
         // Similar Cases (if exist)
         ...(data.similarCases.length > 0 ? createSimilarCasesSection(data.similarCases, docxElements) : createEmptySimilarCasesSection(docxElements)),
     
+    // Additional Case Law (if exists)
+    ...(data.perplexityResearch.length > 0 ? createAdditionalCaseLawSection(data.perplexityResearch, docxElements) : []),
+    
     // Scholarly References (if exist)
     ...(data.scholarlyReferences.length > 0 ? createScholarlyReferencesSection(data.scholarlyReferences, docxElements) : createEmptyScholarlyReferencesSection(docxElements)),
     
@@ -434,17 +437,44 @@ function processAnalysisContent(content: string, docxElements: any) {
   const paragraphs = []
   
   // Split content into lines and process each
-  const lines = content.split('\n').filter(line => line.trim())
+  const lines = content.split('\n')
   let currentListItems = []
   let inList = false
+  let inCodeBlock = false
   
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim()
+    const line = lines[i]
+    const trimmedLine = line.trim()
     
-    if (!line) continue
+    // Handle code blocks
+    if (trimmedLine.startsWith('```')) {
+      inCodeBlock = !inCodeBlock
+      continue
+    }
     
-    // Handle headers (**, ##, ###)
-    if (line.startsWith('**') && line.endsWith('**') && line.length > 4) {
+    if (inCodeBlock) {
+      paragraphs.push(
+        new Paragraph({
+          children: [new TextRun({ text: line, font: "Courier New", size: 20 })],
+          spacing: { after: 100 },
+          indent: { left: 720 }
+        })
+      )
+      continue
+    }
+    
+    if (!trimmedLine) {
+      // Empty lines end lists but add paragraph spacing
+      if (inList && currentListItems.length > 0) {
+        paragraphs.push(...createFormattedList(currentListItems, docxElements))
+        currentListItems = []
+        inList = false
+      }
+      continue
+    }
+    
+    // Handle markdown headers (### ## #)
+    if (trimmedLine.startsWith('###')) {
       // End any current list
       if (inList && currentListItems.length > 0) {
         paragraphs.push(...createFormattedList(currentListItems, docxElements))
@@ -452,7 +482,59 @@ function processAnalysisContent(content: string, docxElements: any) {
         inList = false
       }
       
-      const headerText = line.replace(/\*\*/g, '').trim()
+      const headerText = trimmedLine.replace(/^###\s*/, '').trim()
+      paragraphs.push(
+        new Paragraph({
+          text: headerText,
+          heading: HeadingLevel.HEADING_3,
+          spacing: { before: 200, after: 100 }
+        })
+      )
+    }
+    else if (trimmedLine.startsWith('##')) {
+      // End any current list
+      if (inList && currentListItems.length > 0) {
+        paragraphs.push(...createFormattedList(currentListItems, docxElements))
+        currentListItems = []
+        inList = false
+      }
+      
+      const headerText = trimmedLine.replace(/^##\s*/, '').trim()
+      paragraphs.push(
+        new Paragraph({
+          text: headerText,
+          heading: HeadingLevel.HEADING_2,
+          spacing: { before: 300, after: 150 }
+        })
+      )
+    }
+    else if (trimmedLine.startsWith('#') && !trimmedLine.startsWith('##')) {
+      // End any current list
+      if (inList && currentListItems.length > 0) {
+        paragraphs.push(...createFormattedList(currentListItems, docxElements))
+        currentListItems = []
+        inList = false
+      }
+      
+      const headerText = trimmedLine.replace(/^#\s*/, '').trim()
+      paragraphs.push(
+        new Paragraph({
+          text: headerText,
+          heading: HeadingLevel.HEADING_1,
+          spacing: { before: 400, after: 200 }
+        })
+      )
+    }
+    // Handle headers (**text**)
+    else if (trimmedLine.startsWith('**') && trimmedLine.endsWith('**') && trimmedLine.length > 4) {
+      // End any current list
+      if (inList && currentListItems.length > 0) {
+        paragraphs.push(...createFormattedList(currentListItems, docxElements))
+        currentListItems = []
+        inList = false
+      }
+      
+      const headerText = trimmedLine.replace(/\*\*/g, '').trim()
       paragraphs.push(
         new Paragraph({
           text: headerText,
@@ -462,15 +544,15 @@ function processAnalysisContent(content: string, docxElements: any) {
       )
     }
     // Handle numbered lists (1., 2., etc.)
-    else if (/^\d+\.\s+/.test(line)) {
+    else if (/^\d+\.\s+/.test(trimmedLine)) {
       inList = true
-      const text = line.replace(/^\d+\.\s+/, '').trim()
+      const text = trimmedLine.replace(/^\d+\.\s+/, '').trim()
       currentListItems.push(text)
     }
     // Handle bullet points (-, *, •)
-    else if (/^[-*•]\s+/.test(line)) {
+    else if (/^[-*•]\s+/.test(trimmedLine)) {
       inList = true
-      const text = line.replace(/^[-*•]\s+/, '').trim()
+      const text = trimmedLine.replace(/^[-*•]\s+/, '').trim()
       currentListItems.push(text)
     }
     // Regular paragraph
@@ -482,8 +564,8 @@ function processAnalysisContent(content: string, docxElements: any) {
         inList = false
       }
       
-      // Process inline formatting (bold text)
-      const textRuns = processInlineFormatting(line, docxElements)
+      // Process inline formatting (bold text, links, etc.)
+      const textRuns = processInlineFormatting(trimmedLine, docxElements)
       paragraphs.push(
         new Paragraph({
           children: textRuns,
@@ -704,6 +786,68 @@ function createEmptyScholarlyReferencesSection(docxElements: any) {
       children: [new TextRun({ text: "No scholarly references have been collected for this analysis yet.", italic: true })],
       spacing: { after: 200 }
     })
+  ]
+}
+
+function createAdditionalCaseLawSection(perplexityResearch: any[], docxElements: any) {
+  const { Paragraph, TextRun, HeadingLevel } = docxElements
+  
+  if (!perplexityResearch || perplexityResearch.length === 0) {
+    return []
+  }
+  
+  return [
+    new Paragraph({
+      text: "Additional Case Law Research",
+      heading: HeadingLevel.HEADING_1,
+      spacing: { before: 400 }
+    }),
+    new Paragraph({
+      children: [new TextRun({ text: "The following additional legal research was conducted to support this analysis.", italic: true })],
+      spacing: { after: 200 }
+    }),
+    ...perplexityResearch.slice(0, 10).map((research: any, index: number) => {
+      const content = []
+      
+      // Add research query
+      if (research.query) {
+        content.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: `${index + 1}. Research Query: `, bold: true }),
+              new TextRun(research.query)
+            ],
+            spacing: { after: 100 },
+            indent: { left: 360 }
+          })
+        )
+      }
+      
+      // Add research content with proper formatting
+      if (research.content) {
+        const formattedContent = processAnalysisContent(research.content, docxElements)
+        content.push(...formattedContent.map(paragraph => ({
+          ...paragraph,
+          indent: { left: 720 } // Double indent for research content
+        })))
+      }
+      
+      // Add citations if available
+      if (research.citations && research.citations.length > 0) {
+        content.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: "Sources: ", bold: true, italic: true }),
+              new TextRun({ text: research.citations.join(', '), italic: true })
+            ],
+            spacing: { after: 150 },
+            indent: { left: 720 }
+          })
+        )
+      }
+      
+      return content
+    }).flat()
   ]
 }
 
