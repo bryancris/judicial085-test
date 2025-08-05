@@ -12,7 +12,7 @@ import { TemplatesTabContent } from "./TemplatesTabContent";
 import { Client } from "@/types/client";
 import { useCase } from "@/contexts/CaseContext";
 import { useCaseAnalysis } from "@/hooks/useCaseAnalysis";
-import { useScholarlyReferences } from "@/hooks/useScholarlyReferences";
+import { useScholarlyReferencesData } from "@/components/case-analysis/hooks/useScholarlyReferencesData";
 import { loadSimilarCases } from "@/utils/api/similarCasesApiService";
 import { searchSimilarCases } from "@/utils/api/analysisApiService";
 import EmptyAnalysisState from "@/components/case-analysis/EmptyAnalysisState";
@@ -44,13 +44,13 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
     generateNewAnalysis
   } = useCaseAnalysis(client.id, currentCase?.id);
 
-  // Scholarly references hook
+  // Scholarly references hook with database persistence
   const {
-    references: scholarlyReferences,
-    isLoading: isScholarlyReferencesLoading,
-    searchReferences: onScholarSearch,
-    fetchReferences: onScholarRefresh
-  } = useScholarlyReferences(client.id, analysisData?.caseType);
+    scholarlyReferences,
+    isScholarlyReferencesLoading,
+    handleScholarSearch: onScholarSearch,
+    fetchScholarlyReferences: onScholarRefresh
+  } = useScholarlyReferencesData(client.id);
 
   // Similar cases state
   const [similarCases, setSimilarCases] = useState<SimilarCase[]>([]);
@@ -116,6 +116,13 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
 
     loadSimilarCasesData();
   }, [currentAnalysisId, client.id]);
+
+  // Fetch scholarly references when analysis ID is available
+  React.useEffect(() => {
+    if (currentAnalysisId && analysisData?.caseType) {
+      onScholarRefresh(analysisData.caseType, currentAnalysisId);
+    }
+  }, [currentAnalysisId, analysisData?.caseType, onScholarRefresh]);
 
   // Load conversation data
   React.useEffect(() => {
