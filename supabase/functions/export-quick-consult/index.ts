@@ -15,6 +15,112 @@ interface QuickConsultData {
   messages: any[];
 }
 
+interface TextElement {
+  text: string;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+}
+
+// Markdown processing functions
+function processInlineFormatting(text: string): TextElement[] {
+  const elements: TextElement[] = [];
+  let currentIndex = 0;
+  
+  // Regex patterns for markdown formatting
+  const patterns = [
+    { regex: /\*\*(.*?)\*\*/g, format: 'bold' },
+    { regex: /\*(.*?)\*/g, format: 'italic' },
+    { regex: /__(.*?)__/g, format: 'underline' }
+  ];
+  
+  // Find all formatting matches
+  const matches: Array<{ start: number; end: number; text: string; format: string }> = [];
+  
+  patterns.forEach(pattern => {
+    let match;
+    const regex = new RegExp(pattern.regex.source, 'g');
+    while ((match = regex.exec(text)) !== null) {
+      matches.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        text: match[1],
+        format: pattern.format
+      });
+    }
+  });
+  
+  // Sort matches by start position
+  matches.sort((a, b) => a.start - b.start);
+  
+  // Process text with formatting
+  matches.forEach(match => {
+    // Add any plain text before this match
+    if (currentIndex < match.start) {
+      const plainText = text.substring(currentIndex, match.start);
+      if (plainText) {
+        elements.push({ text: plainText });
+      }
+    }
+    
+    // Add the formatted text
+    const formatProps: TextElement = { text: match.text };
+    if (match.format === 'bold') formatProps.bold = true;
+    if (match.format === 'italic') formatProps.italic = true;
+    if (match.format === 'underline') formatProps.underline = true;
+    
+    elements.push(formatProps);
+    currentIndex = match.end;
+  });
+  
+  // Add any remaining plain text
+  if (currentIndex < text.length) {
+    const remainingText = text.substring(currentIndex);
+    if (remainingText) {
+      elements.push({ text: remainingText });
+    }
+  }
+  
+  // If no formatting was found, return the original text
+  if (elements.length === 0) {
+    elements.push({ text });
+  }
+  
+  return elements;
+}
+
+function processMarkdownContent(content: string, TextRun: any): any[] {
+  const lines = content.split('\n');
+  const textRuns: any[] = [];
+  
+  lines.forEach(line => {
+    const trimmedLine = line.trim();
+    if (!trimmedLine) return;
+    
+    // Process inline formatting for each line
+    const elements = processInlineFormatting(trimmedLine);
+    
+    elements.forEach(element => {
+      textRuns.push(new TextRun({
+        text: element.text,
+        bold: element.bold,
+        italics: element.italic,
+        underline: element.underline
+      }));
+    });
+    
+    // Add line break if not the last line
+    textRuns.push(new TextRun({ text: '\n' }));
+  });
+  
+  // Remove the last line break
+  if (textRuns.length > 0 && textRuns[textRuns.length - 1].text === '\n') {
+    textRuns.pop();
+  }
+  
+  return textRuns;
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -253,17 +359,16 @@ function createQuickConsultDocumentContent(data: QuickConsultData, docxElements:
         })
       )
       
-      // Message content
-      const messageLines = message.content.split('\n').filter((line: string) => line.trim())
-      messageLines.forEach((line: string) => {
-        content.push(
-          new Paragraph({
-            children: [new TextRun(line.trim())],
-            spacing: { after: 80 },
-            indent: { left: 360 }
-          })
-        )
-      })
+      // Message content with markdown processing
+      const formattedTextRuns = processMarkdownContent(message.content, TextRun)
+      
+      content.push(
+        new Paragraph({
+          children: formattedTextRuns,
+          spacing: { after: 200 },
+          indent: { left: 360 }
+        })
+      )
     })
   } else {
     content.push(
