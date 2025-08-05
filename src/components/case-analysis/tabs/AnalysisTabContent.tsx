@@ -3,6 +3,7 @@ import React from "react";
 import { ProcessDocumentContentFunction } from "@/types/caseAnalysis";
 import DetailedLegalAnalysis from "../DetailedLegalAnalysis";
 import LawReferencesSection from "../LawReferencesSection";
+import { AdditionalCaseLawSection } from "../AdditionalCaseLawSection";
 import ScholarlyReferencesSection from "../ScholarlyReferencesSection";
 import SimilarCasesSection, { SimilarCase } from "../SimilarCasesSection";
 import { ScholarlyArticle } from "@/utils/api/scholarApiService";
@@ -67,6 +68,13 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
         fallbackUsed={fallbackUsed}
         clientId={clientId}
         legalAnalysisId={analysisData.id}
+      />
+
+      {/* Additional Case Law Section */}
+      <AdditionalCaseLawSection
+        analysisData={analysisData}
+        clientId={clientId}
+        caseType={analysisData.caseType}
       />
 
       {/* Scholarly Legal References - ONLY HERE AT THE BOTTOM */}
