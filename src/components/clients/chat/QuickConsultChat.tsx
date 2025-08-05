@@ -8,10 +8,12 @@ import { useQuickConsultSessions } from "@/hooks/useQuickConsultSessions";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { processMarkdown } from "@/utils/markdownProcessor";
 import { QuickConsultExportButton } from "@/components/quick-consult/export/QuickConsultExportButton";
+import CreateClientFromQuickConsultDialog from "@/components/clients/CreateClientFromQuickConsultDialog";
 import QuickConsultSidebar from "./QuickConsultSidebar";
 
 const QuickConsultChat = () => {
   const [input, setInput] = useState("");
+  const [showCreateClientDialog, setShowCreateClientDialog] = useState(false);
   const { 
     sessions, 
     currentSessionId, 
@@ -81,6 +83,16 @@ const QuickConsultChat = () => {
     });
   };
 
+  const handleCreateClient = () => {
+    setShowCreateClientDialog(true);
+  };
+
+  const handleClientCreated = () => {
+    setShowCreateClientDialog(false);
+    // Clear current chat after successful client creation
+    clearMessages();
+  };
+
   return (
     <div className="h-full flex bg-background">
       {/* Sidebar */}
@@ -99,7 +111,13 @@ const QuickConsultChat = () => {
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-semibold">Quick Consult</h1>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" className="gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-2"
+                onClick={handleCreateClient}
+                disabled={messages.length === 0}
+              >
                 <UserPlus className="h-4 w-4" />
                 Create Client
               </Button>
@@ -233,6 +251,14 @@ const QuickConsultChat = () => {
           </div>
         </div>
       </div>
+      
+      {/* Create Client Dialog */}
+      <CreateClientFromQuickConsultDialog
+        open={showCreateClientDialog}
+        onOpenChange={setShowCreateClientDialog}
+        messages={messages}
+        onSuccess={handleClientCreated}
+      />
     </div>
   );
 };
