@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import SearchSimilarCasesSection from "./SearchSimilarCasesSection";
+import SearchResultBadges from "./SearchResultBadges";
 
 
 export interface SimilarCase {
@@ -32,6 +33,13 @@ export interface SimilarCasesSectionProps {
   fallbackUsed?: boolean;
   clientId?: string;
   legalAnalysisId?: string;
+  searchMetadata?: {
+    cacheUsed?: boolean;
+    freshApiCall?: boolean;
+    searchStrategy?: string;
+    responseTime?: number;
+    totalResults?: number;
+  };
 }
 
 const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
@@ -41,7 +49,8 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
   analysisFound = true,
   fallbackUsed = false,
   clientId,
-  legalAnalysisId
+  legalAnalysisId,
+  searchMetadata
 }) => {
   
   // Separate cases by source
@@ -166,6 +175,16 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Search performance indicators */}
+          {searchMetadata && (
+            <SearchResultBadges
+              cacheUsed={searchMetadata.cacheUsed}
+              freshApiCall={searchMetadata.freshApiCall}
+              searchStrategy={searchMetadata.searchStrategy}
+              responseTime={searchMetadata.responseTime}
+              totalResults={searchMetadata.totalResults || similarCases.length}
+            />
+          )}
           <div className="space-y-4">
             {/* Perplexity AI Research Results */}
             {perplexityCases.length > 0 && (

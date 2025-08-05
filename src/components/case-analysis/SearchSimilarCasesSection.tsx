@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { SimilarCase } from "./SimilarCasesDialog";
 import { searchSimilarCases } from "@/utils/openaiService";
 import { saveSimilarCases } from "@/utils/api/similarCasesApiService";
+import { useEnhancedSimilarCasesSearch } from "@/hooks/useEnhancedSimilarCasesSearch";
 import { useToast } from "@/hooks/use-toast";
 import SearchSimilarCasesButton from "./SearchSimilarCasesButton";
 import SimilarCasesDialog from "./SimilarCasesDialog";
@@ -24,6 +25,7 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchResult, setSearchResult] = useState<any>(null);
   const { toast } = useToast();
+  const { searchWithCache, isSearching: isEnhancedSearching } = useEnhancedSimilarCasesSearch();
   
 
   // Clear state when clientId changes to prevent showing cached results from previous client
@@ -37,7 +39,7 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
   }, [clientId]);
 
   const handleSearchSimilarCases = async () => {
-    if (isSearchingCases) return;
+    if (isSearchingCases || isEnhancedSearching) return;
     
     setIsSearchingCases(true);
     setIsDialogOpen(true);
@@ -45,7 +47,33 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
     setSearchResult(null);
     
     try {
-      console.log("Starting search for similar cases for client:", clientId);
+      console.log("Starting enhanced search for similar cases for client:", clientId);
+      
+      // First try the enhanced cache-first search
+      const enhancedResult = await searchWithCache(`client:${clientId}`, { clientId });
+      
+      if (enhancedResult.similarCases.length > 0) {
+        console.log("Enhanced search found cached results");
+        setSimilarCases(enhancedResult.similarCases);
+        setSearchResult({
+          similarCases: enhancedResult.similarCases,
+          searchStrategy: enhancedResult.searchMetadata.searchStrategy,
+          analysisFound: true,
+          cacheUsed: enhancedResult.searchMetadata.cacheUsed,
+          freshApiCall: enhancedResult.searchMetadata.freshApiCall,
+          responseTime: enhancedResult.searchMetadata.responseTime,
+          totalResults: enhancedResult.searchMetadata.totalResults
+        });
+        
+        toast({
+          title: "Similar Cases Found",
+          description: `Found ${enhancedResult.similarCases.length} cases${enhancedResult.searchMetadata.cacheUsed ? ' (from cache)' : ' (fresh search)'}.`,
+        });
+        return;
+      }
+      
+      // Fall back to the original search method
+      console.log("Enhanced search found no results, falling back to original search");
       const result = await searchSimilarCases(clientId);
       
       setSearchResult(result);
@@ -166,14 +194,14 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
       
       <SearchSimilarCasesButton 
         onClick={handleSearchSimilarCases}
-        isLoading={isSearchingCases}
+        isLoading={isSearchingCases || isEnhancedSearching}
       />
 
       <SimilarCasesDialog 
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
         similarCases={similarCases}
-        isLoading={isSearchingCases}
+        isLoading={isSearchingCases || isEnhancedSearching}
         error={searchError}
         searchResult={searchResult}
       />

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ScholarlyResearch from '@/components/knowledge/ScholarlyResearch';
 import TexasLawDocuments from '@/components/knowledge/TexasLawDocuments';
+import CourtListenerStats from '@/components/knowledge/CourtListenerStats';
 
 const Knowledge = () => {
   const [loadingProgress, setLoadingProgress] = useState(0);
@@ -121,6 +122,9 @@ const Knowledge = () => {
           </TabsList>
           
           <TabsContent value="documents" className="mt-6">
+            {/* CourtListener Statistics */}
+            <CourtListenerStats />
+            
             {/* Search Bar */}
             <SearchBar 
               searchTerm={searchTerm}

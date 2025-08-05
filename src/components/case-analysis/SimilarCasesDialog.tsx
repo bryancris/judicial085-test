@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import SearchResultBadges from "./SearchResultBadges";
 
 export interface SimilarCase {
   source: "internal" | "courtlistener" | "perplexity";
@@ -33,6 +34,10 @@ interface SimilarCasesDialogProps {
     message?: string;
     searchStrategy?: string;
     analysisFound?: boolean;
+    cacheUsed?: boolean;
+    freshApiCall?: boolean;
+    responseTime?: number;
+    totalResults?: number;
   };
 }
 
@@ -115,6 +120,15 @@ const SimilarCasesDialog: React.FC<SimilarCasesDialogProps> = ({
           </div>
         ) : (
           <>
+            {/* Search performance indicators */}
+            <SearchResultBadges
+              cacheUsed={searchResult?.cacheUsed}
+              freshApiCall={searchResult?.freshApiCall}
+              searchStrategy={searchResult?.searchStrategy}
+              responseTime={searchResult?.responseTime}
+              totalResults={searchResult?.totalResults || similarCases.length}
+            />
+            
             {searchResult?.message && (
               <Alert className="mb-4">
                 <Info className="h-4 w-4" />
