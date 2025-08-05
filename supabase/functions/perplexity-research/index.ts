@@ -112,13 +112,13 @@ Requirements:
 
 Focus on verified, authoritative sources and comprehensive coverage.`;
     } else if (searchType === 'similar-cases') {
-      enhancedQuery = `Find verified legal cases similar to: ${query}
+      enhancedQuery = `Find 3-5 verified legal cases from TEXAS COURTS ONLY similar to: ${query}
 
 Return ONLY a JSON array of cases in this exact format:
 [
   {
     "caseName": "Exact case name v. Defendant",
-    "court": "Specific court name",
+    "court": "Specific Texas court name",
     "citation": "Legal citation",
     "date": "Decision date",
     "relevantFacts": "Key facts that make this case similar",
@@ -128,11 +128,13 @@ Return ONLY a JSON array of cases in this exact format:
 ]
 
 Requirements:
-- Maximum 5 cases
-- Only real, verified legal cases
+- Return exactly 3-5 cases from Texas jurisdiction only
+- Only Texas Supreme Court, Texas Court of Appeals, or Texas District Courts
+- Only real, verified legal cases from Texas
 - No analysis, reasoning, or thinking process
 - No introductory text or explanations
-- Must be valid JSON format`;
+- Must be valid JSON format
+- Do NOT include cases from other states`;
     }
 
     if (context) {
@@ -177,7 +179,7 @@ Requirements:
           top_p: 0.9,
           return_citations: true,
           return_images: false,
-          search_domain_filter: ['justia.com', 'caselaw.findlaw.com', 'scholar.google.com', 'courtlistener.com', 'law.cornell.edu', 'statutes.capitol.texas.gov'],
+          search_domain_filter: ['justia.com', 'caselaw.findlaw.com', 'scholar.google.com', 'courtlistener.com', 'law.cornell.edu', 'statutes.capitol.texas.gov', 'txcourts.gov', 'search.txcourts.gov'],
           search_recency_filter: 'year'
         }),
         signal: controller.signal
