@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { RefreshCw, ExternalLink, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { invokeFunction } from '@/utils/api/baseApiService';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface AdditionalCaseLawProps {
@@ -53,18 +54,44 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
     setError(null);
 
     try {
+      // Check authentication status first
+      console.log('=== Authentication Check ===');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Current session status:', { 
+        hasSession: !!session, 
+        sessionError,
+        userId: session?.user?.id,
+        expiresAt: session?.expires_at
+      });
+
+      // Refresh session if needed
+      if (!session) {
+        console.log('No session found, attempting to refresh...');
+        const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+        console.log('Session refresh result:', { 
+          hasRefreshedSession: !!refreshedSession, 
+          refreshError 
+        });
+        
+        if (!refreshedSession && refreshError) {
+          throw new Error('Authentication required. Please log in again.');
+        }
+      }
+
       // Create search query from analysis data
       const searchQuery = analysisData?.summary 
         ? `Find additional legal cases similar to: ${analysisData.summary.substring(0, 500)}`
         : `Find legal cases related to ${caseType} law`;
 
-      console.log('Calling perplexity-research with:', {
+      console.log('=== Calling perplexity-research ===');
+      console.log('Parameters:', {
         query: searchQuery.substring(0, 100) + '...',
         searchType: 'similar-cases',
         context: (analysisData?.keyFacts?.join(', ') || '').substring(0, 100) + '...',
         limit: 5
       });
 
+      // Try the function call with detailed error logging
       const { data, error: functionError } = await invokeFunction('perplexity-research', {
         query: searchQuery,
         searchType: 'similar-cases',
@@ -72,7 +99,10 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
         limit: 5
       });
 
-      console.log('Perplexity function response:', { data, error: functionError });
+      console.log('=== Function Response ===');
+      console.log('Data:', data);
+      console.log('Error:', functionError);
+      console.log('Full response object keys:', data ? Object.keys(data) : 'No data');
 
       if (functionError) {
         throw new Error(functionError);

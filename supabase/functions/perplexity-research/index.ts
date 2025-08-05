@@ -39,9 +39,17 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Perplexity research function called');
+    console.log('=== Perplexity Research Function Called ===');
     console.log('Request method:', req.method);
     console.log('Request URL:', req.url);
+    console.log('Request headers:', Object.fromEntries(req.headers.entries()));
+    
+    // Log authentication status
+    const authHeader = req.headers.get('authorization');
+    console.log('Auth header present:', !!authHeader);
+    if (authHeader) {
+      console.log('Auth header format:', authHeader.substring(0, 20) + '...');
+    }
     
     const perplexityApiKey = Deno.env.get('PERPLEXITY_API_KEY');
     

@@ -4,7 +4,7 @@ project_id = "ghpljdgecjmhkwkfctgy"
 verify_jwt = true
 
 [functions.perplexity-research]
-verify_jwt = true
+verify_jwt = false
 
 [functions.search-similar-cases]
 verify_jwt = true
