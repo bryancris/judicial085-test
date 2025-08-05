@@ -71,7 +71,6 @@ body div.legal-analysis-content[data-statute] h2 ~ div {
   font-weight: var(--statute-font-weight, 400) !important;
   margin: 0.5rem 0 !important;
   padding: 0.75rem !important;
-  border-left: 4px solid hsl(var(--primary)) !important;
   background-color: hsl(var(--muted)) !important;
   border-radius: 0.375rem !important;
 }
@@ -189,7 +188,6 @@ html body div.legal-analysis-content strong[data-forced-size="true"] {
   border-radius: 0.5rem;
   margin: 1rem 0;
   background-color: hsl(var(--muted));
-  border-left: 4px solid hsl(var(--primary));
 }
 
 /* Clickable follow-up questions */
