@@ -69,9 +69,12 @@ serve(async (req) => {
     // Extract PDF download link from various Justia patterns
     let pdfUrl = null;
     
+    console.log('Analyzing HTML for PDF links...');
+    
     // Pattern 1: Direct download PDF link with class "pdf-icon"
     const pdfIconMatch = html.match(/href="([^"]*\.pdf[^"]*)"[^>]*class="[^"]*pdf-icon[^"]*"/i);
     if (pdfIconMatch) {
+      console.log('Found PDF via pdf-icon pattern:', pdfIconMatch[1]);
       pdfUrl = pdfIconMatch[1];
       if (!pdfUrl.startsWith('http')) {
         pdfUrl = new URL(pdfUrl, justiaUrl).href;
@@ -82,14 +85,16 @@ serve(async (req) => {
     if (!pdfUrl) {
       const casesJustiaMatch = html.match(/href="(https:\/\/cases\.justia\.com\/[^"]*\.pdf[^"]*)"/i);
       if (casesJustiaMatch) {
+        console.log('Found PDF via cases.justia.com pattern:', casesJustiaMatch[1]);
         pdfUrl = casesJustiaMatch[1];
       }
     }
     
-    // Pattern 3: Direct PDF download link (generic)
+    // Pattern 3: Direct PDF download link with "Download PDF" text
     if (!pdfUrl) {
-      const directPdfMatch = html.match(/href="([^"]*\.pdf[^"]*)"[^>]*>Download PDF/i);
+      const directPdfMatch = html.match(/href="([^"]*\.pdf[^"]*)"[^>]*>[^<]*Download[^<]*PDF/i);
       if (directPdfMatch) {
+        console.log('Found PDF via Download PDF pattern:', directPdfMatch[1]);
         pdfUrl = directPdfMatch[1];
         if (!pdfUrl.startsWith('http')) {
           pdfUrl = new URL(pdfUrl, justiaUrl).href;
@@ -101,6 +106,7 @@ serve(async (req) => {
     if (!pdfUrl) {
       const anyPdfMatch = html.match(/href="([^"]*\.pdf[^"]*)"/i);
       if (anyPdfMatch) {
+        console.log('Found PDF via generic pattern:', anyPdfMatch[1]);
         pdfUrl = anyPdfMatch[1];
         if (!pdfUrl.startsWith('http')) {
           pdfUrl = new URL(pdfUrl, justiaUrl).href;
@@ -108,17 +114,25 @@ serve(async (req) => {
       }
     }
 
-    // Pattern 5: Check for case-specific PDF patterns based on URL structure
+    // Pattern 5: Simple HTML to PDF replacement for Justia case URLs
+    if (!pdfUrl && justiaUrl.includes('/cases/') && justiaUrl.endsWith('.html')) {
+      const simplePdfUrl = justiaUrl.replace('.html', '.pdf');
+      console.log('Trying simple HTML to PDF replacement:', simplePdfUrl);
+      pdfUrl = simplePdfUrl;
+    }
+
+    // Pattern 6: Check for specific case ID patterns (Texas Court of Appeals)
     if (!pdfUrl) {
-      const caseIdMatch = justiaUrl.match(/\/(\d{4}-\d{2}-\d{2}-\d{5}-cv)\.html/);
-      if (caseIdMatch) {
-        const caseId = caseIdMatch[1];
-        const baseUrl = justiaUrl.replace(/\/cases\/.*$/, '');
-        pdfUrl = `${baseUrl}/cases.justia.com/${justiaUrl.split('/cases/')[1].replace('.html', '.pdf')}`;
+      const texasCaseMatch = justiaUrl.match(/\/cases\/texas\/[^\/]+\/\d{4}\/([^\/]+)\.html/);
+      if (texasCaseMatch) {
+        const constructedUrl = justiaUrl.replace('.html', '.pdf');
+        console.log('Trying Texas case pattern:', constructedUrl);
+        pdfUrl = constructedUrl;
       }
     }
 
     if (!pdfUrl) {
+      console.log('No PDF patterns matched. Available HTML snippet:', html.substring(0, 500));
       throw new Error('Could not find PDF download link on this Justia page');
     }
 
