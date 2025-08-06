@@ -6,6 +6,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { determineFinalCaseType } from "./utils/caseTypeDetector.ts";
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -13,24 +14,66 @@ serve(async (req) => {
   try {
     console.log("=== AI-POWERED SEARCH SIMILAR CASES FUNCTION START ===");
     
-    const { clientId } = await req.json();
+    // Parse request body with error handling
+    let clientId;
+    try {
+      const body = await req.json();
+      clientId = body.clientId;
+    } catch (parseError) {
+      console.error("❌ Failed to parse request body:", parseError);
+      return new Response(JSON.stringify({
+        similarCases: [],
+        error: "Invalid request format",
+        searchStrategy: "parse-error"
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (!clientId) {
+      console.error("❌ Missing clientId in request");
+      return new Response(JSON.stringify({
+        similarCases: [],
+        error: "Client ID is required",
+        searchStrategy: "missing-client-id"
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     console.log(`Processing request for client: ${clientId}`);
     
-    // Get API keys
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-    const courtListenerApiKey = Deno.env.get('COURTLISTENER_API_KEY');
+    // Validate environment variables early
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    const courtListenerApiKey = Deno.env.get('COURTLISTENER_API_KEY');
     
+    console.log(`Environment check - Supabase URL: ${!!supabaseUrl}, Service Key: ${!!supabaseServiceKey}`);
     console.log(`API Keys available - OpenAI: ${!!openaiApiKey}, CourtListener: ${!!courtListenerApiKey}`);
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("❌ Missing Supabase configuration");
+      return new Response(JSON.stringify({
+        similarCases: [],
+        error: "Database configuration error",
+        searchStrategy: "missing-supabase-config"
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
     
     if (!openaiApiKey || !courtListenerApiKey) {
       console.log("❌ Required API keys not configured");
       return new Response(JSON.stringify({
         similarCases: [],
-        error: "API keys not configured for similar case search",
+        error: "API keys not configured for similar case search. Please check OpenAI and CourtListener API keys.",
         searchStrategy: "missing-api-keys"
       }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
@@ -88,13 +131,31 @@ serve(async (req) => {
     console.log(`Detected case type: ${finalCaseType}`);
     console.log(`✅ DETECTED: ${finalCaseType} case`);
     
-    // Search using intelligent AI-powered approach
-    const searchResult = await intelligentCourtListenerSearch(
-      analysisContent,
-      finalCaseType,
-      openaiApiKey,
-      courtListenerApiKey
-    );
+    // Search using intelligent AI-powered approach with error handling
+    let searchResult;
+    try {
+      console.log("🔍 Starting intelligent CourtListener search...");
+      searchResult = await intelligentCourtListenerSearch(
+        analysisContent,
+        finalCaseType,
+        openaiApiKey,
+        courtListenerApiKey
+      );
+      console.log("✅ Search completed successfully");
+    } catch (searchError) {
+      console.error("❌ Error during intelligent search:", searchError);
+      return new Response(JSON.stringify({
+        similarCases: [],
+        error: `Search failed: ${searchError.message}`,
+        fallbackUsed: false,
+        analysisFound: true,
+        searchStrategy: "search-error",
+        caseType: finalCaseType
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
     
     // Legal compliance: No synthetic fallbacks - only return real case results
     let finalResults = searchResult.results;
@@ -230,15 +291,20 @@ serve(async (req) => {
     
   } catch (error) {
     console.error("Unexpected error in search similar cases:", error);
+    console.error("Error stack:", error.stack);
     
     return new Response(JSON.stringify({
       similarCases: [],
-      error: error.message || "An unexpected error occurred",
+      error: `Unexpected error: ${error.message || "Unknown error occurred"}`,
       fallbackUsed: false,
       analysisFound: false,
-      searchStrategy: "error"
+      searchStrategy: "unexpected-error",
+      debug: {
+        errorType: error.constructor.name,
+        timestamp: new Date().toISOString()
+      }
     }), {
-      status: 500,
+      status: 200, // Always return 200 to avoid non-2xx errors
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
