@@ -150,46 +150,66 @@ serve(async (req) => {
     
     console.log(`✅ Found ${formattedCases.length} similar cases using ${fallbackUsed ? 'intelligent fallback' : 'AI-powered search'}`);
     
-    // Save similar cases to database
+    // Save similar cases to database (with proper validation)
     try {
       const legalAnalysisId = analysisData[0].id || analysis.id;
       
       if (legalAnalysisId && formattedCases.length > 0) {
-        // First, delete existing similar cases for this analysis
-        const { error: deleteError } = await supabase
-          .from("similar_cases")
-          .delete()
-          .eq("client_id", clientId)
-          .eq("legal_analysis_id", legalAnalysisId);
+        // Validate that the client exists before attempting to save
+        console.log(`🔍 Validating client exists: ${clientId}`);
+        const { data: clientExists, error: clientCheckError } = await supabase
+          .from("clients")
+          .select("id")
+          .eq("id", clientId)
+          .limit(1);
 
-        if (deleteError) {
-          console.error("Error deleting existing similar cases:", deleteError);
-        }
-
-        // Insert new similar cases
-        const { error: insertError } = await supabase
-          .from("similar_cases")
-          .insert({
-            client_id: clientId,
-            legal_analysis_id: legalAnalysisId,
-            case_data: formattedCases,
-            search_metadata: {
-              fallbackUsed: fallbackUsed,
-              analysisFound: true,
-              searchStrategy: fallbackUsed ? "intelligent-fallback" : "ai-agent-powered",
-              caseType: finalCaseType
-            }
-          });
-
-        if (insertError) {
-          console.error("Error saving similar cases:", insertError);
+        if (clientCheckError) {
+          console.error("Error checking client existence:", clientCheckError);
+          console.log("⚠️ Skipping database save due to client validation error, but returning search results");
+        } else if (!clientExists || clientExists.length === 0) {
+          console.error(`❌ Client with ID ${clientId} does not exist in database`);
+          console.log("⚠️ Skipping database save due to missing client, but returning search results");
         } else {
-          console.log("✅ Successfully saved similar cases to database");
+          console.log("✅ Client validation passed, proceeding with database save");
+          
+          // First, delete existing similar cases for this analysis
+          const { error: deleteError } = await supabase
+            .from("similar_cases")
+            .delete()
+            .eq("client_id", clientId)
+            .eq("legal_analysis_id", legalAnalysisId);
+
+          if (deleteError) {
+            console.error("Error deleting existing similar cases:", deleteError);
+          }
+
+          // Insert new similar cases
+          const { error: insertError } = await supabase
+            .from("similar_cases")
+            .insert({
+              client_id: clientId,
+              legal_analysis_id: legalAnalysisId,
+              case_data: formattedCases,
+              search_metadata: {
+                fallbackUsed: fallbackUsed,
+                analysisFound: true,
+                searchStrategy: fallbackUsed ? "intelligent-fallback" : "ai-agent-powered",
+                caseType: finalCaseType
+              }
+            });
+
+          if (insertError) {
+            console.error("Error saving similar cases:", insertError);
+            console.log("⚠️ Database save failed, but returning search results anyway");
+          } else {
+            console.log("✅ Successfully saved similar cases to database");
+          }
         }
       }
     } catch (saveError) {
-      console.error("Error saving similar cases to database:", saveError);
-      // Don't fail the request if saving fails
+      console.error("Error in database save operation:", saveError);
+      console.log("⚠️ Database save failed, but continuing with search results");
+      // Don't fail the request if saving fails - always return search results
     }
     
     return new Response(JSON.stringify({
