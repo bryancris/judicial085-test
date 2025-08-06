@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { invokeFunction } from '@/utils/api/baseApiService';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import LawReferenceLink from '@/components/knowledge/LawReferenceLink';
 
 interface AdditionalCaseLawProps {
   analysisData?: any;
@@ -453,7 +454,7 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
                         <span className="font-medium">Court:</span> {caseItem.court}
                       </div>
                       <div>
-                        <span className="font-medium">Citation:</span> {caseItem.citation}
+                        <span className="font-medium">Citation:</span> <LawReferenceLink citation={caseItem.citation} url={caseItem.url} />
                       </div>
                       {caseItem.date && (
                         <div>
