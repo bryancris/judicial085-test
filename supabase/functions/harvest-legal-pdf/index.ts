@@ -66,22 +66,20 @@ serve(async (req) => {
 
     const html = await response.text();
     
-    // Extract PDF download link from various Justia patterns
+    // Extract PDF download link from Justia page
     let pdfUrl = null;
     
     console.log('Analyzing HTML for PDF links...');
     
-    // Pattern 1: Direct download PDF link with class "pdf-icon"
-    const pdfIconMatch = html.match(/href="([^"]*\.pdf[^"]*)"[^>]*class="[^"]*pdf-icon[^"]*"/i);
-    if (pdfIconMatch) {
-      console.log('Found PDF via pdf-icon pattern:', pdfIconMatch[1]);
-      pdfUrl = pdfIconMatch[1];
-      if (!pdfUrl.startsWith('http')) {
-        pdfUrl = new URL(pdfUrl, justiaUrl).href;
-      }
+    // Pattern 1: Justia PDF links with pdf-icon class and "Download PDF" text
+    // This is the most common pattern for Justia case PDFs
+    const justiaIconMatch = html.match(/href="(https:\/\/cases\.justia\.com\/[^"]*\.pdf[^"]*)"[^>]*class="[^"]*pdf-icon[^"]*"[^>]*>[^<]*Download[^<]*PDF/i);
+    if (justiaIconMatch) {
+      console.log('Found PDF via Justia pdf-icon pattern:', justiaIconMatch[1]);
+      pdfUrl = justiaIconMatch[1];
     }
     
-    // Pattern 2: cases.justia.com PDF links (common pattern)
+    // Pattern 2: Any cases.justia.com PDF link (fallback)
     if (!pdfUrl) {
       const casesJustiaMatch = html.match(/href="(https:\/\/cases\.justia\.com\/[^"]*\.pdf[^"]*)"/i);
       if (casesJustiaMatch) {
@@ -90,7 +88,7 @@ serve(async (req) => {
       }
     }
     
-    // Pattern 3: Direct PDF download link with "Download PDF" text
+    // Pattern 3: Generic PDF download link with "Download PDF" text
     if (!pdfUrl) {
       const directPdfMatch = html.match(/href="([^"]*\.pdf[^"]*)"[^>]*>[^<]*Download[^<]*PDF/i);
       if (directPdfMatch) {
@@ -102,37 +100,20 @@ serve(async (req) => {
       }
     }
     
-    // Pattern 4: Any PDF link in the content
+    // Pattern 4: Any PDF link with pdf-icon class
     if (!pdfUrl) {
-      const anyPdfMatch = html.match(/href="([^"]*\.pdf[^"]*)"/i);
-      if (anyPdfMatch) {
-        console.log('Found PDF via generic pattern:', anyPdfMatch[1]);
-        pdfUrl = anyPdfMatch[1];
+      const pdfIconMatch = html.match(/href="([^"]*\.pdf[^"]*)"[^>]*class="[^"]*pdf-icon[^"]*"/i);
+      if (pdfIconMatch) {
+        console.log('Found PDF via pdf-icon class:', pdfIconMatch[1]);
+        pdfUrl = pdfIconMatch[1];
         if (!pdfUrl.startsWith('http')) {
           pdfUrl = new URL(pdfUrl, justiaUrl).href;
         }
       }
     }
 
-    // Pattern 5: Simple HTML to PDF replacement for Justia case URLs
-    if (!pdfUrl && justiaUrl.includes('/cases/') && justiaUrl.endsWith('.html')) {
-      const simplePdfUrl = justiaUrl.replace('.html', '.pdf');
-      console.log('Trying simple HTML to PDF replacement:', simplePdfUrl);
-      pdfUrl = simplePdfUrl;
-    }
-
-    // Pattern 6: Check for specific case ID patterns (Texas Court of Appeals)
     if (!pdfUrl) {
-      const texasCaseMatch = justiaUrl.match(/\/cases\/texas\/[^\/]+\/\d{4}\/([^\/]+)\.html/);
-      if (texasCaseMatch) {
-        const constructedUrl = justiaUrl.replace('.html', '.pdf');
-        console.log('Trying Texas case pattern:', constructedUrl);
-        pdfUrl = constructedUrl;
-      }
-    }
-
-    if (!pdfUrl) {
-      console.log('No PDF patterns matched. Available HTML snippet:', html.substring(0, 500));
+      console.log('No PDF patterns matched. HTML snippet around expected area:', html.substring(html.indexOf('Download PDF') - 100, html.indexOf('Download PDF') + 200));
       throw new Error('Could not find PDF download link on this Justia page');
     }
 
@@ -154,6 +135,25 @@ serve(async (req) => {
     const pdfUint8Array = new Uint8Array(pdfBuffer);
 
     console.log('PDF downloaded, size:', pdfUint8Array.length, 'bytes');
+    
+    // Validate that we actually downloaded a PDF file
+    const contentType = pdfResponse.headers.get('content-type');
+    console.log('Content-Type:', contentType);
+    
+    // Check PDF magic bytes (should start with %PDF)
+    const pdfSignature = String.fromCharCode(...pdfUint8Array.slice(0, 4));
+    console.log('File signature:', pdfSignature);
+    
+    if (pdfSignature !== '%PDF') {
+      // Log some of the content to see what we actually got
+      const contentSample = String.fromCharCode(...pdfUint8Array.slice(0, 200));
+      console.log('Invalid PDF content sample:', contentSample);
+      throw new Error('Downloaded content is not a valid PDF file. Got HTML or other content instead.');
+    }
+    
+    if (contentType && !contentType.includes('application/pdf')) {
+      console.log('Warning: Content-Type is not application/pdf but file appears to be PDF based on signature');
+    }
 
     // Create document metadata
     const documentId = crypto.randomUUID();
