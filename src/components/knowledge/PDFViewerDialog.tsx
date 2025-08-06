@@ -20,7 +20,17 @@ const PDFViewerDialog: React.FC<PDFViewerDialogProps> = ({
   const [loadError, setLoadError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
+  // Use the document.url which contains the Supabase storage URL for the PDF
+  // NOT the document.title which may contain the original web URL
   const pdfUrl = document.url;
+  
+  // Debug logging to see what URL we're actually using
+  console.log('PDFViewerDialog - Document:', {
+    id: document.id,
+    title: document.title,
+    url: document.url,
+    pdfUrl
+  });
 
   const handleIframeError = () => {
     setLoadError(true);
