@@ -5,6 +5,12 @@ import { DocumentWithContent } from "@/types/knowledge";
 import { FileIcon, Download, ExternalLink, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
+
+// Configure PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 interface PDFViewerDialogProps {
   document: DocumentWithContent;
@@ -22,6 +28,9 @@ const PDFViewerDialog: React.FC<PDFViewerDialogProps> = ({
   const [dialogKey, setDialogKey] = useState(0);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [isLoadingBlob, setIsLoadingBlob] = useState(false);
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pdfRenderMethod, setPdfRenderMethod] = useState<'pdfjs' | 'object' | 'newTab'>('pdfjs');
 
   // EMERGENCY FIX: Fetch PDF as blob to bypass all caching
   const fetchPdfAsBlob = async () => {
@@ -90,15 +99,30 @@ const PDFViewerDialog: React.FC<PDFViewerDialogProps> = ({
     pdfUrl
   });
 
-  const handleIframeError = () => {
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+    setLoadError(false);
+    console.log('PDF loaded successfully with', numPages, 'pages');
+  };
+
+  const onDocumentLoadError = (error: Error) => {
+    console.error('PDF.js failed to load:', error);
     setLoadError(true);
-    console.error('PDF iframe failed to load:', pdfUrl);
+    // Try fallback method
+    setPdfRenderMethod('object');
+  };
+
+  const handleObjectError = () => {
+    console.error('Object/embed failed to load PDF, opening in new tab');
+    setPdfRenderMethod('newTab');
+    handleOpenInNewTab();
   };
 
   const handleRetry = () => {
     setLoadError(false);
     setRetryCount(prev => prev + 1);
     setDialogKey(prev => prev + 1);
+    setPdfRenderMethod('pdfjs'); // Reset to PDF.js first
     
     // Clear existing blob and fetch new one
     if (blobUrl) {
@@ -145,13 +169,13 @@ const PDFViewerDialog: React.FC<PDFViewerDialogProps> = ({
                   <p className="text-muted-foreground">Loading PDF...</p>
                 </div>
               </div>
-            ) : loadError ? (
+            ) : loadError && pdfRenderMethod === 'pdfjs' ? (
               <div className="flex-1 flex items-center justify-center p-8">
                 <div className="text-center max-w-md">
                   <Alert className="mb-4">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
-                      Unable to display the PDF in the browser. This might be due to browser security settings or PDF format compatibility.
+                      Unable to display the PDF using the built-in viewer. Trying alternative methods...
                     </AlertDescription>
                   </Alert>
                   
@@ -172,26 +196,96 @@ const PDFViewerDialog: React.FC<PDFViewerDialogProps> = ({
               </div>
             ) : (
               <>
-                <div className="flex-1 overflow-hidden">
-                  <object 
-                    key={`pdf-${retryCount}-${dialogKey}`}
-                    data={pdfUrl}
-                    type="application/pdf"
-                    className="w-full h-full border-0"
-                    title="PDF Document"
-                  >
-                    <embed
-                      src={pdfUrl}
+                {pdfRenderMethod === 'pdfjs' ? (
+                  <div className="flex-1 overflow-auto bg-gray-100">
+                    <Document
+                      file={pdfUrl}
+                      onLoadSuccess={onDocumentLoadSuccess}
+                      onLoadError={onDocumentLoadError}
+                      loading={
+                        <div className="flex items-center justify-center p-8">
+                          <div className="text-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                            <p className="text-muted-foreground">Loading PDF...</p>
+                          </div>
+                        </div>
+                      }
+                      className="flex flex-col items-center"
+                    >
+                      <div className="mb-4 flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                          disabled={currentPage <= 1}
+                        >
+                          Previous
+                        </Button>
+                        <span className="text-sm">
+                          Page {currentPage} of {numPages || 1}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(Math.min(numPages || 1, currentPage + 1))}
+                          disabled={currentPage >= (numPages || 1)}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                      <Page
+                        pageNumber={currentPage}
+                        renderTextLayer={true}
+                        renderAnnotationLayer={true}
+                        className="shadow-lg mb-4"
+                        width={Math.min(800, window.innerWidth - 100)}
+                      />
+                    </Document>
+                  </div>
+                ) : pdfRenderMethod === 'object' ? (
+                  <div className="flex-1 overflow-hidden">
+                    <object 
+                      key={`pdf-${retryCount}-${dialogKey}`}
+                      data={pdfUrl}
                       type="application/pdf"
                       className="w-full h-full border-0"
                       title="PDF Document"
-                    />
-                  </object>
-                </div>
+                      onError={handleObjectError}
+                    >
+                      <embed
+                        src={pdfUrl}
+                        type="application/pdf"
+                        className="w-full h-full border-0"
+                        title="PDF Document"
+                        onError={handleObjectError}
+                      />
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center">
+                          <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                          <p className="text-muted-foreground mb-4">Cannot display PDF in browser</p>
+                          <Button onClick={handleOpenInNewTab} variant="default">
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            Open in New Tab
+                          </Button>
+                        </div>
+                      </div>
+                    </object>
+                  </div>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center p-8">
+                    <div className="text-center">
+                      <FileIcon className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground mb-4">PDF opened in new tab</p>
+                      <Button onClick={() => setPdfRenderMethod('pdfjs')} variant="outline">
+                        Try Viewing Here Again
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 
                 <div className="p-4 bg-background border-t flex justify-between items-center">
                   <div className="text-sm text-muted-foreground">
-                    PDF Viewer • Document {document.id}
+                    {pdfRenderMethod === 'pdfjs' && numPages ? `PDF Viewer • ${numPages} pages` : `PDF Viewer • Document ${document.id}`}
                   </div>
                   <div className="flex gap-2">
                     <Button 
