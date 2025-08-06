@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { DocumentWithContent } from "@/types/knowledge";
@@ -6,8 +6,9 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { FileText, Trash2, ExternalLink, Loader2, FileIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import DocumentPreviewDialog from "./DocumentPreviewDialog";
+import DocumentPreviewDialog from "@/components/case-analysis/documents/DocumentPreviewDialog";
 import DocumentDeleteDialog from "./DocumentDeleteDialog";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DocumentLibraryCardProps {
   document: DocumentWithContent;
@@ -25,6 +26,8 @@ const DocumentLibraryCard: React.FC<DocumentLibraryCardProps> = ({
   const [showPreview, setShowPreview] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [documentContent, setDocumentContent] = useState('');
+  const [loadingContent, setLoadingContent] = useState(false);
 
   const getDocumentPreview = (document: DocumentWithContent): string => {
     if (document.contents.length > 0 && document.contents[0].content) {
@@ -42,12 +45,41 @@ const DocumentLibraryCard: React.FC<DocumentLibraryCardProps> = ({
     setShowDeleteDialog(true);
   };
 
+  const fetchDocumentContent = async () => {
+    if (!document.id) return;
+    
+    setLoadingContent(true);
+    try {
+      const { data, error } = await supabase
+        .from('document_chunks')
+        .select('content')
+        .eq('document_id', document.id)
+        .order('chunk_index');
+
+      if (error) throw error;
+
+      const fullContent = data?.map(chunk => chunk.content).join('\n\n') || '';
+      setDocumentContent(fullContent);
+    } catch (error) {
+      console.error('Error fetching document content:', error);
+      setDocumentContent('Error loading document content');
+    } finally {
+      setLoadingContent(false);
+    }
+  };
+
   const handleCardClick = (e: React.MouseEvent) => {
     // Don't open preview if clicking on a button or switch
     if ((e.target as HTMLElement).closest('button, [role="switch"]')) {
       return;
     }
     setShowPreview(true);
+    fetchDocumentContent();
+  };
+
+  const handlePreviewClick = () => {
+    setShowPreview(true);
+    fetchDocumentContent();
   };
 
   const handlePdfOpen = (url: string) => {
@@ -109,7 +141,7 @@ const DocumentLibraryCard: React.FC<DocumentLibraryCardProps> = ({
               <Button 
                 variant="secondary" 
                 size="sm"
-                onClick={() => setShowPreview(true)}
+                onClick={handlePreviewClick}
                 disabled={isDeleting}
               >
                 <FileText className="h-4 w-4 mr-1" />
@@ -168,9 +200,10 @@ const DocumentLibraryCard: React.FC<DocumentLibraryCardProps> = ({
 
       {/* Preview Dialog */}
       <DocumentPreviewDialog
-        document={document}
-        isOpen={showPreview}
-        onOpenChange={setShowPreview}
+        selectedDocument={showPreview ? document : null}
+        onClose={() => setShowPreview(false)}
+        documentContent={documentContent}
+        loadingContent={loadingContent}
       />
 
       {/* Delete Dialog */}
