@@ -217,7 +217,7 @@ serve(async (req) => {
           schema: 'legal_case',
           processing_status: 'processing',
           url: documentUrl,
-          include_in_analysis: true
+          include_in_analysis: false
         });
       
       if (metadataError) {
