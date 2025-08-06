@@ -155,123 +155,117 @@ serve(async (req) => {
       console.log('Warning: Content-Type is not application/pdf but file appears to be PDF based on signature');
     }
 
-    // Create document metadata
-    const documentId = crypto.randomUUID();
-    const fileName = `${caseTitle.replace(/[^a-zA-Z0-9\s]/g, '').trim()}.pdf`;
-
-    // Upload PDF to storage first
-    const storageFileName = `legal-cases/${documentId}/${fileName}`;
-    console.log('Uploading PDF to storage:', storageFileName);
+    // Create a File object from the PDF buffer to match the Document Library processing
+    const fileName = `${justiaUrl.replace(/[^a-zA-Z0-9]/g, '')}.pdf`;
+    const pdfFile = new File([pdfUint8Array], fileName, { type: 'application/pdf' });
     
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('documents')
-      .upload(storageFileName, pdfUint8Array, {
-        contentType: 'application/pdf',
-        upsert: false
-      });
-
-    if (uploadError) {
-      console.error('Storage upload error:', uploadError);
-      throw new Error(`Failed to upload PDF to storage: ${uploadError.message}`);
-    }
-
-    // Get the public URL for the uploaded file
-    const { data: urlData } = supabase.storage
-      .from('documents')
-      .getPublicUrl(storageFileName);
-    
-    const fileUrl = urlData.publicUrl;
-    console.log('PDF uploaded to storage URL:', fileUrl);
-
-    // Insert document metadata for firm-level legal case
-    const { error: metadataError } = await supabase
-      .from('document_metadata')
-      .insert({
-        id: documentId,
-        title: caseTitle,
-        client_id: null, // Firm-level document
-        case_id: null,
-        user_id: userId,
-        firm_id: firmData?.firm_id || null,
-        schema: 'legal_case',
-        url: fileUrl, // Use storage URL instead of original Justia URL
-        processing_status: 'processing',
-        include_in_analysis: true
-      });
-
-    if (metadataError) {
-      throw new Error(`Error creating document metadata: ${metadataError.message}`);
-    }
-
-    // Call the existing PDF processing function with proper format
-    console.log('Calling process-pdf-document with:', {
-      documentId,
-      title: caseTitle,
-      fileUrl: fileUrl,
-      fileName,
-      clientId: null,
-      caseId: null,
-      userId: userId,
-      firmId: firmData?.firm_id || null
+    console.log('Created PDF File object:', {
+      name: pdfFile.name,
+      size: pdfFile.size,
+      type: pdfFile.type
     });
+
+    // Use the same processing pipeline as the Document Library by implementing
+    // the upload and processing logic directly here to match uploadAndProcessFirmDocument
+    console.log('Processing PDF using firm document pipeline...');
     
-    const processingResult = await supabase.functions.invoke('process-pdf-document', {
-      body: {
-        documentId,
-        title: caseTitle,
-        fileUrl: fileUrl, // Required by process-pdf-document
-        fileName,
-        clientId: null, // Firm-level
-        caseId: null,
-        userId: userId,
-        firmId: firmData?.firm_id || null
+    try {
+      // Generate a unique ID for the document
+      const documentId = crypto.randomUUID();
+      
+      // Upload file to storage using the same approach as firmDocumentUtils
+      const fileExt = pdfFile.name.split('.').pop();
+      const storageFileName = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const firmId = firmData?.firm_id;
+      const filePath = firmId ? `firm/${firmId}/${storageFileName}` : `user/${userId}/${storageFileName}`;
+      
+      console.log('Uploading PDF to storage:', filePath);
+      
+      // Upload file to client_documents bucket (same as firmDocumentUtils)
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('client_documents')
+        .upload(filePath, pdfUint8Array, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+      
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw new Error(`Failed to upload document to storage: ${uploadError.message}`);
       }
-    });
-
-    console.log('Process-PDF-Document response:', {
-      data: processingResult.data,
-      error: processingResult.error,
-      status: processingResult.status
-    });
-
-    if (processingResult.error) {
-      console.error('PDF processing error details:', {
-        error: processingResult.error,
-        message: processingResult.error.message,
-        stack: processingResult.error.stack,
-        context: processingResult.error.context
+      
+      console.log('PDF uploaded successfully:', uploadData.path);
+      
+      // Get public URL for the uploaded file
+      const { data: urlData } = await supabase.storage
+        .from('client_documents')
+        .getPublicUrl(filePath);
+      
+      const documentUrl = urlData.publicUrl;
+      console.log('Public URL generated:', documentUrl);
+      
+      // Create document metadata with 'processing' status - exactly like uploadAndProcessFirmDocument
+      const { error: metadataError } = await supabase
+        .from('document_metadata')
+        .insert({
+          id: documentId,
+          title: justiaUrl, // Use the original URL as title
+          client_id: null, // No client for firm documents
+          case_id: null,
+          user_id: userId,
+          firm_id: firmId || null,
+          schema: 'legal_case',
+          processing_status: 'processing',
+          url: documentUrl,
+          include_in_analysis: true
+        });
+      
+      if (metadataError) {
+        throw new Error(`Error creating document metadata: ${metadataError.message}`);
+      }
+      
+      console.log(`Document metadata created with ID: ${documentId}, status: processing`);
+      
+      // Call server-side processing edge function - same as uploadAndProcessFirmDocument
+      console.log('Calling server-side document processing function...');
+      const { data, error: functionError } = await supabase.functions.invoke('process-pdf-document', {
+        body: {
+          documentId,
+          clientId: null, // No client for firm documents
+          caseId: null,
+          userId,
+          firmId,
+          title: justiaUrl,
+          fileUrl: documentUrl,
+          fileName: pdfFile.name
+        }
       });
       
-      // Update document status to failed
-      await supabase
-        .from('document_metadata')
-        .update({ 
-          processing_status: 'failed',
-          processing_error: `Process-PDF-Document failed: ${processingResult.error.message}` 
-        })
-        .eq('id', documentId);
-        
-      throw new Error(`PDF processing failed: ${processingResult.error.message}`);
+      if (functionError) {
+        throw new Error(`Server-side processing failed: ${functionError.message}`);
+      }
+      
+      if (!data || !data.success) {
+        throw new Error(data?.error || 'Server-side processing failed');
+      }
+      
+      console.log(`Server-side document processing completed successfully for document: ${documentId}`);
+      
+      console.log('Legal case PDF successfully harvested and processed:', documentId);
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          documentId,
+          message: 'Legal case PDF successfully added to knowledge base'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+      
+    } catch (processingError: any) {
+      console.error('Error processing PDF:', processingError);
+      throw new Error(`Failed to process PDF: ${processingError.message}`);
     }
-
-    console.log('PDF processing completed successfully:', processingResult.data);
-
-    // Update document status to completed
-    await supabase
-      .from('document_metadata')
-      .update({ processing_status: 'completed' })
-      .eq('id', documentId);
-
-    console.log('Legal case PDF successfully harvested and processed:', documentId);
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        documentId,
-        message: 'Legal case PDF successfully added to knowledge base'
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
 
   } catch (error) {
     console.error('Error in harvest-legal-pdf function:', error);
