@@ -69,32 +69,52 @@ serve(async (req) => {
     // Extract PDF download link from various Justia patterns
     let pdfUrl = null;
     
-    // Pattern 1: Direct PDF download link
-    const pdfMatch = html.match(/href="([^"]*\.pdf)"/i);
-    if (pdfMatch) {
-      pdfUrl = pdfMatch[1];
+    // Pattern 1: Direct download PDF link with class "pdf-icon"
+    const pdfIconMatch = html.match(/href="([^"]*\.pdf[^"]*)"[^>]*class="[^"]*pdf-icon[^"]*"/i);
+    if (pdfIconMatch) {
+      pdfUrl = pdfIconMatch[1];
       if (!pdfUrl.startsWith('http')) {
         pdfUrl = new URL(pdfUrl, justiaUrl).href;
       }
     }
     
-    // Pattern 2: Download button with PDF endpoint
+    // Pattern 2: cases.justia.com PDF links (common pattern)
     if (!pdfUrl) {
-      const downloadMatch = html.match(/href="([^"]*download[^"]*pdf[^"]*)"/i);
-      if (downloadMatch) {
-        pdfUrl = downloadMatch[1];
+      const casesJustiaMatch = html.match(/href="(https:\/\/cases\.justia\.com\/[^"]*\.pdf[^"]*)"/i);
+      if (casesJustiaMatch) {
+        pdfUrl = casesJustiaMatch[1];
+      }
+    }
+    
+    // Pattern 3: Direct PDF download link (generic)
+    if (!pdfUrl) {
+      const directPdfMatch = html.match(/href="([^"]*\.pdf[^"]*)"[^>]*>Download PDF/i);
+      if (directPdfMatch) {
+        pdfUrl = directPdfMatch[1];
+        if (!pdfUrl.startsWith('http')) {
+          pdfUrl = new URL(pdfUrl, justiaUrl).href;
+        }
+      }
+    }
+    
+    // Pattern 4: Any PDF link in the content
+    if (!pdfUrl) {
+      const anyPdfMatch = html.match(/href="([^"]*\.pdf[^"]*)"/i);
+      if (anyPdfMatch) {
+        pdfUrl = anyPdfMatch[1];
         if (!pdfUrl.startsWith('http')) {
           pdfUrl = new URL(pdfUrl, justiaUrl).href;
         }
       }
     }
 
-    // Pattern 3: Check for case-specific PDF patterns
+    // Pattern 5: Check for case-specific PDF patterns based on URL structure
     if (!pdfUrl) {
-      const caseIdMatch = justiaUrl.match(/\/(\d+)\.html/);
+      const caseIdMatch = justiaUrl.match(/\/(\d{4}-\d{2}-\d{2}-\d{5}-cv)\.html/);
       if (caseIdMatch) {
         const caseId = caseIdMatch[1];
-        pdfUrl = justiaUrl.replace('.html', '.pdf');
+        const baseUrl = justiaUrl.replace(/\/cases\/.*$/, '');
+        pdfUrl = `${baseUrl}/cases.justia.com/${justiaUrl.split('/cases/')[1].replace('.html', '.pdf')}`;
       }
     }
 
