@@ -204,6 +204,17 @@ serve(async (req) => {
     }
 
     // Call the existing PDF processing function with proper format
+    console.log('Calling process-pdf-document with:', {
+      documentId,
+      title: caseTitle,
+      fileUrl: fileUrl,
+      fileName,
+      clientId: null,
+      caseId: null,
+      userId: userId,
+      firmId: firmData?.firm_id || null
+    });
+    
     const processingResult = await supabase.functions.invoke('process-pdf-document', {
       body: {
         documentId,
@@ -217,20 +228,33 @@ serve(async (req) => {
       }
     });
 
+    console.log('Process-PDF-Document response:', {
+      data: processingResult.data,
+      error: processingResult.error,
+      status: processingResult.status
+    });
+
     if (processingResult.error) {
-      console.error('PDF processing error:', processingResult.error);
+      console.error('PDF processing error details:', {
+        error: processingResult.error,
+        message: processingResult.error.message,
+        stack: processingResult.error.stack,
+        context: processingResult.error.context
+      });
       
       // Update document status to failed
       await supabase
         .from('document_metadata')
         .update({ 
           processing_status: 'failed',
-          processing_error: processingResult.error.message 
+          processing_error: `Process-PDF-Document failed: ${processingResult.error.message}` 
         })
         .eq('id', documentId);
         
       throw new Error(`PDF processing failed: ${processingResult.error.message}`);
     }
+
+    console.log('PDF processing completed successfully:', processingResult.data);
 
     // Update document status to completed
     await supabase
