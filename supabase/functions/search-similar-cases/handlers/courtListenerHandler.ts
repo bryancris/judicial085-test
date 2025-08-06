@@ -1,6 +1,5 @@
 import { corsHeaders } from "../utils/corsUtils.ts";
 import { addExplicitLegalTerms } from "../utils/searchTermGenerator.ts";
-import { getIntelligentFallbackByArea } from "../utils/intelligentFallbackCases.ts";
 import { detectCaseTypeFromText } from "../utils/caseTypeDetector.ts";
 
 // Process Court Listener API results
@@ -115,75 +114,22 @@ export async function processCourtListenerResults(
       }));
     } else {
       console.log(`❌ No results found from CourtListener API for terms: ${enhancedSearchTerms}`);
-      
-      // For animal protection cases, use specialized fallback
-      if (detectedType === "animal-protection") {
-        console.log("🐾 Using animal protection specific fallback cases");
-        courtListenerResults = getAnimalProtectionFallbackCases();
-      } else {
-        courtListenerResults = getIntelligentFallbackByArea(detectedType);
-      }
+      // Legal compliance: No synthetic fallback cases - return empty results
+      courtListenerResults = [];
     }
     
     console.log(`=== COURTLISTENER PROCESSING COMPLETE ===`);
     console.log(`Successfully processed ${courtListenerResults.length} cases`);
   } catch (apiError) {
     console.error('=== COURTLISTENER API ERROR ===', apiError);
-    
-    // Use specialized fallback for animal protection
-    const detectedType = detectCaseTypeFromText(currentSearchDocument);
-    if (detectedType === "animal-protection") {
-      console.log("🐾 Using animal protection fallback due to API error");
-      courtListenerResults = getAnimalProtectionFallbackCases();
-    } else {
-      courtListenerResults = getIntelligentFallbackByArea(detectedType);
-    }
+    // Legal compliance: No synthetic fallback cases on API errors
+    courtListenerResults = [];
   }
   
   return courtListenerResults;
 }
 
-// Specialized fallback for animal protection cases
-function getAnimalProtectionFallbackCases(): any[] {
-  return [
-    {
-      source: "courtlistener",
-      clientId: null,
-      clientName: "Martinez v. Pet Paradise Boarding",
-      similarity: 0.85,
-      relevantFacts: "Pet boarding facility failed to monitor animals during extreme heat, resulting in pet death. Facility violated Texas Penal Code 42.092 regarding animal cruelty and DTPA consumer protection laws.",
-      outcome: "Court found facility liable for animal cruelty and consumer deception, awarding damages for pet's death and emotional distress.",
-      court: "Texas District Court, Travis County",
-      citation: "No. 2021-CV-45892",
-      dateDecided: "08/15/2021",
-      url: null
-    },
-    {
-      source: "courtlistener",
-      clientId: null,
-      clientName: "Johnson v. Happy Tails Pet Care",
-      similarity: 0.82,
-      relevantFacts: "Commercial pet boarding service negligently supervised animals, leading to injury. Business violated implied warranty of care and potentially Texas Penal Code provisions on animal welfare.",
-      outcome: "Jury found pet care facility liable for negligence and breach of duty of care, awarding compensatory damages.",
-      court: "Texas Court of Appeals, 3rd District",
-      citation: "542 S.W.3d 892 (Tex. App. 2018)",
-      dateDecided: "03/22/2018",
-      url: null
-    },
-    {
-      source: "courtlistener",
-      clientId: null, 
-      clientName: "State v. Commercial Pet Services LLC",
-      similarity: 0.78,
-      relevantFacts: "Business charged under Texas Penal Code 42.092 for cruelty to animals in commercial setting. Case involved inadequate care leading to animal suffering and death.",
-      outcome: "Criminal conviction for animal cruelty; civil liability also established for damages to pet owners.",
-      court: "Texas Criminal District Court, Harris County", 
-      citation: "No. 2019-CR-28472",
-      dateDecided: "11/08/2019",
-      url: null
-    }
-  ];
-}
+// REMOVED: Synthetic animal protection cases for legal compliance
 
 // Extract a relevant snippet from a court opinion based on search terms
 export function extractRelevantSnippet(opinionText: string, searchTerms: string): string {
@@ -291,83 +237,5 @@ export function extractOutcomeFromOpinion(opinionText: string): string {
   return "Case outcome details not available";
 }
 
-// New function to create client-specific fallback cases
-function getClientSpecificFallbackCases(caseType: string, clientContent: string): any[] {
-  // Start with generic fallbacks based on case type
-  const baseFallbacks = getIntelligentFallbackByArea(caseType);
-  
-  // Extract key details from client content to customize the fallback cases
-  const keyDetails = extractKeyDetailsFromClient(clientContent);
-  
-  // Customize the fallback cases with client-specific information
-  const customizedFallbacks = baseFallbacks.map((baseCase, index) => {
-    // Only customize the first few cases to avoid making them all too similar
-    if (index < 3 && keyDetails.length > 0) {
-      // Randomly select some client details to incorporate
-      const selectedDetails = keyDetails
-        .sort(() => Math.random() - 0.5)
-        .slice(0, 2)
-        .join(" ");
-        
-      // Customize the case details with client information
-      return {
-        ...baseCase,
-        // Increase the similarity for more believable results
-        similarity: Math.min(0.85, baseCase.similarity + 0.15),
-        // Include some client details in the facts to make it seem more relevant
-        relevantFacts: `${baseCase.relevantFacts} The case involved similar issues related to ${selectedDetails}.`,
-      };
-    }
-    
-    return baseCase;
-  });
-  
-  // Randomize the order slightly for more realistic results
-  return customizedFallbacks.sort(() => Math.random() - 0.4);
-}
-
-// Helper function to extract key details from client content
-function extractKeyDetailsFromClient(content: string): string[] {
-  if (!content) return [];
-  
-  const keyDetails: string[] = [];
-  
-  // Extract potential important phrases
-  const lowerContent = content.toLowerCase();
-  
-  // Look for legal terms mentioned
-  const legalTerms = [
-    "negligence", "breach of contract", "liability", "damages", "injury", 
-    "property", "homeowner", "hoa", "violation", "fine", "notice", "dpta",
-    "consumer protection", "warranty", "title", "defect", "accident", "fraud"
-  ];
-  
-  for (const term of legalTerms) {
-    if (lowerContent.includes(term)) {
-      // Find the sentence containing this term
-      const sentences = content.split(/\.|\?|\!/);
-      for (const sentence of sentences) {
-        if (sentence.toLowerCase().includes(term)) {
-          // Extract a summarized version of this sentence
-          const condensed = sentence.trim().substring(0, 80);
-          if (condensed && !keyDetails.includes(condensed)) {
-            keyDetails.push(condensed);
-          }
-          break;
-        }
-      }
-    }
-  }
-  
-  // Look for case-specific details like names, dates, amounts
-  const nameMatch = content.match(/[A-Z][a-z]+ [A-Z][a-z]+/);
-  if (nameMatch) keyDetails.push(nameMatch[0]);
-  
-  const dateMatch = content.match(/\b(January|February|March|April|May|June|July|August|September|October|November|December) \d{1,2}, \d{4}\b/);
-  if (dateMatch) keyDetails.push(dateMatch[0]);
-  
-  const moneyMatch = content.match(/\$\d{1,3}(,\d{3})*(\.\d{2})?/);
-  if (moneyMatch) keyDetails.push(moneyMatch[0]);
-  
-  return keyDetails.slice(0, 5); // Limit to 5 details
-}
+// REMOVED: Client-specific fallback cases for legal compliance
+// All case data must come from verified external sources only

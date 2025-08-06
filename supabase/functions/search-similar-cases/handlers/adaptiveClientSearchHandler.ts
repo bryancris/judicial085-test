@@ -2,7 +2,6 @@
 import { corsHeaders } from "../utils/corsUtils.ts";
 import { analyzeCase, generateAdaptiveSearchTerms } from "../services/adaptiveCaseAnalyzer.ts";
 import { handleCourtListenerSearch } from "./courtListenerHandler.ts";
-import { getFallbackCasesByType } from "../utils/intelligentFallbackCases.ts";
 
 export async function handleAdaptiveClientSearch(
   clientId: string,
@@ -89,18 +88,19 @@ export async function handleAdaptiveClientSearch(
       }
     }
     
-    // If still no results, use intelligent fallback based on detected legal area
-    console.log(`No external results found, using intelligent fallback for ${analysisResult.primaryLegalArea}`);
-    const fallbackCases = getIntelligentFallbackCases(analysisResult.primaryLegalArea);
+    // No external results found - return no results with legal disclaimer
+    console.log(`No similar cases found for ${analysisResult.primaryLegalArea}`);
     
     return new Response(
       JSON.stringify({
-        similarCases: fallbackCases,
-        fallbackUsed: true,
+        similarCases: [],
+        fallbackUsed: false,
         analysisFound: true,
-        searchStrategy: "intelligent-fallback",
+        searchStrategy: "no-results-found",
         legalArea: analysisResult.primaryLegalArea,
-        confidence: analysisResult.confidence * 0.5
+        confidence: analysisResult.confidence,
+        message: "No similar cases found in legal databases. Please consult additional legal research sources and verify all legal precedents independently.",
+        disclaimer: "All legal research results require independent verification. This AI-assisted search does not guarantee completeness of available case law."
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -108,14 +108,16 @@ export async function handleAdaptiveClientSearch(
   } catch (error) {
     console.error("Error in adaptive client search:", error);
     
-    // Return generic fallback on error
+    // Return error response with legal disclaimer
     return new Response(
       JSON.stringify({
-        similarCases: getFallbackCasesByType("general"),
-        fallbackUsed: true,
+        similarCases: [],
+        fallbackUsed: false,
         analysisFound: false,
-        searchStrategy: "error-fallback",
-        error: error.message
+        searchStrategy: "search-error",
+        error: error.message,
+        message: "Search encountered an error. Please try alternative legal research methods.",
+        disclaimer: "All legal research results require independent verification. This AI-assisted search does not guarantee completeness of available case law."
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -157,28 +159,5 @@ function generateBroaderSearchTerms(analysisResult: any): string {
   return finalTerms;
 }
 
-function getIntelligentFallbackCases(legalArea: string): any[] {
-  // Map AI-detected legal areas to appropriate fallback cases
-  const legalAreaMap: Record<string, string> = {
-    "premises-liability": "premises-liability",
-    "property-law": "real-estate",
-    "real-estate": "real-estate", 
-    "hoa": "real-estate",
-    "homeowners-association": "real-estate",
-    "personal-injury": "personal-injury",
-    "negligence": "personal-injury",
-    "consumer-protection": "consumer-protection",
-    "deceptive-trade": "consumer-protection",
-    "contract-law": "contract",
-    "employment-law": "employment",
-    "family-law": "family",
-    "criminal-law": "criminal",
-    "animal-protection": "animal-protection",
-    "general": "premises-liability" // Default general cases to premises liability
-  };
-  
-  const fallbackType = legalAreaMap[legalArea] || "general-liability";
-  console.log(`Using intelligent fallback type: ${fallbackType} for legal area: ${legalArea}`);
-  
-  return getFallbackCasesByType(fallbackType);
-}
+// REMOVED: No longer using synthetic fallback cases to ensure legal compliance
+// All case data must come from verified external sources only

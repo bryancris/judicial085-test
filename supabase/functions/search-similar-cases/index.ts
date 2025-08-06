@@ -2,7 +2,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "./utils/corsUtils.ts";
 import { intelligentCourtListenerSearch } from "./services/intelligentCourtListenerSearch.ts";
-import { getIntelligentFallbackByArea, generateCourtListenerSearchUrl } from "./utils/intelligentFallbackCases.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { determineFinalCaseType } from "./utils/caseTypeDetector.ts";
 
@@ -97,41 +96,23 @@ serve(async (req) => {
       courtListenerApiKey
     );
     
-    // NEW: If no results from CourtListener, use intelligent fallbacks
+    // Legal compliance: No synthetic fallbacks - only return real case results
     let finalResults = searchResult.results;
     let fallbackUsed = false;
     
     if (finalResults.length === 0) {
-      console.log("⚠️ No results from CourtListener, using intelligent fallbacks");
-      const fallbackCases = getIntelligentFallbackByArea(finalCaseType);
-      finalResults = fallbackCases.map((fallbackCase: any) => ({
-        source: "courtlistener" as const,
-        clientId: null,
-        clientName: fallbackCase.clientName || "Similar Case",
-        similarity: fallbackCase.similarity || 60,
-        relevantFacts: fallbackCase.relevantFacts || "No summary available",
-        outcome: fallbackCase.outcome || "Case outcome details not available",
-        court: fallbackCase.court || "Unknown Court",
-        citation: fallbackCase.citation || "No citation",
-        dateDecided: fallbackCase.dateDecided || null,
-        url: fallbackCase.url || null,
-        agentReasoning: "Intelligent fallback - similar case type"
-      }));
-      fallbackUsed = true;
-      console.log(`✅ Provided ${finalResults.length} intelligent fallback cases`);
+      console.log("⚠️ No results from CourtListener - no synthetic data returned for legal compliance");
+      finalResults = [];
+      fallbackUsed = false;
     }
     
-    // Format results for frontend and ensure all have viewable URLs
+    // Format results for frontend - only real cases with verified URLs
     const formattedCases = finalResults.map((result: any) => {
       const caseName = result.caseName || result.case_name || result.clientName || "Unknown Case";
       const citation = result.citation?.[0] || result.citation || "No citation";
       
-      // Ensure the case has a viewable URL
+      // Only use verified URLs from real cases
       let caseUrl = result.absolute_url || result.url || null;
-      if (!caseUrl || caseUrl === null) {
-        // Generate a search URL if no direct URL is available
-        caseUrl = generateCourtListenerSearchUrl(caseName, citation);
-      }
       
       return {
         source: "courtlistener" as const,
@@ -144,21 +125,24 @@ serve(async (req) => {
         citation: citation,
         dateDecided: result.dateFiled || result.date_filed || result.dateDecided || null,
         url: caseUrl,
-        agentReasoning: result.agentReasoning || "AI analysis completed"
+        agentReasoning: result.agentReasoning || "AI analysis completed",
+        sourceVerified: true // All cases are from verified external sources
       };
     });
     
     if (formattedCases.length === 0) {
-      console.log("❌ No similar cases found despite fallback attempts");
+      console.log("❌ No similar cases found - returning empty results for legal compliance");
       return new Response(JSON.stringify({
         similarCases: [],
         fallbackUsed: false,
         analysisFound: true,
         searchStrategy: "ai-agent-no-results",
-        message: "No similar cases found in legal databases despite comprehensive AI analysis.",
+        message: "No similar cases found in legal databases. Please consult additional legal research sources and verify all legal precedents independently.",
+        disclaimer: "All legal research results require independent verification. This AI-assisted search does not guarantee completeness of available case law. Attorneys must independently verify all citations and legal precedents.",
         caseType: finalCaseType,
         searchQueries: searchResult.searchQueries,
-        agentAnalysis: searchResult.agentAnalysis
+        agentAnalysis: searchResult.agentAnalysis,
+        professionalResponsibilityNotice: "This tool is for research assistance only. Legal practitioners must verify all results independently and conduct comprehensive legal research using primary sources."
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -210,13 +194,16 @@ serve(async (req) => {
     
     return new Response(JSON.stringify({
       similarCases: formattedCases,
-      fallbackUsed: fallbackUsed,
+      fallbackUsed: false, // Never using fallbacks for legal compliance
       analysisFound: true,
-      searchStrategy: fallbackUsed ? "intelligent-fallback" : "ai-agent-powered",
+      searchStrategy: "ai-agent-powered",
       caseType: finalCaseType,
       searchQueries: searchResult.searchQueries,
       agentAnalysis: searchResult.agentAnalysis,
-      message: `Found ${formattedCases.length} similar cases using ${fallbackUsed ? 'intelligent fallback system' : 'AI analysis'}`
+      message: `Found ${formattedCases.length} verified similar cases from legal databases`,
+      disclaimer: "All legal research results require independent verification. This AI-assisted search does not guarantee completeness of available case law. Attorneys must independently verify all citations and legal precedents.",
+      professionalResponsibilityNotice: "This tool is for research assistance only. Legal practitioners must verify all results independently and conduct comprehensive legal research using primary sources.",
+      sourceAttribution: "All case data sourced from CourtListener and verified legal databases."
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
