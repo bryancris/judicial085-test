@@ -106,34 +106,32 @@ serve(async (req) => {
         enhancedQuery = `Texas construction and contract law research for: ${query}
 
 Requirements:
-1. Find 5-8 relevant TEXAS legal cases with:
+1. Find 3-5 relevant TEXAS legal cases with:
    - Complete case names (Plaintiff v. Defendant)
    - Texas court names (Supreme Court of Texas, Texas Court of Appeals, District Courts)
    - Legal citations (Tex. citation format)
    - Brief case summaries focusing on construction/contract issues
    - Outcomes/holdings related to warranties, breach, or construction
-   - Relevance to construction contracts and warranty law
-2. Include Texas statutes (Property Code, Business & Commerce Code)
+2. Include relevant Texas statutes (Property Code, Business & Commerce Code sections only)
 3. Focus on Texas construction law, warranty law, and contract law
-4. Include practical legal guidance for construction/warranty disputes
+4. Provide concise practical legal guidance
 
 Focus on Texas jurisdiction only and verified, authoritative sources.`;
       } else {
-        enhancedQuery = `Comprehensive legal research for: ${query}
+        enhancedQuery = `Legal research for: ${query}
 
 Requirements:
-1. If specific Texas statutes are mentioned (like Property Code 202.004), provide the FULL TEXT of those statutes
-2. Find and summarize 5-10 relevant legal cases with:
+1. If specific Texas statutes are mentioned, provide relevant statute sections (not full text)
+2. Find and summarize 3-5 relevant legal cases with:
    - Complete case names (Plaintiff v. Defendant)
    - Court names and jurisdictions  
    - Legal citations
    - Brief case summaries
    - Outcomes/holdings
-   - Relevance to the query
-3. Provide current Texas law analysis
+3. Provide concise Texas law analysis
 4. Include practical legal guidance
 
-Focus on verified, authoritative sources and comprehensive coverage.`;
+Focus on verified, authoritative sources.`;
       }
     } else if (searchType === 'similar-cases') {
       enhancedQuery = `Find 3-5 verified legal cases from TEXAS COURTS ONLY similar to: ${query}
@@ -170,7 +168,7 @@ Requirements:
     console.log('Making request to Perplexity API with model:', selectedModel);
 
     // Create timeout wrapper for the API call
-    const timeoutMs = 35000; // 35 second timeout to stay within Edge Function limits
+    const timeoutMs = 25000; // 25 second timeout to stay well within Edge Function limits
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -191,20 +189,20 @@ Requirements:
               role: 'system',
               content: searchType === 'similar-cases' 
                 ? 'You are a legal case database. Return only verified case information in the requested JSON format. Do not include analysis, reasoning, or explanations.'
-                : 'You are a legal research expert. Provide comprehensive legal information including: 1) Full statute text when statutes are mentioned, 2) Multiple relevant cases with detailed summaries, 3) Clear legal analysis with actionable guidance. Always include 5-10 relevant cases with case names, courts, citations, and brief summaries.'
+                : 'You are a legal research expert. Provide concise legal information including: 1) Relevant statute sections when mentioned, 2) 3-5 relevant cases with summaries, 3) Clear legal analysis with actionable guidance. Be concise and focused.'
             },
             {
               role: 'user',
               content: enhancedQuery
             }
           ],
-          max_tokens: searchType === 'similar-cases' ? 2000 : 4000, // Reduced tokens for similar-cases
+          max_tokens: searchType === 'similar-cases' ? 1500 : 2000, // Reduced tokens for faster responses
           temperature: 0.1,
           top_p: 0.9,
           return_citations: true,
           return_images: false,
-          search_domain_filter: ['justia.com', 'caselaw.findlaw.com', 'scholar.google.com', 'courtlistener.com', 'law.cornell.edu', 'statutes.capitol.texas.gov', 'txcourts.gov', 'search.txcourts.gov', 'texasbar.com', 'coa.courts.state.tx.us'],
-          search_recency_filter: 'year'
+          search_domain_filter: ['justia.com', 'caselaw.findlaw.com', 'scholar.google.com', 'courtlistener.com', 'law.cornell.edu', 'txcourts.gov'],
+          search_recency_filter: 'month'
         }),
         signal: controller.signal
       });
