@@ -144,123 +144,359 @@ export async function intelligentCourtListenerSearch(
   }
 }
 
-// Enhanced search query generation
+// Enhanced multi-level search query generation with progressive broadening
 function generateEnhancedSearchQueries(agentAnalysis: AgentAnalysis, caseType: string): string[] {
   const queries: string[] = [];
   
-  // Start with agent's queries
+  // LEVEL 1: Very broad legal concepts (highest success rate)
+  const broadLegalTerms = generateBroadLegalQueries(caseType);
+  queries.push(...broadLegalTerms);
+  
+  // LEVEL 2: Agent's specific queries (medium specificity)
   queries.push(...agentAnalysis.searchQueries);
   
-  // Add broader case-type specific queries
-  if (caseType.includes("premises") || caseType.includes("liability")) {
-    queries.push(
-      "premises liability Texas",
-      "slip and fall Texas store",
-      "negligence dangerous condition",
-      "invitee business premises",
-      "actual constructive knowledge",
-      "Wal-Mart premises liability"
-    );
-  } else if (caseType.includes("contract") || caseType.includes("construction") || caseType.includes("warranty")) {
-    queries.push(
-      "breach of contract express warranty Texas",
-      "construction contract material substitution",
-      "home renovation contractor breach",
-      "express warranty construction materials",
-      "Texas Business Commerce Code warranty",
-      "material specification breach contract",
-      "contractor warranty violation Texas",
-      "UCC express warranty breach"
-    );
-  }
+  // LEVEL 3: Case-type specific with broader terms
+  const caseSpecificQueries = generateCaseSpecificQueries(caseType, agentAnalysis);
+  queries.push(...caseSpecificQueries);
   
-  // Add common legal terms that appear in court opinions
-  if (agentAnalysis.keyFacts.some(fact => fact.includes("slip") || fact.includes("fall"))) {
-    queries.push(
-      "slip fall retail store",
-      "spilled substance floor",
-      "unsafe condition premises"
-    );
-  }
+  // LEVEL 4: Semantic expansion based on key facts
+  const semanticQueries = generateSemanticQueries(agentAnalysis);
+  queries.push(...semanticQueries);
   
-  // Add construction/contract specific terms
-  if (agentAnalysis.keyFacts.some(fact => 
-    fact.includes("construction") || fact.includes("renovation") || 
-    fact.includes("contractor") || fact.includes("material") ||
-    fact.includes("specification") || fact.includes("warranty"))) {
-    queries.push(
-      "construction contract breach Texas",
-      "home renovation material defect",
-      "contractor warranty breach",
-      "building contract specification"
-    );
-  }
-  
-  // Add statute-based searches
+  // LEVEL 5: Statute-based searches (most specific)
   if (agentAnalysis.relevantStatutes.length > 0) {
     agentAnalysis.relevantStatutes.forEach(statute => {
-      queries.push(`"${statute}"`);
+      // Use broader statute searches instead of exact quotes
+      const cleanStatute = statute.replace(/[§"]/g, '').trim();
+      queries.push(cleanStatute);
     });
   }
   
-  // Remove duplicates and return
-  return [...new Set(queries)].slice(0, 8); // Limit to 8 queries
+  // Remove duplicates and return progressive search strategy
+  const uniqueQueries = [...new Set(queries)];
+  console.log(`Generated ${uniqueQueries.length} progressive search queries:`, uniqueQueries);
+  return uniqueQueries.slice(0, 12); // Increased limit for better coverage
+}
+
+// Generate broad legal queries that have high success rates
+function generateBroadLegalQueries(caseType: string): string[] {
+  const broadQueries: string[] = [];
+  
+  if (caseType.includes("premises") || caseType.includes("liability")) {
+    broadQueries.push(
+      "premises liability Texas",
+      "negligence Texas",
+      "slip fall Texas",
+      "dangerous condition property"
+    );
+  } else if (caseType.includes("contract") || caseType.includes("construction")) {
+    broadQueries.push(
+      "breach contract Texas",
+      "warranty Texas",
+      "construction contract",
+      "contract damages Texas"
+    );
+  } else if (caseType.includes("consumer")) {
+    broadQueries.push(
+      "consumer protection Texas",
+      "deceptive practices Texas",
+      "DTPA Texas"
+    );
+  } else {
+    // Default broad terms for any case type
+    broadQueries.push(
+      "negligence Texas",
+      "liability Texas",
+      "damages Texas"
+    );
+  }
+  
+  return broadQueries;
+}
+
+// Generate case-specific queries with legal terminology
+function generateCaseSpecificQueries(caseType: string, agentAnalysis: AgentAnalysis): string[] {
+  const queries: string[] = [];
+  
+  if (caseType.includes("premises") || caseType.includes("liability")) {
+    queries.push(
+      "premises liability store",
+      "invitee business premises",
+      "constructive knowledge dangerous",
+      "retail store accident",
+      "floor condition negligence"
+    );
+  } else if (caseType.includes("contract") || caseType.includes("construction")) {
+    queries.push(
+      "express warranty construction",
+      "material substitution contract",
+      "contractor breach warranty",
+      "construction defect Texas",
+      "building material specification"
+    );
+  }
+  
+  // Add queries based on key facts with broader legal terms
+  agentAnalysis.keyFacts.forEach(fact => {
+    if (fact.includes("slip") || fact.includes("fall")) {
+      queries.push("slip fall premises", "floor accident Texas");
+    }
+    if (fact.includes("construction") || fact.includes("renovation")) {
+      queries.push("construction dispute Texas", "contractor liability");
+    }
+    if (fact.includes("warranty") || fact.includes("defect")) {
+      queries.push("warranty breach Texas", "product defect liability");
+    }
+  });
+  
+  return queries;
+}
+
+// Generate semantic queries using legal concepts and synonyms
+function generateSemanticQueries(agentAnalysis: AgentAnalysis): string[] {
+  const queries: string[] = [];
+  
+  // Legal concept expansion
+  agentAnalysis.legalConcepts.forEach(concept => {
+    const expandedTerms = expandLegalConcept(concept);
+    queries.push(...expandedTerms);
+  });
+  
+  return queries;
+}
+
+// Expand legal concepts into related searchable terms
+function expandLegalConcept(concept: string): string[] {
+  const expansions: string[] = [];
+  const lowerConcept = concept.toLowerCase();
+  
+  if (lowerConcept.includes("breach") || lowerConcept.includes("contract")) {
+    expansions.push("contract dispute Texas", "breach agreement");
+  }
+  
+  if (lowerConcept.includes("warranty")) {
+    expansions.push("warranty liability Texas", "product warranty");
+  }
+  
+  if (lowerConcept.includes("negligence")) {
+    expansions.push("negligence liability Texas", "duty care");
+  }
+  
+  if (lowerConcept.includes("premises")) {
+    expansions.push("property liability Texas", "premises accident");
+  }
+  
+  return expansions;
 }
 
 async function searchCourtListenerV4(query: string, apiKey: string): Promise<any[]> {
   try {
-    const encodedQuery = encodeURIComponent(query);
-    // Enhanced V4 API with better parameters
-    const url = `https://www.courtlistener.com/api/rest/v4/search/?q=${encodedQuery}&type=o&stat_Precedential=on&court=tex,texapp,texcrimapp,texjpml,tex.bankr&order_by=score%20desc&page_size=20`;
+    // Progressive search strategy - start broad, then narrow if needed
+    const searchVariations = generateSearchVariations(query);
     
-    console.log(`🔍 Searching CourtListener V4: ${query}`);
-    console.log(`📍 URL: ${url}`);
-    
-    const response = await fetch(url, {
-      headers: {
-        'Authorization': `Token ${apiKey}`,
-        'User-Agent': 'LegalAnalysis/1.0',
-        'Accept': 'application/json'
-      }
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`CourtListener API error: ${response.status} - ${errorText}`);
+    for (const searchQuery of searchVariations) {
+      const encodedQuery = encodeURIComponent(searchQuery);
       
-      // Log detailed error for debugging
-      if (response.status === 403) {
-        console.error("❌ 403 Forbidden - Check API key and permissions");
-      } else if (response.status === 429) {
-        console.error("❌ 429 Rate Limited - Too many requests");
+      // Optimized API parameters for better results
+      const params = new URLSearchParams({
+        q: encodedQuery,
+        type: 'o', // opinions
+        order_by: 'score desc',
+        page_size: '25' // Increased for better results
+      });
+      
+      // Progressive court filtering - start with all Texas courts
+      if (!searchQuery.includes('Texas')) {
+        params.append('court', 'tex,texapp,texcrimapp,texjpml,tex.bankr');
       }
       
-      return [];
+      // Add precedential filter only for specific searches
+      if (searchQuery.length > 20) {
+        params.append('stat_Precedential', 'on');
+      }
+      
+      const url = `https://www.courtlistener.com/api/rest/v4/search/?${params.toString()}`;
+      
+      console.log(`🔍 Searching CourtListener V4: ${searchQuery}`);
+      console.log(`📍 URL: ${url}`);
+      
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Token ${apiKey}`,
+          'User-Agent': 'LegalAnalysis/1.0',
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`CourtListener API error: ${response.status} - ${errorText}`);
+        
+        if (response.status === 403) {
+          console.error("❌ 403 Forbidden - Check API key and permissions");
+        } else if (response.status === 429) {
+          console.error("❌ 429 Rate Limited - Too many requests");
+          // Add delay and retry once
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          continue;
+        }
+        
+        continue; // Try next variation
+      }
+      
+      const data = await response.json();
+      console.log(`✅ CourtListener returned ${data.results?.length || 0} results for query: ${searchQuery}`);
+      
+      if (data.results && data.results.length > 0) {
+        // Enhanced result processing with better data extraction
+        const processedResults = data.results.map((result: any) => ({
+          id: result.id,
+          caseName: result.caseName || result.case_name || "Unknown Case",
+          case_name: result.caseName || result.case_name || "Unknown Case",
+          court: result.court || result.court_id || "Unknown Court",
+          court_name: result.court_name || result.court || "Unknown Court", 
+          citation: extractBestCitation(result),
+          dateFiled: result.dateFiled || result.date_filed,
+          date_filed: result.dateFiled || result.date_filed,
+          dateDecided: result.dateDecided || result.date_decided,
+          date_decided: result.dateDecided || result.date_decided,
+          absolute_url: result.absolute_url || result.absolute_uri,
+          snippet: enhanceSnippet(result.snippet || result.text || "No summary available", searchQuery),
+          text: result.snippet || result.text || "No summary available",
+          score: result.score || 0
+        }));
+        
+        return processedResults;
+      }
     }
     
-    const data = await response.json();
-    console.log(`✅ CourtListener returned ${data.results?.length || 0} results for query: ${query}`);
-    
-    // Enhanced V4 API response processing
-    const processedResults = (data.results || []).map((result: any) => ({
-      id: result.id,
-      caseName: result.caseName || result.case_name || "Unknown Case",
-      case_name: result.caseName || result.case_name || "Unknown Case",
-      court: result.court || result.court_id || "Unknown Court",
-      court_name: result.court || result.court_id || "Unknown Court", 
-      citation: Array.isArray(result.citation) ? result.citation[0] : result.citation || "No citation",
-      dateFiled: result.dateFiled || result.date_filed,
-      date_filed: result.dateFiled || result.date_filed,
-      absolute_url: result.absolute_url || result.absolute_uri,
-      snippet: result.snippet || result.text || "No summary available",
-      text: result.snippet || result.text || "No summary available"
-    }));
-    
-    return processedResults;
+    // If no variations worked, return empty
+    console.log(`❌ No results found for any variation of: ${query}`);
+    return [];
   } catch (error) {
     console.error(`Error searching CourtListener for "${query}":`, error);
     return [];
   }
+}
+
+// Generate search variations with progressive broadening
+function generateSearchVariations(originalQuery: string): string[] {
+  const variations: string[] = [];
+  
+  // 1. Original query
+  variations.push(originalQuery);
+  
+  // 2. Remove quotes for broader search
+  const withoutQuotes = originalQuery.replace(/"/g, '');
+  if (withoutQuotes !== originalQuery) {
+    variations.push(withoutQuotes);
+  }
+  
+  // 3. Use OR operators for key terms
+  const keyTerms = originalQuery.split(' ').filter(term => term.length > 3 && !term.includes('"'));
+  if (keyTerms.length > 1) {
+    variations.push(keyTerms.join(' OR '));
+  }
+  
+  // 4. Extract core legal concepts
+  const legalTerms = extractCoreLegalTerms(originalQuery);
+  if (legalTerms.length > 0) {
+    variations.push(legalTerms.join(' '));
+  }
+  
+  // 5. Fallback to very broad terms
+  const broadTerms = extractBroadTerms(originalQuery);
+  if (broadTerms) {
+    variations.push(broadTerms);
+  }
+  
+  return [...new Set(variations)].slice(0, 3); // Limit to avoid too many API calls
+}
+
+// Extract core legal terms from query
+function extractCoreLegalTerms(query: string): string[] {
+  const legalTerms: string[] = [];
+  const lowerQuery = query.toLowerCase();
+  
+  const legalConcepts = [
+    'contract', 'breach', 'warranty', 'negligence', 'liability', 
+    'premises', 'damages', 'construction', 'consumer', 'protection'
+  ];
+  
+  legalConcepts.forEach(concept => {
+    if (lowerQuery.includes(concept)) {
+      legalTerms.push(concept);
+    }
+  });
+  
+  // Always include Texas for jurisdiction
+  if (lowerQuery.includes('texas')) {
+    legalTerms.push('Texas');
+  }
+  
+  return legalTerms;
+}
+
+// Extract broad terms as fallback
+function extractBroadTerms(query: string): string | null {
+  const lowerQuery = query.toLowerCase();
+  
+  if (lowerQuery.includes('contract') || lowerQuery.includes('warranty')) {
+    return 'contract Texas';
+  }
+  if (lowerQuery.includes('premises') || lowerQuery.includes('slip')) {
+    return 'premises liability Texas';
+  }
+  if (lowerQuery.includes('negligence')) {
+    return 'negligence Texas';
+  }
+  
+  return 'liability Texas'; // Ultimate fallback
+}
+
+// Extract best citation from result
+function extractBestCitation(result: any): string {
+  if (Array.isArray(result.citation) && result.citation.length > 0) {
+    return result.citation[0];
+  }
+  if (typeof result.citation === 'string' && result.citation) {
+    return result.citation;
+  }
+  if (result.citation_count && result.citation_count > 0) {
+    return `Cited ${result.citation_count} times`;
+  }
+  return "No citation available";
+}
+
+// Enhance snippet with better context
+function enhanceSnippet(snippet: string, query: string): string {
+  if (!snippet || snippet === "No summary available") {
+    return snippet;
+  }
+  
+  // If snippet is very short, return as is
+  if (snippet.length < 100) {
+    return snippet;
+  }
+  
+  // Try to find sentences that contain query terms
+  const queryTerms = query.toLowerCase().split(' ').filter(term => 
+    term.length > 3 && !term.includes('"') && term !== 'texas'
+  );
+  
+  const sentences = snippet.split(/[.!?]+/).filter(s => s.trim().length > 20);
+  
+  for (const term of queryTerms) {
+    const relevantSentence = sentences.find(sentence => 
+      sentence.toLowerCase().includes(term)
+    );
+    if (relevantSentence) {
+      return relevantSentence.trim() + '.';
+    }
+  }
+  
+  // Return first sentence if no term match
+  return sentences[0]?.trim() + '.' || snippet;
 }
 
 function deduplicateResults(results: any[]): any[] {
@@ -284,12 +520,12 @@ function deduplicateResults(results: any[]): any[] {
   return unique;
 }
 
-// Generate MD5 hash for query caching
+// Generate SHA-256 hash for query caching (MD5 not supported in Deno)
 async function generateQueryHash(query: string): Promise<string> {
   const normalizedQuery = query.toLowerCase().trim();
   const encoder = new TextEncoder();
   const data = encoder.encode(normalizedQuery);
-  const hashBuffer = await crypto.subtle.digest('MD5', data);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }

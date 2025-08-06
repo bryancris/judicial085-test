@@ -31,14 +31,14 @@ export interface SearchCacheEntry {
   hit_count: number;
 }
 
-// Generate MD5 hash for query caching
+// Generate SHA-256 hash for query caching (MD5 not supported in browser/Deno environments)
 const generateQueryHash = async (query: string, parameters: any = {}): Promise<string> => {
   const normalizedQuery = query.toLowerCase().trim();
   const searchString = JSON.stringify({ query: normalizedQuery, ...parameters });
   
   const encoder = new TextEncoder();
   const data = encoder.encode(searchString);
-  const hashBuffer = await crypto.subtle.digest('MD5', data);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 };
