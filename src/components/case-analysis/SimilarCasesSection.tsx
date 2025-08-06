@@ -256,43 +256,77 @@ interface SimilarCaseCardProps {
 }
 
 const SimilarCaseCard: React.FC<SimilarCaseCardProps> = ({ similarCase }) => {
-  // Much stricter URL validation - only allow known working URLs
+  // Relaxed URL validation to allow legitimate legal URLs
   const isValidWorkingUrl = (url: string): boolean => {
-    // Only allow URLs we know work or can verify
+    if (!url || typeof url !== 'string') return false;
     
-    // Allow known working URLs (like our hardcoded ones)
-    if (url.includes('caselaw.findlaw.com') || 
-        url.includes('supreme.justia.com') ||
-        url.includes('law.justia.com')) {
-      return true;
-    }
-    
-    // For CourtListener URLs, be extremely strict
-    if (url.includes('courtlistener.com')) {
-      // Must have realistic docket pattern
-      const docketMatch = url.match(/\/(\d+)\//);
-      if (!docketMatch) return false;
+    try {
+      const urlObj = new URL(url);
       
-      const docketNumber = docketMatch[1];
+      // Must be HTTPS for security
+      if (urlObj.protocol !== 'https:') return false;
       
-      // Reject obviously fake patterns
-      if (docketNumber.length < 7 || // Too short
-          /^[0-9]{1,3}$/.test(docketNumber) || // Just 1-3 digits
-          /^1234567/.test(docketNumber) || // Starts with obvious placeholder
-          docketNumber === '0000000') { // All zeros
-        return false;
+      // List of trusted legal domains
+      const trustedDomains = [
+        'courtlistener.com',
+        'caselaw.findlaw.com',
+        'supreme.justia.com',
+        'law.justia.com',
+        'scholar.google.com',
+        'openjurist.org',
+        'casetext.com',
+        'leagle.com',
+        'versuslaw.com',
+        'westlaw.com',
+        'lexisnexis.com',
+        'uscourts.gov',
+        'supremecourt.gov',
+        'ca1.uscourts.gov',
+        'ca2.uscourts.gov',
+        'ca3.uscourts.gov',
+        'ca4.uscourts.gov',
+        'ca5.uscourts.gov',
+        'ca6.uscourts.gov',
+        'ca7.uscourts.gov',
+        'ca8.uscourts.gov',
+        'ca9.uscourts.gov',
+        'ca10.uscourts.gov',
+        'ca11.uscourts.gov',
+        'cadc.uscourts.gov',
+        'cafc.uscourts.gov'
+      ];
+      
+      // Check if domain is in our trusted list
+      const domain = urlObj.hostname.toLowerCase();
+      const isTrustedDomain = trustedDomains.some(trustedDomain => 
+        domain === trustedDomain || domain.endsWith('.' + trustedDomain)
+      );
+      
+      if (isTrustedDomain) {
+        // For CourtListener, do basic validation but don't be overly strict
+        if (domain.includes('courtlistener.com')) {
+          // Just check that it has a reasonable path structure
+          return urlObj.pathname.length > 5 && urlObj.pathname.includes('/');
+        }
+        return true;
       }
       
-      // Must have reasonable court abbreviation
-      if (!url.match(/\/[a-z]{2,10}\//)) {
-        return false;
+      // Allow other URLs that look like legitimate court or legal sites
+      if (domain.includes('court') || 
+          domain.includes('supreme') || 
+          domain.includes('appeals') ||
+          domain.includes('district') ||
+          domain.includes('.gov') ||
+          domain.includes('law') ||
+          domain.includes('legal')) {
+        // Basic format validation
+        return urlObj.pathname.length > 1;
       }
       
-      return true;
+      return false;
+    } catch {
+      return false;
     }
-    
-    // Reject all other URLs as potentially fake
-    return false;
   };
 
   // Get external URL only if it's validated and working
