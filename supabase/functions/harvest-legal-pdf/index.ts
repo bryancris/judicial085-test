@@ -66,10 +66,38 @@ serve(async (req) => {
 
     const html = await response.text();
     
-    // Extract PDF download link from Justia page
+    // Extract PDF download link and case title from Justia page
     let pdfUrl = null;
+    let extractedTitle = caseTitle; // Start with provided title
     
-    console.log('Analyzing HTML for PDF links...');
+    console.log('Analyzing HTML for PDF links and case title...');
+    
+    // Extract case title from the HTML page if not provided or is generic
+    if (!caseTitle || caseTitle === 'Legal Case Document') {
+      // Try to extract case title from h1 tag or title tag
+      const titleMatch = html.match(/<h1[^>]*>(.*?)<\/h1>/i) || 
+                        html.match(/<title[^>]*>(.*?)<\/title>/i);
+      
+      if (titleMatch) {
+        let title = titleMatch[1]
+          .replace(/<[^>]*>/g, '') // Remove HTML tags
+          .replace(/\s+/g, ' ') // Normalize whitespace
+          .trim();
+        
+        // Clean up common Justia title patterns
+        title = title
+          .replace(/\s*-\s*Justia.*$/i, '') // Remove "- Justia Law" suffix
+          .replace(/\s*\|\s*Justia.*$/i, '') // Remove "| Justia" suffix
+          .replace(/\s*::.*$/i, '') // Remove ":: Court" suffix
+          .replace(/^\s*Case\s*:\s*/i, '') // Remove "Case: " prefix
+          .trim();
+        
+        if (title.length > 0 && title.length < 200) {
+          extractedTitle = title;
+          console.log('Extracted case title from HTML:', extractedTitle);
+        }
+      }
+    }
     
     // Pattern 1: Justia PDF links with pdf-icon class and "Download PDF" text
     // This is the most common pattern for Justia case PDFs
@@ -209,7 +237,7 @@ serve(async (req) => {
         .from('document_metadata')
         .insert({
           id: documentId,
-          title: justiaUrl, // Use the original URL as title
+          title: extractedTitle, // Use the extracted title, not the URL
           client_id: null, // No client for firm documents
           case_id: null,
           user_id: userId,
@@ -235,7 +263,7 @@ serve(async (req) => {
           caseId: null,
           userId,
           firmId,
-          title: justiaUrl,
+          title: extractedTitle,
           fileUrl: documentUrl,
           fileName: pdfFile.name
         }
