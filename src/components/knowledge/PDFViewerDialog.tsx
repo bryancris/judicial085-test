@@ -21,9 +21,17 @@ const PDFViewerDialog: React.FC<PDFViewerDialogProps> = ({
   const [retryCount, setRetryCount] = useState(0);
   const [dialogKey, setDialogKey] = useState(0);
 
-  // Use the document.url which contains the Supabase storage URL for the PDF
-  // Add cache-busting to force browser to reload
-  const pdfUrl = document.url ? `${document.url}?v=${Date.now()}&nocache=${Math.random()}` : null;
+  // EMERGENCY CACHE FIX: Use completely different cache-busting strategy
+  // Force absolute cache bypass with multiple techniques
+  const pdfUrl = document.url ? (() => {
+    const baseUrl = document.url;
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(7);
+    const sessionId = Math.random().toString(36).substring(7);
+    
+    // Try multiple cache-busting strategies
+    return `${baseUrl}?_cb=${timestamp}&_r=${random}&_s=${sessionId}&_force=true&_bypass=cache&_t=${Date.now()}`;
+  })() : null;
   
   // Debug logging to see what URL we're actually using
   console.log('PDFViewerDialog - Document:', {
@@ -42,6 +50,18 @@ const PDFViewerDialog: React.FC<PDFViewerDialogProps> = ({
     setLoadError(false);
     setRetryCount(prev => prev + 1);
     setDialogKey(prev => prev + 1); // Force dialog re-render to clear cache
+    
+    // EMERGENCY: Force complete iframe cache clear
+    setTimeout(() => {
+      const iframes = window.document.querySelectorAll('iframe');
+      iframes.forEach(iframe => {
+        if (iframe.src.includes('supabase')) {
+          const newSrc = iframe.src.split('?')[0] + `?_emergency=${Date.now()}&_clear=${Math.random()}`;
+          iframe.src = 'about:blank'; // Clear first
+          setTimeout(() => iframe.src = newSrc, 100); // Then reload
+        }
+      });
+    }, 50);
   };
 
   const handleDownload = () => {
@@ -102,12 +122,14 @@ const PDFViewerDialog: React.FC<PDFViewerDialogProps> = ({
               <>
                 <div className="flex-1 overflow-hidden">
                   <iframe 
-                    key={retryCount} // Force re-render on retry
-                    src={`${pdfUrl}#toolbar=1&navpanes=1&scrollbar=1&page=1&view=FitH`}
+                    key={`${retryCount}-${dialogKey}-${Date.now()}`} // Force complete re-render with multiple keys
+                    src={`${pdfUrl}#toolbar=1&navpanes=1&scrollbar=1&page=1&view=FitH&_nocache=${Date.now()}`}
                     className="w-full h-full border-0"
                     title={document.title || "PDF Document"}
                     onError={handleIframeError}
                     onLoad={() => setLoadError(false)}
+                    sandbox="allow-same-origin allow-scripts"
+                    loading="eager"
                   />
                 </div>
                 
