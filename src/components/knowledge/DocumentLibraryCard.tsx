@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import DocumentPreviewDialog from "@/components/case-analysis/documents/DocumentPreviewDialog";
 import DocumentDeleteDialog from "./DocumentDeleteDialog";
+import PDFViewerDialog from "./PDFViewerDialog";
 import { supabase } from "@/integrations/supabase/client";
 
 interface DocumentLibraryCardProps {
@@ -24,6 +25,7 @@ const DocumentLibraryCard: React.FC<DocumentLibraryCardProps> = ({
   isProcessing
 }) => {
   const [showPreview, setShowPreview] = useState(false);
+  const [showPDFViewer, setShowPDFViewer] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [documentContent, setDocumentContent] = useState('');
@@ -82,22 +84,8 @@ const DocumentLibraryCard: React.FC<DocumentLibraryCardProps> = ({
     fetchDocumentContent();
   };
 
-  const handlePdfOpen = async (url: string) => {
-    try {
-      // Test if the URL is accessible before opening
-      const response = await fetch(url, { method: 'HEAD' });
-      if (response.ok) {
-        window.open(url, '_blank');
-      } else {
-        console.error('PDF URL not accessible:', response.status, response.statusText);
-        // Fallback: try to open anyway (sometimes HEAD requests are blocked but GET works)
-        window.open(url, '_blank');
-      }
-    } catch (error) {
-      console.error('Error testing PDF URL:', error);
-      // Fallback: try to open anyway
-      window.open(url, '_blank');
-    }
+  const handlePdfOpen = () => {
+    setShowPDFViewer(true);
   };
 
   // Check if this is a PDF document
@@ -161,11 +149,11 @@ const DocumentLibraryCard: React.FC<DocumentLibraryCardProps> = ({
                 <FileText className="h-4 w-4 mr-1" />
                 Preview
               </Button>
-              {document.url && (
+              {document.url && isPdf && (
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => handlePdfOpen(document.url!)}
+                  onClick={handlePdfOpen}
                   disabled={isDeleting}
                 >
                   <ExternalLink className="h-4 w-4 mr-1" />
@@ -218,6 +206,13 @@ const DocumentLibraryCard: React.FC<DocumentLibraryCardProps> = ({
         onClose={() => setShowPreview(false)}
         documentContent={documentContent}
         loadingContent={loadingContent}
+      />
+
+      {/* PDF Viewer Dialog */}
+      <PDFViewerDialog
+        document={document}
+        isOpen={showPDFViewer}
+        onOpenChange={setShowPDFViewer}
       />
 
       {/* Delete Dialog */}
