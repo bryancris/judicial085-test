@@ -2,12 +2,10 @@ import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { DocumentWithContent } from "@/types/knowledge";
-import { FileIcon, Download, ExternalLink, AlertCircle } from "lucide-react";
+import { FileIcon, Download, ExternalLink, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { Document, Page, pdfjs } from 'react-pdf';
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-import 'react-pdf/dist/esm/Page/TextLayer.css';
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
@@ -212,16 +210,17 @@ const PDFViewerDialog: React.FC<PDFViewerDialogProps> = ({
                       }
                       className="flex flex-col items-center"
                     >
-                      <div className="mb-4 flex items-center gap-2">
+                      <div className="mb-4 flex items-center gap-2 bg-white p-2 rounded shadow-sm">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                           disabled={currentPage <= 1}
                         >
+                          <ChevronLeft className="h-4 w-4" />
                           Previous
                         </Button>
-                        <span className="text-sm">
+                        <span className="text-sm font-medium px-2">
                           Page {currentPage} of {numPages || 1}
                         </span>
                         <Button
@@ -231,14 +230,15 @@ const PDFViewerDialog: React.FC<PDFViewerDialogProps> = ({
                           disabled={currentPage >= (numPages || 1)}
                         >
                           Next
+                          <ChevronRight className="h-4 w-4" />
                         </Button>
                       </div>
                       <Page
                         pageNumber={currentPage}
-                        renderTextLayer={true}
-                        renderAnnotationLayer={true}
-                        className="shadow-lg mb-4"
-                        width={Math.min(800, window.innerWidth - 100)}
+                        renderTextLayer={false}
+                        renderAnnotationLayer={false}
+                        className="shadow-lg mb-4 border"
+                        width={Math.min(800, typeof window !== 'undefined' ? window.innerWidth - 100 : 800)}
                       />
                     </Document>
                   </div>
