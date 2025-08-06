@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import DocumentPreviewDialog from "@/components/case-analysis/documents/DocumentPreviewDialog";
 import DocumentDeleteDialog from "./DocumentDeleteDialog";
-import PDFViewerDialog from "./PDFViewerDialog";
 import { supabase } from "@/integrations/supabase/client";
 
 interface DocumentLibraryCardProps {
@@ -25,7 +24,6 @@ const DocumentLibraryCard: React.FC<DocumentLibraryCardProps> = ({
   isProcessing
 }) => {
   const [showPreview, setShowPreview] = useState(false);
-  const [showPDFViewer, setShowPDFViewer] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [documentContent, setDocumentContent] = useState('');
@@ -85,7 +83,9 @@ const DocumentLibraryCard: React.FC<DocumentLibraryCardProps> = ({
   };
 
   const handlePdfOpen = () => {
-    setShowPDFViewer(true);
+    if (document.url) {
+      window.open(document.url, '_blank');
+    }
   };
 
   // Check if this is a PDF document
@@ -206,13 +206,6 @@ const DocumentLibraryCard: React.FC<DocumentLibraryCardProps> = ({
         onClose={() => setShowPreview(false)}
         documentContent={documentContent}
         loadingContent={loadingContent}
-      />
-
-      {/* PDF Viewer Dialog */}
-      <PDFViewerDialog
-        document={document}
-        isOpen={showPDFViewer}
-        onOpenChange={setShowPDFViewer}
       />
 
       {/* Delete Dialog */}
