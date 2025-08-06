@@ -45,7 +45,11 @@ const PDFViewerDialog: React.FC<PDFViewerDialogProps> = ({
         throw new Error(`Failed to fetch PDF: ${response.status}`);
       }
       
-      const blob = await response.blob();
+      const arrayBuffer = await response.arrayBuffer();
+      console.log('PDF arrayBuffer size:', arrayBuffer.byteLength);
+      
+      // Create blob with explicit PDF MIME type
+      const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
       console.log('PDF blob type:', blob.type, 'size:', blob.size);
       
       const objectUrl = URL.createObjectURL(blob);
@@ -169,15 +173,20 @@ const PDFViewerDialog: React.FC<PDFViewerDialogProps> = ({
             ) : (
               <>
                 <div className="flex-1 overflow-hidden">
-                  <iframe 
+                  <object 
                     key={`pdf-${retryCount}-${dialogKey}`}
-                    src={`${pdfUrl}#toolbar=1&navpanes=1&scrollbar=1&page=1&view=FitH`}
+                    data={pdfUrl}
+                    type="application/pdf"
                     className="w-full h-full border-0"
                     title="PDF Document"
-                    onError={handleIframeError}
-                    onLoad={() => setLoadError(false)}
-                    sandbox="allow-same-origin allow-scripts"
-                  />
+                  >
+                    <embed
+                      src={pdfUrl}
+                      type="application/pdf"
+                      className="w-full h-full border-0"
+                      title="PDF Document"
+                    />
+                  </object>
                 </div>
                 
                 <div className="p-4 bg-background border-t flex justify-between items-center">
