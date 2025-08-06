@@ -15,6 +15,7 @@ export const uploadPdfToStorage = async (file: File, clientId: string, caseId?: 
       .upload(filePath, file, {
         cacheControl: '3600',
         upsert: false,
+        contentType: 'application/pdf',
       });
     
     if (error) {
