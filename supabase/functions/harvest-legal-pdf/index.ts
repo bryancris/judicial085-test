@@ -159,6 +159,30 @@ serve(async (req) => {
     const documentId = crypto.randomUUID();
     const fileName = `${caseTitle.replace(/[^a-zA-Z0-9\s]/g, '').trim()}.pdf`;
 
+    // Upload PDF to storage first
+    const storageFileName = `legal-cases/${documentId}/${fileName}`;
+    console.log('Uploading PDF to storage:', storageFileName);
+    
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('documents')
+      .upload(storageFileName, pdfUint8Array, {
+        contentType: 'application/pdf',
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error('Storage upload error:', uploadError);
+      throw new Error(`Failed to upload PDF to storage: ${uploadError.message}`);
+    }
+
+    // Get the public URL for the uploaded file
+    const { data: urlData } = supabase.storage
+      .from('documents')
+      .getPublicUrl(storageFileName);
+    
+    const fileUrl = urlData.publicUrl;
+    console.log('PDF uploaded to storage URL:', fileUrl);
+
     // Insert document metadata for firm-level legal case
     const { error: metadataError } = await supabase
       .from('document_metadata')
@@ -170,7 +194,7 @@ serve(async (req) => {
         user_id: userId,
         firm_id: firmData?.firm_id || null,
         schema: 'legal_case',
-        url: justiaUrl,
+        url: fileUrl, // Use storage URL instead of original Justia URL
         processing_status: 'processing',
         include_in_analysis: true
       });
@@ -179,21 +203,17 @@ serve(async (req) => {
       throw new Error(`Error creating document metadata: ${metadataError.message}`);
     }
 
-    // Call the existing PDF processing function
+    // Call the existing PDF processing function with proper format
     const processingResult = await supabase.functions.invoke('process-pdf-document', {
       body: {
         documentId,
+        title: caseTitle,
+        fileUrl: fileUrl, // Required by process-pdf-document
         fileName,
-        fileData: Array.from(pdfUint8Array),
         clientId: null, // Firm-level
         caseId: null,
-        metadata: {
-          originalUrl: justiaUrl,
-          caseTitle,
-          source: 'justia_harvest',
-          harvestedBy: userId,
-          harvestedAt: new Date().toISOString()
-        }
+        userId: userId,
+        firmId: firmData?.firm_id || null
       }
     });
 
