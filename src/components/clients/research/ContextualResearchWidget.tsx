@@ -54,7 +54,7 @@ const ContextualResearchWidget: React.FC<ContextualResearchWidgetProps> = ({
   const [lastAnalyzedText, setLastAnalyzedText] = useState("");
   const { toast } = useToast();
 
-  const { searchCases, isLoading } = useEnhancedSimilarCasesSearch();
+  const { searchWithCache, isSearching } = useEnhancedSimilarCasesSearch();
 
   // Debounced text analysis
   const analyzeText = useCallback(

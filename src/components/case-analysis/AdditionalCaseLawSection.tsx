@@ -79,7 +79,7 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
 
           setCases(formattedCases);
           setHasSearched(true);
-          setLastUpdated(new Date(existingCases[0]?.created_at || Date.now()).toLocaleDateString());
+          setLastUpdated(new Date((existingCases as any)[0]?.created_at || Date.now()).toLocaleDateString());
         }
       } catch (error) {
         console.error('Error loading existing cases:', error);

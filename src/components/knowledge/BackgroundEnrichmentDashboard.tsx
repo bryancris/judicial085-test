@@ -46,12 +46,12 @@ const BackgroundEnrichmentDashboard: React.FC = () => {
   const fetchStats = async () => {
     try {
       const { data: statsData, error: statsError } = await supabase
-        .rpc('get_enrichment_stats');
+        .rpc('get_enrichment_stats' as any);
 
       if (statsError) throw statsError;
       
-      if (statsData && statsData.length > 0) {
-        setStats(statsData[0]);
+      if (statsData && (statsData as any).length > 0) {
+        setStats((statsData as any)[0]);
       }
     } catch (error: any) {
       console.error("Error fetching enrichment stats:", error);
@@ -66,13 +66,13 @@ const BackgroundEnrichmentDashboard: React.FC = () => {
   const fetchRecentJobs = async () => {
     try {
       const { data: jobsData, error: jobsError } = await supabase
-        .from('background_job_runs')
+        .from('background_job_runs' as any)
         .select('*')
         .order('started_at', { ascending: false })
         .limit(10);
 
       if (jobsError) throw jobsError;
-      setRecentJobs(jobsData || []);
+      setRecentJobs((jobsData || []) as any);
     } catch (error: any) {
       console.error("Error fetching recent jobs:", error);
     }

@@ -44,7 +44,7 @@ const ClientResearchPanel: React.FC<ClientResearchPanelProps> = ({
   const [autoResearchEnabled, setAutoResearchEnabled] = useState(true);
   const { toast } = useToast();
 
-  const { searchCases, isLoading } = useEnhancedSimilarCasesSearch();
+  const { searchWithCache, isSearching } = useEnhancedSimilarCasesSearch();
 
   // Auto-generate suggestions based on case description
   useEffect(() => {

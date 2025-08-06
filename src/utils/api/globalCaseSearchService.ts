@@ -52,7 +52,7 @@ export const checkSearchCache = async (
     const queryHash = await generateQueryHash(query, parameters);
     
     const { data: cacheData, error: cacheError } = await supabase
-      .from("courtlistener_search_cache")
+      .from("courtlistener_search_cache" as any)
       .select("*")
       .eq("query_hash", queryHash)
       .gt("expires_at", new Date().toISOString())
@@ -62,31 +62,33 @@ export const checkSearchCache = async (
       return { cacheEntry: null, cases: [] };
     }
 
-    const cacheEntry = cacheData[0];
+    const cacheEntry = cacheData[0] as any;
     
     // Increment hit count
     await supabase
-      .from("courtlistener_search_cache")
+      .from("courtlistener_search_cache" as any)
       .update({ hit_count: cacheEntry.hit_count + 1 })
       .eq("id", cacheEntry.id);
 
     // Fetch the actual case data
     if (cacheEntry.result_case_ids.length === 0) {
-      return { cacheEntry, cases: [] };
+      return { cacheEntry: cacheEntry as SearchCacheEntry, cases: [] };
     }
 
     const { data: cases, error: casesError } = await supabase
-      .from("courtlistener_cases")
+      .from("courtlistener_cases" as any)
       .select("*")
       .in("id", cacheEntry.result_case_ids);
 
     if (casesError) {
       console.error("Error fetching cached cases:", casesError);
-      return { cacheEntry, cases: [] };
+      return { cacheEntry: cacheEntry as SearchCacheEntry, cases: [] };
     }
 
-    console.log(`✅ Cache hit for query: ${query} (${cases?.length || 0} cases)`);
-    return { cacheEntry, cases: cases || [] };
+    return { 
+      cacheEntry: cacheEntry as SearchCacheEntry, 
+      cases: (cases || []) as CourtListenerCase[] 
+    };
   } catch (error) {
     console.error("Error checking search cache:", error);
     return { cacheEntry: null, cases: [] };
