@@ -19,10 +19,11 @@ const PDFViewerDialog: React.FC<PDFViewerDialogProps> = ({
 }) => {
   const [loadError, setLoadError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [dialogKey, setDialogKey] = useState(0);
 
   // Use the document.url which contains the Supabase storage URL for the PDF
-  // NOT the document.title which may contain the original web URL
-  const pdfUrl = document.url;
+  // Add cache-busting to force browser to reload
+  const pdfUrl = document.url ? `${document.url}?v=${Date.now()}&nocache=${Math.random()}` : null;
   
   // Debug logging to see what URL we're actually using
   console.log('PDFViewerDialog - Document:', {
@@ -40,6 +41,7 @@ const PDFViewerDialog: React.FC<PDFViewerDialogProps> = ({
   const handleRetry = () => {
     setLoadError(false);
     setRetryCount(prev => prev + 1);
+    setDialogKey(prev => prev + 1); // Force dialog re-render to clear cache
   };
 
   const handleDownload = () => {
@@ -60,7 +62,7 @@ const PDFViewerDialog: React.FC<PDFViewerDialogProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog key={dialogKey} open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] p-0 overflow-hidden">
         <DialogHeader className="p-4 bg-background border-b">
           <DialogTitle className="flex items-center">
