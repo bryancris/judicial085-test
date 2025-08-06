@@ -11,3 +11,9 @@ verify_jwt = true
 
 [functions.search-similar-cases]
 verify_jwt = true
+
+[functions.harvest-legal-pdf]
+verify_jwt = true
+
+[functions.process-pdf-document]
+verify_jwt = true
