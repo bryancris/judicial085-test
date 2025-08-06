@@ -87,7 +87,7 @@ export const checkSearchCache = async (
 
     return { 
       cacheEntry: cacheEntry as SearchCacheEntry, 
-      cases: (cases || []) as CourtListenerCase[] 
+      cases: (cases || []) as unknown as CourtListenerCase[] 
     };
   } catch (error) {
     console.error("Error checking search cache:", error);
@@ -109,7 +109,7 @@ export const storeGlobalCases = async (
     try {
       // Check if case already exists by courtlistener_id
       const { data: existingCase } = await supabase
-        .from("courtlistener_cases")
+        .from("courtlistener_cases" as any)
         .select("id")
         .eq("courtlistener_id", result.id?.toString())
         .limit(1);
@@ -118,19 +118,19 @@ export const storeGlobalCases = async (
 
       if (existingCase && existingCase.length > 0) {
         // Update existing case and increment fetch count
-        caseId = existingCase[0].id;
+        caseId = (existingCase[0] as any).id;
         
         // Get current fetch count first
         const { data: currentCase } = await supabase
-          .from("courtlistener_cases")
+          .from("courtlistener_cases" as any)
           .select("api_fetch_count")
           .eq("id", caseId)
           .single();
 
         await supabase
-          .from("courtlistener_cases")
+          .from("courtlistener_cases" as any)
           .update({ 
-            api_fetch_count: (currentCase?.api_fetch_count || 0) + 1,
+            api_fetch_count: ((currentCase as any)?.api_fetch_count || 0) + 1,
             last_updated_at: new Date().toISOString()
           })
           .eq("id", caseId);
@@ -154,8 +154,8 @@ export const storeGlobalCases = async (
         };
 
         const { data: newCase, error: insertError } = await supabase
-          .from("courtlistener_cases")
-          .insert(caseData)
+          .from("courtlistener_cases" as any)
+          .insert(caseData as any)
           .select("id")
           .single();
 
@@ -164,7 +164,7 @@ export const storeGlobalCases = async (
           continue;
         }
 
-        caseId = newCase.id;
+        caseId = ((newCase as any)?.id || result.id?.toString() || `temp_${Date.now()}`);
 
         // Generate and store embedding for the snippet
         if (result.snippet) {
@@ -211,13 +211,13 @@ const generateAndStoreEmbedding = async (
 
     // Store embedding
     await supabase
-      .from("courtlistener_case_embeddings")
+      .from("courtlistener_case_embeddings" as any)
       .insert({
         case_id: caseId,
         content_type: contentType,
         content,
         embedding
-      });
+      } as any);
   } catch (error) {
     console.error("Error generating embedding:", error);
   }
@@ -244,8 +244,8 @@ export const cacheSearchResults = async (
     };
 
     const { data, error } = await supabase
-      .from("courtlistener_search_cache")
-      .insert(cacheData)
+      .from("courtlistener_search_cache" as any)
+      .insert(cacheData as any)
       .select("id")
       .single();
 
@@ -254,7 +254,7 @@ export const cacheSearchResults = async (
       return null;
     }
 
-    return data.id;
+    return (data as any).id;
   } catch (error) {
     console.error("Error caching search:", error);
     return null;
@@ -322,18 +322,18 @@ export const semanticSearchCases = async (
     if (!queryEmbedding) {
       // Fall back to text search if embedding generation fails
       const { data: cases, error } = await supabase
-        .from('courtlistener_cases')
+        .from('courtlistener_cases' as any)
         .select('*')
         .or(`case_name.ilike.%${query}%,snippet.ilike.%${query}%`)
         .limit(limit);
 
       if (error) throw error;
-      return cases || [];
+      return (cases || []) as unknown as CourtListenerCase[];
     }
 
     // Use semantic search with embeddings
     const { data: results, error } = await supabase.rpc(
-      'search_similar_courtlistener_cases',
+      'search_similar_courtlistener_cases' as any,
       {
         query_embedding: JSON.stringify(queryEmbedding),
         match_threshold: threshold,
@@ -345,16 +345,16 @@ export const semanticSearchCases = async (
       console.warn('Semantic search failed, falling back to text search:', error);
       // Fall back to text search
       const { data: cases, error: textError } = await supabase
-        .from('courtlistener_cases')
+        .from('courtlistener_cases' as any)
         .select('*')
         .or(`case_name.ilike.%${query}%,snippet.ilike.%${query}%`)
         .limit(limit);
 
       if (textError) throw textError;
-      return cases || [];
+      return (cases || []) as unknown as CourtListenerCase[];
     }
 
-    return results || [];
+    return (results || []) as unknown as CourtListenerCase[];
   } catch (error) {
     console.error('Error in semantic search:', error);
     throw error;
@@ -370,8 +370,8 @@ export const getSearchStats = async (): Promise<{
 }> => {
   try {
     const [casesResult, cacheResult] = await Promise.all([
-      supabase.from("courtlistener_cases").select("api_fetch_count", { count: "exact" }),
-      supabase.from("courtlistener_search_cache").select("hit_count", { count: "exact" })
+      supabase.from("courtlistener_cases" as any).select("api_fetch_count", { count: "exact" }),
+      supabase.from("courtlistener_search_cache" as any).select("hit_count", { count: "exact" })
     ]);
 
     const totalCases = casesResult.count || 0;
@@ -379,12 +379,12 @@ export const getSearchStats = async (): Promise<{
     
     // Calculate average fetch count
     const avgFetchCount = casesResult.data && casesResult.data.length > 0
-      ? casesResult.data.reduce((sum, case_) => sum + (case_.api_fetch_count || 0), 0) / casesResult.data.length
+      ? casesResult.data.reduce((sum, case_) => sum + ((case_ as any).api_fetch_count || 0), 0) / casesResult.data.length
       : 0;
 
     // Calculate cache hit rate
     const totalHits = cacheResult.data 
-      ? cacheResult.data.reduce((sum, entry) => sum + (entry.hit_count || 0), 0)
+      ? cacheResult.data.reduce((sum, entry) => sum + ((entry as any).hit_count || 0), 0)
       : 0;
     const cacheHitRate = totalCacheEntries > 0 ? (totalHits / totalCacheEntries) * 100 : 0;
 

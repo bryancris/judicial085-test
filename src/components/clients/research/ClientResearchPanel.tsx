@@ -38,7 +38,6 @@ const ClientResearchPanel: React.FC<ClientResearchPanelProps> = ({
   onClose
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
   const [suggestions, setSuggestions] = useState<ResearchSuggestion[]>([]);
   const [similarCases, setSimilarCases] = useState<SimilarCase[]>([]);
   const [autoResearchEnabled, setAutoResearchEnabled] = useState(true);
@@ -98,20 +97,19 @@ const ClientResearchPanel: React.FC<ClientResearchPanelProps> = ({
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
 
-    setIsSearching(true);
     try {
-      const results = await searchCases(searchQuery, {
+      const results = await searchWithCache(searchQuery, {
         clientId,
         caseId,
         includeSemanticSearch: true,
         limit: 5
       });
 
-      setSimilarCases(results.cases || []);
+      setSimilarCases(results.similarCases || []);
       
       toast({
         title: "Research Complete",
-        description: `Found ${results.cases?.length || 0} relevant cases`,
+        description: `Found ${results.similarCases?.length || 0} relevant cases`,
       });
     } catch (error) {
       console.error("Search error:", error);
@@ -120,8 +118,6 @@ const ClientResearchPanel: React.FC<ClientResearchPanelProps> = ({
         description: "Unable to complete research. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsSearching(false);
     }
   };
 

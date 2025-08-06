@@ -2,6 +2,16 @@ import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+export interface QuickConsultSession {
+  id: string;
+  title: string;
+  lastMessage: string;
+  timestamp: string;
+  createdAt: Date;
+  is_archived: boolean;
+  updated_at: string;
+}
+
 export interface ChatSession {
   id: string;
   title: string;
@@ -21,14 +31,14 @@ export const useQuickConsultSessions = () => {
     const loadSessions = async () => {
       try {
         const { data, error } = await supabase
-          .from('quick_consult_sessions')
+          .from('quick_consult_sessions' as any)
           .select('*')
           .eq('is_archived', false)
           .order('updated_at', { ascending: false });
 
         if (error) throw error;
 
-        const formattedSessions: ChatSession[] = (data || []).map(session => ({
+        const formattedSessions: ChatSession[] = ((data || []) as any).map((session: any) => ({
           id: session.id,
           title: session.title,
           lastMessage: "", // Will be populated when messages are loaded
@@ -61,22 +71,22 @@ export const useQuickConsultSessions = () => {
   const createNewSession = useCallback(async () => {
     try {
       const { data, error } = await supabase
-        .from('quick_consult_sessions')
+        .from('quick_consult_sessions' as any)
         .insert({
           title: "New Chat",
           user_id: (await supabase.auth.getUser()).data.user?.id,
-        })
+        } as any)
         .select()
         .single();
 
       if (error) throw error;
 
       const newSession: ChatSession = {
-        id: data.id,
-        title: data.title,
+        id: (data as any).id,
+        title: (data as any).title,
         lastMessage: "",
-        timestamp: new Date(data.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        createdAt: new Date(data.created_at),
+        timestamp: new Date((data as any).created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        createdAt: new Date((data as any).created_at),
       };
       
       setSessions(prev => [newSession, ...prev]);
@@ -101,8 +111,8 @@ export const useQuickConsultSessions = () => {
       
       if (Object.keys(updates).length > 0) {
         const { error } = await supabase
-          .from('quick_consult_sessions')
-          .update(updates)
+          .from('quick_consult_sessions' as any)
+          .update(updates as any)
           .eq('id', sessionId);
 
         if (error) throw error;
@@ -126,8 +136,8 @@ export const useQuickConsultSessions = () => {
   const deleteSession = useCallback(async (sessionId: string) => {
     try {
       const { error } = await supabase
-        .from('quick_consult_sessions')
-        .update({ is_archived: true })
+        .from('quick_consult_sessions' as any)
+        .update({ is_archived: true } as any)
         .eq('id', sessionId);
 
       if (error) throw error;

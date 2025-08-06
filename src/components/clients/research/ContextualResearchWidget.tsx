@@ -155,14 +155,14 @@ const ContextualResearchWidget: React.FC<ContextualResearchWidgetProps> = ({
 
   const performContextualSearch = async (query: string) => {
     try {
-      const results = await searchCases(query, {
+      const results = await searchWithCache(query, {
         clientId,
         caseId,
         includeSemanticSearch: true,
         limit: 5
       });
 
-      const formattedResults: ResearchResult[] = (results.cases || []).map(case_ => ({
+      const formattedResults: ResearchResult[] = (results.similarCases || []).map(case_ => ({
         type: "case" as const,
         title: case_.clientName,
         description: case_.relevantFacts,
