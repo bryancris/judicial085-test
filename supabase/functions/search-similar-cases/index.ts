@@ -133,13 +133,13 @@ serve(async (req) => {
       console.log(`✅ CourtListener returned ${cases.length} results`);
 
       // Format results for frontend
-      const formattedCases = cases.slice(0, 10).map((case: any) => ({
-        id: case.id,
-        case_name: case.caseName || case.case_name || 'Unknown Case',
-        snippet: case.snippet || 'No description available',
-        court: case.court || 'Unknown Court',
-        date_filed: case.dateFiled || case.date_filed,
-        absolute_url: case.absolute_url,
+      const formattedCases = cases.slice(0, 10).map((caseItem: any) => ({
+        id: caseItem.id,
+        case_name: caseItem.caseName || caseItem.case_name || 'Unknown Case',
+        snippet: caseItem.snippet || 'No description available',
+        court: caseItem.court || 'Unknown Court',
+        date_filed: caseItem.dateFiled || caseItem.date_filed,
+        absolute_url: caseItem.absolute_url,
         relevance_score: 85 // Default score for CourtListener results
       }));
 
