@@ -203,7 +203,7 @@ Requirements:
           top_p: 0.9,
           return_citations: true,
           return_images: false,
-          search_domain_filter: ['justia.com', 'caselaw.findlaw.com', 'scholar.google.com', 'courtlistener.com', 'law.cornell.edu', 'statutes.capitol.texas.gov', 'txcourts.gov', 'search.txcourts.gov', 'texasbar.com', 'txcourts.gov/supreme-court', 'coa.courts.state.tx.us'],
+          search_domain_filter: ['justia.com', 'caselaw.findlaw.com', 'scholar.google.com', 'courtlistener.com', 'law.cornell.edu', 'statutes.capitol.texas.gov', 'txcourts.gov', 'search.txcourts.gov', 'texasbar.com', 'coa.courts.state.tx.us'],
           search_recency_filter: 'year'
         }),
         signal: controller.signal
