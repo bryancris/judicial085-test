@@ -14,7 +14,7 @@ interface ChunkMetadata {
 export async function generateAndStoreEmbeddingsWithTimeout(
   chunks: string[],
   documentId: string,
-  clientId: string,
+  clientId: string | null,
   caseId: string | null,
   supabase: any,
   openaiApiKey: string,
@@ -122,7 +122,7 @@ export async function generateAndStoreEmbeddingsWithTimeout(
 export async function generateAndStoreEmbeddings(
   chunks: string[],
   documentId: string,
-  clientId: string,
+  clientId: string | null,
   caseId: string | null,
   supabase: any,
   openaiApiKey: string,

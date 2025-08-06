@@ -784,7 +784,7 @@ export type Database = {
         Row: {
           case_id: string | null
           chunk_index: number
-          client_id: string
+          client_id: string | null
           content: string | null
           created_at: string | null
           document_id: string
@@ -795,7 +795,7 @@ export type Database = {
         Insert: {
           case_id?: string | null
           chunk_index: number
-          client_id: string
+          client_id?: string | null
           content?: string | null
           created_at?: string | null
           document_id: string
@@ -806,7 +806,7 @@ export type Database = {
         Update: {
           case_id?: string | null
           chunk_index?: number
-          client_id?: string
+          client_id?: string | null
           content?: string | null
           created_at?: string | null
           document_id?: string
