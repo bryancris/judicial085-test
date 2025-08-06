@@ -54,7 +54,7 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
       try {
         // Check for existing saved additional case law
         const { data: existingCases, error } = await supabase
-          .from('additional_case_law')
+          .from('additional_case_law' as any)
           .select('*')
           .eq('client_id', clientId)
           .order('created_at', { ascending: false });
@@ -67,7 +67,7 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
 
         if (existingCases && existingCases.length > 0) {
           // Convert database format to component format
-          const formattedCases: PerplexityCase[] = existingCases.map(dbCase => ({
+          const formattedCases: PerplexityCase[] = existingCases.map((dbCase: any) => ({
             caseName: dbCase.case_name,
             court: dbCase.court || "Court information not available",
             citation: dbCase.citation || "Citation pending",
@@ -79,7 +79,7 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
 
           setCases(formattedCases);
           setHasSearched(true);
-          setLastUpdated(new Date(existingCases[0].created_at).toLocaleDateString());
+          setLastUpdated(new Date(existingCases[0]?.created_at || Date.now()).toLocaleDateString());
         }
       } catch (error) {
         console.error('Error loading existing cases:', error);
@@ -96,7 +96,7 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
     try {
       // First, clear existing cases for this client to avoid duplicates
       await supabase
-        .from('additional_case_law')
+        .from('additional_case_law' as any)
         .delete()
         .eq('client_id', clientId);
 
@@ -113,7 +113,7 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
       }));
 
       const { error } = await supabase
-        .from('additional_case_law')
+        .from('additional_case_law' as any)
         .insert(casesToInsert);
 
       if (error) {
