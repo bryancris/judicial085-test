@@ -18,6 +18,8 @@ export interface ChatSession {
   lastMessage: string;
   timestamp: string;
   createdAt: Date;
+  is_archived: boolean;
+  updated_at: string;
 }
 
 export const useQuickConsultSessions = () => {
@@ -44,6 +46,8 @@ export const useQuickConsultSessions = () => {
           lastMessage: "", // Will be populated when messages are loaded
           timestamp: new Date(session.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           createdAt: new Date(session.created_at),
+          is_archived: session.is_archived,
+          updated_at: session.updated_at,
         }));
 
         setSessions(formattedSessions);
@@ -87,6 +91,8 @@ export const useQuickConsultSessions = () => {
         lastMessage: "",
         timestamp: new Date((data as any).created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         createdAt: new Date((data as any).created_at),
+        is_archived: false,
+        updated_at: (data as any).created_at,
       };
       
       setSessions(prev => [newSession, ...prev]);
