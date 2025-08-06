@@ -106,7 +106,7 @@ const DocumentLibrary = () => {
     };
 
     fetchDocumentContent();
-  }, [documents]);
+  }, [documents.length]); // Use documents.length instead of documents array
 
   // Filter documents based on search term
   const filteredDocuments = documentsWithContent.filter(doc => 
