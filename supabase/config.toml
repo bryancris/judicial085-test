@@ -1,5 +1,8 @@
 project_id = "ghpljdgecjmhkwkfctgy"
 
+[functions.ai-agent-coordinator]
+verify_jwt = true
+
 [functions.perplexity-research]
 verify_jwt = true
 
