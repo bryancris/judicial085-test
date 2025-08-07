@@ -106,33 +106,15 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {/* Legal Compliance Disclaimer */}
-            <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 mb-4">
-              <Shield className="h-4 w-4" />
-              <AlertDescription className="text-sm">
-                <strong>Professional Responsibility Notice:</strong> All case results are for research assistance only. 
-                Legal practitioners must independently verify all citations, legal precedents, and case law. 
-                This tool does not guarantee completeness of available legal authorities.
-              </AlertDescription>
-            </Alert>
-
             <div className="text-center py-8">
               <Scale className="h-12 w-12 mx-auto text-gray-400 mb-3" />
               <h3 className="text-lg font-medium text-gray-600 mb-1">No similar cases found</h3>
-              <p className="text-gray-500 mb-4">
+              <p className="text-gray-500">
                 {!analysisFound 
                   ? "Generate an analysis first to find similar cases"
-                  : "No similar cases found in legal databases. Please consult additional research sources and verify all precedents independently."
+                  : "No similar cases found in legal databases."
                 }
               </p>
-              
-              <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/20 mt-4">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription className="text-sm">
-                  Consider consulting additional legal research sources such as Westlaw, LexisNexis, or other comprehensive legal databases. 
-                  Always verify case citations and holdings independently.
-                </AlertDescription>
-              </Alert>
             </div>
           </CardContent>
         </Card>
@@ -189,16 +171,6 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Legal Compliance Disclaimer */}
-          <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 mb-4">
-            <Shield className="h-4 w-4" />
-            <AlertDescription className="text-sm">
-              <strong>Professional Responsibility Notice:</strong> All case results are for research assistance only. 
-              Legal practitioners must independently verify all citations, legal precedents, and case law. 
-              This tool does not guarantee completeness of available legal authorities.
-            </AlertDescription>
-          </Alert>
-
           {/* Search performance indicators */}
           {searchMetadata && (
             <SearchResultBadges
