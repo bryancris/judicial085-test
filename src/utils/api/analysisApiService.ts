@@ -49,7 +49,7 @@ export const generateLegalAnalysis = async (
   }
 };
 
-// Search for similar cases
+// Enhanced search for similar cases using AI Agent Coordinator
 export const searchSimilarCases = async (
   clientId: string
 ): Promise<{ 
@@ -59,15 +59,17 @@ export const searchSimilarCases = async (
   analysisFound?: boolean;
 }> => {
   try {
-    console.log("Calling search-similar-cases function with clientId:", clientId);
+    console.log("🤖 Calling enhanced AI-powered search-similar-cases for client:", clientId);
     const { data, error } = await invokeFunction<{
       similarCases: SimilarCase[];
       fallbackUsed?: boolean;
       analysisFound?: boolean;
+      searchStrategy?: string;
+      aiMetadata?: any;
     }>("search-similar-cases", { clientId });
 
     if (error) {
-      console.error("Error searching for similar cases:", error);
+      console.error("❌ Error in AI-powered similar cases search:", error);
       return { 
         similarCases: [], 
         error,
@@ -76,7 +78,11 @@ export const searchSimilarCases = async (
       };
     }
 
-    console.log("Search-similar-cases response:", data);
+    console.log("✅ Enhanced search-similar-cases response:", {
+      casesFound: data?.similarCases?.length || 0,
+      searchStrategy: data?.searchStrategy,
+      analysisFound: data?.analysisFound
+    });
     
     return { 
       similarCases: data?.similarCases || [],
@@ -84,7 +90,7 @@ export const searchSimilarCases = async (
       analysisFound: data?.analysisFound !== false // default to true if not specifically false
     };
   } catch (err: any) {
-    console.error("Error searching for similar cases:", err);
+    console.error("❌ Error in enhanced similar cases search:", err);
     return { 
       similarCases: [], 
       error: err.message,
