@@ -356,10 +356,20 @@ serve(async (req) => {
     // Phase 2: Detect request type and generate appropriate response
     console.log('🧠 Initiating Gemini synthesis with 2M context window...');
     
-    // Detect if this is a document drafting request
-    const isDraftingRequest = /\b(draft|create|write|prepare|generate)\b.*\b(agreement|contract|waiver|letter|document|notice|motion|brief|pleading|complaint|answer|discovery|subpoena|will|trust|lease|license|policy|form|template)\b/i.test(query);
+    // Detect if this is a document drafting request - more flexible detection
+    const queryLower = query.toLowerCase();
+    const draftingKeywords = ['draft', 'create', 'write', 'prepare', 'generate'];
+    const documentTypes = ['agreement', 'contract', 'waiver', 'letter', 'document', 'notice', 'motion', 'brief', 'pleading', 'complaint', 'answer', 'discovery', 'subpoena', 'will', 'trust', 'lease', 'license', 'policy', 'form', 'template'];
     
-    console.log(`Request type detected: ${isDraftingRequest ? 'DOCUMENT DRAFTING' : 'LEGAL RESEARCH'}`);
+    const hasDraftingKeyword = draftingKeywords.some(keyword => queryLower.includes(keyword));
+    const hasDocumentType = documentTypes.some(docType => queryLower.includes(docType));
+    const isDraftingRequest = hasDraftingKeyword && hasDocumentType;
+    
+    console.log(`🔍 Query Analysis:
+    - Original query: "${query}"
+    - Has drafting keyword: ${hasDraftingKeyword}
+    - Has document type: ${hasDocumentType}
+    - Request type detected: ${isDraftingRequest ? 'DOCUMENT DRAFTING' : 'LEGAL RESEARCH'}`);
     
     let synthesisPrompt: string;
     
