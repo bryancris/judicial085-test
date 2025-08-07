@@ -353,10 +353,49 @@ serve(async (req) => {
     const researchResults = await Promise.all(researchPromises);
     console.log('✅ Research agents completed. Results:', researchResults.map(r => ({ source: r.source, type: r.type, contentLength: r.content.length })));
 
-    // Phase 2: Use Gemini as synthesis engine with large context window
+    // Phase 2: Detect request type and generate appropriate response
     console.log('🧠 Initiating Gemini synthesis with 2M context window...');
     
-    const synthesisPrompt = `You are an expert legal synthesizer creating comprehensive legal research for desktop attorney consultation. Generate ONLY clean markdown content - no CSS, no formatting instructions, no code blocks with styling.
+    // Detect if this is a document drafting request
+    const isDraftingRequest = /\b(draft|create|write|prepare|generate)\b.*\b(agreement|contract|waiver|letter|document|notice|motion|brief|pleading|complaint|answer|discovery|subpoena|will|trust|lease|license|policy|form|template)\b/i.test(query);
+    
+    console.log(`Request type detected: ${isDraftingRequest ? 'DOCUMENT DRAFTING' : 'LEGAL RESEARCH'}`);
+    
+    let synthesisPrompt: string;
+    
+    if (isDraftingRequest) {
+      // Document drafting prompt
+      synthesisPrompt = `You are an expert legal document drafter. Create the actual document requested by the attorney, incorporating relevant legal research to ensure compliance and protection.
+
+ATTORNEY'S REQUEST: ${query}
+
+RESEARCH SOURCES FOR CONTEXT:
+${researchResults.map((result, index) => `
+--- ${result.source.toUpperCase()} RESEARCH ---
+${result.content}
+CITATIONS: ${result.citations?.join(', ') || 'None'}
+`).join('\n')}
+
+TASK: Draft the actual document requested. Do NOT provide legal analysis - create the usable document.
+
+DOCUMENT STRUCTURE REQUIREMENTS:
+1. **Document Title** - Clear, descriptive title
+2. **Complete Document Content** - All necessary clauses, terms, and provisions
+3. **Legal Compliance** - Incorporate relevant legal requirements from research
+4. **Professional Formatting** - Proper legal document structure
+5. **Signature Blocks** - Appropriate signature/execution sections
+
+FORMAT: Generate ONLY the document content in clean markdown. Use:
+- # for document title
+- ## for major sections  
+- **Bold** for important terms
+- Numbered lists for clauses
+- Proper legal language and terminology
+
+Include all necessary legal disclaimers, protective clauses, and compliance elements based on the research provided. Make it a complete, usable document.`;
+    } else {
+      // Legal research and analysis prompt
+      synthesisPrompt = `You are an expert legal synthesizer creating comprehensive legal research for desktop attorney consultation. Generate ONLY clean markdown content - no CSS, no formatting instructions, no code blocks with styling.
 
 ATTORNEY'S QUESTION: ${query}
 
@@ -477,6 +516,7 @@ CRITICAL REQUIREMENTS:
 - Format statute text in code blocks with proper indentation
 - Each case must be a distinct block with clear separation
 - Include comprehensive factual details and legal reasoning`;
+    }
 
     const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent', {
       method: 'POST',
