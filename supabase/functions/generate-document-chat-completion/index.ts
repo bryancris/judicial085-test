@@ -21,8 +21,20 @@ serve(async (req) => {
   try {
     const { userMessage, documentTitle, documentContent, clientId, caseId } = await req.json();
 
-    // Check if this is a document creation request
-    const isDocumentCreationRequest = /\b(create|write|draft|generate|make)\b.*\b(document|contract|letter|memo|brief|discovery|motion|pleading|agreement|will|trust)\b/i.test(userMessage);
+    // Check if this is a document creation request - improved detection
+    const messageLower = userMessage.toLowerCase();
+    const draftingKeywords = ['create', 'write', 'draft', 'generate', 'make', 'prepare'];
+    const documentTypes = ['document', 'contract', 'letter', 'memo', 'brief', 'discovery', 'motion', 'pleading', 'agreement', 'will', 'trust', 'waiver', 'lease', 'policy', 'form', 'template', 'notice'];
+    
+    const hasDraftingKeyword = draftingKeywords.some(keyword => messageLower.includes(keyword));
+    const hasDocumentType = documentTypes.some(docType => messageLower.includes(docType));
+    const isDocumentCreationRequest = hasDraftingKeyword && hasDocumentType;
+    
+    console.log(`📄 Document Creation Analysis:
+    - User message: "${userMessage}"
+    - Has drafting keyword: ${hasDraftingKeyword}
+    - Has document type: ${hasDocumentType}
+    - Is document creation request: ${isDocumentCreationRequest}`);
 
     // Fetch client and case information if available
     let clientInfo = null;
@@ -120,20 +132,48 @@ If the user asks you to review the document, provide specific feedback on struct
     const data = await response.json();
     const generatedText = data.choices[0].message.content;
 
+    console.log(`🤖 OpenAI Response received (length: ${generatedText.length})`);
+    console.log(`📝 Response preview: ${generatedText.substring(0, 200)}...`);
+
     // Parse response for document content
     let chatText = generatedText;
     let generatedDocumentContent = null;
 
     if (generatedText.includes('DOCUMENT_CONTENT:')) {
+      console.log(`✅ Found DOCUMENT_CONTENT marker in response`);
       const parts = generatedText.split('DOCUMENT_CONTENT:');
-      if (parts.length === 2) {
-        const contentMatch = parts[1].match(/^([^]*?)(?:\n\n|$)/);
-        if (contentMatch) {
-          generatedDocumentContent = contentMatch[1].trim();
-          chatText = parts[0].trim() + '\n\n' + parts[1].replace(contentMatch[1], '').trim();
-          chatText = chatText.trim();
+      if (parts.length >= 2) {
+        // Extract the HTML content between DOCUMENT_CONTENT: and the next section
+        const htmlContent = parts[1];
+        
+        // Try to find the end of the HTML (look for double newline or end of string)
+        const lines = htmlContent.split('\n');
+        let htmlLines = [];
+        let foundEndMarker = false;
+        
+        for (const line of lines) {
+          if (line.trim() === '' && htmlLines.length > 0) {
+            // Empty line might mark end of HTML content
+            foundEndMarker = true;
+            break;
+          }
+          htmlLines.push(line);
+        }
+        
+        if (htmlLines.length > 0) {
+          generatedDocumentContent = htmlLines.join('\n').trim();
+          // Remove the HTML content from chat text
+          const remainingText = foundEndMarker ? 
+            htmlContent.substring(generatedDocumentContent.length).trim() : 
+            '';
+          chatText = (parts[0] + '\n\n' + remainingText).trim();
+          
+          console.log(`📄 Extracted document content (${generatedDocumentContent.length} chars)`);
+          console.log(`💬 Chat text after extraction (${chatText.length} chars)`);
         }
       }
+    } else {
+      console.log(`❌ No DOCUMENT_CONTENT marker found in response`);
     }
 
     return new Response(JSON.stringify({ 
