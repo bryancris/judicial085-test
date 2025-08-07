@@ -82,22 +82,8 @@ const DocumentLibraryCard: React.FC<DocumentLibraryCardProps> = ({
     fetchDocumentContent();
   };
 
-  const handlePdfOpen = () => {
-    if (document.url) {
-      try {
-        const opened = window.open(document.url, '_blank');
-        if (!opened) {
-          // Popup blocked, try download instead
-          window.location.href = document.url;
-        }
-      } catch (error) {
-        console.error('Failed to open PDF:', error);
-        // Fallback to download
-        window.location.href = document.url;
-      }
-    } else {
-      console.error('No PDF URL available for document:', document.id);
-    }
+  const handlePdfOpen = (url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   // Check if this is a PDF document
@@ -165,7 +151,7 @@ const DocumentLibraryCard: React.FC<DocumentLibraryCardProps> = ({
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={handlePdfOpen}
+                  onClick={() => handlePdfOpen(document.url!)}
                   disabled={isDeleting}
                 >
                   <ExternalLink className="h-4 w-4 mr-1" />
