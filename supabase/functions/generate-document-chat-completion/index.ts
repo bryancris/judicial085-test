@@ -146,31 +146,40 @@ If the user asks you to review the document, provide specific feedback on struct
         // Extract the HTML content between DOCUMENT_CONTENT: and the next section
         const htmlContent = parts[1];
         
-        // Try to find the end of the HTML (look for double newline or end of string)
-        const lines = htmlContent.split('\n');
-        let htmlLines = [];
-        let foundEndMarker = false;
+        // Look for the end of HTML content - find where explanation text starts
+        // This usually happens after the closing </div> or similar tags
+        let htmlEndIndex = htmlContent.length;
         
-        for (const line of lines) {
-          if (line.trim() === '' && htmlLines.length > 0) {
-            // Empty line might mark end of HTML content
-            foundEndMarker = true;
+        // Look for patterns that indicate the start of explanation text
+        const explanationPatterns = [
+          /\n\nI have created/i,
+          /\n\nThis waiver/i,
+          /\n\nThe document/i,
+          /\n\nPlease note/i,
+          /\n\nImportant/i
+        ];
+        
+        for (const pattern of explanationPatterns) {
+          const match = htmlContent.match(pattern);
+          if (match) {
+            htmlEndIndex = match.index;
             break;
           }
-          htmlLines.push(line);
         }
         
-        if (htmlLines.length > 0) {
-          generatedDocumentContent = htmlLines.join('\n').trim();
-          // Remove the HTML content from chat text
-          const remainingText = foundEndMarker ? 
-            htmlContent.substring(generatedDocumentContent.length).trim() : 
-            '';
-          chatText = (parts[0] + '\n\n' + remainingText).trim();
-          
-          console.log(`📄 Extracted document content (${generatedDocumentContent.length} chars)`);
-          console.log(`💬 Chat text after extraction (${chatText.length} chars)`);
+        // Extract the HTML content up to the explanation
+        generatedDocumentContent = htmlContent.substring(0, htmlEndIndex).trim();
+        
+        // The chat text is the part before DOCUMENT_CONTENT: plus any explanation after
+        const explanationText = htmlContent.substring(htmlEndIndex).trim();
+        chatText = parts[0].trim();
+        if (explanationText) {
+          chatText += '\n\n' + explanationText;
         }
+        
+        console.log(`📄 Extracted document content (${generatedDocumentContent.length} chars)`);
+        console.log(`💬 Chat text after extraction (${chatText.length} chars)`);
+        console.log(`🔍 Document content preview: ${generatedDocumentContent.substring(0, 100)}...`);
       }
     } else {
       console.log(`❌ No DOCUMENT_CONTENT marker found in response`);
