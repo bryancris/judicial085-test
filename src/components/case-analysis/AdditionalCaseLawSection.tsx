@@ -32,6 +32,14 @@ interface PerplexityResult {
   error?: string;
 }
 
+interface AICoordinatorResponse {
+  success: boolean;
+  content: string;
+  citations: string[];
+  sources: any[];
+  error?: string;
+}
+
 export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
   analysisData,
   clientId,
@@ -224,7 +232,7 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
       let searchQuery = '';
       if (concepts.contractTerms.length > 0 || concepts.legalIssues.length > 0) {
         const combinedTerms = [...concepts.contractTerms, ...concepts.legalIssues].join(' OR ');
-        searchQuery = `Texas construction contract and warranty cases involving: ${combinedTerms}`;
+        searchQuery = `Find additional legal cases related to: ${combinedTerms}`;
         
         if (concepts.statutes.length > 0) {
           searchQuery += ` AND ${concepts.statutes.join(' OR ')}`;
@@ -236,82 +244,44 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
           : `Find legal cases related to ${caseType} law`;
       }
 
-      // Prepare enhanced context with legal concepts
-      const enhancedContext = [
-        ...(analysisData?.keyFacts || []),
-        ...concepts.contractTerms,
-        ...concepts.legalIssues,
-        'Texas jurisdiction',
-        'construction law',
-        'contract law',
-        'warranty law'
-      ].join(', ');
+      // Prepare context for AI Agent Coordinator
+      const contextData = {
+        caseTypes: [caseType || 'contract law'],
+        caseDescription: analysisData?.summary || '',
+        incidentDescription: analysisData?.description || '',
+        searchFocus: 'additional-case-law'
+      };
 
-      console.log('=== Calling perplexity-research ===');
+      console.log('=== Calling AI Agent Coordinator ===');
       console.log('Parameters:', {
         query: searchQuery.substring(0, 100) + '...',
-        searchType: 'legal-research', // Changed to legal-research for better case law
-        context: enhancedContext.substring(0, 100) + '...',
-        limit: 5,
-        concepts: concepts
+        clientId,
+        researchTypes: ['legal-research', 'current-research']
       });
 
-      // Try the function call with detailed error logging
-      const { data, error: functionError } = await invokeFunction('perplexity-research', {
+      // Call AI Agent Coordinator instead of perplexity-research
+      const { data, error: functionError } = await invokeFunction('ai-agent-coordinator', {
         query: searchQuery,
-        searchType: 'legal-research', // Use legal-research for more comprehensive results
-        context: enhancedContext,
-        limit: 5,
-        concepts: concepts
+        clientId,
+        researchTypes: ['legal-research', 'current-research'],
+        context: contextData
       });
 
-      console.log('=== Function Response ===');
+      console.log('=== AI Agent Coordinator Response ===');
       console.log('Data:', data);
       console.log('Error:', functionError);
-      console.log('Full response object keys:', data ? Object.keys(data) : 'No data');
 
       if (functionError) {
-        // Handle specific timeout errors
-        if (functionError.includes('timeout') || functionError.includes('504') || functionError.includes('Request timeout')) {
-          toast({
-            title: "Search Timed Out",
-            description: "The search took too long. Please try again with a simpler query or wait a moment before retrying.",
-            variant: "destructive",
-          });
-          setError("The search took too long and was cancelled. This can happen with complex queries. Try again or simplify your search.");
-          return;
-        }
-        
         throw new Error(functionError);
       }
 
-      // Check if the response indicates a timeout
-      const result = data as PerplexityResult;
-      if (result?.timeout || result?.error === 'Request timeout') {
-        toast({
-          title: "Search Timed Out",
-          description: "The search took too long. Please try again with a simpler query.",
-          variant: "destructive",
-        });
-        setError("The search took too long and was cancelled. This can happen with complex queries. Try again or simplify your search.");
-        return;
-      }
-      if (result?.content) {
+      const aiResponse = data as AICoordinatorResponse;
+      
+      if (aiResponse?.success && aiResponse?.content) {
         let newCases: PerplexityCase[] = [];
         
-        try {
-          // Try to parse as JSON first (for similar-cases search type)
-          const parsedCases = JSON.parse(result.content);
-          if (Array.isArray(parsedCases)) {
-            newCases = parsedCases.slice(0, 5); // Limit to 5 cases
-          } else {
-            throw new Error('Invalid JSON format');
-          }
-        } catch (parseError) {
-          // If JSON parsing fails, it might be text content with citations
-          // Extract case information from text
-          newCases = extractCasesFromText(result.content, result.citations || []);
-        }
+        // Parse the AI Agent Coordinator response
+        newCases = parseAICoordinatorResponse(aiResponse.content, aiResponse.citations || [], aiResponse.sources || []);
 
         // Save the new cases to the database
         if (newCases.length > 0 && clientId) {
@@ -320,13 +290,40 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
 
         setCases(newCases);
         setLastUpdated(new Date().toLocaleDateString());
-      }
+        setHasSearched(true);
+        
+        toast({
+          title: "Additional Cases Found",
+          description: `Found ${newCases.length} additional cases from AI-powered legal research.`,
+        });
+      } else {
+        // Fallback to old method if AI Agent Coordinator fails
+        console.log('=== Falling back to perplexity-research ===');
+        const fallbackResult = await invokeFunction('perplexity-research', {
+          query: searchQuery,
+          searchType: 'legal-research',
+          context: concepts,
+          limit: 5
+        });
 
-      setHasSearched(true);
-      toast({
-        title: "Additional Cases Found",
-        description: `Found ${cases.length} additional cases from legal databases.`,
-      });
+        const fallbackData = fallbackResult.data as PerplexityResult;
+        if (fallbackData?.content) {
+          const newCases = extractCasesFromText(fallbackData.content, fallbackData.citations || []);
+          
+          if (newCases.length > 0 && clientId) {
+            await saveNewCasesToDatabase(newCases, clientId);
+          }
+
+          setCases(newCases);
+          setLastUpdated(new Date().toLocaleDateString());
+          setHasSearched(true);
+          
+          toast({
+            title: "Additional Cases Found",
+            description: `Found ${newCases.length} additional cases from legal databases.`,
+          });
+        }
+      }
 
     } catch (error: any) {
       console.error('Error searching additional cases:', error);
@@ -341,35 +338,211 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
     }
   };
 
+  const parseAICoordinatorResponse = (content: string, citations: string[], sources: any[]): PerplexityCase[] => {
+    const cases: PerplexityCase[] = [];
+    
+    // First, try to extract verified CourtListener cases from sources
+    if (sources && sources.length > 0) {
+      sources.forEach((source: any) => {
+        if (source.case_name && source.court_name) {
+          cases.push({
+            caseName: source.case_name,
+            court: source.court_name || source.court || "Court information available",
+            citation: source.citation || extractCitationFromContent(content, source.case_name),
+            date: source.date_filed || source.date_decided || extractDateFromContent(content, source.case_name),
+            relevantFacts: extractRelevantFacts(content, source.case_name),
+            outcome: extractOutcome(content, source.case_name),
+            url: source.absolute_url ? `https://www.courtlistener.com${source.absolute_url}` : undefined
+          });
+        }
+      });
+    }
+    
+    // If no verified cases, extract from content using enhanced parsing
+    if (cases.length === 0) {
+      cases.push(...extractCasesFromText(content, citations));
+    }
+    
+    return cases.slice(0, 5); // Limit to 5 cases
+  };
+
+  const extractCitationFromContent = (content: string, caseName: string): string => {
+    // Look for citation patterns near the case name
+    const caseIndex = content.indexOf(caseName);
+    if (caseIndex !== -1) {
+      const contextArea = content.substring(Math.max(0, caseIndex - 100), caseIndex + caseName.length + 100);
+      const citationPatterns = [
+        /\d+\s+[A-Z][a-z]*\.?\s*\d*d?\s+\d+/g, // e.g., "123 F.3d 456"
+        /\d+\s+S\.W\.\d*d?\s+\d+/g, // e.g., "123 S.W.3d 456"
+        /\d+\s+Tex\.\s*App\.\s*\d+/g // e.g., "123 Tex. App. 456"
+      ];
+      
+      for (const pattern of citationPatterns) {
+        const matches = contextArea.match(pattern);
+        if (matches && matches.length > 0) {
+          return matches[0];
+        }
+      }
+    }
+    return "Citation available in full research";
+  };
+
+  const extractDateFromContent = (content: string, caseName: string): string => {
+    // Look for date patterns near the case name
+    const caseIndex = content.indexOf(caseName);
+    if (caseIndex !== -1) {
+      const contextArea = content.substring(Math.max(0, caseIndex - 100), caseIndex + caseName.length + 200);
+      const datePatterns = [
+        /\b\d{4}\b/g, // Year
+        /\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b/g,
+        /\b\d{1,2}\/\d{1,2}\/\d{4}\b/g
+      ];
+      
+      for (const pattern of datePatterns) {
+        const matches = contextArea.match(pattern);
+        if (matches && matches.length > 0) {
+          return matches[0];
+        }
+      }
+    }
+    return "Date available in research";
+  };
+
+  const extractRelevantFacts = (content: string, caseName: string): string => {
+    // Extract 1-2 sentences around the case name that describe relevant facts
+    const caseIndex = content.indexOf(caseName);
+    if (caseIndex !== -1) {
+      // Get context around the case name
+      const start = Math.max(0, caseIndex - 200);
+      const end = Math.min(content.length, caseIndex + caseName.length + 300);
+      const contextArea = content.substring(start, end);
+      
+      // Split into sentences and find relevant ones
+      const sentences = contextArea.split(/[.!?]+/).filter(s => s.trim().length > 20);
+      const relevantSentences = sentences.filter(sentence => 
+        sentence.toLowerCase().includes('contract') ||
+        sentence.toLowerCase().includes('breach') ||
+        sentence.toLowerCase().includes('warranty') ||
+        sentence.toLowerCase().includes('construction') ||
+        sentence.toLowerCase().includes('material') ||
+        sentence.toLowerCase().includes('damage')
+      );
+      
+      if (relevantSentences.length > 0) {
+        return relevantSentences.slice(0, 2).join('. ').trim() + '.';
+      }
+      
+      // Fallback to first meaningful sentence
+      return sentences[0]?.trim() + '.' || "Relevant facts available in full research";
+    }
+    return "Case facts extracted from AI legal analysis";
+  };
+
+  const extractOutcome = (content: string, caseName: string): string => {
+    // Look for outcome-related keywords near the case name
+    const caseIndex = content.indexOf(caseName);
+    if (caseIndex !== -1) {
+      const contextArea = content.substring(caseIndex, Math.min(content.length, caseIndex + caseName.length + 400));
+      
+      const outcomeKeywords = [
+        'held that', 'ruled that', 'decided that', 'found that', 'concluded that',
+        'awarded', 'damages', 'granted', 'denied', 'affirmed', 'reversed',
+        'judgment', 'verdict', 'decision', 'outcome', 'result'
+      ];
+      
+      for (const keyword of outcomeKeywords) {
+        const keywordIndex = contextArea.toLowerCase().indexOf(keyword);
+        if (keywordIndex !== -1) {
+          // Extract sentence containing the keyword
+          const sentenceStart = contextArea.lastIndexOf('.', keywordIndex) + 1;
+          const sentenceEnd = contextArea.indexOf('.', keywordIndex + keyword.length);
+          if (sentenceEnd !== -1) {
+            return contextArea.substring(sentenceStart, sentenceEnd + 1).trim();
+          }
+        }
+      }
+    }
+    return "Case outcome and holding available in detailed analysis";
+  };
+
   const extractCasesFromText = (content: string, citations: string[]): PerplexityCase[] => {
     const cases: PerplexityCase[] = [];
     
-    // Simple extraction logic - look for case patterns in the content
+    // Enhanced case name patterns
     const casePatterns = [
-      /([A-Z][a-zA-Z\s&]+v\.\s+[A-Z][a-zA-Z\s&]+)/g,
-      /([A-Z][a-zA-Z\s&]+vs\.\s+[A-Z][a-zA-Z\s&]+)/g
+      /([A-Z][a-zA-Z\s&.,-]+\s+v\.\s+[A-Z][a-zA-Z\s&.,-]+)/g,
+      /([A-Z][a-zA-Z\s&.,-]+\s+vs\.\s+[A-Z][a-zA-Z\s&.,-]+)/g,
+      /In\s+re\s+[A-Z][a-zA-Z\s&.,-]+/g,
+      /([A-Z][a-zA-Z\s&.,-]+\s+v\s+[A-Z][a-zA-Z\s&.,-]+)/g
     ];
+
+    const foundCases = new Set<string>();
 
     casePatterns.forEach(pattern => {
       const matches = content.match(pattern);
       if (matches) {
-        matches.forEach((match, index) => {
-          if (cases.length < 3) { // Limit to 3 cases from text
-            cases.push({
-              caseName: match,
-              court: "Court information not available",
-              citation: citations[index] || "Citation pending",
-              date: "Date not available",
-              relevantFacts: "Relevant facts extracted from comprehensive legal research",
-              outcome: "Outcome details available in full research",
-              url: citations[index]?.includes('http') ? citations[index] : undefined
-            });
+        matches.forEach((match) => {
+          const cleanMatch = match.trim();
+          if (cleanMatch.length > 10 && cleanMatch.length < 100 && !foundCases.has(cleanMatch)) {
+            foundCases.add(cleanMatch);
+            
+            if (cases.length < 5) {
+              cases.push({
+                caseName: cleanMatch,
+                court: extractCourtFromContent(content, cleanMatch),
+                citation: extractCitationFromContent(content, cleanMatch),
+                date: extractDateFromContent(content, cleanMatch),
+                relevantFacts: extractRelevantFacts(content, cleanMatch),
+                outcome: extractOutcome(content, cleanMatch),
+                url: findCitationUrl(citations, cleanMatch)
+              });
+            }
           }
         });
       }
     });
 
     return cases;
+  };
+
+  const extractCourtFromContent = (content: string, caseName: string): string => {
+    const caseIndex = content.indexOf(caseName);
+    if (caseIndex !== -1) {
+      const contextArea = content.substring(Math.max(0, caseIndex - 100), caseIndex + caseName.length + 200);
+      
+      const courtPatterns = [
+        /Texas\s+Supreme\s+Court/gi,
+        /Supreme\s+Court\s+of\s+Texas/gi,
+        /Texas\s+Court\s+of\s+Appeals/gi,
+        /Court\s+of\s+Appeals\s+of\s+Texas/gi,
+        /\d+\w*\s+District\s+Court/gi,
+        /U\.S\.\s+District\s+Court/gi,
+        /Fifth\s+Circuit/gi,
+        /\d+\w*\s+Judicial\s+District/gi
+      ];
+      
+      for (const pattern of courtPatterns) {
+        const matches = contextArea.match(pattern);
+        if (matches && matches.length > 0) {
+          return matches[0];
+        }
+      }
+    }
+    return "Texas Court";
+  };
+
+  const findCitationUrl = (citations: string[], caseName: string): string | undefined => {
+    // Try to find URL in citations that might relate to this case
+    for (const citation of citations) {
+      if (citation.includes('http') && (
+        citation.toLowerCase().includes(caseName.toLowerCase().split(' ')[0]) ||
+        citation.includes('justia.com') ||
+        citation.includes('courtlistener.com')
+      )) {
+        return citation;
+      }
+    }
+    return undefined;
   };
 
   return (
