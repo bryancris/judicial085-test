@@ -15,6 +15,7 @@ export const uploadFirmDocumentToStorage = async (file: File, userId: string, fi
       .upload(filePath, file, {
         cacheControl: '3600',
         upsert: false,
+        contentType: 'application/pdf',
       });
     
     if (error) {
