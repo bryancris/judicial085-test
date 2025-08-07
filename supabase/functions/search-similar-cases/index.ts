@@ -179,28 +179,42 @@ serve(async (req) => {
     let dbSaveSuccess = false;
     try {
       if (similarCases.length > 0) {
-        // Save the search result to similar_cases table using service role
-        const { error: saveError } = await supabase
-          .from('similar_cases')
-          .upsert({
-            client_id: clientId,
-            legal_analysis_id: clientId, // Use clientId as fallback for legal_analysis_id
-            case_data: similarCases,
-            search_metadata: {
-              fallbackUsed: false,
-              analysisFound: true,
-              searchStrategy: "ai-agent-coordinator",
-              citationsCount: citations.length,
-              timestamp: new Date().toISOString()
-            },
-            global_case_ids: courtListenerCases.map(() => crypto.randomUUID()) // Generate UUIDs for global case tracking
-          });
-        
-        if (saveError) {
-          console.warn("⚠️ Failed to save to database, but returning results anyway:", saveError);
+        // Get the most recent legal analysis for this client
+        const { data: analysisData, error: analysisError } = await supabase
+          .from('legal_analyses')
+          .select('id')
+          .eq('client_id', clientId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (analysisError || !analysisData) {
+          console.warn("⚠️ No legal analysis found for client, cannot save similar cases to database");
+          console.warn("Analysis error:", analysisError);
         } else {
-          console.log("✅ Successfully saved similar cases to database");
-          dbSaveSuccess = true;
+          // Save the search result to similar_cases table using the correct legal_analysis_id
+          const { error: saveError } = await supabase
+            .from('similar_cases')
+            .upsert({
+              client_id: clientId,
+              legal_analysis_id: analysisData.id, // Use the actual legal analysis ID
+              case_data: similarCases,
+              search_metadata: {
+                fallbackUsed: false,
+                analysisFound: true,
+                searchStrategy: "ai-agent-coordinator",
+                citationsCount: citations.length,
+                timestamp: new Date().toISOString()
+              },
+              global_case_ids: courtListenerCases.map(() => crypto.randomUUID()) // Generate UUIDs for global case tracking
+            });
+          
+          if (saveError) {
+            console.warn("⚠️ Failed to save to database, but returning results anyway:", saveError);
+          } else {
+            console.log("✅ Successfully saved similar cases to database");
+            dbSaveSuccess = true;
+          }
         }
       }
     } catch (dbError) {
