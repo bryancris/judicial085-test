@@ -16,6 +16,7 @@ import Features from "./pages/Features";
 import Admin from "./pages/Admin";
 import FAQ from "./pages/FAQ";
 import QuickConsult from "./pages/QuickConsult";
+import Pricing from "./pages/Pricing";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/document-library" element={<DocumentLibrary />} />
             <Route path="/knowledge" element={<Knowledge />} />
             <Route path="/features" element={<Features />} />
+            <Route path="/pricing" element={<Pricing />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/faq" element={<FAQ />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
