@@ -951,6 +951,39 @@ export type Database = {
         }
         Relationships: []
       }
+      firm_case_types: {
+        Row: {
+          created_at: string
+          firm_id: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+          user_id: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          firm_id: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+          user_id: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          firm_id?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+          user_id?: string
+          value?: string
+        }
+        Relationships: []
+      }
       firm_users: {
         Row: {
           created_at: string
