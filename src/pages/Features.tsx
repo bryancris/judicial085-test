@@ -25,6 +25,12 @@ const Features = () => {
       color: "text-brand-burgundy dark:text-brand-gold"
     },
     {
+      title: "Quick Consult",
+      description: "Get instant answers and guidance with AI; save chats and convert them into clients.",
+      icon: MessageSquare,
+      color: "text-brand-burgundy dark:text-brand-gold"
+    },
+    {
       title: "Document Hub & Storage",
       description: "Upload, organize, and search across PDFs, Word docs, and text files.",
       icon: FileSearch,

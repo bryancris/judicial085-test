@@ -10,12 +10,14 @@ const Pricing: React.FC = () => {
     "Client Intake Management",
     "AI-Powered Case Analysis", 
     "Case Discussion & Notes",
+    "Quick Consult",
     "Document Hub & Storage",
     "1 Attorney + 1 Paralegal"
   ];
 
   const tier2Features = [
     "All Professional features",
+    "Quick Consult",
     "Discovery Management",
     "Contract Generation & Management", 
     "AI Document Creation",
@@ -130,6 +132,7 @@ const Pricing: React.FC = () => {
                   { feature: "Client Intake", tier1: true, tier2: true },
                   { feature: "Case Analysis", tier1: true, tier2: true },
                   { feature: "Case Discussion", tier1: true, tier2: true },
+                  { feature: "Quick Consult", tier1: true, tier2: true },
                   { feature: "Document Hub", tier1: true, tier2: true },
                   { feature: "Discovery Management", tier1: false, tier2: true },
                   { feature: "Contract Generation", tier1: false, tier2: true },
