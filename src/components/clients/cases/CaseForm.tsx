@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,6 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useFirmCaseTypes } from "@/hooks/useFirmCaseTypes";
+import AddCaseTypeDialog from "./AddCaseTypeDialog";
 
 const caseFormSchema = z.object({
   case_title: z.string().min(1, { message: "Title is required" }),
@@ -60,6 +62,19 @@ const CaseForm = ({
     },
   });
 
+  const { types: firmTypes } = useFirmCaseTypes();
+  const [addOpen, setAddOpen] = useState(false);
+
+  const allOptions = useMemo(() => {
+    const builtins = caseTypes.map(t => ({ value: t.id, label: t.label }));
+    const existing = new Set(builtins.map(b => b.value.toLowerCase()));
+    const customs = (firmTypes || [])
+      .filter(t => t.is_active)
+      .map(t => ({ value: t.value, label: t.name }))
+      .filter(t => !existing.has(t.value.toLowerCase()));
+    return [...builtins, ...customs];
+  }, [firmTypes]);
+
   // Get current case type to dynamically change field labels
   const caseType = form.watch("case_type");
   const isContractReview = caseType === "contract_review";
@@ -93,7 +108,10 @@ const CaseForm = ({
             <FormItem>
               <FormLabel>Case Type</FormLabel>
               <Select 
-                onValueChange={field.onChange} 
+                onValueChange={(val) => {
+                  if (val === "__add__") { setAddOpen(true); return; }
+                  field.onChange(val);
+                }} 
                 defaultValue={field.value || ""} 
               >
                 <FormControl>
@@ -102,11 +120,12 @@ const CaseForm = ({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {caseTypes.map((type) => (
-                    <SelectItem key={type.id} value={type.id}>
-                      {type.label}
+                  {allOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
                     </SelectItem>
                   ))}
+                  <SelectItem value="__add__">+ Create new case type</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -184,6 +203,13 @@ const CaseForm = ({
           </Button>
         </div>
       </form>
+      <AddCaseTypeDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onCreated={(value) => {
+          form.setValue("case_type", value, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+        }}
+      />
     </Form>
   );
 };
