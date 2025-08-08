@@ -3,6 +3,7 @@ import React from 'react';
 import NavBar from '@/components/NavBar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Gavel, FileSearch, MessageSquare, Database, Shield, Clock, Scale, Mic, FileEdit, BookOpen, FileText } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const Features = () => {
   const proFeatures = [
@@ -90,9 +91,14 @@ const Features = () => {
               </a>
             </header>
             <p className="text-muted-foreground mb-6">Includes the core tools to run your practice.</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8">
               {proFeatures.map((feature, index) => (
-                <Card key={index} className="dark-card hover:shadow-lg transition-all duration-300">
+                <Card key={index} className={cn(
+                  "dark-card hover:shadow-lg transition-all duration-300",
+                  "lg:col-span-2",
+                  index === 3 ? "lg:col-start-2" : "",
+                  index === 4 ? "lg:col-start-4" : ""
+                )}>
                   <CardHeader className="pb-2">
                     <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800/80 flex items-center justify-center mb-4">
                       <feature.icon className={`w-6 h-6 ${feature.color}`} />
@@ -123,9 +129,13 @@ const Features = () => {
               </a>
             </header>
             <p className="text-muted-foreground mb-6">Everything in Professional, plus:</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8">
               {enterprisePlusFeatures.map((feature, index) => (
-                <Card key={index} className="dark-card hover:shadow-lg transition-all duration-300">
+                <Card key={index} className={cn(
+                  "dark-card hover:shadow-lg transition-all duration-300",
+                  "lg:col-span-2",
+                  index === 3 ? "lg:col-start-3" : ""
+                )}>
                   <CardHeader className="pb-2">
                     <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800/80 flex items-center justify-center mb-4">
                       <feature.icon className={`w-6 h-6 ${feature.color}`} />
