@@ -49,7 +49,7 @@ const CaseForm = ({
   onCancel, 
   initialData,
   isLoading = false,
-  clientId  // Accept clientId prop
+  clientId
 }: CaseFormProps) => {
   const form = useForm<CaseFormValues>({
     resolver: zodResolver(caseFormSchema),
@@ -66,12 +66,18 @@ const CaseForm = ({
   const [addOpen, setAddOpen] = useState(false);
 
   const allOptions = useMemo(() => {
-    const builtins = caseTypes.map(t => ({ value: t.id, label: t.label }));
+    // Ensure we never render a SelectItem with an empty value
+    const builtins = caseTypes
+      .map(t => ({ value: t.id, label: t.label }))
+      .filter(opt => typeof opt.value === "string" && opt.value.trim() !== "");
+
     const existing = new Set(builtins.map(b => b.value.toLowerCase()));
+
     const customs = (firmTypes || [])
-      .filter(t => t.is_active)
+      .filter(t => t.is_active && typeof t.value === "string" && t.value.trim() !== "")
       .map(t => ({ value: t.value, label: t.name }))
       .filter(t => !existing.has(t.value.toLowerCase()));
+
     return [...builtins, ...customs];
   }, [firmTypes]);
 
@@ -111,8 +117,8 @@ const CaseForm = ({
                 onValueChange={(val) => {
                   if (val === "__add__") { setAddOpen(true); return; }
                   field.onChange(val);
-                }} 
-                defaultValue={field.value || ""} 
+                }}
+                value={field.value ?? undefined}
               >
                 <FormControl>
                   <SelectTrigger>
