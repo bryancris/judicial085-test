@@ -49,16 +49,24 @@ Deno.serve(async (req) => {
         'Content-Type': mimeType,
         'Content-Disposition': `attachment; filename="${filename}"`,
         'Content-Length': fileBuffer.length.toString(),
+        'X-Export-Impl': 'pdf-lib',
+        'X-Export-Format': extension,
+        'Cache-Control': 'no-store',
       },
     })
 
   } catch (error) {
     console.error('Export error:', error)
+    const message = (error as any)?.message || 'Unknown error'
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: message }),
       {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+          'X-Export-Impl': 'pdf-lib'
+        },
       }
     )
   }

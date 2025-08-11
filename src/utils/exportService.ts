@@ -40,7 +40,20 @@ export const exportCaseAnalysis = async (options: ExportOptions): Promise<void> 
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
+      const contentType = response.headers.get('Content-Type') || '';
+      const impl = response.headers.get('X-Export-Impl');
+      if (impl) console.warn('Export failed. Implementation:', impl);
+      let errorText = '';
+      try {
+        if (contentType.includes('application/json')) {
+          const json = await response.json();
+          errorText = json?.error || JSON.stringify(json);
+        } else {
+          errorText = await response.text();
+        }
+      } catch {
+        try { errorText = await response.text(); } catch { errorText = 'Unknown error'; }
+      }
       throw new Error(`Export failed: ${response.status} ${errorText}`);
     }
 
@@ -53,6 +66,10 @@ export const exportCaseAnalysis = async (options: ExportOptions): Promise<void> 
       if (filenameMatch) {
         filename = filenameMatch[1];
       }
+    }
+    const implHeader = response.headers.get('X-Export-Impl');
+    if (implHeader) {
+      console.log('Export implementation:', implHeader);
     }
 
     // Convert response to blob and trigger download
