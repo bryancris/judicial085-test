@@ -37,7 +37,16 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
   const [loadingPreview, setLoadingPreview] = useState(false);
 
   // Get unique categories
-  const categories = ['all', ...new Set(templates.map(t => t.category))];
+  const categories = [
+    'all',
+    ...Array.from(
+      new Set(
+        templates
+          .map((t) => (t.category || '').trim())
+          .filter((c) => c.length > 0)
+      )
+    ),
+  ];
 
   // Filter templates
   const filteredTemplates = templates.filter(template => {

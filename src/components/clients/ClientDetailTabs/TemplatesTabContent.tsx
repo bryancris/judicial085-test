@@ -79,7 +79,13 @@ export const TemplatesTabContent = () => {
     loadTemplates();
   };
 
-  const categories = Array.from(new Set(templates.map(t => t.category)));
+  const categories = Array.from(
+    new Set(
+      templates
+        .map((t) => (t.category || "").trim())
+        .filter((c) => c.length > 0)
+    )
+  );
 
   if (showUpload) {
     return <TemplateUpload onUploadComplete={handleUploadComplete} />;
@@ -112,13 +118,16 @@ export const TemplatesTabContent = () => {
             className="pl-9"
           />
         </div>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+        <Select
+          value={categoryFilter === "" ? "__all__" : categoryFilter}
+          onValueChange={(val) => setCategoryFilter(val === "__all__" ? "" : val)}
+        >
           <SelectTrigger className="w-48">
             <Filter className="h-4 w-4 mr-2" />
             <SelectValue placeholder="All Categories" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Categories</SelectItem>
+            <SelectItem value="__all__">All Categories</SelectItem>
             {categories.map((category) => (
               <SelectItem key={category} value={category}>
                 {category.charAt(0).toUpperCase() + category.slice(1)}
