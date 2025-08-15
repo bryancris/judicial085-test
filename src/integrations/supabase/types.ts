@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -1527,98 +1527,98 @@ export type Database = {
       find_similar_research: {
         Args: {
           client_id_param: string
-          search_type_param: string
           query_param: string
+          search_type_param: string
           similarity_threshold?: number
         }
         Returns: {
+          content: string
+          created_at: string
           id: string
           query: string
-          content: string
           similarity_score: number
-          created_at: string
         }[]
       }
       get_case_discussion_research: {
         Args: { discussion_id_param: string }
         Returns: {
-          id: string
-          search_type: string
-          query: string
-          content: string
-          model: string
           citations: string[]
-          usage_data: Json
-          metadata: Json
+          content: string
           created_at: string
+          id: string
+          metadata: Json
+          model: string
+          query: string
+          search_type: string
+          usage_data: Json
         }[]
       }
       get_case_documents: {
         Args: { case_id_param: string }
         Returns: {
+          case_id: string
+          client_id: string
+          created_at: string
           id: string
+          schema: string
           title: string
           url: string
-          created_at: string
-          schema: string
-          client_id: string
-          case_id: string
         }[]
       }
       get_cases_needing_enrichment: {
         Args: { batch_size?: number }
         Returns: {
-          id: string
-          courtlistener_id: string
-          case_name: string
-          snippet: string
           api_fetch_count: number
+          case_name: string
+          courtlistener_id: string
+          id: string
           last_updated_at: string
+          snippet: string
         }[]
       }
       get_client_documents_with_cases: {
-        Args: { client_id_param: string; case_id_filter?: string }
+        Args: { case_id_filter?: string; client_id_param: string }
         Returns: {
-          id: string
-          title: string
-          url: string
-          created_at: string
-          schema: string
-          client_id: string
           case_id: string
           case_title: string
+          client_id: string
+          created_at: string
+          id: string
+          schema: string
+          title: string
+          url: string
         }[]
       }
       get_client_research_for_analysis: {
         Args: { client_id_param: string; legal_analysis_id_param?: string }
         Returns: {
-          id: string
-          search_type: string
-          query: string
-          content: string
-          citations: string[]
-          created_at: string
           case_discussion_id: string
+          citations: string[]
+          content: string
+          created_at: string
+          id: string
+          query: string
+          search_type: string
         }[]
       }
       get_client_research_stats: {
         Args: { client_id_param: string }
         Returns: {
-          total_research_count: number
-          similar_cases_count: number
+          avg_confidence: number
           legal_research_count: number
           recent_research_count: number
-          avg_confidence: number
+          similar_cases_count: number
+          total_research_count: number
         }[]
       }
       get_enrichment_stats: {
         Args: Record<PropertyKey, never>
         Returns: {
-          total_cases: number
-          cases_with_embeddings: number
-          cases_with_concepts: number
           cases_needing_enrichment: number
+          cases_with_concepts: number
+          cases_with_embeddings: number
           last_enrichment_run: string
+          total_cases: number
         }[]
       }
       get_user_firm_id: {
@@ -1643,8 +1643,8 @@ export type Database = {
       }
       has_role: {
         Args: {
-          _user_id: string
           _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
         }
         Returns: boolean
       }
@@ -1666,30 +1666,30 @@ export type Database = {
       }
       hybrid_search_courtlistener_cases: {
         Args: {
-          query_text: string
-          query_embedding?: string
-          match_threshold?: number
           match_count?: number
+          match_threshold?: number
+          query_embedding?: string
+          query_text: string
           semantic_weight?: number
         }
         Returns: {
-          id: string
-          courtlistener_id: string
+          absolute_url: string
+          api_fetch_count: number
           case_name: string
+          case_type: string
+          citation: string
+          combined_score: number
           court: string
           court_name: string
-          citation: string
-          date_filed: string
+          courtlistener_id: string
           date_decided: string
-          snippet: string
-          absolute_url: string
+          date_filed: string
+          id: string
           jurisdiction: string
-          case_type: string
           precedential_status: string
-          api_fetch_count: number
           similarity: number
+          snippet: string
           text_rank: number
-          combined_score: number
         }[]
       }
       ivfflat_bit_support: {
@@ -1713,16 +1713,16 @@ export type Database = {
         Returns: unknown
       }
       link_research_to_analysis: {
-        Args: { research_id_param: string; legal_analysis_id_param: string }
+        Args: { legal_analysis_id_param: string; research_id_param: string }
         Returns: boolean
       }
       log_background_job_complete: {
         Args: {
-          job_run_id_param: string
-          status_param?: string
-          processed_count_param?: number
           error_count_param?: number
+          job_run_id_param: string
           metadata_param?: Json
+          processed_count_param?: number
+          status_param?: string
         }
         Returns: boolean
       }
@@ -1735,102 +1735,102 @@ export type Database = {
         Returns: boolean
       }
       match_documents: {
-        Args: { query_embedding: string; match_count?: number; filter?: Json }
+        Args: { filter?: Json; match_count?: number; query_embedding: string }
         Returns: {
-          id: number
           content: string
+          id: number
           metadata: Json
           similarity: number
         }[]
       }
       search_case_document_chunks_by_similarity: {
         Args: {
-          query_embedding: string
           case_id_param: string
-          match_threshold?: number
           match_count?: number
+          match_threshold?: number
+          query_embedding: string
         }
         Returns: {
-          id: string
-          document_id: string
           chunk_index: number
           content: string
+          document_id: string
+          id: string
           metadata: Json
           similarity: number
         }[]
       }
       search_client_and_case_documents_by_similarity: {
         Args: {
-          query_embedding: string
-          client_id_param: string
           case_id_param?: string
-          match_threshold?: number
+          client_id_param: string
           match_count?: number
+          match_threshold?: number
+          query_embedding: string
         }
         Returns: {
-          id: string
-          document_id: string
+          case_id: string
           chunk_index: number
           content: string
+          document_id: string
+          id: string
           metadata: Json
           similarity: number
-          case_id: string
         }[]
       }
       search_document_chunks: {
         Args: {
-          query_embedding: string
           client_id_param: string
-          match_threshold?: number
           match_count?: number
+          match_threshold?: number
+          query_embedding: string
         }
         Returns: {
-          id: string
-          document_id: string
           chunk_index: number
           content: string
+          document_id: string
+          id: string
           metadata: Json
           similarity: number
         }[]
       }
       search_document_chunks_by_similarity: {
         Args: {
-          query_embedding: string
           client_id_param: string
-          match_threshold?: number
           match_count?: number
+          match_threshold?: number
+          query_embedding: string
         }
         Returns: {
-          id: string
-          document_id: string
           chunk_index: number
           content: string
+          document_id: string
+          id: string
           metadata: Json
           similarity: number
         }[]
       }
       search_similar_courtlistener_cases: {
         Args: {
-          query_embedding: string
-          match_threshold?: number
           match_count?: number
+          match_threshold?: number
+          query_embedding: string
         }
         Returns: {
-          id: string
-          courtlistener_id: string
+          absolute_url: string
+          api_fetch_count: number
           case_name: string
+          case_type: string
+          citation: string
           court: string
           court_name: string
-          citation: string
-          date_filed: string
+          courtlistener_id: string
           date_decided: string
-          snippet: string
-          absolute_url: string
+          date_filed: string
+          id: string
           jurisdiction: string
-          case_type: string
           precedential_status: string
-          api_fetch_count: number
           similarity: number
+          snippet: string
         }[]
       }
       sparsevec_out: {

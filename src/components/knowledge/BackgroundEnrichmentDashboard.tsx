@@ -13,11 +13,13 @@ import {
   CheckCircle,
   AlertTriangle,
   Activity,
-  Eye
+  Eye,
+  Download
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import PendingCasesPreviewDialog from "./PendingCasesPreviewDialog";
+import { useCourtListenerImport } from "@/hooks/useCourtListenerImport";
 
 interface EnrichmentStats {
   total_cases: number;
@@ -45,6 +47,7 @@ const BackgroundEnrichmentDashboard: React.FC = () => {
   const [runningJob, setRunningJob] = useState(false);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { importCases, isImporting } = useCourtListenerImport();
 
   const fetchStats = async () => {
     try {
@@ -208,6 +211,20 @@ const BackgroundEnrichmentDashboard: React.FC = () => {
                   <div className="text-2xl font-bold text-blue-600">
                     {stats.total_cases.toLocaleString()}
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => importCases()}
+                    disabled={isImporting}
+                    className="mt-2 text-xs h-6 px-2"
+                  >
+                    {isImporting ? (
+                      <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <Download className="h-3 w-3 mr-1" />
+                    )}
+                    Import New
+                  </Button>
                 </div>
 
                 <div className="text-center p-4 rounded-lg bg-green-50 dark:bg-green-950">
