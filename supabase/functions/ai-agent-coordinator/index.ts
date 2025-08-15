@@ -631,9 +631,11 @@ CRITICAL REQUIREMENTS:
         .insert({
           client_id: clientId,
           case_id: caseId,
+          legal_analysis_id: crypto.randomUUID(), // Generate a temp ID to satisfy RLS
           search_type: 'ai-agent-coordination',
           query,
           content: finalContent,
+          model: 'gemini-synthesis',
           citations: uniqueCitations,
           metadata: {
             researchSources: researchResults.map(r => ({ source: r.source, type: r.type })),
