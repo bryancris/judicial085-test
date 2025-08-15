@@ -12,10 +12,12 @@ import {
   Clock, 
   CheckCircle,
   AlertTriangle,
-  Activity
+  Activity,
+  Eye
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import PendingCasesPreviewDialog from "./PendingCasesPreviewDialog";
 
 interface EnrichmentStats {
   total_cases: number;
@@ -41,6 +43,7 @@ const BackgroundEnrichmentDashboard: React.FC = () => {
   const [recentJobs, setRecentJobs] = useState<JobRun[]>([]);
   const [loading, setLoading] = useState(true);
   const [runningJob, setRunningJob] = useState(false);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const fetchStats = async () => {
@@ -247,7 +250,18 @@ const BackgroundEnrichmentDashboard: React.FC = () => {
                   <div className="text-2xl font-bold text-orange-600">
                     {stats.cases_needing_enrichment.toLocaleString()}
                   </div>
-                  <div className="text-xs text-muted-foreground">Cases pending</div>
+                  <div className="text-xs text-muted-foreground mb-2">Cases pending</div>
+                  {stats.cases_needing_enrichment > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPreviewDialogOpen(true)}
+                      className="text-xs h-6 px-2"
+                    >
+                      <Eye className="h-3 w-3 mr-1" />
+                      Preview
+                    </Button>
+                  )}
                 </div>
               </div>
 
@@ -341,6 +355,12 @@ const BackgroundEnrichmentDashboard: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      <PendingCasesPreviewDialog
+        open={previewDialogOpen}
+        onOpenChange={setPreviewDialogOpen}
+        totalPending={stats?.cases_needing_enrichment || 0}
+      />
     </div>
   );
 };
