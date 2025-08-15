@@ -49,7 +49,26 @@ serve(async (req) => {
   // Force redeployment to pick up updated environment variables
 
   try {
-    const { clientId, conversation, caseId, researchUpdates } = await req.json();
+    // Safely parse request body
+    let payload: any = null;
+    try {
+      payload = await req.json();
+    } catch (e: any) {
+      console.error('Invalid JSON payload:', e);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body', details: e?.message || String(e) }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { clientId, conversation, caseId, researchUpdates } = payload || {};
+
+    if (!clientId) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required parameter: clientId' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
     if (!geminiApiKey) {
@@ -59,7 +78,6 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
     // Extract user ID from the authorization header
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
@@ -478,11 +496,13 @@ serve(async (req) => {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in generate-legal-analysis function:', error);
+    const status = error?.status || 500;
+    const details = error?.message || (typeof error === 'string' ? error : JSON.stringify(error));
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: 'Internal server error while generating analysis', status, details }),
+      { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
