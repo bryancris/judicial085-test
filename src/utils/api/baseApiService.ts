@@ -13,7 +13,8 @@ export const invokeFunction = async <T>(
 
     if (error) {
       console.error(`Error calling ${functionName}:`, error);
-      return { data: null, error: error.message };
+      const detailed = (error as any)?.context?.body || (error as any)?.message || (typeof error === 'string' ? error : JSON.stringify(error));
+      return { data: null, error: typeof detailed === 'string' ? detailed : JSON.stringify(detailed) };
     }
 
     return { data };

@@ -9,7 +9,7 @@ import { mapCitationsToKnowledgeBase } from "./services/knowledgeBaseMappingServ
 import { generateStrengthsWeaknesses } from "./services/strengthsWeaknessesGenerator.ts";
 import { generateLegalAnalysis } from "../shared/geminiService.ts";
 
-const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -51,6 +51,7 @@ serve(async (req) => {
   try {
     const { clientId, conversation, caseId, researchUpdates } = await req.json();
 
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
     if (!geminiApiKey) {
       console.error('Gemini API key is not configured');
       return new Response(
@@ -71,8 +72,15 @@ serve(async (req) => {
 
     // Create Supabase client to get user info
     const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.38.0");
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Supabase configuration missing', { hasUrl: !!supabaseUrl, hasServiceKey: !!supabaseServiceKey });
+      return new Response(
+        JSON.stringify({ error: "Server misconfiguration: missing Supabase URL or Service Role Key." }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get user from JWT token
@@ -335,28 +343,28 @@ serve(async (req) => {
 
       console.log('✅ Successfully generated analysis from Gemini');
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Gemini API error:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.statusCode,
-        response: error.response
-      });
-      
+      const status = error?.statusCode || 500;
+      const rawDetails = typeof error?.response === 'string' 
+        ? error.response 
+        : JSON.stringify(error?.response || error?.message || '');
+      const details = rawDetails?.slice ? rawDetails.slice(0, 500) : rawDetails;
+
       // Handle specific error types with user-friendly messages
       let errorMessage = 'Failed to generate legal analysis';
-      
-      if (error.message && error.message.includes('429')) {
+      const msg = (error?.message || '').toString();
+      if (msg.includes('429')) {
         errorMessage = 'API rate limit exceeded. Please wait a few minutes and try again.';
-      } else if (error.message && error.message.includes('401')) {
+      } else if (msg.includes('401')) {
         errorMessage = 'API authentication failed. Please check your Gemini API key configuration.';
-      } else if (error.message && error.message.includes('quota')) {
+      } else if (msg.toLowerCase().includes('quota')) {
         errorMessage = 'API quota exceeded. Please check your Gemini API usage limits.';
       }
-      
+
       return new Response(
-        JSON.stringify({ error: errorMessage }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: errorMessage, status, details }),
+        { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
