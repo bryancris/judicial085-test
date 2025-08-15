@@ -70,14 +70,13 @@ serve(async (req) => {
       );
     }
 
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!geminiApiKey) {
-      console.error('Gemini API key is not configured');
-      return new Response(
-        JSON.stringify({ error: "Gemini API key is not configured" }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Log secret availability (booleans only for security)
+    const secretStatus = {
+      gemini: !!Deno.env.get('GEMINI_API_KEY'),
+      openai: !!Deno.env.get('OPENAI_API_KEY'),
+      perplexity: !!Deno.env.get('PERPLEXITY_API_KEY')
+    };
+    console.log('🔐 Secret availability:', secretStatus);
     // Extract user ID from the authorization header
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
@@ -115,6 +114,80 @@ serve(async (req) => {
 
     const userId = user.id;
     console.log(`Authenticated user ID: ${userId}`);
+
+    // 🎯 NEW: Orchestrate 3-agent pipeline first, with fallback to direct analysis
+    console.log('🎯 Starting 3-agent coordination for client:', clientId);
+    
+    try {
+      // Build research query from conversation
+      const researchQuery = conversation && conversation.length > 0
+        ? conversation.slice(-5).map((msg: any) => `${msg.role}: ${msg.content}`).join('\n')
+        : 'Analyze client legal situation and provide comprehensive analysis';
+
+      console.log('📋 Calling ai-agent-coordinator with query length:', researchQuery.length);
+
+      // Call the 3-agent coordinator
+      const coordinatorResponse = await supabase.functions.invoke('ai-agent-coordinator', {
+        body: {
+          query: researchQuery,
+          clientId,
+          caseId,
+          researchTypes: ['legal-research', 'current-research', 'similar-cases']
+        }
+      });
+
+      if (coordinatorResponse.data?.success && coordinatorResponse.data?.synthesizedContent) {
+        console.log('✅ 3-agent coordination successful, using synthesized content');
+        
+        // Save the 3-agent analysis to database
+        const analysisToSave = coordinatorResponse.data.synthesizedContent;
+        const { error: saveError } = await supabase
+          .from('legal_analyses')
+          .insert({
+            client_id: clientId,
+            case_id: caseId || null,
+            content: analysisToSave,
+            analysis_type: '3-agent-coordination',
+            user_id: userId,
+            research_updates: researchUpdates || []
+          });
+
+        if (saveError) {
+          console.error('Error saving 3-agent analysis:', saveError);
+        }
+
+        return new Response(
+          JSON.stringify({
+            analysis: analysisToSave,
+            lawReferences: coordinatorResponse.data.researchSources || [],
+            documentsUsed: [],
+            metadata: {
+              provider: '3-agent-coordinator',
+              sources: coordinatorResponse.data.researchSources?.length || 0,
+              citations: coordinatorResponse.data.citations?.length || 0
+            }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } else {
+        console.warn('⚠️ 3-agent coordination failed or returned no content, falling back to direct analysis');
+        console.warn('Coordinator error:', coordinatorResponse.error);
+      }
+    } catch (coordinatorError: any) {
+      console.warn('⚠️ 3-agent coordinator failed, falling back to direct analysis:', coordinatorError.message);
+    }
+
+    // 🔄 FALLBACK: Direct Gemini analysis (existing logic)
+    console.log('🔄 Falling back to direct Gemini analysis');
+    
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!geminiApiKey) {
+      console.error('Gemini API key is not configured for fallback');
+      return new Response(
+        JSON.stringify({ error: 'Both 3-agent coordination and fallback analysis failed: Gemini API key missing' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Log the request details for debugging
     console.log(`Generating legal analysis for client: ${clientId}${caseId ? `, case: ${caseId}` : ''}`);
