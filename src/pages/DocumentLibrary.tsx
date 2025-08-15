@@ -11,6 +11,7 @@ import { useFirmDocumentManager } from '@/hooks/useFirmDocumentManager';
 import { DocumentWithContent } from '@/types/knowledge';
 import DocumentLibraryCard from '@/components/knowledge/DocumentLibraryCard';
 import QuickConsultDocumentUploadDialog from '@/components/quick-consult/QuickConsultDocumentUploadDialog';
+import { TemplatesDialog } from '@/components/templates/TemplatesDialog';
 
 const DocumentLibrary = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -130,13 +131,16 @@ const DocumentLibrary = () => {
             <Library className="h-8 w-8 text-brand-burgundy" />
             <h1 className="text-3xl font-bold">Document Library</h1>
           </div>
-          <Button 
-            onClick={() => setShowUploadDialog(true)}
-            className="bg-brand-burgundy hover:bg-brand-burgundy/90 text-white flex items-center gap-2"
-          >
-            <Upload className="h-4 w-4" />
-            Upload Document
-          </Button>
+          <div className="flex items-center gap-3">
+            <TemplatesDialog />
+            <Button 
+              onClick={() => setShowUploadDialog(true)}
+              className="bg-brand-burgundy hover:bg-brand-burgundy/90 text-white flex items-center gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              Upload Document
+            </Button>
+          </div>
         </div>
         
         <p className="text-lg mb-6 text-muted-foreground">

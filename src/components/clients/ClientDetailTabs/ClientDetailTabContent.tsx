@@ -1,6 +1,8 @@
 
 import React, { useState, useCallback } from "react";
 import { TabsContent } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Layout } from "lucide-react";
 import ClientIntakeChat from "@/components/clients/chat/ClientIntakeChat";
 
 import CaseDiscussionContainer from "@/components/case-discussion/CaseDiscussionContainer";
@@ -271,7 +273,19 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
       </TabsContent>
 
       <TabsContent value="templates" className="mt-6">
-        <TemplatesTabContent />
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <Layout className="h-16 w-16 text-muted-foreground mb-4" />
+          <h3 className="text-xl font-medium mb-2">Placeholder Tab</h3>
+          <p className="text-muted-foreground mb-4">
+            This tab is currently a placeholder. Templates have been moved to the Document Library for better organization.
+          </p>
+          <Button 
+            onClick={() => window.location.href = '/document-library'}
+            variant="outline"
+          >
+            Go to Document Library
+          </Button>
+        </div>
       </TabsContent>
     </>
   );

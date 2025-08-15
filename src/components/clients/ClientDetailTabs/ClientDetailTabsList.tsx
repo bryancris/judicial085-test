@@ -74,8 +74,8 @@ const ClientDetailTabsList: React.FC = () => {
           className={`flex items-center gap-2 ${tabColors["templates"]} ${tabHoverColors["templates"]} data-[state=active]:${tabColors["templates"]} data-[state=active]:opacity-100`}
         >
           <Layout className="h-4 w-4" />
-          <span className="hidden sm:inline">Templates</span>
-          <span className="sm:hidden">Templates</span>
+          <span className="hidden sm:inline">Placeholder</span>
+          <span className="sm:hidden">Placeholder</span>
         </TabsTrigger>
       </TabsList>
     </div>
