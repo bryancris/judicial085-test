@@ -11,6 +11,8 @@ export function buildSystemPrompt(
   let systemPrompt = `
 You are an expert Texas attorney and legal analyst. Using Gemini's extensive context window, analyze ALL provided information comprehensively. Based on the ${analysisSource} provided, generate a thorough legal analysis with the following sections:
 
+CRITICAL FOCUS REQUIREMENT: Analyze ONLY the specific legal situation and facts presented in the current conversation/documents. Do not mix or confuse different legal topics. If you see any unrelated legal content (such as animal protection cases when the actual case is about real estate), completely ignore the unrelated content and focus exclusively on the current case facts.
+
 1. **RELEVANT TEXAS LAW:** Identify and briefly explain Texas laws, statutes, or precedents that apply to this case.
    - When citing Texas statutes, use the format: "Texas Civil Practice and Remedies Code § 75.001" or similar standard legal citation format
    - For case law, use italics with the format: *Wal-Mart Stores, Inc. v. Gonzalez*
@@ -19,7 +21,9 @@ You are an expert Texas attorney and legal analyst. Using Gemini's extensive con
 
 2. **PRELIMINARY ANALYSIS:** Analyze the key facts from the ${analysisSource} and their legal implications under Texas law.
 
-${hasConversation ? `CRITICAL: Facts have been provided via the conversation. Look for messages with "FACTS:" role or any substantive case details. Do not state that facts are missing or insufficient. Extract and use the facts from the conversation directly. Begin your response with a short "FACT SUMMARY" bullet list grounded only in the conversation before the analysis sections.` : ''}
+${hasConversation ? `CRITICAL: Facts have been provided via the conversation. Look for messages with "FACTS:" role or any substantive case details. Do not state that facts are missing or insufficient. Extract and use the facts from the conversation directly. Begin your response with a short "FACT SUMMARY" bullet list grounded only in the conversation before the analysis sections.
+
+STRICT CONTENT FILTER: Focus exclusively on the real estate/property law facts presented. Ignore any unrelated legal topics that may appear in the context.` : ''}
 
 3. **POTENTIAL LEGAL ISSUES:** Identify potential legal challenges, considerations, or defenses that may arise.
 

@@ -202,32 +202,9 @@ serve(async (req) => {
     console.log(`Conversation length: ${conversation?.length || 0}`);
     console.log(`Research updates to integrate: ${researchUpdates?.length || 0}`);
 
-    // Fetch existing analysis to preserve research updates
+    // Skip fetching old research updates to prevent contamination from previous cases
     let existingResearchUpdates = [];
-    try {
-      let analysisQuery = supabase
-        .from('legal_analyses')
-        .select('content')
-        .eq('client_id', clientId);
-      
-      if (caseId) {
-        analysisQuery = analysisQuery.eq('case_id', caseId);
-      } else {
-        analysisQuery = analysisQuery.is('case_id', null);
-      }
-      
-      const { data: existingAnalyses, error: analysisError } = await analysisQuery
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (!analysisError && existingAnalyses?.length > 0) {
-        const existingContent = existingAnalyses[0].content;
-        existingResearchUpdates = extractResearchUpdatesFromContent(existingContent);
-        console.log(`Found ${existingResearchUpdates.length} existing research updates to preserve`);
-      }
-    } catch (error) {
-      console.log('No existing analysis found or error fetching:', error.message);
-    }
+    console.log('Skipping old research updates to prevent case contamination');
 
     // Check if we have a conversation provided
     const hasProvidedConversation = conversation && conversation.length > 0;
@@ -254,26 +231,31 @@ serve(async (req) => {
           messageQuery = messageQuery.is("case_id", null);
         }
 
+        // Filter to only recent messages (last 24 hours) to avoid contamination from old conversations
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        messageQuery = messageQuery.gte('created_at', oneDayAgo);
+
         const { data: dbMessages, error: messageError } = await messageQuery
           .order("created_at", { ascending: true });
 
         if (messageError) {
           console.error("Error fetching messages:", messageError);
         } else if (dbMessages && dbMessages.length > 0) {
-          console.log(`Found ${dbMessages.length} messages in database`);
+          console.log(`Found ${dbMessages.length} recent messages in database`);
           conversationMessages = dbMessages.map(msg => ({
             content: msg.content,
             timestamp: msg.timestamp,
             role: msg.role
           }));
         } else if (caseId) {
-          // If no case-specific messages found, fallback to client-level messages
-          console.log("No case-specific messages found, falling back to client-level messages");
+          // If no case-specific messages found, fallback to client-level messages (but still recent)
+          console.log("No case-specific messages found, falling back to recent client-level messages");
           const { data: clientMessages, error: clientError } = await supabase
             .from("client_messages")
             .select("*")
             .eq("client_id", clientId)
             .is("case_id", null)
+            .gte('created_at', oneDayAgo)
             .order("created_at", { ascending: true });
 
           if (clientError) {
@@ -373,7 +355,28 @@ serve(async (req) => {
     let userContent = "";
     
     if (hasConversation) {
-      const formattedConversation = conversationMessages.map(msg => ({
+      // Prioritize FACTS messages and filter out unrelated content
+      const relevantMessages = conversationMessages.filter(msg => {
+        const content = msg.content.toLowerCase();
+        const role = msg.role.toLowerCase();
+        
+        // Always include FACTS messages
+        if (role === 'facts') return true;
+        
+        // Check if message contains case-relevant keywords
+        const realEstateKeywords = ['home', 'house', 'property', 'fixtures', 'appliances', 'kitchen', 'water', 'frisco', 'texas', 'contract', 'seller'];
+        const hasRelevantContent = realEstateKeywords.some(keyword => content.includes(keyword));
+        
+        // Exclude clearly unrelated content (like dog bites, animal protection)
+        const irrelevantKeywords = ['dog', 'bite', 'animal', 'pet', 'german shepherd', 'mail carrier'];
+        const hasIrrelevantContent = irrelevantKeywords.some(keyword => content.includes(keyword));
+        
+        return hasRelevantContent && !hasIrrelevantContent;
+      });
+      
+      console.log(`Filtered conversation: ${conversationMessages.length} → ${relevantMessages.length} relevant messages`);
+      
+      const formattedConversation = relevantMessages.map(msg => ({
         role: "user", 
         content: `${msg.role.toUpperCase()}: ${msg.content}`
       }));
@@ -392,13 +395,30 @@ serve(async (req) => {
       ).join('\n\n')}`;
     }
 
-    // Combine existing and new research updates
-    const allResearchUpdates = [...existingResearchUpdates, ...(researchUpdates || [])];
+    // Filter research updates to only include relevant ones for this case
+    const relevantResearchUpdates = (researchUpdates || []).filter(update => {
+      const content = (update.content || '').toLowerCase();
+      const statutes = ((update.statutes || []).join(' ')).toLowerCase();
+      const topics = ((update.topics || []).join(' ')).toLowerCase();
+      const combined = `${content} ${statutes} ${topics}`;
+      
+      // Check for real estate/property related keywords
+      const realEstateKeywords = ['property', 'real estate', 'fixtures', 'contract', 'conveyance', 'home', 'texas property code'];
+      const hasRelevantContent = realEstateKeywords.some(keyword => combined.includes(keyword));
+      
+      // Exclude animal protection or unrelated content
+      const irrelevantKeywords = ['animal', 'dog', 'bite', 'health and safety code § 822', 'dangerous animal'];
+      const hasIrrelevantContent = irrelevantKeywords.some(keyword => combined.includes(keyword));
+      
+      return hasRelevantContent && !hasIrrelevantContent;
+    });
+    
+    console.log(`Filtered research updates: ${researchUpdates?.length || 0} → ${relevantResearchUpdates.length} relevant updates`);
     
     // Add research updates context if available
-    if (allResearchUpdates.length > 0) {
+    if (relevantResearchUpdates.length > 0) {
       userContent += "\n\nIMPORTANT: The following research updates should be integrated into the appropriate sections of your analysis:\n\n";
-      allResearchUpdates.forEach((update, index) => {
+      relevantResearchUpdates.forEach((update, index) => {
         userContent += `RESEARCH UPDATE ${index + 1} (Target: ${update.section || 'relevant sections'}):\n`;
         userContent += `Statutes: ${update.statutes ? update.statutes.join(', ') : 'N/A'}\n`;
         userContent += `Topics: ${update.topics ? update.topics.join(', ') : 'N/A'}\n`;
@@ -412,7 +432,7 @@ serve(async (req) => {
       { role: "user", content: userContent }
     ];
 
-    console.log(`🚀 Sending request to Gemini with ${analysisSource} context and ${allResearchUpdates.length} total research updates (${existingResearchUpdates.length} preserved + ${researchUpdates?.length || 0} new)`);
+    console.log(`🚀 Sending request to Gemini with ${analysisSource} context and ${relevantResearchUpdates.length} relevant research updates`);
     console.log(`📊 Context size: ${userContent.length} characters, System prompt: ${systemPrompt.length} characters`);
 
     // Initialize analysis variable outside try block
