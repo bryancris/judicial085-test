@@ -19,7 +19,7 @@ You are an expert Texas attorney and legal analyst. Using Gemini's extensive con
 
 2. **PRELIMINARY ANALYSIS:** Analyze the key facts from the ${analysisSource} and their legal implications under Texas law.
 
-${hasConversation ? `CRITICAL: Facts have been provided via the conversation. Do not state that facts are missing or insufficient. Extract and use the facts from the conversation directly. Begin your response with a short "FACT SUMMARY" bullet list grounded only in the conversation before the analysis sections.` : ''}
+${hasConversation ? `CRITICAL: Facts have been provided via the conversation. Look for messages with "FACTS:" role or any substantive case details. Do not state that facts are missing or insufficient. Extract and use the facts from the conversation directly. Begin your response with a short "FACT SUMMARY" bullet list grounded only in the conversation before the analysis sections.` : ''}
 
 3. **POTENTIAL LEGAL ISSUES:** Identify potential legal challenges, considerations, or defenses that may arise.
 

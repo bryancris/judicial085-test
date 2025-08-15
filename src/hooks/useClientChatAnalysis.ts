@@ -24,8 +24,19 @@ export const useClientChatAnalysis = (
     const hasConversation = hasAttorneyMessages && hasClientMessages;
     const hasFactsInput = hasFactsMessages;
     
-    // If we don't allow document-only analysis and there's no full conversation or facts input, skip
-    if (!allowDocumentOnly && !hasConversation && !hasFactsInput) {
+    console.log("Analysis trigger check:", {
+      hasAttorneyMessages,
+      hasClientMessages, 
+      hasFactsMessages,
+      hasConversation,
+      hasFactsInput,
+      allowDocumentOnly,
+      messageCount: currentMessages.length
+    });
+    
+    // Allow analysis if we have facts input, full conversation, or document-only is allowed
+    if (!hasFactsInput && !hasConversation && !allowDocumentOnly) {
+      console.log("Skipping analysis - no facts, conversation, or document-only flag");
       return; // Don't generate analysis until we have conversation or facts
     }
     
