@@ -67,6 +67,15 @@ const fixBrokenNumbering = (text: string): string => {
   // Fix pattern: "§\n17" -> "§ 17" (broken statute references)
   fixed = fixed.replace(/§\n+(\d+)/g, '§ $1');
   
+  // Fix statute subsections: "§ 27.\n01." -> "§ 27.01."
+  fixed = fixed.replace(/(§\s*\d+)\.\s*\n+(\d+)\./g, '$1.$2.');
+  
+  // Fix statute subsections with initial break: "§\n27.\n01." -> "§ 27.01."
+  fixed = fixed.replace(/§\s*\n*(\d+)\.\s*\n*(\d+)\./g, '§ $1.$2.');
+  
+  // Fix three-part statute subsections: "§ 27.\n01.\n(a)" -> "§ 27.01.(a)"
+  fixed = fixed.replace(/(§\s*\d+)\.\s*\n*(\d+)\.\s*\n*(\d+)\./g, '$1.$2.$3.');
+  
   // Fix pattern: "Article\nII" -> "Article II" (broken article references)
   fixed = fixed.replace(/\b(Article|Section|Chapter)\n+([IVXLC]+|\d+)/g, '$1 $2');
   
