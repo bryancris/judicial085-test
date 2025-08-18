@@ -76,6 +76,31 @@ const fixBrokenNumbering = (text: string): string => {
   // Fix three-part statute subsections: "§ 27.\n01.\n(a)" -> "§ 27.01.(a)"
   fixed = fixed.replace(/(§\s*\d+)\.\s*\n*(\d+)\.\s*\n*(\d+)\./g, '$1.$2.$3.');
   
+  // Join lines when a lone decimal part like "01." is split onto its own line after a § reference
+  fixed = fixed.replace(/(§[^\n]{0,50})\n+\s*(\d{1,3})\.\s*\n/g, '$1 $2.\n');
+
+  // General join for decimals split by newlines: "27.\n01" -> "27.01"
+  // Run multiple times to catch cascaded splits
+  for (let i = 0; i < 3; i++) {
+    const before = fixed;
+    fixed = fixed.replace(/(\d+)\.\s*\n+(\d{2,})/g, '$1.$2');
+    fixed = fixed.replace(/(\d+\.\d+)\.\s*\n+\(([a-z0-9\-]+)\)/gi, '$1($2)');
+    fixed = fixed.replace(/(§\s*\d+(?:\.\d+)*)\s*\n+(\([a-z0-9\-]+\))/gi, '$1$2');
+    if (fixed === before) break;
+  }
+
+  // Normalize anything immediately following § that belongs to the statute number, collapsing internal newlines
+  fixed = fixed.replace(/§\s*((?:\d+(?:\.\d+)*)(?:\s*\([a-z0-9\-]+\))*)/gi, (_m, seq: string) => {
+    const normalized = String(seq)
+      .replace(/\s*\n+\s*/g, '') // remove any newlines inside the sequence
+      .replace(/\s*\.\s*/g, '.') // tighten around dots
+      .replace(/\)\s*\(/g, ')('); // tighten parentheses
+    return `§ ${normalized}`;
+  });
+
+  // Handle Section/Sec. references split across newlines: "Section 27.\n01" -> "Section 27.01"
+  fixed = fixed.replace(/\b(Sec\.|Section)\s*(\d+)\.\s*\n+(\d+)/gi, '$1 $2.$3');
+  
   // Fix pattern: "Article\nII" -> "Article II" (broken article references)
   fixed = fixed.replace(/\b(Article|Section|Chapter)\n+([IVXLC]+|\d+)/g, '$1 $2');
   
