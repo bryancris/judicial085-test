@@ -1,10 +1,4 @@
-/* Case Discussion Message Content Styling */
-.prose {
-  line-height: 1.7;
-  max-width: none;
-}
-
-/* Numbered lists in case discussion content */
+/* Case Discussion List Formatting - Only fix list positioning without affecting colors */
 .prose ol {
   list-style-type: decimal;
   list-style-position: inside;
@@ -19,48 +13,9 @@
   margin: 1rem 0;
 }
 
-.prose li {
-  margin: 0.5rem 0;
-  padding-left: 0.5rem;
-  line-height: 1.7;
-}
-
-/* Fix spacing for section numbers and text */
-.prose ol > li {
+.prose ol > li,
+.prose ul > li {
   text-indent: 0;
   padding-left: 0;
-  margin: 0.75rem 0;
-}
-
-/* Ensure proper formatting for legal section numbers like "1. §" */
-.prose p {
   margin: 0.5rem 0;
-  line-height: 1.7;
-}
-
-/* Strong elements in case discussion */
-.prose strong {
-  font-weight: 600;
-  color: hsl(var(--primary));
-}
-
-/* Headers in case discussion */
-.prose h1, .prose h2, .prose h3, .prose h4 {
-  color: hsl(var(--primary));
-  font-weight: 600;
-  margin: 1rem 0 0.5rem 0;
-}
-
-.prose h2 {
-  font-size: 1.25rem;
-  border-bottom: 1px solid hsl(var(--border));
-  padding-bottom: 0.25rem;
-}
-
-.prose h3 {
-  font-size: 1.125rem;
-}
-
-.prose h4 {
-  font-size: 1rem;
 }
