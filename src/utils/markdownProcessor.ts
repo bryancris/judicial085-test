@@ -18,6 +18,9 @@ export const processMarkdown = (text: string): string => {
     .replace(/\n{3,}/g, '\n\n')       // Collapse multiple newlines to double
     .replace(/^[\s\n]+|[\s\n]+$/g, ''); // Remove leading/trailing whitespace
 
+  // Fix broken numbering patterns before markdown processing
+  cleanedText = fixBrokenNumbering(cleanedText);
+
   // Ensure proper spacing around headers
   cleanedText = cleanedText
     .replace(/([^\n])(#{1,6}\s)/g, '$1\n\n$2')  // Add newlines before headers
@@ -50,6 +53,30 @@ export const processMarkdown = (text: string): string => {
       .replace(/^(.)/gm, '<p>$1')
       .replace(/(.*)$/gm, '$1</p>');
   }
+};
+
+/**
+ * Fix broken numbering patterns that prevent proper markdown list rendering
+ */
+const fixBrokenNumbering = (text: string): string => {
+  let fixed = text;
+  
+  // Fix pattern: "1.\nText" -> "1. Text" (broken numbered lists)
+  fixed = fixed.replace(/(\d+)\.\n+([^\n])/g, '$1. $2');
+  
+  // Fix pattern: "§\n17" -> "§ 17" (broken statute references)
+  fixed = fixed.replace(/§\n+(\d+)/g, '§ $1');
+  
+  // Fix pattern: "Article\nII" -> "Article II" (broken article references)
+  fixed = fixed.replace(/\b(Article|Section|Chapter)\n+([IVXLC]+|\d+)/g, '$1 $2');
+  
+  // Fix pattern: "DTPA\n§" -> "DTPA § " (broken law references)
+  fixed = fixed.replace(/\b(DTPA|TCPA|UCC|Code)\n+§/g, '$1 §');
+  
+  // Fix general pattern: "number.\nLetter" where Letter starts with capital -> "number. Letter"
+  fixed = fixed.replace(/(\d+)\.\n+([A-Z][a-z])/g, '$1. $2');
+  
+  return fixed;
 };
 
 // Completely rewritten function with better debugging and simpler patterns
