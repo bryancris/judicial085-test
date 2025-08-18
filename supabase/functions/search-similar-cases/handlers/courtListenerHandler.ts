@@ -2,6 +2,13 @@ import { corsHeaders } from "../utils/corsUtils.ts";
 import { addExplicitLegalTerms } from "../utils/searchTermGenerator.ts";
 import { detectCaseTypeFromText } from "../utils/caseTypeDetector.ts";
 
+// Texas courts for filtering to ensure only Texas precedents are returned
+const TEXAS_COURTS = [
+  "tex", "texcrimapp", "texapp1st", "texapp2nd", "texapp3rd", "texapp4th",
+  "texapp5th", "texapp6th", "texapp7th", "texapp8th", "texapp9th", "texapp10th",
+  "texapp11th", "texapp12th", "texapp13th", "texapp14th"
+];
+
 // Process Court Listener API results
 export async function processCourtListenerResults(
   searchTerms: string, 
@@ -23,11 +30,17 @@ export async function processCourtListenerResults(
     console.log(`Enhanced search terms: ${enhancedSearchTerms}`);
     
     // Build query for CourtListener API - use quoted phrases for better relevance
+    // Filter to only Texas courts to ensure jurisdictional relevance
     const queryParams = new URLSearchParams({
       q: enhancedSearchTerms,
       order_by: 'score desc',
       type: 'o', // 'o' for opinions
       format: 'json'
+    });
+    
+    // Add Texas court filters to ensure only Texas precedents
+    TEXAS_COURTS.forEach(courtId => {
+      queryParams.append('court', courtId);
     });
     
     const url = `https://www.courtlistener.com/api/rest/v4/search/?${queryParams.toString()}`;
