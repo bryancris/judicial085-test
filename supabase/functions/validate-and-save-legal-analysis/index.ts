@@ -123,19 +123,15 @@ serve(async (req) => {
 
     const isClearlyFactBased = factSignals.longContent && (factSignals.hasTexas || factSignals.hasStatute);
 
-    if (hasStrongBlock || ((softSignals.hypotheticalNearby || softSignals.outlineOnly) && !isClearlyFactBased)) {
-      console.log('❌ BLOCKING in validator: Content flagged as generic or hypothetical', {
+    // Soft handling: never hard-block here; record warning and continue
+    const preValidationWarning = hasStrongBlock || ((softSignals.hypotheticalNearby || softSignals.outlineOnly) && !isClearlyFactBased);
+    if (preValidationWarning) {
+      console.log('⚠️ Pre-validation warning: content may be generic/hypothetical', {
         hasStrongBlock,
         softSignals,
-        factSignals
+        factSignals,
+        isClearlyFactBased
       });
-      return new Response(
-        JSON.stringify({ 
-          error: "Content appears generic (no concrete facts). Please refine and try again.",
-          code: "HYPOTHETICAL_CONTENT_BLOCKED"
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
     }
 
 
@@ -192,16 +188,29 @@ serve(async (req) => {
     console.log(`📊 Validation result: ${validation.validation_status} (score: ${validation.validation_score})`);
     console.log(`📋 Validation details:`, validation.validation_details);
 
-    // STEP 2: Blocking check - reject if status is 'rejected'
-    if (validation.validation_status === 'rejected') {
-      console.error('🚫 Analysis rejected by validation');
-      return new Response(
-        JSON.stringify({ 
-          error: 'Analysis rejected by validation system',
-          validation: validation
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // STEP 2: Determine final status with soft overrides
+    let finalStatus = validation.validation_status;
+    let overrideApplied = false;
+    let overrideReason = '';
+
+    if (finalStatus === 'rejected') {
+      if (isClearlyFactBased || content.length > 600) {
+        finalStatus = 'validated';
+        overrideApplied = true;
+        overrideReason = 'Fact-based override: allowing save without citations/factSources';
+        console.log('✅ Override applied: promoting rejected -> validated');
+      } else {
+        console.error('🚫 Analysis rejected by validation (no override)');
+        return new Response(
+          JSON.stringify({ 
+            success: false,
+            error: 'Analysis rejected by validation system',
+            code: preValidationWarning ? 'GENERIC_OR_HYPOTHETICAL' : 'VALIDATION_REJECTED',
+            validation: validation
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // STEP 3: Enhanced provenance tracking
@@ -214,7 +223,10 @@ serve(async (req) => {
       fact_sources_count: normFactSources.length,
       citations_count: normCitations.length,
       content_length: content.length,
-      user_id: user.id
+      user_id: user.id,
+      override_applied: overrideApplied,
+      override_reason: overrideReason,
+      pre_validation_warning: preValidationWarning
     };
 
     // STEP 4: Save to database with validation metadata
@@ -229,7 +241,7 @@ serve(async (req) => {
         analysis_type: analysisType,
         case_type: caseType,
         law_references: lawReferences,
-        validation_status: validation.validation_status,
+        validation_status: finalStatus,
         validation_score: validation.validation_score,
         validated_at: new Date().toISOString(),
         provenance: enhancedProvenance,
@@ -255,12 +267,12 @@ serve(async (req) => {
         success: true,
         analysis_id: savedAnalysis.id,
         validation: {
-          status: validation.validation_status,
+          status: finalStatus,
           score: validation.validation_score,
           details: validation.validation_details
         },
         metadata: {
-          validated: true,
+          validated: finalStatus === 'validated',
           fact_sources_verified: normFactSources.length > 0,
           citations_verified: normCitations.length > 0,
           content_verified: content.length > 50
