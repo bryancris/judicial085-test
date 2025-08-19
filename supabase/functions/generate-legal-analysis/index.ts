@@ -77,17 +77,10 @@ serve(async (req) => {
     };
     console.log('🔐 Secret availability:', secretStatus);
     
-    // Extract user ID from the authorization header
+    // Extract user ID from the authorization header (optional)
     const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
-      console.error('No authorization header found');
-      return new Response(
-        JSON.stringify({ error: "Authentication required" }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
-    // Create Supabase client to get user info
+    // Create Supabase client (service role) for DB operations and optional auth parsing
     const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.38.0");
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -100,20 +93,29 @@ serve(async (req) => {
     }
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get user from JWT token
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    
-    if (userError || !user) {
-      console.error('Failed to get user from token:', userError);
-      return new Response(
-        JSON.stringify({ error: "Invalid authentication token" }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Get user from JWT token if provided, but don't hard-fail if missing/invalid
+    let userId: string | null = null;
+    if (authHeader) {
+      try {
+        const token = authHeader.replace('Bearer ', '');
+        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+        if (userError || !user) {
+          console.warn('Proceeding without authenticated user (invalid token).');
+        } else {
+          userId = user.id;
+        }
+      } catch (e) {
+        console.warn('Auth parsing failed, proceeding anonymously:', e);
+      }
+    } else {
+      console.warn('No authorization header found. Proceeding without user context.');
     }
 
-    const userId = user.id;
-    console.log(`Authenticated user ID: ${userId}`);
+    if (userId) {
+      console.log(`Authenticated user ID: ${userId}`);
+    } else {
+      console.log('Running analysis without authenticated user context.');
+    }
 
 // Remove domain locking - let analysis be fact-based
 console.log('📋 Analyzing facts without domain constraints');
