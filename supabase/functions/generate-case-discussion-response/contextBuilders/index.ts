@@ -12,7 +12,8 @@ export const buildCompleteContext = (
   clientError: any, 
   analysisData: any, 
   notesData: any, 
-  messagesData: any
+  messagesData: any,
+  existingAnalysisContext?: string
 ) => {
   // Client identification is the most critical context - place it at the very beginning
   let contextText = "IMPORTANT CONTEXT - READ CAREFULLY:";
@@ -48,7 +49,10 @@ export const buildCompleteContext = (
     contextText += "\nWARNING: No client data available. You are unable to provide specific case advice.";
   }
   
-  // 4. Legal analysis section
+  // 4. Legal analysis section - include existing analysis context if available
+  if (existingAnalysisContext) {
+    contextText += "\n\nEXISTING LEGAL ANALYSIS CONTEXT:\n" + existingAnalysisContext;
+  }
   contextText += buildLegalAnalysisSection(analysisData);
   
   // Attorney notes section

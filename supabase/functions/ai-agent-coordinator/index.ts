@@ -272,6 +272,38 @@ serve(async (req) => {
 
     console.log('🎯 AI Agent Coordinator received request:', { query, clientId, caseId, researchTypes, requestContext });
 
+    // 🎯 NEW: Retrieve existing analysis for context if this is a client-intake request
+    let existingAnalysisContext = '';
+    if (requestContext === 'client-intake' && clientId) {
+      try {
+        console.log('📋 Retrieving existing analysis for client:', clientId);
+        const { data: existingAnalysis, error: analysisError } = await supabaseClient
+          .from('legal_analyses')
+          .select('content, law_references, case_type')
+          .eq('client_id', clientId)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (!analysisError && existingAnalysis && existingAnalysis.length > 0) {
+          const analysis = existingAnalysis[0];
+          existingAnalysisContext = `
+EXISTING LEGAL ANALYSIS FOR THIS CLIENT:
+${analysis.content}
+
+PREVIOUSLY IDENTIFIED STATUTES: ${JSON.stringify(analysis.law_references || [])}
+CASE TYPE: ${analysis.case_type || 'Not specified'}
+
+IMPORTANT: Build upon this existing analysis. Do NOT recreate it. Add new findings while preserving all previously identified statute violations and legal issues.
+`;
+          console.log('✅ Retrieved existing analysis context, length:', existingAnalysisContext.length);
+        } else {
+          console.log('📋 No existing analysis found for client');
+        }
+      } catch (error) {
+        console.error('❌ Error retrieving existing analysis:', error);
+      }
+    }
+
     // Phase 1: Coordinate research agents in parallel
     console.log('🔍 Initiating parallel research with OpenAI and Perplexity agents...');
     
@@ -290,7 +322,8 @@ serve(async (req) => {
             clientId,
             caseId,
             conversation: [{ role: 'attorney', content: query }],
-            researchFocus: 'legal-analysis'
+            researchFocus: 'legal-analysis',
+            existingAnalysisContext: existingAnalysisContext
           })
         }).then(async (res) => {
           const data = await res.json();
@@ -415,12 +448,24 @@ Include all necessary legal disclaimers, protective clauses, and compliance elem
 
 ATTORNEY'S QUESTION: ${query}
 
+${existingAnalysisContext ? `${existingAnalysisContext}\n` : ''}
+
 RESEARCH SOURCES:
 ${researchResults.map((result, index) => `
 --- ${result.source.toUpperCase()} RESEARCH ---
 ${result.content}
 CITATIONS: ${result.citations?.join(', ') || 'None'}
 `).join('\n')}
+
+CRITICAL INSTRUCTIONS FOR EXISTING ANALYSIS:
+${existingAnalysisContext ? `
+- This client already has an existing legal analysis
+- DO NOT recreate the analysis from scratch
+- ADD to the existing analysis by incorporating new statute violations and legal issues
+- PRESERVE all previously identified violations and findings
+- Format new findings as additions to existing content
+- Clearly distinguish new findings while maintaining continuity
+` : ''}
 
 REQUIRED RESPONSE FORMAT (MARKDOWN ONLY):
 

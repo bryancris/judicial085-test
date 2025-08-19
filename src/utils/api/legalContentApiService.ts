@@ -24,6 +24,45 @@ import { supabase } from "@/integrations/supabase/client";
 import { AnalysisItem } from "@/hooks/useClientChatHistory";
 
 /**
+ * RETRIEVE EXISTING ANALYSIS FOR CONTEXT
+ * 
+ * Fetches the most recent legal analysis for a client to provide context
+ * for new inquiries, ensuring continuity and augmentation rather than replacement.
+ * 
+ * Parameters:
+ * @param clientId - Unique client identifier
+ * 
+ * Returns:
+ * @returns Promise<{ analysis: any | null; error?: string }> - Existing analysis or null
+ */
+export const getExistingAnalysisForContext = async (
+  clientId: string
+): Promise<{ analysis: any | null; error?: string }> => {
+  try {
+    const { data, error } = await supabase
+      .from("legal_analyses")
+      .select("content, law_references, case_type, created_at")
+      .eq("client_id", clientId)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error("Error fetching existing analysis:", error);
+      return { analysis: null, error: error.message };
+    }
+
+    if (data && data.length > 0) {
+      return { analysis: data[0] };
+    }
+
+    return { analysis: null };
+  } catch (err: any) {
+    console.error("Error fetching existing analysis:", err);
+    return { analysis: null, error: err.message };
+  }
+};
+
+/**
  * SAVE LEGAL ANALYSIS TO DATABASE
  * 
  * Persists AI-generated legal analysis to the legal_analyses table.

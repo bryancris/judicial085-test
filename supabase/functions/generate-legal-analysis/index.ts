@@ -61,7 +61,7 @@ serve(async (req) => {
       );
     }
 
-    const { clientId, conversation, caseId, researchUpdates, researchFocus, requestContext } = payload || {};
+    const { clientId, conversation, caseId, researchUpdates, researchFocus, requestContext, existingAnalysisContext } = payload || {};
 
     if (!clientId) {
       return new Response(
@@ -147,16 +147,17 @@ serve(async (req) => {
           
           // Save the 3-agent analysis to database
           const analysisToSave = coordinatorResponse.data.synthesizedContent;
-          const { error: saveError } = await supabase
-            .from('legal_analyses')
-            .insert({
-              client_id: clientId,
-              case_id: caseId || null,
-              content: analysisToSave,
-              analysis_type: '3-agent-coordination',
-              user_id: userId,
-              research_updates: researchUpdates || []
-            });
+      const { error: saveError } = await supabase
+        .from('legal_analyses')
+        .insert({
+          client_id: clientId,
+          case_id: caseId || null,
+          content: analysisToSave,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          analysis_type: '3-agent-coordination',
+          user_id: userId,
+          research_updates: researchUpdates || []
+        });
 
           if (saveError) {
             console.error('Error saving 3-agent analysis:', saveError);
@@ -355,6 +356,11 @@ serve(async (req) => {
     // Format the content for Gemini's 2M context window - include ALL available information
     let userContent = "";
     
+    // Add existing analysis context if available
+    if (existingAnalysisContext) {
+      userContent += existingAnalysisContext + "\n\n";
+    }
+    
     if (hasConversation) {
       // Prioritize FACTS messages and filter out unrelated content
       const relevantMessages = conversationMessages.filter(msg => {
@@ -536,7 +542,7 @@ serve(async (req) => {
 
     // Add note about source of analysis
     if (analysis) {
-      const sourceNote = `*Analysis generated from ${analysisSource}${clientDocuments.length > 0 ? ` (${clientDocuments.length} document${clientDocuments.length > 1 ? 's' : ''}: ${clientDocuments.map(doc => doc.title).join(', ')})` : ''}${allResearchUpdates.length > 0 ? ` with ${allResearchUpdates.length} research update(s) integrated` : ''}*\n\n`;
+      const sourceNote = `*Analysis generated from ${analysisSource}${clientDocuments.length > 0 ? ` (${clientDocuments.length} document${clientDocuments.length > 1 ? 's' : ''}: ${clientDocuments.map(doc => doc.title).join(', ')})` : ''}${relevantResearchUpdates.length > 0 ? ` with ${relevantResearchUpdates.length} research update(s) integrated` : ''}*\n\n`;
       analysis = sourceNote + analysis;
       console.log(`Legal analysis generated successfully from ${analysisSource} with research integration`);
     }
