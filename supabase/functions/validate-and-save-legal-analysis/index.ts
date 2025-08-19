@@ -93,28 +93,51 @@ serve(async (req) => {
     console.log(`🔍 Validating analysis for client ${clientId} by user ${user.id}`);
 
     // STEP 1: Run validation checks
-    // 🔥 PRE-VALIDATION HYPOTHETICAL DETECTOR: Additional safety check
-    const hypotheticalPatterns = [
-      'hypothetical', 'illustrative scenario', 'without specific facts',
-      'for example, a car accident', 'generic legal analysis', 'theoretical case',
-      'sample case', 'typical situation'
-    ];
-    
+    // Improved hypothetical/generic content detector (context-aware)
     const lowerContent = content.toLowerCase();
-    const foundHypotheticalPattern = hypotheticalPatterns.find(pattern => 
-      lowerContent.includes(pattern)
-    );
-    
-    if (foundHypotheticalPattern) {
-      console.log(`❌ BLOCKING in validator: Hypothetical content detected: "${foundHypotheticalPattern}"`);
+
+    // Strong block patterns (high confidence, full templates)
+    const strongBlockRegexes: RegExp[] = [
+      /\bno\s+facts\s+provided\b/,
+      /\bwithout\s+sufficient\s+facts\b/,
+      /\bthis\s+response\s+will\s+outline\s+the\s+framework\b/,
+      /\bi\s+cannot\s+provide\s+\w+\s+legal\s+advice\b/,
+      /\bas\s+an\s+ai(\s+language\s+model)?\b/,
+      /\bgeneric\s+legal\s+analysis\b/
+    ];
+
+    const hasStrongBlock = strongBlockRegexes.some(r => r.test(lowerContent));
+
+    // Soft signals that only block when not clearly fact-based
+    const softSignals = {
+      hypotheticalNearby: /\bhypothetical\s+(case|scenario|example|analysis)\b/.test(lowerContent),
+      outlineOnly: /\bthis\s+analysis\s+(will\s+)?outline\b/.test(lowerContent),
+    };
+
+    // Evidence of fact-based, jurisdiction-specific content
+    const factSignals = {
+      longContent: content.length > 800,
+      hasTexas: /\btexas\b|\btex\./i.test(content),
+      hasStatute: /\bcode\b|§/.test(content),
+    };
+
+    const isClearlyFactBased = factSignals.longContent && (factSignals.hasTexas || factSignals.hasStatute);
+
+    if (hasStrongBlock || ((softSignals.hypotheticalNearby || softSignals.outlineOnly) && !isClearlyFactBased)) {
+      console.log('❌ BLOCKING in validator: Content flagged as generic or hypothetical', {
+        hasStrongBlock,
+        softSignals,
+        factSignals
+      });
       return new Response(
         JSON.stringify({ 
-          error: "Content appears to be hypothetical or generic and cannot be saved.",
+          error: "Content appears generic (no concrete facts). Please refine and try again.",
           code: "HYPOTHETICAL_CONTENT_BLOCKED"
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
 
     const { data: validationResult, error: validationError } = await supabase
       .rpc('validate_legal_analysis', {
