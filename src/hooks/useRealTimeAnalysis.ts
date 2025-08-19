@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { generateLegalAnalysis } from "@/utils/api/analysisApiService";
@@ -68,17 +67,15 @@ export const useRealTimeAnalysis = (clientId?: string, caseId?: string) => {
       
       console.log("Generating fresh real-time analysis...");
 
-      // 🎯 NEW: Pass requestContext to indicate this is case analysis
+      // Pass requestContext to indicate this is case analysis
       const requestContext = caseId ? 'case-analysis' : 'client-analysis';
 
-      // Call the edge function to generate a new analysis
+      // Call the edge function to generate a new analysis - fix the function call
       const { analysis, lawReferences, error: analysisError } = await generateLegalAnalysis(
         clientId, 
         formattedMessages,
-        caseId, // Pass case ID for case-specific document analysis
-        undefined, // researchUpdates
-        undefined, // researchFocus  
-        requestContext // 🎯 NEW: Pass request context
+        caseId,
+        requestContext
       );
       
       if (analysisError) throw new Error(analysisError);
