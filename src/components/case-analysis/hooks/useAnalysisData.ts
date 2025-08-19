@@ -35,6 +35,7 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           .select("*")
           .eq("client_id", clientId)
           .eq("case_id", caseId)
+          .not("analysis_type", "in", "(3-agent-coordination,coordinator-research)")
           .order("created_at", { ascending: false });
 
         if (caseError) {
@@ -44,12 +45,25 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
         analyses = caseAnalyses;
         console.log(`Found ${analyses?.length || 0} case-specific analysis records`);
         
-        // 🎯 NEW: Prefer consumer-protection analyses if multiple exist
+        // 🎯 Filter and prioritize legitimate analyses
         if (analyses && analyses.length > 1) {
-          const consumerAnalyses = analyses.filter(a => a.case_type === 'consumer-protection');
-          if (consumerAnalyses.length > 0) {
-            console.log(`📋 Preferring consumer-protection analysis over other types`);
-            analyses = [consumerAnalyses[0]]; // Use most recent consumer analysis
+          // First, prefer case-analysis and client-intake types
+          const legitimateAnalyses = analyses.filter(a => 
+            a.analysis_type === 'case-analysis' || 
+            a.analysis_type === 'client-intake' ||
+            a.analysis_type === 'direct-analysis'
+          );
+          
+          if (legitimateAnalyses.length > 0) {
+            console.log(`📋 Using legitimate analysis types, found ${legitimateAnalyses.length} options`);
+            analyses = legitimateAnalyses;
+            
+            // Then prefer consumer-protection within legitimate analyses
+            const consumerAnalyses = legitimateAnalyses.filter(a => a.case_type === 'consumer-protection');
+            if (consumerAnalyses.length > 0) {
+              console.log(`📋 Preferring consumer-protection analysis over other types`);
+              analyses = [consumerAnalyses[0]];
+            }
           }
         }
       } else {
@@ -60,6 +74,7 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           .select("*")
           .eq("client_id", clientId)
           .is("case_id", null)
+          .not("analysis_type", "in", "(3-agent-coordination,coordinator-research)")
           .order("created_at", { ascending: false });
 
         if (clientError) {
@@ -69,12 +84,25 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
         analyses = clientAnalyses;
         console.log(`Found ${analyses?.length || 0} client-level analysis records`);
         
-        // 🎯 NEW: Prefer consumer-protection analyses for client-level too
+        // 🎯 Filter and prioritize legitimate analyses for client-level too
         if (analyses && analyses.length > 1) {
-          const consumerAnalyses = analyses.filter(a => a.case_type === 'consumer-protection');
-          if (consumerAnalyses.length > 0) {
-            console.log(`📋 Preferring consumer-protection analysis over other types`);
-            analyses = [consumerAnalyses[0]]; // Use most recent consumer analysis
+          // First, prefer case-analysis and client-intake types
+          const legitimateAnalyses = analyses.filter(a => 
+            a.analysis_type === 'case-analysis' || 
+            a.analysis_type === 'client-intake' ||
+            a.analysis_type === 'direct-analysis'
+          );
+          
+          if (legitimateAnalyses.length > 0) {
+            console.log(`📋 Using legitimate analysis types, found ${legitimateAnalyses.length} options`);
+            analyses = legitimateAnalyses;
+            
+            // Then prefer consumer-protection within legitimate analyses
+            const consumerAnalyses = legitimateAnalyses.filter(a => a.case_type === 'consumer-protection');
+            if (consumerAnalyses.length > 0) {
+              console.log(`📋 Preferring consumer-protection analysis over other types`);
+              analyses = [consumerAnalyses[0]];
+            }
           }
         }
       }
