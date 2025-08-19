@@ -1,7 +1,8 @@
 
 import { useState, useEffect } from "react";
 import { CaseAnalysisData } from "@/types/caseAnalysis";
-import { useAnalysisData, AnalysisData } from "@/hooks/useAnalysisData";
+import { useAnalysisData } from "@/components/case-analysis/hooks/useAnalysisData";
+import { AnalysisData } from "@/hooks/useAnalysisData";
 import { useAnalysisGeneration } from "@/hooks/useAnalysisGeneration";
 import { searchSimilarCases } from "@/utils/openaiService";
 import { useToast } from "@/hooks/use-toast";
@@ -15,8 +16,8 @@ export const useCaseAnalysis = (clientId?: string, caseId?: string) => {
   // Use our hooks with case ID support
   const { 
     analysisData, 
-    isLoading, 
-    error, 
+    isAnalysisLoading, 
+    analysisError, 
     fetchAnalysisData 
   } = useAnalysisData(clientId, caseId);
   
@@ -85,12 +86,12 @@ export const useCaseAnalysis = (clientId?: string, caseId?: string) => {
   };
 
   // Combine loading states
-  const combinedIsLoading = isLoading || isGeneratingAnalysis;
+  const combinedIsLoading = isAnalysisLoading || isGeneratingAnalysis;
 
   console.log("useCaseAnalysis state:", {
     hasAnalysisData: !!analysisData,
     isLoading: combinedIsLoading,
-    error,
+    error: analysisError,
     clientId,
     caseId
   });
@@ -99,7 +100,7 @@ export const useCaseAnalysis = (clientId?: string, caseId?: string) => {
   return {
     analysisData,
     isLoading: combinedIsLoading,
-    error,
+    error: analysisError,
     generateNewAnalysis
   };
 };

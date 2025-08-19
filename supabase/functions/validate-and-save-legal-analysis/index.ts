@@ -93,6 +93,29 @@ serve(async (req) => {
     console.log(`🔍 Validating analysis for client ${clientId} by user ${user.id}`);
 
     // STEP 1: Run validation checks
+    // 🔥 PRE-VALIDATION HYPOTHETICAL DETECTOR: Additional safety check
+    const hypotheticalPatterns = [
+      'hypothetical', 'illustrative scenario', 'without specific facts',
+      'for example, a car accident', 'generic legal analysis', 'theoretical case',
+      'sample case', 'typical situation'
+    ];
+    
+    const lowerContent = content.toLowerCase();
+    const foundHypotheticalPattern = hypotheticalPatterns.find(pattern => 
+      lowerContent.includes(pattern)
+    );
+    
+    if (foundHypotheticalPattern) {
+      console.log(`❌ BLOCKING in validator: Hypothetical content detected: "${foundHypotheticalPattern}"`);
+      return new Response(
+        JSON.stringify({ 
+          error: "Content appears to be hypothetical or generic and cannot be saved.",
+          code: "HYPOTHETICAL_CONTENT_BLOCKED"
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { data: validationResult, error: validationError } = await supabase
       .rpc('validate_legal_analysis', {
         analysis_content: content,

@@ -36,6 +36,27 @@ export const useAnalysisGeneration = (clientId?: string, caseId?: string) => {
       
       if (result.error) {
         console.error("Analysis generation failed:", result.error);
+        
+        // Handle insufficient facts specifically
+        if (result.error.includes("Insufficient facts") || result.error.includes("INSUFFICIENT_FACTS")) {
+          toast({
+            title: "Cannot Generate Analysis",
+            description: "Please add more case details or upload documents before generating analysis.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        // Handle hypothetical content detection
+        if (result.error.includes("hypothetical") || result.error.includes("HYPOTHETICAL_CONTENT")) {
+          toast({
+            title: "Analysis Blocked",
+            description: "Generated content appears too generic. Please provide more specific case facts.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
         toast({
           title: "Analysis Generation Failed",
           description: result.error,

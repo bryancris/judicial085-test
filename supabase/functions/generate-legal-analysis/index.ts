@@ -151,6 +151,16 @@ if (!hasConversation) {
 }
 console.log(`Final conversation status: ${hasConversation}, length: ${conversationMessages?.length || 0}`);
 
+// 🔥 FACT SUFFICIENCY GATE: Block generation if insufficient facts
+const conversationText = conversationMessages.map(m => m.content || '').join(' ');
+const hasSubstantialFacts = hasConversation && conversationText.length > 100;
+console.log("Fact sufficiency check:", {
+  hasConversation,
+  conversationLength: conversationText.length,
+  hasSubstantialFacts,
+  documentCount: 0 // Will be set later after document fetch
+});
+
 // 🎯 NEW: Orchestrate 3-agent pipeline first, with fallback to direct analysis
 const isInternalLegalResearch = researchFocus === 'legal-analysis';
 if (!isInternalLegalResearch && userId) {
@@ -244,10 +254,26 @@ console.log('📋 Fact-based analysis mode enabled');
       console.error("Error fetching client documents:", documentError);
     }
 
-    // If no conversation and no documents, return error
-    if (!hasConversation && clientDocuments.length === 0) {
+    // Enhanced fact sufficiency gate with documents
+    const hasDocuments = clientDocuments && clientDocuments.length > 0;
+    const conversationText = conversationMessages.map(m => m.content || '').join(' ');
+    const hasSubstantialFacts = hasConversation && conversationText.length > 100;
+    
+    console.log("Enhanced fact sufficiency check:", {
+      hasConversation,
+      conversationLength: conversationText.length,
+      hasSubstantialFacts,
+      hasDocuments,
+      documentCount: clientDocuments.length
+    });
+    
+    if (!hasSubstantialFacts && !hasDocuments) {
+      console.log("❌ BLOCKING: Insufficient facts for analysis");
       return new Response(
-        JSON.stringify({ error: "No conversation or documents available for analysis. Please either start a client conversation or upload documents marked for analysis." }),
+        JSON.stringify({ 
+          error: "Insufficient facts for legal analysis. Please provide more details about the case or upload relevant documents.",
+          code: "INSUFFICIENT_FACTS"
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -286,7 +312,7 @@ console.log('📋 Fact-based analysis mode enabled');
     // Search comprehensive Texas law database using vector search
     try {
       const factPattern = legalContext.facts || conversation.map(m => m.message).join(" ");
-      relevantLawReferences = await searchRelevantLaw(factPattern, extractedTopics);
+      relevantLawReferences = await searchRelevantLaw(factPattern, legalContext?.topics || []);
       console.log(`📚 Found ${relevantLawReferences.length} relevant Texas law references from comprehensive database`);
       console.log("Law references found:", relevantLawReferences.map(ref => ref.title));
     } catch (error) {
@@ -494,51 +520,35 @@ console.log('📋 Fact-based analysis mode enabled');
       console.log(`Legal analysis generated successfully from ${analysisSource}`);
     }
 
-    // Save the analysis to the database with proper user association and domain hint
-    try {
-      // Get the current timestamp
-      const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-      // Save the analysis with the correct user ID from authentication
-      const analysisData = {
-        client_id: clientId,
-        case_id: caseId || null, // Important: Use the provided case ID or null for client-level
-        analysis_type: requestContext === 'client-intake' ? 'client-intake' : (caseId ? 'case-analysis' : 'direct-analysis'),
-        content: analysis,
-        case_type: detectedCaseType,
-        law_references: knowledgeBaseLawReferences,
-        timestamp: timestamp,
-        user_id: userId // Use the authenticated user's ID instead of clientId
-      };
-
-      console.log("Saving analysis to database with data:", {
-        client_id: analysisData.client_id,
-        case_id: analysisData.case_id,
-        case_type: analysisData.case_type,
-        has_content: !!analysisData.content,
-        content_length: analysisData.content.length,
-        user_id: analysisData.user_id
-      });
-
-      if (userId) {
-        const { data: savedAnalysis, error: saveError } = await supabase
-          .from('legal_analyses')
-          .insert([analysisData])
-          .select()
-          .single();
-
-        if (saveError) {
-          console.error('Error saving analysis to database:', saveError);
-        } else {
-          console.log('Analysis saved successfully to database with ID:', savedAnalysis.id);
-        }
-      } else {
-        console.warn('Skipping save of analysis because no authenticated user.');
+    // 🔥 POST-GENERATION HYPOTHETICAL DETECTOR: Block generic content
+    if (analysis) {
+      const hypotheticalPatterns = [
+        'hypothetical', 'illustrative scenario', 'without specific facts',
+        'for example, a car accident', 'generic legal analysis', 'theoretical case',
+        'sample case', 'typical situation'
+      ];
+      
+      const lowerAnalysis = analysis.toLowerCase();
+      const foundHypotheticalPattern = hypotheticalPatterns.find(pattern => 
+        lowerAnalysis.includes(pattern)
+      );
+      
+      if (foundHypotheticalPattern) {
+        console.log(`❌ BLOCKING: Hypothetical content detected: "${foundHypotheticalPattern}"`);
+        return new Response(
+          JSON.stringify({ 
+            error: "Generated analysis appears to be hypothetical or generic. Please provide more specific case facts.",
+            code: "HYPOTHETICAL_CONTENT"
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
-    } catch (dbError) {
-      console.error('Database operation failed:', dbError);
-      // Don't fail the entire request, just log the error
     }
+
+    // 🚫 REMOVE ALL DIRECT DATABASE WRITES - Let client route through validation service
+    console.log("✅ Analysis generated successfully - returning to client for validation");
+    console.log("Generated analysis length:", analysis?.length || 0);
+    console.log("Source:", analysisSource, "Case type:", detectedCaseType);
 
     // Return enhanced knowledge base law references with direct PDF URLs
     return new Response(
