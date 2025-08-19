@@ -96,8 +96,8 @@ serve(async (req) => {
     const { data: validationResult, error: validationError } = await supabase
       .rpc('validate_legal_analysis', {
         analysis_content: content,
-        fact_sources: JSON.stringify(factSources),
-        citations: JSON.stringify(citations)
+        fact_sources: factSources,
+        citations: citations
       }) as { data: ValidationResult[] | null; error: any };
 
     if (validationError) {
