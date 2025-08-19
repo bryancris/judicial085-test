@@ -151,7 +151,7 @@ serve(async (req) => {
         metadata: {
           queryAnalysis,
           researchAgentsUsed: researchResults.map(r => r.source),
-          domainLocked: !!domainHint
+          factBasedAnalysis: true
         }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -307,22 +307,10 @@ SYNTHESIS INSTRUCTIONS:
 5. Include specific citations where available
 6. Ensure consistency and remove contradictions`;
 
-  // Add domain-specific synthesis instructions
-  if (domainHint) {
-    synthesisPrompt += `
+  // Add fact-based synthesis instructions
+  synthesisPrompt += `
 
-CRITICAL DOMAIN FOCUS: This analysis must remain within ${domainHint} law. Synthesize only content relevant to this legal domain and exclude unrelated areas of law.`;
-    
-    if (domainHint === 'consumer-protection') {
-      synthesisPrompt += `
-Focus exclusively on:
-- Texas Deceptive Trade Practices-Consumer Protection Act (DTPA)
-- Fair Debt Collection Practices Act (FDCPA) 
-- Texas Debt Collection Act (TDCA)
-- Consumer protection remedies and violations
-DO NOT include property law, premises liability, or real estate content.`;
-    }
-  }
+FACT-BASED SYNTHESIS: Analyze the research findings and synthesize them based on the actual facts and legal issues presented. Do not force the analysis into a predetermined legal category - let the facts and research guide the synthesis.`;
 
   synthesisPrompt += `
 
@@ -376,7 +364,7 @@ Provide a comprehensive synthesis that addresses the original query with authori
     
     console.log('✅ Gemini synthesis completed:', { 
       contentLength: content.length,
-      domainLocked: !!domainHint 
+      factBasedAnalysis: true 
     });
     
     return { content };
@@ -492,7 +480,7 @@ async function storeCoordinatedResearch(data: any, supabase: any, authHeader?: s
         researchSources: data.researchResults?.map((r: any) => r.source) || [],
         verifiedCases: data.verifiedCases || [],
         requestContext: data.requestContext,
-        domainHint: data.domainHint
+        factBasedAnalysis: true
       }
     };
 

@@ -6,29 +6,13 @@ export const buildSystemPrompt = (
   hasConversation: boolean,
   clientDocuments: any[],
   detectedCaseType: string,
-  researchUpdates?: any[],
-  domainHint?: string
+  researchUpdates?: any[]
 ) => {
-  const effectiveCaseType = domainHint || detectedCaseType;
-  console.log(`Building system prompt with effective case type: ${effectiveCaseType}`);
+  console.log(`Building system prompt for fact-based analysis of ${detectedCaseType} case`);
   
-  let systemPrompt = `You are an expert Texas attorney providing detailed legal analysis. You will analyze the provided ${analysisSource} and generate a comprehensive legal assessment.`;
+  let systemPrompt = `You are an expert Texas attorney providing detailed legal analysis. You will analyze the provided ${analysisSource} and generate a comprehensive legal assessment based on the facts presented.
 
-  // Add domain-specific instructions based on case type
-  if (effectiveCaseType === "consumer-protection") {
-    systemPrompt += `\n\nCRITICAL DOMAIN FOCUS: This is a consumer protection case under Texas and federal law. You MUST focus exclusively on:
-- Texas Deceptive Trade Practices-Consumer Protection Act (DTPA) - Texas Business & Commerce Code § 17.41 et seq.
-- Texas Debt Collection Act (TDCA) - Texas Finance Code Chapter 392
-- Fair Debt Collection Practices Act (FDCPA) - 15 U.S.C. § 1692 et seq.
-- Fair Credit Reporting Act (FCRA) - 15 U.S.C. § 1681 et seq.
-- Consumer Financial Protection Bureau (CFPB) regulations
-
-DO NOT include content about real estate law, property law, premises liability, trespass to try title, adverse possession, easements, or Texas Property Code unless explicitly and directly relevant to consumer protection violations.`;
-  } else if (effectiveCaseType === "animal-protection") {
-    systemPrompt += `\n\nCASE TYPE FOCUS: This involves animal protection and safety issues under Texas Health & Safety Code Chapter 822 and related statutes.`;
-  } else if (effectiveCaseType === "personal-injury") {
-    systemPrompt += `\n\nCASE TYPE FOCUS: This is a personal injury matter involving Texas tort law, negligence principles, and damage calculations.`;
-  }
+IMPORTANT: Analyze the facts first, then determine the appropriate legal theories and applicable law. Do not force the analysis into a predetermined category - let the facts guide your legal analysis.`;
 
   // Add law references if available
   if (relevantLawReferences && relevantLawReferences.length > 0) {
@@ -57,11 +41,9 @@ Concise overview of the legal matter and key facts.
 **RELEVANT TEXAS LAW:**
 Applicable statutes, regulations, and case law with specific citations.`;
 
-  // Case-type specific requirements
-  if (effectiveCaseType === "consumer-protection") {
-    systemPrompt += `
-Focus on DTPA violations, FDCPA violations, debt collection practices, and consumer remedies.`;
-  }
+  // Add fact-based guidance
+  systemPrompt += `
+Focus on the specific legal issues that arise from the facts presented, whether they involve contract law, tort law, consumer protection, property law, or other areas of Texas and federal law.`;
 
   systemPrompt += `
 
@@ -92,10 +74,8 @@ Recommended actions and strategy.`;
 - Avoid speculation beyond reasonable legal inferences
 - Provide actionable recommendations`;
 
-  // Add domain constraint reminder if domain locked
-  if (domainHint) {
-    systemPrompt += `\n\nDOMAIN CONSTRAINT REMINDER: This analysis is domain-locked to ${domainHint}. Ensure all content relates specifically to this area of law and avoid drift into unrelated legal domains.`;
-  }
+  // Add fact-based analysis reminder
+  systemPrompt += `\n\nFACT-BASED ANALYSIS: Base your analysis on the specific facts presented. If the facts suggest multiple areas of law are relevant, address each as appropriate. Ensure all legal theories and recommendations are supported by the actual facts of the case.`;
 
   return systemPrompt;
 };

@@ -86,14 +86,13 @@ export const useClientChat = (clientId: string) => {
     setInterviewMode                // Mode switching function
   } = useClientChatMessages(clientId, messages, setMessages, generateAnalysis);
 
-  // Auto-trigger analysis on initial load when we have facts and no meaningful analysis
+  // Auto-trigger analysis on initial load when we have facts and no analysis
   const [autoTriggered, setAutoTriggered] = useState(false);
   useEffect(() => {
     if (isLoadingHistory || autoTriggered) return;
     const hasFacts = messages.some(m => m.role === "facts" && m.content?.trim());
-    const latest = legalAnalysis[0]?.content || "";
-    const needsAnalysis = legalAnalysis.length === 0 || /general law|no specific texas statutes|no specific legal issue/i.test(latest);
-    if (hasFacts && needsAnalysis) {
+    const hasAnalysis = legalAnalysis.length > 0;
+    if (hasFacts && !hasAnalysis) {
       setAutoTriggered(true);
       generateAnalysis(messages);
     }

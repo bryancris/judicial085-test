@@ -115,32 +115,8 @@ serve(async (req) => {
     const userId = user.id;
     console.log(`Authenticated user ID: ${userId}`);
 
-    // 🎯 NEW: Fetch case metadata if caseId is provided for domain locking
-    let domainHint = null;
-    let caseMetadata = null;
-    if (caseId) {
-      try {
-        const { data: caseData, error: caseError } = await supabase
-          .from("cases")
-          .select("case_type, case_title, case_description")
-          .eq("id", caseId)
-          .single();
-        
-        if (caseError) {
-          console.warn(`Could not fetch case metadata for ${caseId}:`, caseError);
-        } else if (caseData) {
-          caseMetadata = caseData;
-          domainHint = caseData.case_type;
-          console.log(`🔒 Domain lock engaged for case ${caseId}: ${domainHint}`);
-          console.log(`📋 Case metadata:`, { 
-            case_type: caseData.case_type, 
-            title: caseData.case_title?.substring(0, 50) 
-          });
-        }
-      } catch (error) {
-        console.warn(`Error fetching case metadata:`, error);
-      }
-    }
+    // Remove domain locking - let analysis be fact-based
+    console.log('📋 Analyzing facts without domain constraints');
 
     // 🎯 NEW: Orchestrate 3-agent pipeline first, with fallback to direct analysis
     const isInternalLegalResearch = researchFocus === 'legal-analysis';
@@ -153,10 +129,7 @@ serve(async (req) => {
           ? conversation.slice(-5).map((msg: any) => `${msg.role}: ${msg.content}`).join('\n')
           : 'Analyze client legal situation and provide comprehensive analysis';
 
-        // Add domain reminder if we have case metadata
-        if (domainHint) {
-          researchQuery += `\n\nIMPORTANT: This is a ${domainHint} case. Focus research and analysis within this domain.`;
-        }
+        // Let research be fact-based without domain constraints
 
         console.log('📋 Calling ai-agent-coordinator with query length:', researchQuery.length);
 
@@ -168,7 +141,7 @@ serve(async (req) => {
             caseId,
             researchTypes: ['legal-research', 'current-research', 'similar-cases'],
             requestContext,
-            domainHint // Pass domain hint to coordinator
+            undefined // No domain hint - let analysis be fact-based
           },
           headers: {
             Authorization: authHeader
@@ -188,7 +161,7 @@ serve(async (req) => {
               content: analysisToSave,
               timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               analysis_type: '3-agent-coordination',
-              case_type: domainHint || 'general',
+              case_type: 'fact-based-analysis',
               user_id: userId,
               research_updates: researchUpdates || []
             });
@@ -206,7 +179,7 @@ serve(async (req) => {
                 provider: '3-agent-coordinator',
                 sources: coordinatorResponse.data.researchSources?.length || 0,
                 citations: coordinatorResponse.data.citations?.length || 0,
-                domainLocked: !!domainHint
+                factBasedAnalysis: true
               }
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -243,9 +216,7 @@ serve(async (req) => {
     console.log(`Conversation length: ${conversation?.length || 0}`);
     console.log("📝 Fact pattern preview:", factPatternPreview);
     console.log(`Research updates to integrate: ${researchUpdates?.length || 0}`);
-    if (domainHint) {
-      console.log(`🔒 Domain locked to: ${domainHint}`);
-    }
+    console.log('📋 Fact-based analysis mode enabled');
 
     // Skip fetching old research updates to prevent contamination from previous cases
     let existingResearchUpdates = [];
@@ -360,13 +331,9 @@ serve(async (req) => {
     console.log("Extracted legal topics:", legalContext);
     console.log("Analysis source:", analysisSource);
     
-    // 🎯 NEW: Override detected case type with domain hint if available
+    // Let case type be detected from facts, not forced
     let detectedCaseType = detectCaseType(legalContext);
-    if (domainHint) {
-      console.log(`🔄 Overriding detected case type '${detectedCaseType}' with domain hint '${domainHint}'`);
-      detectedCaseType = domainHint;
-    }
-    console.log(`Final case type: ${detectedCaseType}`);
+    console.log(`Detected case type from facts: ${detectedCaseType}`);
     
     // Create a search query from the extracted topics
     const searchQuery = [
@@ -393,15 +360,14 @@ serve(async (req) => {
     const isConsumerCase = detectedCaseType === "consumer-protection";
     console.log(`Case identified as consumer protection case: ${isConsumerCase}`);
     
-    // Create system prompt with research updates integration and domain hint
+    // Create system prompt without domain constraints
     const systemPrompt = buildSystemPrompt(
       analysisSource,
       relevantLawReferences,
       hasConversation,
       clientDocuments,
       detectedCaseType,
-      researchUpdates,
-      domainHint // Pass domain hint to system prompt
+      researchUpdates
     );
 
     // Format the content for Gemini's 2M context window - include ALL available information
@@ -413,7 +379,7 @@ serve(async (req) => {
     }
     
     if (hasConversation) {
-      // 🎯 NEW: When domain locked to consumer-protection, filter out clearly unrelated content
+      // Use all conversation messages without domain filtering
       let filteredMessages = conversationMessages;
       if (domainHint === 'consumer-protection') {
         const irrelevantKeywords = ['dog', 'bite', 'animal', 'pet', 'german shepherd', 'mail carrier', 'premises liability', 'property code', 'trespass to try title'];

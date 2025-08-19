@@ -1145,6 +1145,7 @@ export type Database = {
       perplexity_research: {
         Row: {
           case_discussion_id: string | null
+          case_id: string | null
           citations: string[] | null
           client_id: string
           content: string
@@ -1160,6 +1161,7 @@ export type Database = {
         }
         Insert: {
           case_discussion_id?: string | null
+          case_id?: string | null
           citations?: string[] | null
           client_id: string
           content: string
@@ -1175,6 +1177,7 @@ export type Database = {
         }
         Update: {
           case_discussion_id?: string | null
+          case_id?: string | null
           citations?: string[] | null
           client_id?: string
           content?: string
@@ -1194,6 +1197,13 @@ export type Database = {
             columns: ["case_discussion_id"]
             isOneToOne: false
             referencedRelation: "case_discussions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "perplexity_research_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
             referencedColumns: ["id"]
           },
         ]
