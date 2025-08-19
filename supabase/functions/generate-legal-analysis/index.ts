@@ -411,21 +411,7 @@ console.log("📝 Fact pattern preview:", factPatternPreview);
     
     if (hasConversation) {
       // Use all conversation messages without domain filtering
-      let filteredMessages = conversationMessages;
-      if (domainHint === 'consumer-protection') {
-        const irrelevantKeywords = ['dog', 'bite', 'animal', 'pet', 'german shepherd', 'mail carrier', 'premises liability', 'property code', 'trespass to try title'];
-        filteredMessages = conversationMessages.filter(msg => {
-          const content = (msg.content || '').toLowerCase();
-          const hasIrrelevant = irrelevantKeywords.some(k => content.includes(k));
-          if (hasIrrelevant) {
-            console.log(`🚫 Filtering out message with irrelevant content for consumer case: ${content.substring(0, 50)}...`);
-          }
-          return !hasIrrelevant;
-        });
-        console.log(`🔍 Consumer domain filter: ${conversationMessages.length} → ${filteredMessages.length} messages`);
-      }
-      
-      const formattedConversation = filteredMessages.map(msg => ({
+      const formattedConversation = conversationMessages.map(msg => ({
         role: "user", 
         content: `${msg.role.toUpperCase()}: ${msg.content}`
       }));
@@ -444,28 +430,10 @@ console.log("📝 Fact pattern preview:", factPatternPreview);
       ).join('\n\n')}`;
     }
 
-    // Filter research updates to only include relevant ones for this case
-    const relevantResearchUpdates = (researchUpdates || []).filter(update => {
-      const content = (update.content || '').toLowerCase();
-      const statutes = ((update.statutes || []).join(' ')).toLowerCase();
-      const topics = ((update.topics || []).join(' ')).toLowerCase();
-      const combined = `${content} ${statutes} ${topics}`;
-      
-      // 🎯 NEW: Stronger filtering when domain locked to consumer-protection
-      if (domainHint === 'consumer-protection') {
-        const irrelevantKeywords = ['animal', 'dog', 'bite', 'health and safety code § 822', 'dangerous animal', 'premises liability', 'property code', 'trespass to try title', 'adverse possession', 'encroachment'];
-        const hasIrrelevant = irrelevantKeywords.some(keyword => combined.includes(keyword));
-        if (hasIrrelevant) {
-          console.log(`🚫 Filtering out research update with irrelevant content for consumer case`);
-        }
-        return !hasIrrelevant;
-      }
-      
-      // Original filtering for other cases
-      const irrelevantKeywords = ['animal', 'dog', 'bite', 'health and safety code § 822', 'dangerous animal'];
-      const hasIrrelevantContent = irrelevantKeywords.some(keyword => combined.includes(keyword));
-      return !hasIrrelevantContent;
-    });
+    // Use all provided research updates (no domain-based filtering)
+    const relevantResearchUpdates = (researchUpdates || []);
+    
+    console.log(`Filtered research updates: ${researchUpdates?.length || 0} → ${relevantResearchUpdates.length} relevant updates`);
     
     console.log(`Filtered research updates: ${researchUpdates?.length || 0} → ${relevantResearchUpdates.length} relevant updates`);
     
@@ -619,10 +587,9 @@ console.log("📝 Fact pattern preview:", factPatternPreview);
 
     // Add note about source of analysis
     if (analysis) {
-      const domainNote = domainHint ? ` (domain-locked to ${domainHint})` : '';
-      const sourceNote = `*Analysis generated from ${analysisSource}${domainNote}${clientDocuments.length > 0 ? ` (${clientDocuments.length} document${clientDocuments.length > 1 ? 's' : ''}: ${clientDocuments.map(doc => doc.title).join(', ')})` : ''}${relevantResearchUpdates.length > 0 ? ` with ${relevantResearchUpdates.length} research update(s) integrated` : ''}*\n\n`;
+      const sourceNote = `*Analysis generated from ${analysisSource}${clientDocuments.length > 0 ? ` (${clientDocuments.length} document${clientDocuments.length > 1 ? 's' : ''}: ${clientDocuments.map(doc => doc.title).join(', ')})` : ''}${relevantResearchUpdates.length > 0 ? ` with ${relevantResearchUpdates.length} research update(s) integrated` : ''}*\n\n`;
       analysis = sourceNote + analysis;
-      console.log(`Legal analysis generated successfully from ${analysisSource} with domain lock: ${domainHint}`);
+      console.log(`Legal analysis generated successfully from ${analysisSource}`);
     }
 
     // Save the analysis to the database with proper user association and domain hint
@@ -635,7 +602,7 @@ console.log("📝 Fact pattern preview:", factPatternPreview);
         client_id: clientId,
         case_id: caseId || null, // Important: Use the provided case ID or null for client-level
         content: analysis,
-        case_type: domainHint || detectedCaseType, // Prefer domain hint over detection
+        case_type: detectedCaseType,
         law_references: knowledgeBaseLawReferences,
         timestamp: timestamp,
         user_id: userId // Use the authenticated user's ID instead of clientId
@@ -647,8 +614,7 @@ console.log("📝 Fact pattern preview:", factPatternPreview);
         case_type: analysisData.case_type,
         has_content: !!analysisData.content,
         content_length: analysisData.content.length,
-        user_id: analysisData.user_id,
-        domain_locked: !!domainHint
+        user_id: analysisData.user_id
       });
 
       const { data: savedAnalysis, error: saveError } = await supabase
@@ -678,11 +644,9 @@ console.log("📝 Fact pattern preview:", factPatternPreview);
           title: doc.title,
           isPdfDocument: doc.isPdfDocument
         })),
-        caseType: domainHint || detectedCaseType, // Prefer domain hint over detection
+        caseType: detectedCaseType,
         analysisSource,
         metadata: {
-          domainLocked: !!domainHint,
-          domainHint: domainHint,
           provider: 'gemini-direct'
         }
       }),

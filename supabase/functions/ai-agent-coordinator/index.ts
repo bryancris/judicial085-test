@@ -12,15 +12,14 @@ serve(async (req) => {
   }
 
   try {
-    const { query, clientId, caseId, researchTypes, requestContext, domainHint } = await req.json();
+    const { query, clientId, caseId, researchTypes, requestContext } = await req.json();
     
     console.log('🎯 AI Agent Coordinator received request:', { 
       query: query.substring(0, 200) + '...',
       clientId, 
       caseId, 
       researchTypes,
-      requestContext,
-      domainHint
+      requestContext
     });
 
     // Create Supabase client
@@ -81,7 +80,7 @@ serve(async (req) => {
     // OpenAI Legal Research Agent
     if (effectiveResearchTypes.includes('legal-research')) {
       researchPromises.push(
-        callResearchAgent('openai', 'legal-analysis', query, clientId, caseId, authHeader, domainHint)
+        callResearchAgent('openai', 'legal-analysis', query, clientId, caseId, authHeader)
           .catch(error => {
             console.error('OpenAI agent failed:', error);
             return { source: 'openai', type: 'legal-analysis', content: '', error: error.message };
@@ -92,7 +91,7 @@ serve(async (req) => {
     // Perplexity Current Research Agent
     if (effectiveResearchTypes.includes('current-research')) {
       researchPromises.push(
-        callResearchAgent('perplexity', 'current-research', query, clientId, caseId, authHeader, domainHint)
+        callResearchAgent('perplexity', 'current-research', query, clientId, caseId, authHeader)
           .catch(error => {
             console.error('Perplexity agent failed:', error);
             return { source: 'perplexity', type: 'current-research', content: '', error: error.message };
@@ -116,8 +115,7 @@ serve(async (req) => {
       query,
       researchResults,
       existingAnalyses?.[0]?.content,
-      queryAnalysis,
-      domainHint
+      queryAnalysis
     );
 
     // Verify case citations using CourtListener
@@ -133,8 +131,7 @@ serve(async (req) => {
         researchResults,
         synthesizedContent: verifiedResult.content,
         verifiedCases: verifiedResult.verifiedCases,
-        requestContext,
-        domainHint
+        requestContext
       }, supabase, authHeader);
     } catch (storageError) {
       console.error('Error storing coordinated research:', storageError);
@@ -198,21 +195,17 @@ function determineRequestType(query: string, hasDrafting: boolean, hasDocType: b
   return 'LEGAL_RESEARCH';
 }
 
-// Research agent caller with domain context
+// Research agent caller
 async function callResearchAgent(
   source: string, 
   type: string, 
   query: string, 
   clientId: string, 
   caseId?: string, 
-  authHeader?: string,
-  domainHint?: string
+  authHeader?: string
 ) {
-  // Add domain context to query if available
-  let enhancedQuery = query;
-  if (domainHint) {
-    enhancedQuery = `${query}\n\nDomain context: This is a ${domainHint} matter. Focus research within this legal domain.`;
-  }
+  // Use query as-is without domain context
+  const enhancedQuery = query;
 
   try {
     const endpoint = source === 'openai' ? 'generate-legal-analysis' : 'perplexity-research';
@@ -281,13 +274,12 @@ async function callResearchAgent(
   }
 }
 
-// Enhanced Gemini synthesis with domain awareness
+// Enhanced Gemini synthesis
 async function synthesizeWithGemini(
   originalQuery: string, 
   researchResults: any[], 
   existingAnalysis?: string,
-  queryAnalysis?: any,
-  domainHint?: string
+  queryAnalysis?: any
 ) {
   const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
   if (!geminiApiKey) {
