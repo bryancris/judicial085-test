@@ -15,6 +15,7 @@ interface DetailedLegalAnalysisProps {
   remedies?: string;
   caseType?: string;
   rawContent?: string; // Add raw content prop
+  validationStatus?: string;
 }
 
 const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
@@ -25,7 +26,8 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
   isLoading = false,
   remedies,
   caseType,
-  rawContent
+  rawContent,
+  validationStatus
 }) => {
   // If we have raw content, use it directly like Client Intake does
   if (rawContent) {
@@ -53,13 +55,19 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
                   {caseType === "consumer-protection" ? "Consumer Protection" : caseType}
                 </span>
               )}
+              {validationStatus === 'pending_review' && (
+                <span className="ml-2 text-xs font-medium bg-yellow-100 text-yellow-800 px-2.5 py-0.5 rounded-full dark:bg-yellow-900/30 dark:text-yellow-200">
+                  Pending review
+                </span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {/* Use the same AnalysisItem component that Client Intake uses */}
             <AnalysisItem 
               content={rawContent}
-              timestamp={new Date().toISOString()}
+              timestamp={new Date().toISOString()} // TODO: pass real timestamp
+
             />
           </CardContent>
         </Card>

@@ -21,6 +21,7 @@ export interface AnalysisData {
   timestamp: string;
   lawReferences?: any[];
   caseType?: string;
+  validationStatus?: string;
   remedies?: string;
   rawContent?: string; // Add raw content for direct rendering
 }
@@ -90,7 +91,7 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
           .select("*")
           .eq("client_id", clientId)
           .eq("case_id", caseId)
-          .eq("validation_status", "validated")
+          .in("validation_status", ["validated", "pending_review"]) 
           .not("analysis_type", "in", "(3-agent-coordination,coordinator-research)")
           .order("created_at", { ascending: false })
           .limit(1);
@@ -119,7 +120,7 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
           .select("*")
           .eq("client_id", clientId)
           .is("case_id", null)
-          .eq("validation_status", "validated")
+          .in("validation_status", ["validated", "pending_review"]) 
           .not("analysis_type", "in", "(3-agent-coordination,coordinator-research)")
           .order("created_at", { ascending: false })
           .limit(1);
@@ -200,6 +201,7 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
         timestamp: analysis.timestamp || analysis.created_at,
         lawReferences: lawReferences,
         caseType: analysis.case_type || extractCaseType(analysis.content),
+        validationStatus: analysis.validation_status,
         rawContent: analysis.content // Store raw content for direct rendering
       };
 

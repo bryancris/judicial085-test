@@ -45,6 +45,7 @@ export const getExistingAnalysisForContext = async (
       .eq("client_id", clientId)
       .is("case_id", null)
       .eq("analysis_type", "client-intake")
+      .in("validation_status", ["validated", "pending_review"]) 
       .order("created_at", { ascending: false })
       .limit(1);
 
@@ -182,9 +183,10 @@ export const getClientLegalAnalyses = async (
       .eq("client_id", clientId)                    // Filter by client
       .is("case_id", null)                          // Intake is client-level
       .eq("analysis_type", "client-intake")         // Only client-intake analyses
-      .eq("validation_status", "validated")         // Only validated analyses
+      .in("validation_status", ["validated", "pending_review"]) // Include pending review
       .order("created_at", { ascending: false })    // Newest first
-      .limit(1);                                    // Only latest analysis
+      .limit(5);                                    // Fetch a few to prioritize
+
 
     /**
      * ERROR HANDLING
@@ -202,10 +204,12 @@ export const getClientLegalAnalyses = async (
      * Convert database format to AnalysisItem interface.
      * Maps only the fields needed by the UI components.
      */
-    const formattedAnalyses = data.map(analysis => ({
-      content: analysis.content,      // AI analysis content
-      timestamp: analysis.timestamp   // Display timestamp
-    }));
+    const formattedAnalyses = (data && data.length > 0)
+      ? [ (data.find(a => a.validation_status === 'validated') || data[0]) ].map(analysis => ({
+          content: analysis.content,
+          timestamp: analysis.timestamp
+        }))
+      : [];
 
     return { analyses: formattedAnalyses };
   } catch (err: any) {

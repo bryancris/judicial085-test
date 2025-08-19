@@ -130,6 +130,7 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
         
         // Transform the analysis into the expected format
         const transformedData: AnalysisData = {
+          id: analysis.id,
           legalAnalysis: {
             relevantLaw: "",
             preliminaryAnalysis: "",
@@ -143,11 +144,12 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
             defense: 65,
             prosecution: 35
           },
-          timestamp: analysis.timestamp || new Date().toLocaleTimeString(),
+          timestamp: analysis.timestamp || analysis.created_at || new Date().toISOString(),
           lawReferences: lawReferences,
           caseType: analysis.case_type || "general",
           remedies: "",
-          rawContent: analysis.content
+          rawContent: analysis.content,
+          validationStatus: analysis.validation_status
         };
 
         setAnalysisData(transformedData);
