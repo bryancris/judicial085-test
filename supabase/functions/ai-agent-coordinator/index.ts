@@ -122,21 +122,12 @@ serve(async (req) => {
     console.log('⚖️ Initiating CourtListener verification for case citations...');
     const verifiedResult = await verifyCaseCitations(synthesizedResult.content);
 
-    // Store coordinated research results
-    try {
-      await storeCoordinatedResearch({
-        clientId,
-        caseId,
-        query,
-        researchResults,
-        synthesizedContent: verifiedResult.content,
-        verifiedCases: verifiedResult.verifiedCases,
-        requestContext
-      }, supabase, authHeader);
-    } catch (storageError) {
-      console.error('Error storing coordinated research:', storageError);
-      // Continue even if storage fails
-    }
+    // 🚫 DISABLED: Stop coordinator from polluting the analysis database
+    // The coordinator should only return research results, not save fake analyses
+    console.log('📋 Skipping database storage to prevent analysis pollution');
+    
+    // Note: Coordinator research is meant for immediate use, not database persistence
+    // Only legitimate user-initiated analyses should be saved to legal_analyses table
 
     return new Response(
       JSON.stringify({
