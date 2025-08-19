@@ -4,7 +4,7 @@ import { CaseAnalysisData } from "@/types/caseAnalysis";
 import { useAnalysisData } from "@/components/case-analysis/hooks/useAnalysisData";
 import { AnalysisData } from "@/hooks/useAnalysisData";
 import { useAnalysisGeneration } from "@/hooks/useAnalysisGeneration";
-import { searchSimilarCases } from "@/utils/openaiService";
+import { searchSimilarCases } from "@/utils/api/analysisApiService";
 import { useToast } from "@/hooks/use-toast";
 
 export type { CaseAnalysisData } from "@/types/caseAnalysis";
@@ -49,7 +49,7 @@ export const useCaseAnalysis = (clientId?: string, caseId?: string) => {
         console.error("Error searching similar cases:", result.error);
         toast({
           title: "Similar Cases Search Failed",
-          description: result.message || "Failed to search for similar cases.",
+          description: result.error || "Failed to search for similar cases.",
           variant: "destructive",
         });
       } else {

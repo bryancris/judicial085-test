@@ -139,17 +139,36 @@ serve(async (req) => {
     }
 
 
-    // Pass through the extracted fact sources and citations as JSON
-    const factSourcesJson = JSON.stringify(factSources || []);
-    const citationsJson = JSON.stringify(citations || []);
+    // Normalize inputs to proper JSON arrays (avoid scalar errors)
+    const normFactSources = Array.isArray(factSources)
+      ? factSources
+      : (() => {
+          try {
+            const parsed = typeof factSources === 'string' ? JSON.parse(factSources as unknown as string) : [];
+            return Array.isArray(parsed) ? parsed : [];
+          } catch {
+            return [];
+          }
+        })();
+
+    const normCitations = Array.isArray(citations)
+      ? citations
+      : (() => {
+          try {
+            const parsed = typeof citations === 'string' ? JSON.parse(citations as unknown as string) : [];
+            return Array.isArray(parsed) ? parsed : [];
+          } catch {
+            return [];
+          }
+        })();
     
-    console.log(`📋 Validation input: ${factSources?.length || 0} fact sources, ${citations?.length || 0} citations`);
+    console.log(`📋 Validation input: ${normFactSources.length} fact sources, ${normCitations.length} citations`);
 
     const { data: validationResult, error: validationError } = await supabase
       .rpc('validate_legal_analysis', {
         analysis_content: content,
-        fact_sources: factSourcesJson,
-        citations: citationsJson
+        fact_sources: normFactSources,
+        citations: normCitations
       }) as { data: ValidationResult[] | null; error: any };
 
     if (validationError) {
@@ -192,8 +211,8 @@ serve(async (req) => {
       validator_version: '1.0',
       validation_score: validation.validation_score,
       validation_details: validation.validation_details,
-      fact_sources_count: factSources.length,
-      citations_count: citations.length,
+      fact_sources_count: normFactSources.length,
+      citations_count: normCitations.length,
       content_length: content.length,
       user_id: user.id
     };
@@ -214,8 +233,8 @@ serve(async (req) => {
         validation_score: validation.validation_score,
         validated_at: new Date().toISOString(),
         provenance: enhancedProvenance,
-        fact_sources: factSources,
-        citation_verified: citations.length > 0
+        fact_sources: normFactSources,
+        citation_verified: normCitations.length > 0
       })
       .select()
       .single();
@@ -242,8 +261,8 @@ serve(async (req) => {
         },
         metadata: {
           validated: true,
-          fact_sources_verified: factSources.length > 0,
-          citations_verified: citations.length > 0,
+          fact_sources_verified: normFactSources.length > 0,
+          citations_verified: normCitations.length > 0,
           content_verified: content.length > 50
         }
       }),

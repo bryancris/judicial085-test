@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { SimilarCase } from "./SimilarCasesDialog";
-import { searchSimilarCases } from "@/utils/openaiService";
+import { searchSimilarCases } from "@/utils/api/analysisApiService";
 import { saveSimilarCases } from "@/utils/api/similarCasesApiService";
 import { useEnhancedSimilarCasesSearch } from "@/hooks/useEnhancedSimilarCasesSearch";
 import { useToast } from "@/hooks/use-toast";
@@ -103,7 +103,7 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
             description: "Please generate a legal analysis first to enable similar case search.",
             variant: "destructive",
           });
-        } else if (result.searchStrategy === "missing-api-keys") {
+        } else if ((result as any).searchStrategy === "missing-api-keys") {
           toast({
             title: "Configuration Required",
             description: "API keys not configured for similar case search.",
@@ -112,11 +112,11 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
         } else if (result.similarCases.length === 0) {
           toast({
             title: "No Similar Cases Found",
-            description: result.message || "No similar cases were found in available legal databases.",
+            description: "No similar cases were found in available legal databases.",
           });
         } else {
           // Determine case type from results
-          const detectedCaseType = result.caseType || determineCaseTypeFromResults(result.similarCases);
+          const detectedCaseType = determineCaseTypeFromResults(result.similarCases);
           
           // Save similar cases to database if we have a legal analysis ID
           if (legalAnalysisId && result.similarCases.length > 0) {
@@ -129,8 +129,8 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
                 {
                   fallbackUsed: result.fallbackUsed,
                   analysisFound: result.analysisFound,
-                  searchStrategy: result.searchStrategy,
-                  caseType: result.caseType
+                  searchStrategy: ((result as any).searchStrategy) ?? 'basic',
+                  caseType: determineCaseTypeFromResults(result.similarCases)
                 }
               );
               // Trigger refresh of parent component's similar cases display
