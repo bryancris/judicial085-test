@@ -98,26 +98,26 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
   }, [analysisData, client.id, currentCase?.id]);
 
   // Load similar cases when analysis ID is available
-  React.useEffect(() => {
-    const loadSimilarCasesData = async () => {
-      if (!currentAnalysisId) return;
-      
-      setIsSimilarCasesLoading(true);
-      try {
-        const result = await loadSimilarCases(client.id, currentAnalysisId);
-        setSimilarCases(result.similarCases || []);
-        setAnalysisFound(result.metadata?.analysisFound !== false);
-        setFallbackUsed(result.metadata?.fallbackUsed || false);
-      } catch (error) {
-        console.error("Error loading similar cases:", error);
-        setSimilarCases([]);
-      } finally {
-        setIsSimilarCasesLoading(false);
-      }
-    };
-
-    loadSimilarCasesData();
+  const loadSimilarCasesData = useCallback(async () => {
+    if (!currentAnalysisId) return;
+    
+    setIsSimilarCasesLoading(true);
+    try {
+      const result = await loadSimilarCases(client.id, currentAnalysisId);
+      setSimilarCases(result.similarCases || []);
+      setAnalysisFound(result.metadata?.analysisFound !== false);
+      setFallbackUsed(result.metadata?.fallbackUsed || false);
+    } catch (error) {
+      console.error("Error loading similar cases:", error);
+      setSimilarCases([]);
+    } finally {
+      setIsSimilarCasesLoading(false);
+    }
   }, [currentAnalysisId, client.id]);
+
+  React.useEffect(() => {
+    loadSimilarCasesData();
+  }, [loadSimilarCasesData]);
 
   // Fetch scholarly references when analysis ID is available
   React.useEffect(() => {
@@ -243,6 +243,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
               isSimilarCasesLoading={isSimilarCasesLoading}
               analysisFound={analysisFound}
               fallbackUsed={fallbackUsed}
+              onSimilarCasesRefresh={loadSimilarCasesData}
             />
           </div>
         )}

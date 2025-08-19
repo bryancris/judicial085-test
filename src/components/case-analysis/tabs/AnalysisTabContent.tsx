@@ -21,6 +21,7 @@ interface AnalysisTabContentProps {
   isSimilarCasesLoading: boolean;
   analysisFound: boolean;
   fallbackUsed: boolean;
+  onSimilarCasesRefresh?: () => void;
 }
 
 const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
@@ -34,7 +35,8 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
   similarCases,
   isSimilarCasesLoading,
   analysisFound,
-  fallbackUsed
+  fallbackUsed,
+  onSimilarCasesRefresh
 }) => {
   return (
     <div className="space-y-8">
@@ -68,6 +70,7 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
         fallbackUsed={fallbackUsed}
         clientId={clientId}
         legalAnalysisId={analysisData.id}
+        onCasesFound={onSimilarCasesRefresh}
       />
 
       {/* Additional Case Law Section */}

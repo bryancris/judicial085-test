@@ -12,12 +12,14 @@ export interface SearchSimilarCasesSectionProps {
   clientId: string;
   caseType?: string;
   legalAnalysisId?: string;
+  onCasesFound?: () => void;
 }
 
 const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({ 
   clientId,
   caseType,
-  legalAnalysisId
+  legalAnalysisId,
+  onCasesFound
 }) => {
   const [isSearchingCases, setIsSearchingCases] = useState(false);
   const [similarCases, setSimilarCases] = useState<SimilarCase[]>([]);
@@ -69,6 +71,11 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
           title: "Similar Cases Found",
           description: `Found ${enhancedResult.similarCases.length} cases${enhancedResult.searchMetadata.cacheUsed ? ' (from cache)' : ' (fresh search)'}.`,
         });
+        
+        // Trigger refresh if cases were found
+        if (onCasesFound) {
+          onCasesFound();
+        }
         return;
       }
       
@@ -114,20 +121,26 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
           // Save similar cases to database if we have a legal analysis ID
           if (legalAnalysisId && result.similarCases.length > 0) {
             console.log("Saving similar cases to database after manual search");
-            saveSimilarCases(
-              clientId,
-              legalAnalysisId,
-              result.similarCases,
-              {
-                fallbackUsed: result.fallbackUsed,
-                analysisFound: result.analysisFound,
-                searchStrategy: result.searchStrategy,
-                caseType: result.caseType
+            try {
+              await saveSimilarCases(
+                clientId,
+                legalAnalysisId,
+                result.similarCases,
+                {
+                  fallbackUsed: result.fallbackUsed,
+                  analysisFound: result.analysisFound,
+                  searchStrategy: result.searchStrategy,
+                  caseType: result.caseType
+                }
+              );
+              // Trigger refresh of parent component's similar cases display
+              if (onCasesFound) {
+                onCasesFound();
               }
-            ).catch(error => {
+            } catch (error) {
               console.error("Failed to save similar cases:", error);
               // Don't show error to user as this is background operation
-            });
+            }
           }
           
           toast({

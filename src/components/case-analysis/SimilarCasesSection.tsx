@@ -34,6 +34,7 @@ export interface SimilarCasesSectionProps {
   fallbackUsed?: boolean;
   clientId?: string;
   legalAnalysisId?: string;
+  onCasesFound?: () => void;
   searchMetadata?: {
     cacheUsed?: boolean;
     freshApiCall?: boolean;
@@ -51,6 +52,7 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
   fallbackUsed = false,
   clientId,
   legalAnalysisId,
+  onCasesFound,
   searchMetadata
 }) => {
   
@@ -131,6 +133,7 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
             clientId={clientId}
             caseType={caseType}
             legalAnalysisId={legalAnalysisId}
+            onCasesFound={onCasesFound}
           />
         </div>
       )}

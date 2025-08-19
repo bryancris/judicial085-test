@@ -28,6 +28,7 @@ interface TabsContainerProps {
   isSimilarCasesLoading: boolean;
   analysisFound: boolean;
   fallbackUsed: boolean;
+  onSimilarCasesRefresh?: () => void;
 }
 
 const TabsContainer: React.FC<TabsContainerProps> = ({
@@ -48,7 +49,8 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
   similarCases,
   isSimilarCasesLoading,
   analysisFound,
-  fallbackUsed
+  fallbackUsed,
+  onSimilarCasesRefresh
 }) => {
   return (
     <div className="mt-6">
@@ -66,6 +68,7 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
             isSimilarCasesLoading={isSimilarCasesLoading}
             analysisFound={analysisFound}
             fallbackUsed={fallbackUsed}
+            onSimilarCasesRefresh={onSimilarCasesRefresh}
           />
         </div>
       )}
