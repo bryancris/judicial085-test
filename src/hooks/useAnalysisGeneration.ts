@@ -32,7 +32,7 @@ export const useAnalysisGeneration = (clientId?: string, caseId?: string) => {
 
       console.log("Sending empty conversation to edge function - it will handle message fetching");
 
-      const result = await generateLegalAnalysis(clientId, emptyConversation, caseId);
+      const result = await generateLegalAnalysis(clientId, emptyConversation, caseId, caseId ? 'case-analysis' : 'client-analysis');
       
       if (result.error) {
         console.error("Analysis generation failed:", result.error);

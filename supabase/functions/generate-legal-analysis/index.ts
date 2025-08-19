@@ -286,7 +286,7 @@ console.log('📋 Fact-based analysis mode enabled');
     console.log("Analysis source:", analysisSource);
     
     // Let case type be detected from facts, not forced
-    let detectedCaseType = requestContext === 'client-intake' ? 'general' : detectCaseType(legalContext);
+    let detectedCaseType = detectCaseType(legalContext);
     console.log(`Detected case type from facts: ${detectedCaseType}`);
     
     // Create a search query from the extracted topics
@@ -520,6 +520,7 @@ console.log('📋 Fact-based analysis mode enabled');
       const analysisData = {
         client_id: clientId,
         case_id: caseId || null, // Important: Use the provided case ID or null for client-level
+        analysis_type: requestContext === 'client-intake' ? 'client-intake' : (caseId ? 'case-analysis' : 'direct-analysis'),
         content: analysis,
         case_type: detectedCaseType,
         law_references: knowledgeBaseLawReferences,

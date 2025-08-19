@@ -43,6 +43,8 @@ export const getExistingAnalysisForContext = async (
       .from("legal_analyses")
       .select("content, law_references, case_type, created_at")
       .eq("client_id", clientId)
+      .is("case_id", null)
+      .eq("analysis_type", "client-intake")
       .order("created_at", { ascending: false })
       .limit(1);
 
@@ -97,6 +99,8 @@ export const saveLegalAnalysis = async (
      */
     const { error } = await supabase.from("legal_analyses").insert({
       client_id: clientId,     // Associate with specific client
+      case_id: null,           // Client intake analyses are client-level
+      analysis_type: "client-intake", // Tag as client intake
       content,                 // AI analysis content
       timestamp,               // UI display timestamp
       user_id: (await supabase.auth.getUser()).data.user?.id  // Current user
@@ -157,6 +161,8 @@ export const getClientLegalAnalyses = async (
       .from("legal_analyses")
       .select("*")                                  // Get all fields
       .eq("client_id", clientId)                    // Filter by client
+      .is("case_id", null)                          // Intake is client-level
+      .eq("analysis_type", "client-intake")         // Only client-intake analyses
       .order("created_at", { ascending: false })    // Newest first
       .limit(1);                                    // Only latest analysis
 
