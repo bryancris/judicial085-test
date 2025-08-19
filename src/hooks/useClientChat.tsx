@@ -22,7 +22,7 @@
  * - Provides a unified API for components to consume
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useClientChatHistory } from "@/hooks/useClientChatHistory";
 import { useClientChatMessages } from "@/hooks/useClientChatMessages";
 import { useClientChatAnalysis } from "@/hooks/useClientChatAnalysis";
@@ -85,6 +85,19 @@ export const useClientChat = (clientId: string) => {
     interviewMode,                  // Conversation mode
     setInterviewMode                // Mode switching function
   } = useClientChatMessages(clientId, messages, setMessages, generateAnalysis);
+
+  // Auto-trigger analysis on initial load when we have facts and no meaningful analysis
+  const [autoTriggered, setAutoTriggered] = useState(false);
+  useEffect(() => {
+    if (isLoadingHistory || autoTriggered) return;
+    const hasFacts = messages.some(m => m.role === "facts" && m.content?.trim());
+    const latest = legalAnalysis[0]?.content || "";
+    const needsAnalysis = legalAnalysis.length === 0 || /general law|no specific texas statutes|no specific legal issue/i.test(latest);
+    if (hasFacts && needsAnalysis) {
+      setAutoTriggered(true);
+      generateAnalysis(messages);
+    }
+  }, [isLoadingHistory, autoTriggered, messages, legalAnalysis, generateAnalysis]);
 
   /**
    * MESSAGE HANDLER INTEGRATION
