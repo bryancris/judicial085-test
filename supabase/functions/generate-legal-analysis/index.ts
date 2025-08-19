@@ -213,20 +213,42 @@ if (!isInternalLegalResearch && userId) {
           // Note: 3-agent coordination should return research for immediate use,
           // not save fake analyses to the database that bypass validation
 
-          return new Response(
-            JSON.stringify({
-              analysis: coordinatorResponse.data.synthesizedContent,
-              lawReferences: coordinatorResponse.data.researchSources || [],
-              documentsUsed: [],
-              metadata: {
-                provider: '3-agent-coordinator',
-                sources: coordinatorResponse.data.researchSources?.length || 0,
-                citations: coordinatorResponse.data.citations?.length || 0,
-                factBasedAnalysis: true
-              }
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+           // Build fact sources and citations for validator
+           const factSources = hasConversation
+             ? [{ type: 'conversation', source: 'Client intake and conversation' }]
+             : [];
+
+           // Use coordinator citations if provided, otherwise extract from content
+           const coordinatorCitations = Array.isArray(coordinatorResponse.data.citations)
+             ? coordinatorResponse.data.citations
+             : extractLegalCitations(coordinatorResponse.data.synthesizedContent || '');
+
+           const citationsForValidation = (coordinatorCitations || []).map((c: any) =>
+             typeof c === 'string'
+               ? { citation: c, type: 'statute', jurisdiction: 'Texas' }
+               : c
+           );
+
+           console.log(`📋 Coordinator return: ${factSources.length} fact sources, ${citationsForValidation.length} citations`);
+
+           return new Response(
+             JSON.stringify({
+               analysis: coordinatorResponse.data.synthesizedContent,
+               lawReferences: coordinatorResponse.data.researchSources || [],
+               documentsUsed: [],
+               factSources,
+               citations: citationsForValidation,
+               caseType: detectCaseType(coordinatorResponse.data.synthesizedContent || ''),
+               analysisSource: hasConversation ? 'client conversation' : 'coordinator',
+               metadata: {
+                 provider: '3-agent-coordinator',
+                 sources: coordinatorResponse.data.researchSources?.length || 0,
+                 citations: citationsForValidation.length,
+                 factBasedAnalysis: true
+               }
+             }),
+             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+           );
         } else {
           console.warn('⚠️ 3-agent coordination failed or returned no content, falling back to direct analysis');
           console.warn('Coordinator error:', coordinatorResponse.error);
