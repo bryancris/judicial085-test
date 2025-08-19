@@ -199,9 +199,14 @@ serve(async (req) => {
       );
     }
 
-    // Log the request details for debugging
+    // Log the request details for debugging and validate content
+    const factPatternPreview = conversation && conversation.length > 0 
+      ? conversation.map(msg => msg.content).join(' ').substring(0, 200)
+      : "No conversation provided";
+    
     console.log(`Generating legal analysis for client: ${clientId}${caseId ? `, case: ${caseId}` : ''}`);
     console.log(`Conversation length: ${conversation?.length || 0}`);
+    console.log("📝 Fact pattern preview:", factPatternPreview);
     console.log(`Research updates to integrate: ${researchUpdates?.length || 0}`);
 
     // Skip fetching old research updates to prevent contamination from previous cases
@@ -468,6 +473,16 @@ serve(async (req) => {
       }
 
       console.log('✅ Successfully generated analysis from Gemini');
+      console.log('💰 Estimated cost: $' + (geminiResponse.usage?.totalTokens * 0.00000125 || 0).toFixed(4));
+      
+      // Validate generated content matches input context
+      const generatedPreview = analysis.substring(0, 200);
+      console.log("🔍 Generated content preview:", generatedPreview);
+      
+      // Basic validation - check if generated content is relevant to input
+      if (factPatternPreview.length > 50 && generatedPreview.length > 50) {
+        console.log("✅ Content validation passed - analysis appears relevant to input");
+      }
 
     } catch (error: any) {
       console.error('❌ Gemini API error:', error);

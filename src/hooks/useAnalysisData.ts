@@ -90,7 +90,8 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
           .select("*")
           .eq("client_id", clientId)
           .eq("case_id", caseId)
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .limit(1);
 
         if (caseSpecificError) {
           throw new Error(`Failed to fetch case-specific legal analysis: ${caseSpecificError.message}`);
@@ -116,7 +117,8 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
           .select("*")
           .eq("client_id", clientId)
           .is("case_id", null)
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .limit(1);
 
         if (clientLevelError) {
           throw new Error(`Failed to fetch client-level legal analysis: ${clientLevelError.message}`);
