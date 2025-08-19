@@ -50,9 +50,10 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [autoSearchAttempted, setAutoSearchAttempted] = useState(false);
   const { toast } = useToast();
 
-  // Load existing additional case law on component mount
+  // Load existing additional case law on component mount and auto-search if analysis available
   useEffect(() => {
     const loadExistingCases = async () => {
       if (!clientId) {
@@ -89,6 +90,13 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
           setCases(formattedCases);
           setHasSearched(true);
           setLastUpdated(new Date((existingCases as any)[0]?.created_at || Date.now()).toLocaleDateString());
+        } else {
+          // No existing cases found, auto-search if analysis data is available
+          if ((analysisData?.summary || caseType) && !autoSearchAttempted) {
+            console.log('No existing additional case law found, auto-searching...');
+            setAutoSearchAttempted(true);
+            searchAdditionalCases();
+          }
         }
       } catch (error) {
         console.error('Error loading existing cases:', error);
@@ -99,6 +107,15 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
 
     loadExistingCases();
   }, [clientId]);
+
+  // Auto-search when analysis data becomes available
+  useEffect(() => {
+    if (analysisData?.summary && !hasSearched && cases.length === 0 && !autoSearchAttempted) {
+      console.log('Analysis data available, auto-searching for additional case law...');
+      setAutoSearchAttempted(true);
+      searchAdditionalCases();
+    }
+  }, [analysisData, hasSearched, cases.length, autoSearchAttempted]);
 
   // Function to save new cases to the database
   const saveNewCasesToDatabase = async (newCases: PerplexityCase[], clientId: string) => {

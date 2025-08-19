@@ -88,22 +88,31 @@ const ScholarlyReferencesSection: React.FC<ScholarlyReferencesSectionProps> = ({
             <h3 className="text-lg font-medium text-gray-600 mb-1">No scholarly references found</h3>
             <p className="text-gray-500 mb-4">Try searching for specific legal terms or case types</p>
             
-            {onSearch && (
-              <div className="flex max-w-md mx-auto">
-                <Input 
-                  type="text"
-                  placeholder="Search legal scholarship..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={handleKeyPress}
-                  className="mr-2"
-                />
-                <Button onClick={handleSearch} disabled={!searchQuery.trim()}>
-                  <Search className="h-4 w-4 mr-2" />
-                  Search
+            <div className="flex flex-col items-center gap-4">
+              {onRefresh && (
+                <Button variant="outline" onClick={onRefresh}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh References
                 </Button>
-              </div>
-            )}
+              )}
+              
+              {onSearch && (
+                <div className="flex max-w-md">
+                  <Input 
+                    type="text"
+                    placeholder="Search legal scholarship..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={handleKeyPress}
+                    className="mr-2"
+                  />
+                  <Button onClick={handleSearch} disabled={!searchQuery.trim()}>
+                    <Search className="h-4 w-4 mr-2" />
+                    Search
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>

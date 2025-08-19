@@ -95,6 +95,18 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
   if (!similarCases || similarCases.length === 0) {
     return (
       <>
+        {/* Always show search button even when no cases found */}
+        {clientId && (
+          <div className="mb-6">
+            <SearchSimilarCasesSection 
+              clientId={clientId}
+              caseType={caseType}
+              legalAnalysisId={legalAnalysisId}
+              onCasesFound={onCasesFound}
+            />
+          </div>
+        )}
+        
         <Card className="mb-6 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-xl font-semibold flex items-center">

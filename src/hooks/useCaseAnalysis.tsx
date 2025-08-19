@@ -77,6 +77,8 @@ export const useCaseAnalysis = (clientId?: string, caseId?: string) => {
       async () => {
         console.log("useCaseAnalysis: Analysis complete callback - refetching data");
         await fetchAnalysisData();
+        // Auto-trigger similar cases search after analysis is complete
+        setTimeout(searchSimilarCasesAfterAnalysis, 1000);
       },
       searchSimilarCasesAfterAnalysis
     );
