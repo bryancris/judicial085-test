@@ -23,7 +23,7 @@ CRITICAL FOCUS REQUIREMENT: Analyze ONLY the specific legal situation and facts 
 
 ${hasConversation ? `CRITICAL: Facts have been provided via the conversation. Look for messages with "FACTS:" role or any substantive case details. Do not state that facts are missing or insufficient. Extract and use the facts from the conversation directly. Begin your response with a short "FACT SUMMARY" bullet list grounded only in the conversation before the analysis sections.
 
-STRICT CONTENT FILTER: Focus exclusively on the real estate/property law facts presented. Ignore any unrelated legal topics that may appear in the context.` : ''}
+STRICT CONTENT FILTER: Focus exclusively on the facts of the current case. Ignore any unrelated legal topics that may appear in the context.` : ''}
 
 3. **POTENTIAL LEGAL ISSUES:** Identify potential legal challenges, considerations, or defenses that may arise.
 

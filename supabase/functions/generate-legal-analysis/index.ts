@@ -367,28 +367,16 @@ serve(async (req) => {
     }
     
     if (hasConversation) {
-      // Prioritize FACTS messages and filter out unrelated content
-      const relevantMessages = conversationMessages.filter(msg => {
-        const content = msg.content.toLowerCase();
-        const role = msg.role.toLowerCase();
-        
-        // Always include FACTS messages
-        if (role === 'facts') return true;
-        
-        // Check if message contains case-relevant keywords
-        const realEstateKeywords = ['home', 'house', 'property', 'fixtures', 'appliances', 'kitchen', 'water', 'frisco', 'texas', 'contract', 'seller'];
-        const hasRelevantContent = realEstateKeywords.some(keyword => content.includes(keyword));
-        
-        // Exclude clearly unrelated content (like dog bites, animal protection)
-        const irrelevantKeywords = ['dog', 'bite', 'animal', 'pet', 'german shepherd', 'mail carrier'];
-        const hasIrrelevantContent = irrelevantKeywords.some(keyword => content.includes(keyword));
-        
-        return hasRelevantContent && !hasIrrelevantContent;
+      // Use all conversation messages; only drop clearly unrelated content
+      const irrelevantKeywords = ['dog', 'bite', 'animal', 'pet', 'german shepherd', 'mail carrier'];
+      const filteredMessages = conversationMessages.filter(msg => {
+        const content = (msg.content || '').toLowerCase();
+        return !irrelevantKeywords.some(k => content.includes(k));
       });
       
-      console.log(`Filtered conversation: ${conversationMessages.length} → ${relevantMessages.length} relevant messages`);
+      console.log(`Filtered conversation: ${conversationMessages.length} → ${filteredMessages.length} relevant messages`);
       
-      const formattedConversation = relevantMessages.map(msg => ({
+      const formattedConversation = filteredMessages.map(msg => ({
         role: "user", 
         content: `${msg.role.toUpperCase()}: ${msg.content}`
       }));
@@ -414,15 +402,11 @@ serve(async (req) => {
       const topics = ((update.topics || []).join(' ')).toLowerCase();
       const combined = `${content} ${statutes} ${topics}`;
       
-      // Check for real estate/property related keywords
-      const realEstateKeywords = ['property', 'real estate', 'fixtures', 'contract', 'conveyance', 'home', 'texas property code'];
-      const hasRelevantContent = realEstateKeywords.some(keyword => combined.includes(keyword));
-      
-      // Exclude animal protection or unrelated content
+      // Exclude animal protection or unrelated content only
       const irrelevantKeywords = ['animal', 'dog', 'bite', 'health and safety code § 822', 'dangerous animal'];
       const hasIrrelevantContent = irrelevantKeywords.some(keyword => combined.includes(keyword));
       
-      return hasRelevantContent && !hasIrrelevantContent;
+      return !hasIrrelevantContent;
     });
     
     console.log(`Filtered research updates: ${researchUpdates?.length || 0} → ${relevantResearchUpdates.length} relevant updates`);
@@ -482,6 +466,26 @@ serve(async (req) => {
       // Basic validation - check if generated content is relevant to input
       if (factPatternPreview.length > 50 && generatedPreview.length > 50) {
         console.log("✅ Content validation passed - analysis appears relevant to input");
+      }
+      
+      // Domain guardrail: prevent property/real-estate drift for consumer cases
+      const propertyIndicators = ['texas property code', 'trespass to try title', 'adverse possession', 'encroach', 'easement', 'deed', 'fixture'];
+      const consumerIndicators = ['debt', 'collection', 'fdcpa', 'dtpa', 'finance code', 'harass', 'garnishment', 'validation'];
+      const containsProperty = propertyIndicators.some(k => analysis.toLowerCase().includes(k));
+      const containsConsumer = consumerIndicators.some(k => analysis.toLowerCase().includes(k));
+      if (isConsumerCase && containsProperty && !containsConsumer) {
+        console.warn('⚠️ Detected off-topic property law content in consumer case. Retrying with hard constraint...');
+        const strongConstraint = `\n\nHARD CONSTRAINT: This is a consumer protection/debt collection matter. Do NOT include real estate/property law content (e.g., Texas Property Code, trespass to try title, encroachment, adverse possession, easements) unless explicitly stated in the facts. Focus on DTPA (Bus. & Com. Code § 17.41 et seq.), Texas Finance Code Ch. 392 (TDCA), and FDCPA.`;
+        const retryResponse = await generateLegalAnalysis(
+          userContent,
+          systemPrompt + strongConstraint,
+          geminiApiKey,
+          { temperature: 0.2, maxTokens: 8192 }
+        );
+        if (retryResponse?.text) {
+          analysis = retryResponse.text;
+          console.log('✅ Retry successful. Replaced analysis with consumer-focused content.');
+        }
       }
 
     } catch (error: any) {

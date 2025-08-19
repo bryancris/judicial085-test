@@ -272,35 +272,43 @@ serve(async (req) => {
 
     console.log('🎯 AI Agent Coordinator received request:', { query, clientId, caseId, researchTypes, requestContext });
 
-    // 🎯 NEW: Retrieve existing analysis for context if this is a client-intake request
+    // 🎯 Retrieve existing analysis scoped to this case to avoid contamination
     let existingAnalysisContext = '';
-    if (requestContext === 'client-intake' && clientId) {
+    if (clientId) {
       try {
-        console.log('📋 Retrieving existing analysis for client:', clientId);
-        const { data: existingAnalysis, error: analysisError } = await supabaseClient
+        console.log('📋 Retrieving existing analysis for client (scoped):', { clientId, caseId });
+        let query = supabaseClient
           .from('legal_analyses')
           .select('content, law_references, case_type')
-          .eq('client_id', clientId)
+          .eq('client_id', clientId);
+        
+        if (caseId) {
+          query = query.eq('case_id', caseId);
+        } else {
+          query = query.is('case_id', null);
+        }
+        
+        const { data: existingAnalysis, error: analysisError } = await query
           .order('created_at', { ascending: false })
           .limit(1);
 
         if (!analysisError && existingAnalysis && existingAnalysis.length > 0) {
           const analysis = existingAnalysis[0];
           existingAnalysisContext = `
-EXISTING LEGAL ANALYSIS FOR THIS CLIENT:
+EXISTING LEGAL ANALYSIS (SCOPED):
 ${analysis.content}
 
 PREVIOUSLY IDENTIFIED STATUTES: ${JSON.stringify(analysis.law_references || [])}
 CASE TYPE: ${analysis.case_type || 'Not specified'}
 
-IMPORTANT: Build upon this existing analysis. Do NOT recreate it. Add new findings while preserving all previously identified statute violations and legal issues.
+IMPORTANT: Build upon this existing analysis ONLY if it aligns with the same case. Do NOT mix content from unrelated domains.
 `;
-          console.log('✅ Retrieved existing analysis context, length:', existingAnalysisContext.length);
+          console.log('✅ Retrieved scoped existing analysis context, length:', existingAnalysisContext.length);
         } else {
-          console.log('📋 No existing analysis found for client');
+          console.log('📋 No scoped analysis found for this client/case');
         }
       } catch (error) {
-        console.error('❌ Error retrieving existing analysis:', error);
+        console.error('❌ Error retrieving scoped existing analysis:', error);
       }
     }
 
