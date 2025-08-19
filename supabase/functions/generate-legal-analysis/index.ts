@@ -135,9 +135,7 @@ if (!hasConversation) {
     } else {
       console.log(`Fetching client-level messages (case_id IS NULL)`);
       messageQuery = messageQuery.is("case_id", null);
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      messageQuery = messageQuery.gte('created_at', oneDayAgo);
-      console.log("📅 Client-level run: applying 24h message filter");
+      console.log("📅 Client-level run: fetching ALL messages (no time filter)");
     }
     const { data: dbMessages, error: messageError } = await messageQuery.order("created_at", { ascending: true });
     if (messageError) {
@@ -155,7 +153,7 @@ console.log(`Final conversation status: ${hasConversation}, length: ${conversati
 
 // 🎯 NEW: Orchestrate 3-agent pipeline first, with fallback to direct analysis
 const isInternalLegalResearch = researchFocus === 'legal-analysis';
-if (!isInternalLegalResearch) {
+if (!isInternalLegalResearch && userId) {
       console.log('🎯 Starting 3-agent coordination for client:', clientId);
       
       try {
@@ -184,23 +182,26 @@ if (!isInternalLegalResearch) {
         if (coordinatorResponse.data?.success && coordinatorResponse.data?.synthesizedContent) {
           console.log('✅ 3-agent coordination successful, using synthesized content');
           
-          // Save the 3-agent analysis to database
+          // Save the 3-agent analysis to database (only if authenticated)
           const analysisToSave = coordinatorResponse.data.synthesizedContent;
-          const { error: saveError } = await supabase
-            .from('legal_analyses')
-            .insert({
-              client_id: clientId,
-              case_id: caseId || null,
-              content: analysisToSave,
-              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              analysis_type: '3-agent-coordination',
-              case_type: 'fact-based-analysis',
-              user_id: userId,
-              research_updates: researchUpdates || []
-            });
-
-          if (saveError) {
-            console.error('Error saving 3-agent analysis:', saveError);
+          if (userId) {
+            const { error: saveError } = await supabase
+              .from('legal_analyses')
+              .insert({
+                client_id: clientId,
+                case_id: caseId || null,
+                content: analysisToSave,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                analysis_type: '3-agent-coordination',
+                case_type: 'fact-based-analysis',
+                user_id: userId,
+                research_updates: researchUpdates || []
+              });
+            if (saveError) {
+              console.error('Error saving 3-agent analysis:', saveError);
+            }
+          } else {
+            console.warn('Skipping save of 3-agent analysis because no authenticated user.');
           }
 
           return new Response(
@@ -285,7 +286,7 @@ console.log('📋 Fact-based analysis mode enabled');
     console.log("Analysis source:", analysisSource);
     
     // Let case type be detected from facts, not forced
-    let detectedCaseType = detectCaseType(legalContext);
+    let detectedCaseType = requestContext === 'client-intake' ? 'general' : detectCaseType(legalContext);
     console.log(`Detected case type from facts: ${detectedCaseType}`);
     
     // Create a search query from the extracted topics
@@ -299,7 +300,7 @@ console.log('📋 Fact-based analysis mode enabled');
     let relevantLawReferences = [];
     
     // Search for relevant law if we have extracted topics
-    if (searchQuery.trim()) {
+    if (searchQuery.trim() && requestContext !== 'client-intake') {
       try {
         relevantLawReferences = await searchRelevantLaw(searchQuery, detectedCaseType);
         console.log(`Found ${relevantLawReferences.length} relevant law references`);
@@ -535,17 +536,20 @@ console.log('📋 Fact-based analysis mode enabled');
         user_id: analysisData.user_id
       });
 
-      const { data: savedAnalysis, error: saveError } = await supabase
-        .from('legal_analyses')
-        .insert([analysisData])
-        .select()
-        .single();
+      if (userId) {
+        const { data: savedAnalysis, error: saveError } = await supabase
+          .from('legal_analyses')
+          .insert([analysisData])
+          .select()
+          .single();
 
-      if (saveError) {
-        console.error('Error saving analysis to database:', saveError);
-        // Don't fail the entire request, just log the error
+        if (saveError) {
+          console.error('Error saving analysis to database:', saveError);
+        } else {
+          console.log('Analysis saved successfully to database with ID:', savedAnalysis.id);
+        }
       } else {
-        console.log('Analysis saved successfully to database with ID:', savedAnalysis.id);
+        console.warn('Skipping save of analysis because no authenticated user.');
       }
     } catch (dbError) {
       console.error('Database operation failed:', dbError);
