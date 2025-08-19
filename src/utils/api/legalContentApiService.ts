@@ -88,42 +88,61 @@ export const getExistingAnalysisForContext = async (
 export const saveLegalAnalysis = async (
   clientId: string,
   content: string,
-  timestamp: string
-): Promise<{ success: boolean; error?: string }> => {
+  timestamp: string,
+  options: {
+    caseId?: string;
+    analysisType?: string;
+    caseType?: string;
+    lawReferences?: any[];
+    documentsUsed?: any[];
+    factSources?: any[];
+    citations?: any[];
+    provenance?: any;
+  } = {}
+): Promise<{ success: boolean; error?: string; analysisId?: string; validation?: any }> => {
   try {
-    /**
-     * DATABASE INSERT OPERATION
-     * 
-     * Insert the AI-generated analysis with proper associations.
-     * User ID ensures multi-user support and data ownership.
-     */
-    const { error } = await supabase.from("legal_analyses").insert({
-      client_id: clientId,     // Associate with specific client
-      case_id: null,           // Client intake analyses are client-level
-      analysis_type: "client-intake", // Tag as client intake
-      content,                 // AI analysis content
-      timestamp,               // UI display timestamp
-      user_id: (await supabase.auth.getUser()).data.user?.id  // Current user
+    console.log("🔒 Using secure validation service for legal analysis save");
+    
+    // Call the validation and save edge function
+    const { data, error } = await supabase.functions.invoke('validate-and-save-legal-analysis', {
+      body: {
+        clientId,
+        content,
+        timestamp,
+        caseId: options.caseId,
+        analysisType: options.analysisType || "client-intake",
+        caseType: options.caseType,
+        lawReferences: options.lawReferences || [],
+        documentsUsed: options.documentsUsed || [],
+        factSources: options.factSources || [],
+        citations: options.citations || [],
+        provenance: options.provenance || {}
+      }
     });
 
-    /**
-     * ERROR HANDLING
-     * 
-     * Database errors are returned with descriptive messages.
-     */
     if (error) {
-      console.error("Error saving legal analysis:", error);
+      console.error("❌ Validation service error:", error);
       return { success: false, error: error.message };
     }
 
-    return { success: true };
+    if (!data?.success) {
+      console.error("❌ Analysis validation failed:", data);
+      return { 
+        success: false, 
+        error: data?.error || "Analysis failed validation",
+        validation: data?.validation 
+      };
+    }
+
+    console.log("✅ Analysis validated and saved successfully");
+    return { 
+      success: true, 
+      analysisId: data.analysis_id,
+      validation: data.validation
+    };
+
   } catch (err: any) {
-    /**
-     * EXCEPTION HANDLING
-     * 
-     * Catch unexpected errors (network issues, auth failures, etc.)
-     */
-    console.error("Error saving legal analysis:", err);
+    console.error("❌ Error in validated analysis save:", err);
     return { success: false, error: err.message };
   }
 };
@@ -163,6 +182,7 @@ export const getClientLegalAnalyses = async (
       .eq("client_id", clientId)                    // Filter by client
       .is("case_id", null)                          // Intake is client-level
       .eq("analysis_type", "client-intake")         // Only client-intake analyses
+      .eq("validation_status", "validated")         // Only validated analyses
       .order("created_at", { ascending: false })    // Newest first
       .limit(1);                                    // Only latest analysis
 

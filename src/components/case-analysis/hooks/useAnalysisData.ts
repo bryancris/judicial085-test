@@ -35,6 +35,7 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           .select("*")
           .eq("client_id", clientId)
           .eq("case_id", caseId)
+          .eq("validation_status", "validated")  // Only validated analyses
           .not("analysis_type", "in", "(3-agent-coordination,coordinator-research)")
           .order("created_at", { ascending: false });
 
@@ -74,6 +75,7 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           .select("*")
           .eq("client_id", clientId)
           .is("case_id", null)
+          .eq("validation_status", "validated")  // Only validated analyses
           .not("analysis_type", "in", "(3-agent-coordination,coordinator-research)")
           .order("created_at", { ascending: false });
 

@@ -21,6 +21,7 @@ export type Database = {
           client_id: string
           court: string | null
           courtlistener_case_id: string | null
+          courtlistener_verified: boolean | null
           created_at: string
           date_decided: string | null
           id: string
@@ -30,6 +31,9 @@ export type Database = {
           relevant_facts: string | null
           updated_at: string
           url: string | null
+          validated_at: string | null
+          validation_score: number | null
+          validation_status: string | null
         }
         Insert: {
           case_name: string
@@ -37,6 +41,7 @@ export type Database = {
           client_id: string
           court?: string | null
           courtlistener_case_id?: string | null
+          courtlistener_verified?: boolean | null
           created_at?: string
           date_decided?: string | null
           id?: string
@@ -46,6 +51,9 @@ export type Database = {
           relevant_facts?: string | null
           updated_at?: string
           url?: string | null
+          validated_at?: string | null
+          validation_score?: number | null
+          validation_status?: string | null
         }
         Update: {
           case_name?: string
@@ -53,6 +61,7 @@ export type Database = {
           client_id?: string
           court?: string | null
           courtlistener_case_id?: string | null
+          courtlistener_verified?: boolean | null
           created_at?: string
           date_decided?: string | null
           id?: string
@@ -62,6 +71,9 @@ export type Database = {
           relevant_facts?: string | null
           updated_at?: string
           url?: string | null
+          validated_at?: string | null
+          validation_score?: number | null
+          validation_status?: string | null
         }
         Relationships: [
           {
@@ -1069,43 +1081,61 @@ export type Database = {
           analysis_type: string | null
           case_id: string | null
           case_type: string | null
+          citation_verified: boolean | null
           client_id: string
           content: string
           created_at: string
+          fact_sources: Json | null
           id: string
           law_references: Json | null
+          provenance: Json | null
           research_updates: Json | null
           timestamp: string
           updated_at: string
           user_id: string
+          validated_at: string | null
+          validation_score: number | null
+          validation_status: string | null
         }
         Insert: {
           analysis_type?: string | null
           case_id?: string | null
           case_type?: string | null
+          citation_verified?: boolean | null
           client_id: string
           content: string
           created_at?: string
+          fact_sources?: Json | null
           id?: string
           law_references?: Json | null
+          provenance?: Json | null
           research_updates?: Json | null
           timestamp: string
           updated_at?: string
           user_id: string
+          validated_at?: string | null
+          validation_score?: number | null
+          validation_status?: string | null
         }
         Update: {
           analysis_type?: string | null
           case_id?: string | null
           case_type?: string | null
+          citation_verified?: boolean | null
           client_id?: string
           content?: string
           created_at?: string
+          fact_sources?: Json | null
           id?: string
           law_references?: Json | null
+          provenance?: Json | null
           research_updates?: Json | null
           timestamp?: string
           updated_at?: string
           user_id?: string
+          validated_at?: string | null
+          validation_score?: number | null
+          validation_status?: string | null
         }
         Relationships: [
           {
@@ -1150,14 +1180,19 @@ export type Database = {
           client_id: string
           content: string
           created_at: string
+          fact_sources: Json | null
           id: string
           legal_analysis_id: string
           metadata: Json | null
           model: string
           query: string
           search_type: string
+          source_verified: boolean | null
           updated_at: string
           usage_data: Json | null
+          validated_at: string | null
+          validation_score: number | null
+          validation_status: string | null
         }
         Insert: {
           case_discussion_id?: string | null
@@ -1166,14 +1201,19 @@ export type Database = {
           client_id: string
           content: string
           created_at?: string
+          fact_sources?: Json | null
           id?: string
           legal_analysis_id: string
           metadata?: Json | null
           model: string
           query: string
           search_type: string
+          source_verified?: boolean | null
           updated_at?: string
           usage_data?: Json | null
+          validated_at?: string | null
+          validation_score?: number | null
+          validation_status?: string | null
         }
         Update: {
           case_discussion_id?: string | null
@@ -1182,14 +1222,19 @@ export type Database = {
           client_id?: string
           content?: string
           created_at?: string
+          fact_sources?: Json | null
           id?: string
           legal_analysis_id?: string
           metadata?: Json | null
           model?: string
           query?: string
           search_type?: string
+          source_verified?: boolean | null
           updated_at?: string
           usage_data?: Json | null
+          validated_at?: string | null
+          validation_score?: number | null
+          validation_status?: string | null
         }
         Relationships: [
           {
@@ -1334,6 +1379,7 @@ export type Database = {
         Row: {
           case_data: Json
           client_id: string
+          courtlistener_verified: boolean | null
           created_at: string
           global_case_ids: string[] | null
           id: string
@@ -1341,10 +1387,14 @@ export type Database = {
           search_cache_id: string | null
           search_metadata: Json | null
           updated_at: string
+          validated_at: string | null
+          validation_score: number | null
+          validation_status: string | null
         }
         Insert: {
           case_data: Json
           client_id: string
+          courtlistener_verified?: boolean | null
           created_at?: string
           global_case_ids?: string[] | null
           id?: string
@@ -1352,10 +1402,14 @@ export type Database = {
           search_cache_id?: string | null
           search_metadata?: Json | null
           updated_at?: string
+          validated_at?: string | null
+          validation_score?: number | null
+          validation_status?: string | null
         }
         Update: {
           case_data?: Json
           client_id?: string
+          courtlistener_verified?: boolean | null
           created_at?: string
           global_case_ids?: string[] | null
           id?: string
@@ -1363,6 +1417,9 @@ export type Database = {
           search_cache_id?: string | null
           search_metadata?: Json | null
           updated_at?: string
+          validated_at?: string | null
+          validation_score?: number | null
+          validation_status?: string | null
         }
         Relationships: [
           {
@@ -1487,6 +1544,42 @@ export type Database = {
           session_token?: string
           user_agent?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      validation_rules: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          min_score: number | null
+          rule_name: string
+          rule_type: string
+          table_name: string
+          updated_at: string | null
+          validation_function: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          min_score?: number | null
+          rule_name: string
+          rule_type: string
+          table_name: string
+          updated_at?: string | null
+          validation_function: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          min_score?: number | null
+          rule_name?: string
+          rule_type?: string
+          table_name?: string
+          updated_at?: string | null
+          validation_function?: string
         }
         Relationships: []
       }
@@ -1860,6 +1953,18 @@ export type Database = {
       sparsevec_typmod_in: {
         Args: { "": unknown[] }
         Returns: number
+      }
+      validate_legal_analysis: {
+        Args: {
+          analysis_content: string
+          citations?: Json
+          fact_sources?: Json
+        }
+        Returns: {
+          validation_details: Json
+          validation_score: number
+          validation_status: string
+        }[]
       }
       vector_avg: {
         Args: { "": number[] }

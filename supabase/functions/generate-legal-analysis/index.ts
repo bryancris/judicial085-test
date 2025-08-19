@@ -182,31 +182,15 @@ if (!isInternalLegalResearch && userId) {
         if (coordinatorResponse.data?.success && coordinatorResponse.data?.synthesizedContent) {
           console.log('✅ 3-agent coordination successful, using synthesized content');
           
-          // Save the 3-agent analysis to database (only if authenticated)
-          const analysisToSave = coordinatorResponse.data.synthesizedContent;
-          if (userId) {
-            const { error: saveError } = await supabase
-              .from('legal_analyses')
-              .insert({
-                client_id: clientId,
-                case_id: caseId || null,
-                content: analysisToSave,
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                analysis_type: '3-agent-coordination',
-                case_type: 'fact-based-analysis',
-                user_id: userId,
-                research_updates: researchUpdates || []
-              });
-            if (saveError) {
-              console.error('Error saving 3-agent analysis:', saveError);
-            }
-          } else {
-            console.warn('Skipping save of 3-agent analysis because no authenticated user.');
-          }
+          // 🚫 DISABLED: Prevent coordinator from saving unvalidated analyses
+          console.log('📋 Skipping coordinator analysis save to prevent data pollution');
+          
+          // Note: 3-agent coordination should return research for immediate use,
+          // not save fake analyses to the database that bypass validation
 
           return new Response(
             JSON.stringify({
-              analysis: analysisToSave,
+              analysis: coordinatorResponse.data.synthesizedContent,
               lawReferences: coordinatorResponse.data.researchSources || [],
               documentsUsed: [],
               metadata: {
