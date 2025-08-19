@@ -240,94 +240,14 @@ if (!isInternalLegalResearch) {
 
 // Log the request details for debugging and validate content
 const factPatternPreview = hasConversation 
-  ? conversationMessages.map(msg => msg.content).join(' ').substring(0, 200)
+  ? conversationMessages.map((msg: any) => msg.content).join(' ').substring(0, 200)
   : "No conversation provided";
 
 console.log(`Generating legal analysis for client: ${clientId}${caseId ? `, case: ${caseId}` : ''}`);
 console.log(`Conversation length: ${conversationMessages?.length || 0}`);
 console.log("📝 Fact pattern preview:", factPatternPreview);
-    console.log(`Research updates to integrate: ${researchUpdates?.length || 0}`);
-    console.log('📋 Fact-based analysis mode enabled');
-
-    // Skip fetching old research updates to prevent contamination from previous cases
-    let existingResearchUpdates = [];
-    console.log('Skipping old research updates to prevent case contamination');
-
-    // Check if we have a conversation provided
-    const hasProvidedConversation = conversation && conversation.length > 0;
-    console.log(`Has provided conversation: ${hasProvidedConversation}`);
-
-    // Initialize conversation data
-    let conversationMessages = conversation || [];
-
-    // If no conversation provided or empty, try to fetch client messages
-    if (!hasProvidedConversation) {
-      console.log("No conversation provided, fetching client messages from database");
-      try {
-        // First try to get case-specific messages if caseId is provided
-        let messageQuery = supabase
-          .from("client_messages")
-          .select("*")
-          .eq("client_id", clientId);
-
-        if (caseId) {
-          console.log(`Trying to fetch case-specific messages for case: ${caseId}`);
-          messageQuery = messageQuery.eq("case_id", caseId);
-          // 🎯 NEW: For case-specific runs, do NOT apply time limit to avoid drift
-          console.log("📅 Case-specific run: fetching ALL messages (no 24h limit)");
-        } else {
-          console.log(`Fetching client-level messages (case_id IS NULL)`);
-          messageQuery = messageQuery.is("case_id", null);
-          // Keep time filter only for client-level runs
-          const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-          messageQuery = messageQuery.gte('created_at', oneDayAgo);
-          console.log("📅 Client-level run: applying 24h message filter");
-        }
-
-        const { data: dbMessages, error: messageError } = await messageQuery
-          .order("created_at", { ascending: true });
-
-        if (messageError) {
-          console.error("Error fetching messages:", messageError);
-        } else if (dbMessages && dbMessages.length > 0) {
-          console.log(`Found ${dbMessages.length} messages in database`);
-          conversationMessages = dbMessages.map(msg => ({
-            content: msg.content,
-            timestamp: msg.timestamp,
-            role: msg.role
-          }));
-        } else if (caseId) {
-          // If no case-specific messages found, fallback to client-level messages (but still recent)
-          console.log("No case-specific messages found, falling back to recent client-level messages");
-          const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-          const { data: clientMessages, error: clientError } = await supabase
-            .from("client_messages")
-            .select("*")
-            .eq("client_id", clientId)
-            .is("case_id", null)
-            .gte('created_at', oneDayAgo)
-            .order("created_at", { ascending: true });
-
-          if (clientError) {
-            console.error("Error fetching client messages:", clientError);
-          } else if (clientMessages && clientMessages.length > 0) {
-            console.log(`Found ${clientMessages.length} client-level messages for fallback`);
-            conversationMessages = clientMessages.map(msg => ({
-              content: msg.content,
-              timestamp: msg.timestamp,
-              role: msg.role
-            }));
-          }
-        }
-      } catch (dbError) {
-        console.error("Database error when fetching messages:", dbError);
-      }
-    }
-
-    // Determine if we have a conversation after fetching
-    const hasConversation = conversationMessages && conversationMessages.length > 0;
-    console.log(`Final conversation status: ${hasConversation}, length: ${conversationMessages?.length || 0}`);
-
+console.log(`Research updates to integrate: ${researchUpdates?.length || 0}`);
+console.log('📋 Fact-based analysis mode enabled');
     // Fetch client-specific documents (filtered by case if provided)
     let clientDocuments = [];
     try {
@@ -433,10 +353,6 @@ console.log("📝 Fact pattern preview:", factPatternPreview);
     // Use all provided research updates (no domain-based filtering)
     const relevantResearchUpdates = (researchUpdates || []);
     
-    console.log(`Filtered research updates: ${researchUpdates?.length || 0} → ${relevantResearchUpdates.length} relevant updates`);
-    
-    console.log(`Filtered research updates: ${researchUpdates?.length || 0} → ${relevantResearchUpdates.length} relevant updates`);
-    
     // Add research updates context if available
     if (relevantResearchUpdates.length > 0) {
       userContent += "\n\nIMPORTANT: The following research updates should be integrated into the appropriate sections of your analysis:\n\n";
@@ -490,7 +406,7 @@ console.log("📝 Fact pattern preview:", factPatternPreview);
       console.log("🔍 Generated content preview:", generatedPreview);
       
       // 🎯 NEW: Enhanced domain guardrail for consumer protection cases
-      if (domainHint === 'consumer-protection' || isConsumerCase) {
+      if (isConsumerCase) {
         const propertyIndicators = ['texas property code', 'trespass to try title', 'adverse possession', 'encroach', 'easement', 'deed', 'fixture', 'premises liability'];
         const consumerIndicators = ['debt', 'collection', 'fdcpa', 'dtpa', 'finance code', 'harass', 'garnishment', 'validation', 'deceptive trade practices'];
         const containsProperty = propertyIndicators.some(k => analysis.toLowerCase().includes(k));

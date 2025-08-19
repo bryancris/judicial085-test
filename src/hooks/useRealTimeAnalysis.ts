@@ -23,10 +23,18 @@ export const useRealTimeAnalysis = (clientId?: string, caseId?: string) => {
       console.log(`Generating real-time analysis for client: ${clientId}${caseId ? `, case: ${caseId}` : ''}`);
       
       // Fetch the client messages for this client
-      const { data: messages, error: messagesError } = await supabase
+      const messagesQuery = supabase
         .from("client_messages")
         .select("content, role, timestamp")
-        .eq("client_id", clientId)
+        .eq("client_id", clientId);
+
+      if (caseId) {
+        messagesQuery.eq("case_id", caseId);
+      } else {
+        messagesQuery.is("case_id", null);
+      }
+
+      const { data: messages, error: messagesError } = await messagesQuery
         .order("created_at", { ascending: true });
 
       if (messagesError) throw messagesError;
