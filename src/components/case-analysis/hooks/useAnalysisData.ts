@@ -35,7 +35,7 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           .select("*")
           .eq("client_id", clientId)
           .eq("case_id", caseId)
-          .eq("validation_status", "validated")  // Only validated analyses
+          .in("validation_status", ["validated", "pending_review"])  // Include validated and pending review
           .not("analysis_type", "in", "(3-agent-coordination,coordinator-research)")
           .order("created_at", { ascending: false });
 
@@ -45,6 +45,26 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
 
         analyses = caseAnalyses;
         console.log(`Found ${analyses?.length || 0} case-specific analysis records`);
+
+        // If no case-specific analysis, fall back to latest client-level analysis
+        if (!analyses || analyses.length === 0) {
+          console.log(`No case-specific analysis found, falling back to client-level (case_id IS NULL)`);
+          const { data: clientAnalysesFallback, error: clientFallbackError } = await supabase
+            .from("legal_analyses")
+            .select("*")
+            .eq("client_id", clientId)
+            .is("case_id", null)
+            .in("validation_status", ["validated", "pending_review"])  // Include validated and pending review
+            .not("analysis_type", "in", "(3-agent-coordination,coordinator-research)")
+            .order("created_at", { ascending: false });
+
+          if (clientFallbackError) {
+            throw new Error(`Failed to fetch client-level analysis (fallback): ${clientFallbackError.message}`);
+          }
+
+          analyses = clientAnalysesFallback;
+          console.log(`Found ${analyses?.length || 0} client-level analysis records (fallback)`);
+        }
         
         // 🎯 Filter and prioritize legitimate analyses
         if (analyses && analyses.length > 1) {
@@ -75,7 +95,7 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           .select("*")
           .eq("client_id", clientId)
           .is("case_id", null)
-          .eq("validation_status", "validated")  // Only validated analyses
+          .in("validation_status", ["validated", "pending_review"])  // Include validated and pending review
           .not("analysis_type", "in", "(3-agent-coordination,coordinator-research)")
           .order("created_at", { ascending: false });
 
