@@ -49,7 +49,7 @@ export const useClientChatAnalysis = (
     
     try {
       // Send the conversation to generate legal analysis (can be empty for document-only analysis)
-      const { analysis, error, lawReferences, documentsUsed: docsUsed } = await generateLegalAnalysis(clientId, currentMessages);
+      const { analysis, error, lawReferences, documentsUsed: docsUsed } = await generateLegalAnalysis(clientId, currentMessages, undefined, 'client-intake');
       
       // Update state with documents used in the analysis
       if (docsUsed && docsUsed.length > 0) {

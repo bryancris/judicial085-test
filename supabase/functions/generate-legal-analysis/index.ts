@@ -61,7 +61,7 @@ serve(async (req) => {
       );
     }
 
-    const { clientId, conversation, caseId, researchUpdates, researchFocus } = payload || {};
+    const { clientId, conversation, caseId, researchUpdates, researchFocus, requestContext } = payload || {};
 
     if (!clientId) {
       return new Response(
@@ -134,7 +134,8 @@ serve(async (req) => {
             query: researchQuery,
             clientId,
             caseId,
-            researchTypes: ['legal-research', 'current-research', 'similar-cases']
+            researchTypes: ['legal-research', 'current-research', 'similar-cases'],
+            requestContext
           },
           headers: {
             Authorization: authHeader

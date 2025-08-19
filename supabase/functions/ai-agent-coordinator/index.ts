@@ -22,6 +22,7 @@ interface CoordinatorRequest {
   caseId?: string;
   context?: any;
   researchTypes?: string[];
+  requestContext?: string;
   userId?: string;
   messages?: Array<{ role: string; content: string; timestamp?: string }>;
 }
@@ -267,9 +268,9 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
-    const { query, clientId, caseId, context, researchTypes = ['legal-research', 'similar-cases'] }: CoordinatorRequest = await req.json();
+    const { query, clientId, caseId, context, researchTypes = ['legal-research', 'similar-cases'], requestContext }: CoordinatorRequest = await req.json();
 
-    console.log('🎯 AI Agent Coordinator received request:', { query, clientId, caseId, researchTypes });
+    console.log('🎯 AI Agent Coordinator received request:', { query, clientId, caseId, researchTypes, requestContext });
 
     // Phase 1: Coordinate research agents in parallel
     console.log('🔍 Initiating parallel research with OpenAI and Perplexity agents...');
@@ -363,12 +364,17 @@ serve(async (req) => {
     
     const hasDraftingKeyword = draftingKeywords.some(keyword => queryLower.includes(keyword));
     const hasDocumentType = documentTypes.some(docType => queryLower.includes(docType));
-    const isDraftingRequest = hasDraftingKeyword && hasDocumentType;
+    
+    // Check if this is from client intake context - if so, always treat as legal research
+    const isClientIntakeContext = requestContext === 'client-intake';
+    const isDraftingRequest = !isClientIntakeContext && hasDraftingKeyword && hasDocumentType;
     
     console.log(`🔍 Query Analysis:
     - Original query: "${query}"
     - Has drafting keyword: ${hasDraftingKeyword}
     - Has document type: ${hasDocumentType}
+    - Request context: ${requestContext || 'none'}
+    - Is client intake: ${isClientIntakeContext}
     - Request type detected: ${isDraftingRequest ? 'DOCUMENT DRAFTING' : 'LEGAL RESEARCH'}`);
     
     let synthesisPrompt: string;
