@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { generateLegalAnalysis } from "@/utils/api/analysisApiService";
 import { useToast } from "@/hooks/use-toast";
+import { saveLegalAnalysis } from "@/utils/api/legalContentApiService";
 
 export const useAnalysisGeneration = (clientId?: string, caseId?: string) => {
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
@@ -66,11 +67,33 @@ export const useAnalysisGeneration = (clientId?: string, caseId?: string) => {
       }
 
       console.log("✅ Analysis generation completed successfully");
-      
+      // Save the generated analysis (validated) via secure service
+      const timestamp = new Date().toISOString();
+      const saveResult = await saveLegalAnalysis(
+        clientId,
+        result.analysis,
+        timestamp,
+        {
+          caseId,
+          analysisType: caseId ? "case-analysis" : "client-intake",
+          lawReferences: result.lawReferences || [],
+          documentsUsed: result.documentsUsed || []
+        }
+      );
+      if (!saveResult.success) {
+        console.error("❌ Failed to save validated analysis:", saveResult.error || saveResult.validation);
+        toast({
+          title: "Save Failed",
+          description: saveResult.error || "Validation failed while saving analysis.",
+          variant: "destructive",
+        });
+        return;
+      }
+      console.log("✅ Analysis validated and saved, id:", saveResult.analysisId);
       // Show success message
       toast({
         title: "Analysis Complete",
-        description: `Legal analysis has been generated successfully${caseId ? ' for this case' : ''}.`,
+        description: `Legal analysis has been generated and saved${caseId ? ' for this case' : ''}.`,
       });
 
       // Refresh analysis data first

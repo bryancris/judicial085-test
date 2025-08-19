@@ -144,6 +144,21 @@ if (!hasConversation) {
       console.log(`Found ${dbMessages.length} messages in database`);
       conversationMessages = dbMessages.map(msg => ({ content: msg.content, timestamp: msg.timestamp, role: msg.role }));
       hasConversation = conversationMessages.length > 0;
+    } else if (caseId) {
+      // Fallback: use client-level conversation if no case-specific messages found
+      console.log("No case-specific messages found. Falling back to client-level messages (case_id IS NULL)");
+      const { data: clientLevelMsgs, error: clientLevelError } = await supabase
+        .from("client_messages").select("*")
+        .eq("client_id", clientId)
+        .is("case_id", null)
+        .order("created_at", { ascending: true });
+      if (clientLevelError) {
+        console.error("Error fetching client-level messages:", clientLevelError);
+      } else if (clientLevelMsgs && clientLevelMsgs.length > 0) {
+        console.log(`Found ${clientLevelMsgs.length} client-level messages`);
+        conversationMessages = clientLevelMsgs.map(msg => ({ content: msg.content, timestamp: msg.timestamp, role: msg.role }));
+        hasConversation = conversationMessages.length > 0;
+      }
     }
   } catch (dbError) {
     console.error("Database error when fetching messages:", dbError);
@@ -256,9 +271,7 @@ console.log('📋 Fact-based analysis mode enabled');
 
     // Enhanced fact sufficiency gate with documents
     const hasDocuments = clientDocuments && clientDocuments.length > 0;
-    const conversationText = conversationMessages.map(m => m.content || '').join(' ');
-    const hasSubstantialFacts = hasConversation && conversationText.length > 100;
-    
+    // Reuse previously computed conversationText/hasSubstantialFacts
     console.log("Enhanced fact sufficiency check:", {
       hasConversation,
       conversationLength: conversationText.length,
