@@ -1,7 +1,7 @@
 project_id = "ghpljdgecjmhkwkfctgy"
 
 [functions.ai-agent-coordinator]
-verify_jwt = true
+verify_jwt = false
 
 [functions.perplexity-research]
 verify_jwt = true
@@ -22,4 +22,4 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.generate-legal-analysis]
-verify_jwt = true
+verify_jwt = false

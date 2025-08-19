@@ -12,6 +12,7 @@ import { generateLegalAnalysis } from "../shared/geminiService.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 // Function to extract research updates from existing analysis content
