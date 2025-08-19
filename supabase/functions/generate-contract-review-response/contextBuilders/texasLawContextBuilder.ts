@@ -1,6 +1,7 @@
 
-// Updated context builder for Texas law
+// Updated context builder for Texas law with vector similarity search
 import { supabase } from "../supabaseClient.ts";
+import { generateEmbedding } from "../../process-pdf-document/openaiService.ts";
 
 // Define severity levels for contract issues
 export const SEVERITY_LEVELS = {
@@ -72,96 +73,186 @@ async function extractContractSections(contractText: string): Promise<Record<str
 }
 
 /**
- * Get relevant Texas laws for a contract section from the vector database
+ * Get relevant Texas laws for a contract section using vector similarity search
  * @param sectionType The type of contract section
  * @param sectionText The text content of the section
- * @returns Relevant laws as text
+ * @returns Relevant laws with confidence scores for potential violations
  */
 async function getRelevantTexasLaws(sectionType: string, sectionText: string): Promise<string> {
   try {
-    // Generate search query based on section type and content
+    // Generate search query based on section type and content for semantic matching
     let searchQuery = "";
     
     switch (sectionType) {
       case "choice-of-law":
-        searchQuery = "Texas choice of law provision jurisdiction conflicts foreign law";
+        searchQuery = `Texas choice of law provision jurisdiction conflicts foreign law governing law clause ${sectionText.slice(0, 200)}`;
         break;
       case "security-interest":
-        searchQuery = "Texas security interest UCC collateral description requirements";
+        searchQuery = `Texas security interest UCC collateral description requirements all assets property ${sectionText.slice(0, 200)}`;
         break;
       case "liquidated-damages":
-        searchQuery = "Texas liquidated damages penalty reasonable estimate actual damages";
+        searchQuery = `Texas liquidated damages penalty reasonable estimate actual damages compensation ${sectionText.slice(0, 200)}`;
         break;
       case "waiver-of-rights":
-        searchQuery = "Texas DTPA waiver consumer rights protection statutes";
+        searchQuery = `Texas DTPA waiver consumer rights protection statutes jury trial class action ${sectionText.slice(0, 200)}`;
         break;
       case "limitation-of-liability":
-        searchQuery = "Texas limitation of liability gross negligence intentional conduct";
+        searchQuery = `Texas limitation of liability gross negligence intentional conduct misconduct ${sectionText.slice(0, 200)}`;
         break;
       case "arbitration":
-        searchQuery = "Texas arbitration agreement enforceability requirements";
+        searchQuery = `Texas arbitration agreement enforceability requirements binding dispute resolution ${sectionText.slice(0, 200)}`;
         break;
       case "venue":
-        searchQuery = "Texas venue provision forum selection clause enforceability";
+        searchQuery = `Texas venue provision forum selection clause enforceability jurisdiction court ${sectionText.slice(0, 200)}`;
         break;
       case "indemnification":
-        searchQuery = "Texas indemnification clause fair notice conspicuousness";
+        searchQuery = `Texas indemnification clause fair notice conspicuousness express negligence doctrine ${sectionText.slice(0, 200)}`;
         break;
       case "confidentiality":
-        searchQuery = "Texas confidentiality agreement trade secret protection";
+        searchQuery = `Texas confidentiality agreement trade secret protection non-disclosure ${sectionText.slice(0, 200)}`;
         break;
       default:
-        searchQuery = `Texas contract law ${sectionType}`;
+        searchQuery = `Texas contract law ${sectionType} ${sectionText.slice(0, 200)}`;
     }
     
-    // Extract key words from the section text
-    const keywords = sectionText
-      .replace(/[^\w\s]/g, ' ')
-      .split(/\s+/)
-      .filter(word => word.length > 4 && !['shall', 'party', 'agreement', 'contract'].includes(word.toLowerCase()))
-      .slice(0, 5)
-      .join(' ');
+    console.log(`Generating embedding for: ${searchQuery.slice(0, 100)}... (section: ${sectionType})`);
     
-    // Add keywords to search query
-    searchQuery += ` ${keywords}`;
+    // Get OpenAI API key from environment
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openaiApiKey) {
+      console.error("OpenAI API key not found");
+      return getDefaultTexasLaws(sectionType);
+    }
     
-    console.log(`Searching vector DB for: ${searchQuery} (section: ${sectionType})`);
+    // Generate embedding for the search query
+    const queryEmbedding = await generateEmbedding(searchQuery, openaiApiKey);
     
-    // Search the vector database for relevant laws
-    const { data: documents, error } = await supabase
-      .from('documents')
-      .select('id, content, metadata')
-      .textSearch('content', searchQuery, { type: 'plain' })
-      .limit(3);
+    console.log(`Searching vector DB with embedding for section: ${sectionType}`);
+    
+    // Search the vector database for relevant laws using semantic similarity
+    const { data: documents, error } = await supabase.rpc('match_documents', {
+      query_embedding: queryEmbedding,
+      match_threshold: 0.7, // Lower threshold for more comprehensive results
+      match_count: 5,       // Get more results for better analysis
+      filter: {} // Could filter by metadata if needed
+    });
     
     if (error) {
-      console.error("Error searching documents:", error);
+      console.error("Error searching documents with vector similarity:", error);
       return getDefaultTexasLaws(sectionType);
     }
     
     if (!documents || documents.length === 0) {
+      console.log(`No vector matches found for ${sectionType}, using default laws`);
       return getDefaultTexasLaws(sectionType);
     }
     
-    // Format the results
+    console.log(`Found ${documents.length} vector matches for ${sectionType}`);
+    
+    // Format the results with confidence scores for potential violations
     let relevantLaws = `## Texas Law References for ${formatSectionType(sectionType)}\n\n`;
     
-    documents.forEach(doc => {
+    documents.forEach((doc: any, index: number) => {
       const content = doc.content || "";
+      const similarity = doc.similarity || 0;
       const citation = extractLawReference(content, sectionType);
       
-      relevantLaws += `### ${citation || "Texas Contract Law"}\n`;
+      // Determine violation confidence based on similarity and content analysis
+      const violationConfidence = determineViolationConfidence(sectionText, content, similarity, sectionType);
       
-      // Extract relevant snippet (up to 200 chars)
-      const relevantSnippet = extractRelevantSnippet(content, sectionType, keywords);
+      relevantLaws += `### ${citation || "Texas Contract Law"} (Match: ${(similarity * 100).toFixed(1)}%)\n`;
+      
+      if (violationConfidence.isViolation) {
+        relevantLaws += `🚨 **POTENTIAL VIOLATION** (Confidence: ${violationConfidence.confidence}%)\n`;
+        relevantLaws += `**Issue**: ${violationConfidence.reason}\n\n`;
+      }
+      
+      // Extract relevant snippet
+      const relevantSnippet = extractRelevantSnippet(content, sectionType, searchQuery);
       relevantLaws += `${relevantSnippet}\n\n`;
     });
     
     return relevantLaws;
   } catch (error) {
-    console.error("Error getting relevant Texas laws:", error);
+    console.error("Error getting relevant Texas laws with vector search:", error);
     return getDefaultTexasLaws(sectionType);
   }
+}
+
+/**
+ * Determine if there's a potential statute violation and confidence level
+ */
+function determineViolationConfidence(
+  contractText: string, 
+  statuteText: string, 
+  similarity: number, 
+  sectionType: string
+): { isViolation: boolean; confidence: number; reason: string } {
+  const lowerContractText = contractText.toLowerCase();
+  const lowerStatuteText = statuteText.toLowerCase();
+  
+  let confidence = 0;
+  let reasons: string[] = [];
+  
+  // High similarity indicates relevant statute
+  if (similarity > 0.8) {
+    confidence += 30;
+  } else if (similarity > 0.7) {
+    confidence += 20;
+  }
+  
+  // Section-specific violation patterns
+  switch (sectionType) {
+    case "choice-of-law":
+      if (lowerContractText.includes("delaware") || lowerContractText.includes("new york") || 
+          lowerContractText.includes("california")) {
+        confidence += 40;
+        reasons.push("Non-Texas governing law clause may violate Texas public policy");
+      }
+      break;
+      
+    case "security-interest":
+      if (lowerContractText.includes("all assets") || lowerContractText.includes("all property")) {
+        confidence += 50;
+        reasons.push("Overly broad collateral description violates UCC requirements");
+      }
+      break;
+      
+    case "liquidated-damages":
+      if (lowerContractText.match(/\d+%|percent|times|double|triple/)) {
+        confidence += 45;
+        reasons.push("Liquidated damages may constitute unenforceable penalty");
+      }
+      break;
+      
+    case "waiver-of-rights":
+      if (lowerContractText.includes("dtpa") || lowerContractText.includes("deceptive trade") ||
+          lowerContractText.includes("consumer rights")) {
+        confidence += 60;
+        reasons.push("DTPA waiver likely unenforceable under Texas law");
+      }
+      break;
+      
+    case "limitation-of-liability":
+      if (lowerContractText.includes("gross negligence") || lowerContractText.includes("intentional")) {
+        confidence += 55;
+        reasons.push("Limitation of liability for gross negligence violates public policy");
+      }
+      break;
+  }
+  
+  // Check for statute-specific violations in the matched law
+  if (lowerStatuteText.includes("void") || lowerStatuteText.includes("unenforceable") ||
+      lowerStatuteText.includes("against public policy")) {
+    confidence += 25;
+    reasons.push("Statute indicates provision may be void or unenforceable");
+  }
+  
+  return {
+    isViolation: confidence >= 40, // Threshold for flagging potential violations
+    confidence: Math.min(confidence, 95), // Cap at 95%
+    reason: reasons.join("; ") || "Potential conflict with Texas statute requirements"
+  };
 }
 
 /**
