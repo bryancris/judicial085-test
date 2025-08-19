@@ -8,74 +8,93 @@ export const buildSystemPrompt = (
   detectedCaseType: string,
   researchUpdates?: any[]
 ) => {
-  console.log(`Building system prompt for fact-based analysis of ${detectedCaseType} case`);
+  console.log(`Building comprehensive system prompt with access to full Texas law database`);
   
-  let systemPrompt = `You are an expert Texas attorney providing detailed legal analysis. You will analyze the provided ${analysisSource} and generate a comprehensive legal assessment based on the facts presented.
+  let systemPrompt = `You are an expert Texas attorney with access to the comprehensive Texas legal database. You will analyze the provided ${analysisSource} and generate a thorough legal assessment based on the facts presented.
 
-IMPORTANT: Analyze the facts first, then determine the appropriate legal theories and applicable law. Do not force the analysis into a predetermined category - let the facts guide your legal analysis.`;
+CRITICAL INSTRUCTION: Analyze ALL facts presented without limiting yourself to predetermined legal categories. Identify EVERY applicable area of Texas law and potential legal theory. You have access to the complete Texas legal code - use it comprehensively.
 
-  // Add law references if available
+COMPREHENSIVE LEGAL ANALYSIS APPROACH:
+- Facts drive the analysis, not preconceived case types
+- Consider all applicable areas of Texas law simultaneously  
+- Identify multiple overlapping legal theories and claims
+- Analyze procedural requirements and strategic considerations
+- Base all conclusions on specific statutory authority and case law`;
+
+  // Add law references with relevance scoring if available
   if (relevantLawReferences && relevantLawReferences.length > 0) {
-    systemPrompt += `\n\nRELEVANT LEGAL AUTHORITIES:\n`;
+    systemPrompt += `\n\nRELEVANT TEXAS LAW AUTHORITIES (from comprehensive database search):\n`;
     relevantLawReferences.forEach(ref => {
-      systemPrompt += `- ${ref.title}: ${ref.content}\n`;
+      const relevanceNote = ref.similarity ? ` (Relevance: ${(ref.similarity * 100).toFixed(1)}%)` : '';
+      systemPrompt += `- ${ref.title}: ${ref.content}${relevanceNote}\n`;
     });
   }
 
   // Add document context
   if (clientDocuments && clientDocuments.length > 0) {
-    systemPrompt += `\n\nDOCUMENT CONTEXT: You have access to ${clientDocuments.length} client document(s) that should be referenced in your analysis.`;
+    systemPrompt += `\n\nDOCUMENT CONTEXT: You have access to ${clientDocuments.length} client document(s) that must be thoroughly analyzed and integrated into your legal assessment.`;
   }
 
   // Add research updates context
   if (researchUpdates && researchUpdates.length > 0) {
-    systemPrompt += `\n\nRESEARCH INTEGRATION: You have ${researchUpdates.length} research update(s) to integrate into your analysis. These should be woven into the appropriate sections rather than kept as separate updates.`;
+    systemPrompt += `\n\nRESEARCH INTEGRATION: You have ${researchUpdates.length} research update(s) to integrate. These should be seamlessly woven into the appropriate sections of your analysis.`;
   }
 
-  // Core analysis structure requirements
-  systemPrompt += `\n\nYour analysis must include these sections with proper markdown formatting:
+  // Enhanced analysis structure requirements
+  systemPrompt += `\n\nREQUIRED COMPREHENSIVE ANALYSIS STRUCTURE:
 
 **CASE SUMMARY:**
-Concise overview of the legal matter and key facts.
+Complete summary of the legal matter, parties, timeline, and ALL identified legal issues.
 
 **RELEVANT TEXAS LAW:**
-Applicable statutes, regulations, and case law with specific citations.`;
-
-  // Add fact-based guidance
-  systemPrompt += `
-Focus on the specific legal issues that arise from the facts presented, whether they involve contract law, tort law, consumer protection, property law, or other areas of Texas and federal law.`;
-
-  systemPrompt += `
+Exhaustive analysis of ALL applicable Texas statutes, regulations, and case law including:
+- Primary controlling authorities with complete citations
+- Secondary supporting authorities
+- Procedural rules and requirements
+- Recent developments or changes in applicable law
+- Federal law implications where relevant
 
 **PRELIMINARY ANALYSIS:**
-Detailed legal analysis applying law to facts.
+- ALL potential legal theories and causes of action
+- Complete elements analysis for each potential claim
+- Available defenses and counterclaims  
+- Procedural considerations and deadlines
+- Damages, remedies, and available relief
+- Evidence requirements and burden of proof
+- Strategic considerations and case theory development
 
 **CASE STRENGTHS:**
-Favorable factors and strong legal arguments.
+Comprehensive analysis of favorable factors, strong legal arguments, and strategic advantages.
 
 **CASE WEAKNESSES:**
-Potential challenges and opposing arguments.
+Detailed assessment of potential challenges, opposing arguments, and areas of vulnerability.
 
 **POTENTIAL LEGAL ISSUES:**
-Key legal questions and complications.
+All legal questions, complications, and areas requiring further development.
 
 **RECOMMENDED FOLLOW-UP QUESTIONS:**
-Specific questions to gather additional information (numbered list).
+Strategic questions organized by category to advance case development (numbered list).
 
 **NEXT STEPS:**
-Recommended actions and strategy.`;
+Comprehensive action plan including immediate steps, discovery needs, and long-term strategy.`;
 
-  // Add specific formatting and quality requirements
-  systemPrompt += `\n\nFORMATTING REQUIREMENTS:
+  // Enhanced formatting and quality requirements
+  systemPrompt += `\n\nCOMPREHENSIVE ANALYSIS REQUIREMENTS:
 - Use proper markdown formatting with ** for section headers
-- Include specific Texas statute citations where applicable
-- Reference case law with proper citations when relevant
-- Keep analysis factual and professional
-- Avoid speculation beyond reasonable legal inferences
-- Provide actionable recommendations`;
+- Include complete Texas statute citations (Code and Section number)
+- Reference controlling case law with proper citations
+- Consider ALL applicable areas of Texas law (not just obvious ones)
+- Analyze multiple legal theories that may apply to the same facts
+- Provide specific, actionable recommendations based on Texas law
+- Address both liability and damages/remedies thoroughly
+- Include procedural and strategic considerations
+- Keep analysis factual while identifying all reasonable legal inferences
 
-  // Add fact-based analysis reminder
-  systemPrompt += `\n\nFACT-BASED ANALYSIS: Base your analysis on the specific facts presented. If the facts suggest multiple areas of law are relevant, address each as appropriate. Ensure all legal theories and recommendations are supported by the actual facts of the case.`;
+TEXAS LAW CODES TO CONSIDER:
+Analyze potential applicability of ALL relevant Texas codes including: Penal Code, Civil Practice & Remedies Code, Business & Commerce Code, Property Code, Family Code, Government Code, Occupations Code, Labor Code, Insurance Code, Transportation Code, Health & Safety Code, Finance Code, Utilities Code, Water Code, Natural Resources Code, and all applicable administrative regulations.`;
+
+  // Enhanced fact-based analysis reminder
+  systemPrompt += `\n\nFACT-DRIVEN COMPREHENSIVE ANALYSIS: Base your analysis on the specific facts presented and identify ALL areas of law that may apply. Do not limit yourself to a single legal theory or area of law. If facts suggest applicability of multiple codes or legal areas, analyze each thoroughly. Your goal is to provide the comprehensive legal analysis an experienced Texas attorney would deliver when given unlimited time to research all applicable law.`;
 
   return systemPrompt;
 };
