@@ -1,260 +1,8 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-interface ResearchResult {
-  source: 'openai' | 'perplexity';
-  type: string;
-  content: string;
-  citations?: string[];
-  confidence?: number;
-  metadata?: any;
-}
-
-interface CoordinatorRequest {
-  query: string;
-  clientId?: string;
-  caseId?: string;
-  context?: any;
-  researchTypes?: string[];
-  requestContext?: string;
-  userId?: string;
-  messages?: Array<{ role: string; content: string; timestamp?: string }>;
-}
-
-/**
- * Extract case names from synthesized content
- */
-const extractCaseNames = (text: string): string[] => {
-  const caseNames: string[] = [];
-  
-  // Enhanced patterns for case extraction
-  const patterns = [
-    // Standard numbered case format: "1. Case v. Other"
-    /^\s*\d+\.\s*\*?\*?([A-Z][^v\n]*v\.?\s*[A-Z][^,\n\d]*)/gm,
-    
-    // Bullet point cases: "• Case v. Other" or "- Case v. Other"
-    /^[\s•\-*]+\*?\*?([A-Z][^v\n]*v\.?\s*[A-Z][^,\n\d]*)/gm,
-    
-    // Bold case names: **Case v. Other**
-    /\*\*([A-Z][^v*\n]*v\.?\s*[A-Z][^,*\n\d]*)\*\*/g,
-    
-    // Inline case citations with proper capitalization
-    /\b([A-Z][a-zA-Z\s&,.']*v\.?\s*[A-Z][a-zA-Z\s&,.']*?)(?:\s*[,;:]|\s*\(|\s*$)/g,
-    
-    // Cases mentioned after "In" or "See": "In Case v. Other"
-    /(?:In\s+|See\s+)([A-Z][^v\n]*v\.?\s*[A-Z][^,\n\d]*)/gi,
-    
-    // Texas-specific patterns: "Texas Court of Appeals" cases
-    /([A-Z][^v\n]*v\.?\s*[A-Z][^,\n\d]*)\s*,?\s*(?:Tex\.|Texas)/gi
-  ];
-  
-  patterns.forEach(pattern => {
-    let match;
-    while ((match = pattern.exec(text)) !== null) {
-      let caseName = match[1].trim()
-        .replace(/\*\*/g, '')
-        .replace(/[,:.;"']+$/, '')
-        .replace(/\s+/g, ' ');
-      
-      // Clean up common artifacts
-      caseName = caseName
-        .replace(/^(In\s+|See\s+)/i, '')
-        .replace(/\s+(Tex\.|Texas).*$/i, '')
-        .trim();
-      
-      // Validate case name quality
-      if (caseName.length > 8 && 
-          caseName.includes('v') && 
-          !caseNames.some(existing => existing.toLowerCase() === caseName.toLowerCase()) &&
-          !/^\d+/.test(caseName) && // Not starting with numbers
-          !/^(The|A|An)\s+v\./i.test(caseName)) { // Not starting with articles + v.
-        caseNames.push(caseName);
-      }
-    }
-  });
-  
-  return caseNames.slice(0, 15); // Limit to prevent overwhelming CourtListener
-};
-
-/**
- * Verify cases with CourtListener
- */
-const verifyCasesWithCourtListener = async (caseNames: string[], supabaseClient: any): Promise<any[]> => {
-  const verifiedCases: any[] = [];
-  
-  for (const caseName of caseNames) {
-    try {
-      console.log(`Verifying case: ${caseName}`);
-      
-      // Call the search-court-listener function
-      const { data, error } = await supabaseClient.functions.invoke('search-court-listener', {
-        body: { 
-          query: caseName,
-          citation: caseName 
-        }
-      });
-      
-      if (error) {
-        console.log(`CourtListener search error for "${caseName}":`, error);
-        continue;
-      }
-      
-      if (data?.results && data.results.length > 0) {
-        // Find the best match based on case name similarity
-        const bestMatch = data.results[0];
-        
-        verifiedCases.push({
-          originalName: caseName,
-          verifiedCase: {
-            id: bestMatch.id,
-            caseName: bestMatch.caseName,
-            court: bestMatch.court,
-            dateFiled: bestMatch.dateFiled,
-            docketNumber: bestMatch.docketNumber,
-            url: bestMatch.absolute_url,
-            snippet: bestMatch.snippet,
-            confidence: calculateMatchConfidence(caseName, bestMatch.caseName)
-          }
-        });
-        
-        console.log(`Verified case: ${caseName} -> ${bestMatch.caseName}`);
-      } else {
-        console.log(`No CourtListener results found for: ${caseName}`);
-      }
-    } catch (error) {
-      console.log(`Error verifying case "${caseName}":`, error);
-    }
-  }
-  
-  return verifiedCases;
-};
-
-/**
- * Calculate match confidence between original and verified case names
- */
-const calculateMatchConfidence = (original: string, verified: string): number => {
-  const originalWords = original.toLowerCase().split(/\s+/);
-  const verifiedWords = verified.toLowerCase().split(/\s+/);
-  
-  let matchCount = 0;
-  for (const word of originalWords) {
-    if (verifiedWords.some(vw => vw.includes(word) || word.includes(vw))) {
-      matchCount++;
-    }
-  }
-  
-  return Math.min(100, Math.round((matchCount / originalWords.length) * 100));
-};
-
-/**
- * Replace AI case mentions with verified CourtListener cases
- */
-const replaceWithVerifiedCases = (text: string, verifiedCases: any[]): { text: string, citations: any[] } => {
-  let updatedText = text;
-  const courtListenerCitations: any[] = [];
-  
-  for (const { originalName, verifiedCase } of verifiedCases) {
-    if (verifiedCase.confidence >= 60) { // Only replace with high confidence matches
-      // Create citation object
-      courtListenerCitations.push({
-        id: `cl-${verifiedCase.id}`,
-        type: 'case',
-        source: 'CourtListener',
-        title: verifiedCase.caseName,
-        relevance: verifiedCase.confidence,
-        content_preview: verifiedCase.snippet,
-        docket_number: verifiedCase.docketNumber,
-        court: verifiedCase.court,
-        date_filed: verifiedCase.dateFiled,
-        url: verifiedCase.url,
-        verified: true
-      });
-      
-      // Replace the case name in the text with verified version
-      const originalPattern = new RegExp(
-        originalName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 
-        'gi'
-      );
-      
-      const verifiedText = `${verifiedCase.caseName} [Verified on CourtListener]`;
-      updatedText = updatedText.replace(originalPattern, verifiedText);
-    }
-  }
-  
-  return { text: updatedText, citations: courtListenerCitations };
-};
-
-/**
- * Remove duplicate case citations while preserving formatting
- */
-const removeDuplicateCitations = (text: string): string => {
-  const lines = text.split('\n');
-  const processedLines: string[] = [];
-  const seenCases = new Set<string>();
-  
-  for (let line of lines) {
-    let processedLine = line;
-    let shouldSkipLine = false;
-    
-    // Check for numbered case lists (1., 2., 3., etc.)
-    const numberedCaseMatch = line.match(/^\s*\d+\.\s*(.+)/);
-    if (numberedCaseMatch) {
-      // This is a numbered case item, check if we've seen this case before
-      const caseContent = numberedCaseMatch[1];
-      const caseNameMatch = caseContent.match(/^(.+?v\..+?)(?:\s|,|$)/i);
-      if (caseNameMatch) {
-        const caseName = caseNameMatch[1].trim();
-        const normalizedCase = caseName.toLowerCase().replace(/[,.\s]+/g, ' ').trim();
-        
-        if (seenCases.has(normalizedCase)) {
-          shouldSkipLine = true; // Skip this entire case entry
-        } else {
-          seenCases.add(normalizedCase);
-        }
-      }
-    }
-    
-    // Find all case citations in format "Name v. Name"
-    const caseMatches = line.match(/\b[A-Z][^v]*v\.[^,\n()]+/g);
-    if (caseMatches) {
-      for (const fullMatch of caseMatches) {
-        const caseName = fullMatch.trim();
-        const normalizedCase = caseName.toLowerCase().replace(/[,.\s]+/g, ' ').trim();
-        
-        if (seenCases.has(normalizedCase)) {
-          // Remove this duplicate case mention
-          const regex = new RegExp(fullMatch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-          processedLine = processedLine.replace(regex, '');
-          // Also remove any bold formatting around it
-          const boldRegex = new RegExp(`\\*\\*${fullMatch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\*\\*`, 'g');
-          processedLine = processedLine.replace(boldRegex, '');
-        } else {
-          seenCases.add(normalizedCase);
-        }
-      }
-    }
-    
-    // Clean up formatting but preserve paragraph structure
-    processedLine = processedLine.replace(/\*\*([^*]+v\.[^*]+)\*\*/g, '$1'); // Remove bold from case names
-    
-    // Only add the line if it's not a case list and has content after processing
-    if (!shouldSkipLine && processedLine.trim().length > 0) {
-      processedLines.push(processedLine);
-    }
-  }
-  
-  // Join lines and clean up excessive whitespace while preserving paragraph breaks
-  return processedLines
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n') // Max 2 consecutive newlines
-    .replace(/[ \t]+\n/g, '\n') // Remove trailing spaces
-    .trim();
 };
 
 serve(async (req) => {
@@ -263,485 +11,538 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    );
+    const { query, clientId, caseId, researchTypes, requestContext, domainHint } = await req.json();
+    
+    console.log('🎯 AI Agent Coordinator received request:', { 
+      query: query.substring(0, 200) + '...',
+      clientId, 
+      caseId, 
+      researchTypes,
+      requestContext,
+      domainHint
+    });
 
-    const { query, clientId, caseId, context, researchTypes = ['legal-research', 'similar-cases'], requestContext }: CoordinatorRequest = await req.json();
+    // Create Supabase client
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.38.0");
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Supabase configuration missing');
+    }
+    
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log('🎯 AI Agent Coordinator received request:', { query, clientId, caseId, researchTypes, requestContext });
-
-    // 🎯 Retrieve existing analysis scoped to this case to avoid contamination
-    let existingAnalysisContext = '';
-    if (clientId) {
-      try {
-        console.log('📋 Retrieving existing analysis for client (scoped):', { clientId, caseId });
-        let query = supabaseClient
-          .from('legal_analyses')
-          .select('content, law_references, case_type')
-          .eq('client_id', clientId);
-        
-        if (caseId) {
-          query = query.eq('case_id', caseId);
-        } else {
-          query = query.is('case_id', null);
-        }
-        
-        const { data: existingAnalysis, error: analysisError } = await query
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-        if (!analysisError && existingAnalysis && existingAnalysis.length > 0) {
-          const analysis = existingAnalysis[0];
-          existingAnalysisContext = `
-EXISTING LEGAL ANALYSIS (SCOPED):
-${analysis.content}
-
-PREVIOUSLY IDENTIFIED STATUTES: ${JSON.stringify(analysis.law_references || [])}
-CASE TYPE: ${analysis.case_type || 'Not specified'}
-
-IMPORTANT: Build upon this existing analysis ONLY if it aligns with the same case. Do NOT mix content from unrelated domains.
-`;
-          console.log('✅ Retrieved scoped existing analysis context, length:', existingAnalysisContext.length);
-        } else {
-          console.log('📋 No scoped analysis found for this client/case');
-        }
-      } catch (error) {
-        console.error('❌ Error retrieving scoped existing analysis:', error);
-      }
+    // 🎯 UPDATED: Retrieve existing analysis scoped to the specific case when caseId is provided
+    console.log('📋 Retrieving existing analysis for client (scoped):', { clientId, caseId });
+    
+    let existingAnalysisQuery = supabase
+      .from('legal_analyses')
+      .select('content, case_type, created_at')
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    
+    // 🔒 CRITICAL: Scope analysis retrieval by case when caseId is provided
+    if (caseId) {
+      existingAnalysisQuery = existingAnalysisQuery.eq('case_id', caseId);
+      console.log('🔒 Scoping analysis retrieval to specific case:', caseId);
+    } else {
+      existingAnalysisQuery = existingAnalysisQuery.is('case_id', null);
+      console.log('📋 Retrieving client-level analysis (case_id IS NULL)');
+    }
+    
+    const { data: existingAnalyses } = await existingAnalysisQuery;
+    
+    if (!existingAnalyses || existingAnalyses.length === 0) {
+      console.log('📋 No scoped analysis found for this client/case');
+    } else {
+      console.log('📋 Found existing scoped analysis:', {
+        case_type: existingAnalyses[0].case_type,
+        content_length: existingAnalyses[0].content?.length || 0,
+        created_at: existingAnalyses[0].created_at
+      });
     }
 
-    // Phase 1: Coordinate research agents in parallel
+    // Determine query analysis and routing
+    const queryAnalysis = analyzeQuery(query, requestContext);
+    console.log('🔍 Query Analysis:', queryAnalysis);
+
+    // Initialize research agents in parallel
     console.log('🔍 Initiating parallel research with OpenAI and Perplexity agents...');
     
-    const researchPromises: Promise<ResearchResult>[] = [];
-
-    // OpenAI Research Agent - Legal analysis and document research
-    if (researchTypes.includes('legal-research')) {
+    const authHeader = req.headers.get('authorization');
+    const researchPromises = [];
+    
+    // Add research type routing based on query analysis and available types
+    const effectiveResearchTypes = researchTypes || ['legal-research', 'current-research'];
+    
+    // OpenAI Legal Research Agent
+    if (effectiveResearchTypes.includes('legal-research')) {
       researchPromises.push(
-        fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/generate-legal-analysis`, {
-          method: 'POST',
-          headers: {
-            'Authorization': req.headers.get('Authorization') || '',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            clientId,
-            caseId,
-            conversation: [{ role: 'attorney', content: query }],
-            researchFocus: 'legal-analysis',
-            existingAnalysisContext: existingAnalysisContext
+        callResearchAgent('openai', 'legal-analysis', query, clientId, caseId, authHeader, domainHint)
+          .catch(error => {
+            console.error('OpenAI agent failed:', error);
+            return { source: 'openai', type: 'legal-analysis', content: '', error: error.message };
           })
-        }).then(async (res) => {
-          const data = await res.json();
-          return {
-            source: 'openai' as const,
-            type: 'legal-analysis',
-            content: data.analysis || '',
-            citations: data.lawReferences || [],
-            metadata: { documentsUsed: data.documentsUsed }
-          };
-        }).catch(err => {
-          console.error('OpenAI research error:', err);
-          return {
-            source: 'openai' as const,
-            type: 'legal-analysis',
-            content: 'OpenAI research temporarily unavailable',
-            citations: []
-          };
-        })
       );
     }
 
-    // Perplexity Research Agent - Real-time case discovery and current legal research
-    if (researchTypes.includes('similar-cases') || researchTypes.includes('current-research')) {
+    // Perplexity Current Research Agent
+    if (effectiveResearchTypes.includes('current-research')) {
       researchPromises.push(
-        fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/perplexity-research`, {
-          method: 'POST',
-          headers: {
-            'Authorization': req.headers.get('Authorization') || '',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            query,
-            clientId,
-            searchType: 'legal-research',
-            context
+        callResearchAgent('perplexity', 'current-research', query, clientId, caseId, authHeader, domainHint)
+          .catch(error => {
+            console.error('Perplexity agent failed:', error);
+            return { source: 'perplexity', type: 'current-research', content: '', error: error.message };
           })
-        }).then(async (res) => {
-          const data = await res.json();
-          return {
-            source: 'perplexity' as const,
-            type: 'current-research',
-            content: data.content || '',
-            citations: data.citations || [],
-            confidence: data.confidence,
-            metadata: data.metadata
-          };
-        }).catch(err => {
-          console.error('Perplexity research error:', err);
-          return {
-            source: 'perplexity' as const,
-            type: 'current-research',
-            content: 'Perplexity research temporarily unavailable',
-            citations: []
-          };
-        })
       );
     }
 
-    // Wait for all research agents to complete
+    // Execute research agents in parallel
     const researchResults = await Promise.all(researchPromises);
-    console.log('✅ Research agents completed. Results:', researchResults.map(r => ({ source: r.source, type: r.type, contentLength: r.content.length })));
+    
+    console.log('✅ Research agents completed. Results:', researchResults.map(r => ({
+      source: r.source,
+      type: r.type,
+      contentLength: r.content?.length || 0,
+      hasError: !!r.error
+    })));
 
-    // Phase 2: Detect request type and generate appropriate response
+    // Synthesize results using Gemini
     console.log('🧠 Initiating Gemini synthesis with 2M context window...');
-    
-    // Detect if this is a document drafting request - more flexible detection
-    const queryLower = query.toLowerCase();
-    const draftingKeywords = ['draft', 'create', 'write', 'prepare', 'generate'];
-    const documentTypes = ['agreement', 'contract', 'waiver', 'letter', 'document', 'notice', 'motion', 'brief', 'pleading', 'complaint', 'answer', 'discovery', 'subpoena', 'will', 'trust', 'lease', 'license', 'policy', 'form', 'template'];
-    
-    const hasDraftingKeyword = draftingKeywords.some(keyword => queryLower.includes(keyword));
-    const hasDocumentType = documentTypes.some(docType => queryLower.includes(docType));
-    
-    // Check if this is from client intake context - if so, always treat as legal research
-    const isClientIntakeContext = requestContext === 'client-intake';
-    const isDraftingRequest = !isClientIntakeContext && hasDraftingKeyword && hasDocumentType;
-    
-    console.log(`🔍 Query Analysis:
-    - Original query: "${query}"
-    - Has drafting keyword: ${hasDraftingKeyword}
-    - Has document type: ${hasDocumentType}
-    - Request context: ${requestContext || 'none'}
-    - Is client intake: ${isClientIntakeContext}
-    - Request type detected: ${isDraftingRequest ? 'DOCUMENT DRAFTING' : 'LEGAL RESEARCH'}`);
-    
-    let synthesisPrompt: string;
-    
-    if (isDraftingRequest) {
-      // Document drafting prompt
-      synthesisPrompt = `You are an expert legal document drafter. Create the actual document requested by the attorney, incorporating relevant legal research to ensure compliance and protection.
+    const synthesizedResult = await synthesizeWithGemini(
+      query,
+      researchResults,
+      existingAnalyses?.[0]?.content,
+      queryAnalysis,
+      domainHint
+    );
 
-ATTORNEY'S REQUEST: ${query}
+    // Verify case citations using CourtListener
+    console.log('⚖️ Initiating CourtListener verification for case citations...');
+    const verifiedResult = await verifyCaseCitations(synthesizedResult.content);
 
-RESEARCH SOURCES FOR CONTEXT:
-${researchResults.map((result, index) => `
---- ${result.source.toUpperCase()} RESEARCH ---
-${result.content}
-CITATIONS: ${result.citations?.join(', ') || 'None'}
-`).join('\n')}
-
-TASK: Draft the actual document requested. Do NOT provide legal analysis - create the usable document.
-
-DOCUMENT STRUCTURE REQUIREMENTS:
-1. **Document Title** - Clear, descriptive title
-2. **Complete Document Content** - All necessary clauses, terms, and provisions
-3. **Legal Compliance** - Incorporate relevant legal requirements from research
-4. **Professional Formatting** - Proper legal document structure
-5. **Signature Blocks** - Appropriate signature/execution sections
-
-FORMAT: Generate ONLY the document content in clean markdown. Use:
-- # for document title
-- ## for major sections  
-- **Bold** for important terms
-- Numbered lists for clauses
-- Proper legal language and terminology
-
-Include all necessary legal disclaimers, protective clauses, and compliance elements based on the research provided. Make it a complete, usable document.`;
-    } else {
-      // Legal research and analysis prompt
-      synthesisPrompt = `You are an expert legal synthesizer creating comprehensive legal research for desktop attorney consultation. Generate ONLY clean markdown content - no CSS, no formatting instructions, no code blocks with styling.
-
-ATTORNEY'S QUESTION: ${query}
-
-${existingAnalysisContext ? `${existingAnalysisContext}\n` : ''}
-
-RESEARCH SOURCES:
-${researchResults.map((result, index) => `
---- ${result.source.toUpperCase()} RESEARCH ---
-${result.content}
-CITATIONS: ${result.citations?.join(', ') || 'None'}
-`).join('\n')}
-
-CRITICAL INSTRUCTIONS FOR EXISTING ANALYSIS:
-${existingAnalysisContext ? `
-- This client already has an existing legal analysis
-- DO NOT recreate the analysis from scratch
-- ADD to the existing analysis by incorporating new statute violations and legal issues
-- PRESERVE all previously identified violations and findings
-- Format new findings as additions to existing content
-- Clearly distinguish new findings while maintaining continuity
-` : ''}
-
-REQUIRED RESPONSE FORMAT (MARKDOWN ONLY):
-
-## 🏛️ RELEVANT LAW
-
-### Primary Statutes
-**[Statute Name]** - [Citation]
-
-\`\`\`
-[Full statute text with proper line breaks and indentation]
-(1) First subsection
-    (a) Sub-paragraph text with proper formatting
-    (b) Sub-paragraph text with proper formatting
-(2) Second subsection
-    (a) Sub-paragraph text
-\`\`\`
-
-**Analysis:** [Detailed explanation of how this statute applies to the situation]
-
-### Related Provisions
-**[Additional Statute]** - [Citation]
-[Brief description and relevance]
-
----
-
-## ⚖️ LEGAL ANALYSIS
-
-### Core Legal Issues
-**Issue 1: [Issue Name]**
-- **Standard:** [Legal standard that applies]
-- **Application:** [How law applies to the specific facts]
-- **Outcome:** [Likely result and reasoning]
-
-**Issue 2: [Issue Name]**
-- **Standard:** [Legal standard that applies]
-- **Application:** [How law applies to the specific facts]
-- **Outcome:** [Likely result and reasoning]
-
-### Risk Assessment
-- **Likelihood of Success:** [High/Medium/Low with detailed explanation]
-- **Key Risks:** [Detailed bullet points of main risks]
-- **Mitigating Factors:** [Factors that strengthen the position]
-
----
-
-## 📚 KEY CASES
-
-### **[Case Name v. Defendant]**
-**Court:** [Full Court Name] | **Citation:** [Complete Legal Citation] | **Year:** [Year]
-
-**Facts:** [Detailed factual summary relevant to the query]
-
-**Holding:** [Court's decision and legal reasoning]
-
-**Relevance:** [Specific explanation of how this case applies to the attorney's situation]
-
----
-
-### **[Case Name v. Defendant]**
-**Court:** [Full Court Name] | **Citation:** [Complete Legal Citation] | **Year:** [Year]
-
-**Facts:** [Detailed factual summary relevant to the query]
-
-**Holding:** [Court's decision and legal reasoning]
-
-**Relevance:** [Specific explanation of how this case applies to the attorney's situation]
-
----
-
-## 💡 PRACTICAL GUIDANCE
-
-### Immediate Actions Required
-1. **[Specific Action]** - [Timeline/Deadline with explanation]
-2. **[Specific Action]** - [Timeline/Deadline with explanation]
-3. **[Specific Action]** - [Timeline/Deadline with explanation]
-
-### Strategic Considerations
-- **[Strategy Name]:** [Detailed explanation of approach and benefits]
-- **[Strategy Name]:** [Detailed explanation of approach and benefits]
-- **[Strategy Name]:** [Detailed explanation of approach and benefits]
-
-### Important Deadlines & Limitations
-- **[Deadline Type]:** [Specific date/timeline with consequences]
-- **[Deadline Type]:** [Specific date/timeline with consequences]
-
----
-
-## 📖 CITATIONS
-
-### Primary Authorities
-- [Complete Statute Citation]
-- [Complete Statute Citation]
-
-### Case Law
-- [Complete Case Citation]
-- [Complete Case Citation]
-- [Complete Case Citation]
-
-### Secondary Sources
-- [Secondary Source Citation]
-- [Secondary Source Citation]
-
-CRITICAL REQUIREMENTS:
-- Generate ONLY markdown content
-- Do NOT include any CSS code blocks
-- Use ## for main sections, ### for subsections
-- Bold ALL case names with **Case Name**
-- Use horizontal rules (---) between major sections
-- Format statute text in code blocks with proper indentation
-- Each case must be a distinct block with clear separation
-- Include comprehensive factual details and legal reasoning`;
+    // Store coordinated research results
+    try {
+      await storeCoordinatedResearch({
+        clientId,
+        caseId,
+        query,
+        researchResults,
+        synthesizedContent: verifiedResult.content,
+        verifiedCases: verifiedResult.verifiedCases,
+        requestContext,
+        domainHint
+      }, supabase, authHeader);
+    } catch (storageError) {
+      console.error('Error storing coordinated research:', storageError);
+      // Continue even if storage fails
     }
 
-    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent', {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        synthesizedContent: verifiedResult.content,
+        researchSources: extractResearchSources(researchResults),
+        verifiedCases: verifiedResult.verifiedCases,
+        citations: extractCitations(verifiedResult.content),
+        metadata: {
+          queryAnalysis,
+          researchAgentsUsed: researchResults.map(r => r.source),
+          domainLocked: !!domainHint
+        }
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error) {
+    console.error('Error in AI Agent Coordinator:', error);
+    return new Response(
+      JSON.stringify({ 
+        error: 'Failed to coordinate AI agents', 
+        details: error.message 
+      }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+  }
+});
+
+// Helper function to analyze query intent and requirements
+function analyzeQuery(query: string, requestContext?: string) {
+  const lowerQuery = query.toLowerCase();
+  
+  // Check for specific legal research indicators
+  const hasDraftingKeyword = /\b(draft|write|create|generate|compose)\b/.test(lowerQuery);
+  const hasDocumentType = /\b(letter|memo|brief|motion|complaint|contract|agreement)\b/.test(lowerQuery);
+  const isClientIntake = /\b(client|intake|consultation|meeting)\b/.test(lowerQuery);
+  
+  return {
+    originalQuery: query.length > 100 ? query.substring(0, 100) + '...' : query,
+    hasDraftingKeyword,
+    hasDocumentType,
+    requestContext: requestContext || 'none',
+    isClientIntake,
+    requestType: determineRequestType(lowerQuery, hasDraftingKeyword, hasDocumentType)
+  };
+}
+
+function determineRequestType(query: string, hasDrafting: boolean, hasDocType: boolean): string {
+  if (hasDrafting && hasDocType) return 'DOCUMENT_DRAFTING';
+  if (query.includes('case law') || query.includes('precedent')) return 'CASE_RESEARCH';
+  if (query.includes('statute') || query.includes('regulation')) return 'STATUTORY_RESEARCH';
+  return 'LEGAL_RESEARCH';
+}
+
+// Research agent caller with domain context
+async function callResearchAgent(
+  source: string, 
+  type: string, 
+  query: string, 
+  clientId: string, 
+  caseId?: string, 
+  authHeader?: string,
+  domainHint?: string
+) {
+  // Add domain context to query if available
+  let enhancedQuery = query;
+  if (domainHint) {
+    enhancedQuery = `${query}\n\nDomain context: This is a ${domainHint} matter. Focus research within this legal domain.`;
+  }
+
+  try {
+    const endpoint = source === 'openai' ? 'generate-legal-analysis' : 'perplexity-research';
+    
+    // For OpenAI agent (generate-legal-analysis), pass full context
+    if (source === 'openai') {
+      const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.38.0");
+      const supabaseUrl = Deno.env.get('SUPABASE_URL');
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+      const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
+      
+      const response = await supabase.functions.invoke(endpoint, {
+        body: { 
+          clientId, 
+          caseId,
+          conversation: [{ role: 'attorney', content: enhancedQuery }],
+          researchFocus: 'legal-analysis', // Indicate this is from coordinator
+          requestContext: 'ai-coordinator'
+        },
+        headers: authHeader ? { Authorization: authHeader } : {}
+      });
+      
+      if (response.error) throw new Error(response.error.message);
+      
+      return {
+        source,
+        type,
+        content: response.data?.analysis || '',
+        metadata: response.data?.metadata || {}
+      };
+    }
+    
+    // For Perplexity agent
+    else {
+      const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authHeader || `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+        },
+        body: JSON.stringify({ 
+          query: enhancedQuery,
+          clientId,
+          caseId,
+          searchType: type,
+          requestContext: 'ai-coordinator'
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`${source} agent failed: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      return {
+        source,
+        type,
+        content: data.content || '',
+        citations: data.citations || [],
+        metadata: data.metadata || {}
+      };
+    }
+  } catch (error) {
+    console.error(`Error calling ${source} agent:`, error);
+    throw error;
+  }
+}
+
+// Enhanced Gemini synthesis with domain awareness
+async function synthesizeWithGemini(
+  originalQuery: string, 
+  researchResults: any[], 
+  existingAnalysis?: string,
+  queryAnalysis?: any,
+  domainHint?: string
+) {
+  const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+  if (!geminiApiKey) {
+    throw new Error('Gemini API key not configured');
+  }
+
+  // Build synthesis prompt with domain context
+  let synthesisPrompt = `You are an expert legal analyst synthesizing research from multiple AI agents to provide comprehensive legal guidance.
+
+ORIGINAL QUERY: ${originalQuery}
+
+SYNTHESIS INSTRUCTIONS:
+1. Combine and analyze all research findings
+2. Identify key legal principles and precedents
+3. Provide practical legal guidance
+4. Structure your response with clear sections
+5. Include specific citations where available
+6. Ensure consistency and remove contradictions`;
+
+  // Add domain-specific synthesis instructions
+  if (domainHint) {
+    synthesisPrompt += `
+
+CRITICAL DOMAIN FOCUS: This analysis must remain within ${domainHint} law. Synthesize only content relevant to this legal domain and exclude unrelated areas of law.`;
+    
+    if (domainHint === 'consumer-protection') {
+      synthesisPrompt += `
+Focus exclusively on:
+- Texas Deceptive Trade Practices-Consumer Protection Act (DTPA)
+- Fair Debt Collection Practices Act (FDCPA) 
+- Texas Debt Collection Act (TDCA)
+- Consumer protection remedies and violations
+DO NOT include property law, premises liability, or real estate content.`;
+    }
+  }
+
+  synthesisPrompt += `
+
+RESEARCH FINDINGS:`;
+
+  // Add research results
+  researchResults.forEach((result, index) => {
+    if (result.content && result.content.trim()) {
+      synthesisPrompt += `
+
+=== ${result.source.toUpperCase()} ${result.type.toUpperCase()} RESEARCH ===
+${result.content}`;
+    }
+  });
+
+  // Add existing analysis context if available
+  if (existingAnalysis) {
+    synthesisPrompt += `
+
+=== EXISTING ANALYSIS CONTEXT ===
+${existingAnalysis.substring(0, 2000)}${existingAnalysis.length > 2000 ? '...' : ''}`;
+  }
+
+  synthesisPrompt += `
+
+Provide a comprehensive synthesis that addresses the original query with authoritative legal guidance.`;
+
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{
           parts: [{ text: synthesisPrompt }]
         }],
         generationConfig: {
-          temperature: 0.2,
+          temperature: 0.3,
           maxOutputTokens: 8192,
-          candidateCount: 1
+          topK: 40,
+          topP: 0.95
         }
-      }),
-    }).then(res => res.text()).then(text => {
-      const url = new URL(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${Deno.env.get('GEMINI_API_KEY')}`);
-      return fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{ text: synthesisPrompt }]
-          }],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 8192,
-            candidateCount: 1
-          }
-        }),
-      });
-    }).then(res => res.json());
+      })
+    });
 
-    let synthesizedContent = 'Synthesis temporarily unavailable';
-    if (geminiResponse.candidates && geminiResponse.candidates[0]?.content?.parts?.[0]?.text) {
-      synthesizedContent = geminiResponse.candidates[0].content.parts[0].text;
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.statusText}`);
     }
 
-    console.log('✅ Gemini synthesis completed:', { contentLength: synthesizedContent.length });
-
-    // Phase 3: CourtListener verification for legal accuracy
-    console.log('⚖️ Initiating CourtListener verification for case citations...');
+    const data = await response.json();
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No synthesis generated';
     
-    const extractedCases = extractCaseNames(synthesizedContent);
+    console.log('✅ Gemini synthesis completed:', { 
+      contentLength: content.length,
+      domainLocked: !!domainHint 
+    });
+    
+    return { content };
+  } catch (error) {
+    console.error('Gemini synthesis error:', error);
+    throw error;
+  }
+}
+
+// CourtListener case verification
+async function verifyCaseCitations(content: string) {
+  try {
+    // Extract potential case names from content
+    const casePattern = /([A-Z][a-zA-Z\s&,\.]+)\s+v\.\s+([A-Z][a-zA-Z\s&,\.]+)/g;
+    const extractedCases = [];
+    let match;
+    
+    // Also extract other potential case references
+    const otherCasePattern = /([A-Z][a-zA-Z\s]+(?:\s+v\.\s+[A-Z][a-zA-Z\s]+)?)\s*[-–]\s*(?:provides?|established?|held?|ruled?)/g;
+    const sentences = content.split(/[.!?]+/);
+    
+    sentences.forEach(sentence => {
+      const trimmed = sentence.trim();
+      if (trimmed.length > 10 && trimmed.length < 100) {
+        extractedCases.push(trimmed);
+      }
+    });
+    
+    while ((match = casePattern.exec(content)) !== null) {
+      extractedCases.push(`${match[1]} v. ${match[2]}`);
+    }
+    
+    while ((match = otherCasePattern.exec(content)) !== null) {
+      extractedCases.push(match[1]);
+    }
+    
     console.log('Extracted cases for verification:', extractedCases);
     
-    let verifiedCases: any[] = [];
-    let courtListenerCitations: any[] = [];
-    let finalContent = synthesizedContent;
-    let courtListenerStatus = 'not_attempted';
+    // Verify cases with CourtListener API
+    const courtListenerToken = Deno.env.get('COURTLISTENER_API_TOKEN');
+    const verifiedCases = [];
     
-    if (extractedCases.length > 0) {
-      try {
-        // Check if CourtListener API token is available
-        const courtListenerToken = Deno.env.get('COURTLISTENER_API_TOKEN');
-        if (!courtListenerToken) {
-          console.warn('⚠️ CourtListener API token not found - skipping verification');
-          courtListenerStatus = 'token_missing';
-        } else {
-          verifiedCases = await verifyCasesWithCourtListener(extractedCases, supabaseClient);
-          console.log(`✅ CourtListener verification completed: ${verifiedCases.length} cases verified`);
-          courtListenerStatus = 'success';
+    if (courtListenerToken) {
+      for (const caseName of extractedCases.slice(0, 8)) { // Limit to prevent quota issues
+        try {
+          console.log('Verifying case:', caseName);
           
-          if (verifiedCases.length > 0) {
-            const verificationResult = replaceWithVerifiedCases(synthesizedContent, verifiedCases);
-            finalContent = removeDuplicateCitations(verificationResult.text);
-            courtListenerCitations = verificationResult.citations;
+          const searchResponse = await fetch(
+            `https://www.courtlistener.com/api/rest/v3/search/?type=o&q=${encodeURIComponent(caseName)}&format=json`,
+            {
+              headers: {
+                'Authorization': `Token ${courtListenerToken}`,
+                'User-Agent': 'Legal Research Bot 1.0'
+              }
+            }
+          );
+          
+          if (searchResponse.ok) {
+            const searchData = await searchResponse.json();
+            if (searchData.results && searchData.results.length > 0) {
+              const topResult = searchData.results[0];
+              console.log(`Verified case: ${caseName} -> ${topResult.caseName}`);
+              verifiedCases.push({
+                searchTerm: caseName,
+                caseName: topResult.caseName,
+                court: topResult.court,
+                citation: topResult.citation,
+                url: topResult.absolute_url,
+                snippet: topResult.snippet
+              });
+            } else {
+              console.log(`No CourtListener results found for: ${caseName}`);
+            }
           }
+        } catch (error) {
+          console.error(`Error verifying case ${caseName}:`, error);
         }
-      } catch (error) {
-        console.error('❌ CourtListener verification failed:', error);
-        courtListenerStatus = 'failed';
-        
-        // Log detailed error information
-        if (error instanceof Error) {
-          console.error('CourtListener error details:', {
-            name: error.name,
-            message: error.message,
-            stack: error.stack
-          });
-        }
-        
-        // Continue without verification - don't fail the entire request
-        console.log('🔄 Continuing without CourtListener verification to ensure response delivery');
       }
     }
-
-    // Combine all citations from research sources plus CourtListener
-    const allCitations = [
-      ...researchResults.flatMap(result => result.citations || []),
-      ...courtListenerCitations
-    ];
-    const uniqueCitations = [...new Set(allCitations)];
-
-    // Store the coordinated research result
-    if (clientId) {
-      const { error: storeError } = await supabaseClient
-        .from('perplexity_research')
-        .insert({
-          client_id: clientId,
-          case_id: caseId,
-          legal_analysis_id: crypto.randomUUID(), // Generate a temp ID to satisfy RLS
-          search_type: 'ai-agent-coordination',
-          query,
-          content: finalContent,
-          model: 'gemini-synthesis',
-          citations: uniqueCitations,
-          metadata: {
-            researchSources: researchResults.map(r => ({ source: r.source, type: r.type })),
-            timestamp: new Date().toISOString(),
-            model: 'gemini-synthesis',
-            researchAgents: researchResults.length
-          }
-        });
-
-      if (storeError) {
-        console.error('Error storing coordinated research:', storeError);
-      }
-    }
-
-    return new Response(JSON.stringify({
-      success: true,
-      text: finalContent, // For Quick Consult compatibility
-      synthesizedContent: finalContent,
-      citations: courtListenerCitations, // CourtListener verified citations for Quick Consult
-      hasKnowledgeBase: researchResults.some(r => r.source === 'openai' && r.metadata?.documentsUsed > 0),
-      documentsFound: researchResults.find(r => r.source === 'openai')?.metadata?.documentsUsed || 0,
-      verifiedCases: verifiedCases.length,
-      courtListenerCitations: verifiedCases.length,
-      courtListenerStatus: courtListenerStatus,
-      researchSources: researchResults.map(r => ({
-        source: r.source,
-        type: r.type,
-        available: r.content !== `${r.source.charAt(0).toUpperCase() + r.source.slice(1)} research temporarily unavailable`
-      })),
-      metadata: {
-        totalResearchAgents: researchResults.length,
-        synthesisEngine: 'gemini-1.5-pro',
-        verificationEngine: 'courtlistener',
-        timestamp: new Date().toISOString()
-      }
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-
+    
+    console.log('✅ CourtListener verification completed:', verifiedCases.length, 'cases verified');
+    
+    return {
+      content,
+      verifiedCases
+    };
   } catch (error) {
-    console.error('Error in AI agent coordinator:', error);
-    return new Response(JSON.stringify({ 
-      error: error.message || 'Failed to coordinate AI agents',
-      success: false 
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.error('Case verification error:', error);
+    return { content, verifiedCases: [] };
   }
-});
+}
+
+// Store coordinated research results
+async function storeCoordinatedResearch(data: any, supabase: any, authHeader?: string) {
+  try {
+    // Get user ID from auth header
+    let userId = null;
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user } } = await supabase.auth.getUser(token);
+      userId = user?.id;
+    }
+
+    const researchRecord = {
+      client_id: data.clientId,
+      case_id: data.caseId || null,
+      search_type: 'coordinated-research',
+      query: data.query,
+      content: data.synthesizedContent,
+      model: 'ai-agent-coordinator',
+      citations: data.verifiedCases?.map((c: any) => c.caseName) || [],
+      metadata: {
+        researchSources: data.researchResults?.map((r: any) => r.source) || [],
+        verifiedCases: data.verifiedCases || [],
+        requestContext: data.requestContext,
+        domainHint: data.domainHint
+      }
+    };
+
+    const { error } = await supabase
+      .from('perplexity_research')
+      .insert([researchRecord]);
+    
+    if (error) {
+      throw error;
+    }
+    
+    console.log('✅ Coordinated research stored successfully');
+  } catch (error) {
+    console.error('Error storing coordinated research:', error);
+    throw error;
+  }
+}
+
+// Extract research sources for response
+function extractResearchSources(researchResults: any[]) {
+  const sources = [];
+  
+  for (const result of researchResults) {
+    if (result.content && result.content.trim()) {
+      sources.push({
+        source: result.source,
+        type: result.type,
+        hasContent: true,
+        contentLength: result.content.length
+      });
+    }
+  }
+  
+  return sources;
+}
+
+// Extract citations from content
+function extractCitations(content: string) {
+  const citations = [];
+  
+  // Extract statute citations
+  const statutePattern = /\b(?:Texas\s+)?(?:Bus\.|Business|Fin\.|Finance|Health|Penal|Civ\.|Civil)\s*(?:&\s*)?(?:Com\.|Commerce)?\s*Code\s*§?\s*[\d\.\-]+[a-z]*/gi;
+  const statutes = content.match(statutePattern) || [];
+  citations.push(...statutes);
+  
+  // Extract case citations
+  const casePattern = /([A-Z][a-zA-Z\s&,\.]+)\s+v\.\s+([A-Z][a-zA-Z\s&,\.]+)/g;
+  let match;
+  while ((match = casePattern.exec(content)) !== null) {
+    citations.push(`${match[1]} v. ${match[2]}`);
+  }
+  
+  return [...new Set(citations)]; // Remove duplicates
+}

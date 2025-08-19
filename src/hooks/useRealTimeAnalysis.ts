@@ -68,11 +68,17 @@ export const useRealTimeAnalysis = (clientId?: string, caseId?: string) => {
       
       console.log("Generating fresh real-time analysis...");
 
+      // 🎯 NEW: Pass requestContext to indicate this is case analysis
+      const requestContext = caseId ? 'case-analysis' : 'client-analysis';
+
       // Call the edge function to generate a new analysis
       const { analysis, lawReferences, error: analysisError } = await generateLegalAnalysis(
         clientId, 
         formattedMessages,
-        caseId // Pass case ID for case-specific document analysis
+        caseId, // Pass case ID for case-specific document analysis
+        undefined, // researchUpdates
+        undefined, // researchFocus  
+        requestContext // 🎯 NEW: Pass request context
       );
       
       if (analysisError) throw new Error(analysisError);

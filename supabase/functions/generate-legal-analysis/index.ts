@@ -9,8 +9,6 @@ import { mapCitationsToKnowledgeBase } from "./services/knowledgeBaseMappingServ
 import { generateStrengthsWeaknesses } from "./services/strengthsWeaknessesGenerator.ts";
 import { generateLegalAnalysis } from "../shared/geminiService.ts";
 
-
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -77,6 +75,7 @@ serve(async (req) => {
       perplexity: !!Deno.env.get('PERPLEXITY_API_KEY')
     };
     console.log('🔐 Secret availability:', secretStatus);
+    
     // Extract user ID from the authorization header
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
@@ -115,16 +114,48 @@ serve(async (req) => {
     const userId = user.id;
     console.log(`Authenticated user ID: ${userId}`);
 
+    // 🎯 NEW: Fetch case metadata if caseId is provided for domain locking
+    let domainHint = null;
+    let caseMetadata = null;
+    if (caseId) {
+      try {
+        const { data: caseData, error: caseError } = await supabase
+          .from("cases")
+          .select("case_type, case_title, case_description")
+          .eq("id", caseId)
+          .single();
+        
+        if (caseError) {
+          console.warn(`Could not fetch case metadata for ${caseId}:`, caseError);
+        } else if (caseData) {
+          caseMetadata = caseData;
+          domainHint = caseData.case_type;
+          console.log(`🔒 Domain lock engaged for case ${caseId}: ${domainHint}`);
+          console.log(`📋 Case metadata:`, { 
+            case_type: caseData.case_type, 
+            title: caseData.case_title?.substring(0, 50) 
+          });
+        }
+      } catch (error) {
+        console.warn(`Error fetching case metadata:`, error);
+      }
+    }
+
     // 🎯 NEW: Orchestrate 3-agent pipeline first, with fallback to direct analysis
     const isInternalLegalResearch = researchFocus === 'legal-analysis';
     if (!isInternalLegalResearch) {
       console.log('🎯 Starting 3-agent coordination for client:', clientId);
       
       try {
-        // Build research query from conversation
-        const researchQuery = conversation && conversation.length > 0
+        // Build research query from conversation with domain context
+        let researchQuery = conversation && conversation.length > 0
           ? conversation.slice(-5).map((msg: any) => `${msg.role}: ${msg.content}`).join('\n')
           : 'Analyze client legal situation and provide comprehensive analysis';
+
+        // Add domain reminder if we have case metadata
+        if (domainHint) {
+          researchQuery += `\n\nIMPORTANT: This is a ${domainHint} case. Focus research and analysis within this domain.`;
+        }
 
         console.log('📋 Calling ai-agent-coordinator with query length:', researchQuery.length);
 
@@ -135,7 +166,8 @@ serve(async (req) => {
             clientId,
             caseId,
             researchTypes: ['legal-research', 'current-research', 'similar-cases'],
-            requestContext
+            requestContext,
+            domainHint // Pass domain hint to coordinator
           },
           headers: {
             Authorization: authHeader
@@ -147,17 +179,18 @@ serve(async (req) => {
           
           // Save the 3-agent analysis to database
           const analysisToSave = coordinatorResponse.data.synthesizedContent;
-      const { error: saveError } = await supabase
-        .from('legal_analyses')
-        .insert({
-          client_id: clientId,
-          case_id: caseId || null,
-          content: analysisToSave,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          analysis_type: '3-agent-coordination',
-          user_id: userId,
-          research_updates: researchUpdates || []
-        });
+          const { error: saveError } = await supabase
+            .from('legal_analyses')
+            .insert({
+              client_id: clientId,
+              case_id: caseId || null,
+              content: analysisToSave,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              analysis_type: '3-agent-coordination',
+              case_type: domainHint || 'general',
+              user_id: userId,
+              research_updates: researchUpdates || []
+            });
 
           if (saveError) {
             console.error('Error saving 3-agent analysis:', saveError);
@@ -171,7 +204,8 @@ serve(async (req) => {
               metadata: {
                 provider: '3-agent-coordinator',
                 sources: coordinatorResponse.data.researchSources?.length || 0,
-                citations: coordinatorResponse.data.citations?.length || 0
+                citations: coordinatorResponse.data.citations?.length || 0,
+                domainLocked: !!domainHint
               }
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -208,6 +242,9 @@ serve(async (req) => {
     console.log(`Conversation length: ${conversation?.length || 0}`);
     console.log("📝 Fact pattern preview:", factPatternPreview);
     console.log(`Research updates to integrate: ${researchUpdates?.length || 0}`);
+    if (domainHint) {
+      console.log(`🔒 Domain locked to: ${domainHint}`);
+    }
 
     // Skip fetching old research updates to prevent contamination from previous cases
     let existingResearchUpdates = [];
@@ -233,14 +270,16 @@ serve(async (req) => {
         if (caseId) {
           console.log(`Trying to fetch case-specific messages for case: ${caseId}`);
           messageQuery = messageQuery.eq("case_id", caseId);
+          // 🎯 NEW: For case-specific runs, do NOT apply time limit to avoid drift
+          console.log("📅 Case-specific run: fetching ALL messages (no 24h limit)");
         } else {
           console.log(`Fetching client-level messages (case_id IS NULL)`);
           messageQuery = messageQuery.is("case_id", null);
+          // Keep time filter only for client-level runs
+          const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+          messageQuery = messageQuery.gte('created_at', oneDayAgo);
+          console.log("📅 Client-level run: applying 24h message filter");
         }
-
-        // Filter to only recent messages (last 24 hours) to avoid contamination from old conversations
-        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-        messageQuery = messageQuery.gte('created_at', oneDayAgo);
 
         const { data: dbMessages, error: messageError } = await messageQuery
           .order("created_at", { ascending: true });
@@ -248,7 +287,7 @@ serve(async (req) => {
         if (messageError) {
           console.error("Error fetching messages:", messageError);
         } else if (dbMessages && dbMessages.length > 0) {
-          console.log(`Found ${dbMessages.length} recent messages in database`);
+          console.log(`Found ${dbMessages.length} messages in database`);
           conversationMessages = dbMessages.map(msg => ({
             content: msg.content,
             timestamp: msg.timestamp,
@@ -257,6 +296,7 @@ serve(async (req) => {
         } else if (caseId) {
           // If no case-specific messages found, fallback to client-level messages (but still recent)
           console.log("No case-specific messages found, falling back to recent client-level messages");
+          const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
           const { data: clientMessages, error: clientError } = await supabase
             .from("client_messages")
             .select("*")
@@ -319,9 +359,13 @@ serve(async (req) => {
     console.log("Extracted legal topics:", legalContext);
     console.log("Analysis source:", analysisSource);
     
-    // Detect case type for better law search
-    const detectedCaseType = detectCaseType(legalContext);
-    console.log(`Detected case type: ${detectedCaseType}`);
+    // 🎯 NEW: Override detected case type with domain hint if available
+    let detectedCaseType = detectCaseType(legalContext);
+    if (domainHint) {
+      console.log(`🔄 Overriding detected case type '${detectedCaseType}' with domain hint '${domainHint}'`);
+      detectedCaseType = domainHint;
+    }
+    console.log(`Final case type: ${detectedCaseType}`);
     
     // Create a search query from the extracted topics
     const searchQuery = [
@@ -344,18 +388,19 @@ serve(async (req) => {
       }
     }
 
-    // Detect if this is a consumer protection case (keeping original logic for backward compatibility)
+    // Detect if this is a consumer protection case
     const isConsumerCase = detectedCaseType === "consumer-protection";
     console.log(`Case identified as consumer protection case: ${isConsumerCase}`);
     
-    // Create system prompt with research updates integration
+    // Create system prompt with research updates integration and domain hint
     const systemPrompt = buildSystemPrompt(
       analysisSource,
       relevantLawReferences,
       hasConversation,
       clientDocuments,
       detectedCaseType,
-      researchUpdates // Pass research updates to system prompt
+      researchUpdates,
+      domainHint // Pass domain hint to system prompt
     );
 
     // Format the content for Gemini's 2M context window - include ALL available information
@@ -367,14 +412,20 @@ serve(async (req) => {
     }
     
     if (hasConversation) {
-      // Use all conversation messages; only drop clearly unrelated content
-      const irrelevantKeywords = ['dog', 'bite', 'animal', 'pet', 'german shepherd', 'mail carrier'];
-      const filteredMessages = conversationMessages.filter(msg => {
-        const content = (msg.content || '').toLowerCase();
-        return !irrelevantKeywords.some(k => content.includes(k));
-      });
-      
-      console.log(`Filtered conversation: ${conversationMessages.length} → ${filteredMessages.length} relevant messages`);
+      // 🎯 NEW: When domain locked to consumer-protection, filter out clearly unrelated content
+      let filteredMessages = conversationMessages;
+      if (domainHint === 'consumer-protection') {
+        const irrelevantKeywords = ['dog', 'bite', 'animal', 'pet', 'german shepherd', 'mail carrier', 'premises liability', 'property code', 'trespass to try title'];
+        filteredMessages = conversationMessages.filter(msg => {
+          const content = (msg.content || '').toLowerCase();
+          const hasIrrelevant = irrelevantKeywords.some(k => content.includes(k));
+          if (hasIrrelevant) {
+            console.log(`🚫 Filtering out message with irrelevant content for consumer case: ${content.substring(0, 50)}...`);
+          }
+          return !hasIrrelevant;
+        });
+        console.log(`🔍 Consumer domain filter: ${conversationMessages.length} → ${filteredMessages.length} messages`);
+      }
       
       const formattedConversation = filteredMessages.map(msg => ({
         role: "user", 
@@ -402,10 +453,19 @@ serve(async (req) => {
       const topics = ((update.topics || []).join(' ')).toLowerCase();
       const combined = `${content} ${statutes} ${topics}`;
       
-      // Exclude animal protection or unrelated content only
+      // 🎯 NEW: Stronger filtering when domain locked to consumer-protection
+      if (domainHint === 'consumer-protection') {
+        const irrelevantKeywords = ['animal', 'dog', 'bite', 'health and safety code § 822', 'dangerous animal', 'premises liability', 'property code', 'trespass to try title', 'adverse possession', 'encroachment'];
+        const hasIrrelevant = irrelevantKeywords.some(keyword => combined.includes(keyword));
+        if (hasIrrelevant) {
+          console.log(`🚫 Filtering out research update with irrelevant content for consumer case`);
+        }
+        return !hasIrrelevant;
+      }
+      
+      // Original filtering for other cases
       const irrelevantKeywords = ['animal', 'dog', 'bite', 'health and safety code § 822', 'dangerous animal'];
       const hasIrrelevantContent = irrelevantKeywords.some(keyword => combined.includes(keyword));
-      
       return !hasIrrelevantContent;
     });
     
@@ -463,28 +523,28 @@ serve(async (req) => {
       const generatedPreview = analysis.substring(0, 200);
       console.log("🔍 Generated content preview:", generatedPreview);
       
-      // Basic validation - check if generated content is relevant to input
-      if (factPatternPreview.length > 50 && generatedPreview.length > 50) {
-        console.log("✅ Content validation passed - analysis appears relevant to input");
-      }
-      
-      // Domain guardrail: prevent property/real-estate drift for consumer cases
-      const propertyIndicators = ['texas property code', 'trespass to try title', 'adverse possession', 'encroach', 'easement', 'deed', 'fixture'];
-      const consumerIndicators = ['debt', 'collection', 'fdcpa', 'dtpa', 'finance code', 'harass', 'garnishment', 'validation'];
-      const containsProperty = propertyIndicators.some(k => analysis.toLowerCase().includes(k));
-      const containsConsumer = consumerIndicators.some(k => analysis.toLowerCase().includes(k));
-      if (isConsumerCase && containsProperty && !containsConsumer) {
-        console.warn('⚠️ Detected off-topic property law content in consumer case. Retrying with hard constraint...');
-        const strongConstraint = `\n\nHARD CONSTRAINT: This is a consumer protection/debt collection matter. Do NOT include real estate/property law content (e.g., Texas Property Code, trespass to try title, encroachment, adverse possession, easements) unless explicitly stated in the facts. Focus on DTPA (Bus. & Com. Code § 17.41 et seq.), Texas Finance Code Ch. 392 (TDCA), and FDCPA.`;
-        const retryResponse = await generateLegalAnalysis(
-          userContent,
-          systemPrompt + strongConstraint,
-          geminiApiKey,
-          { temperature: 0.2, maxTokens: 8192 }
-        );
-        if (retryResponse?.text) {
-          analysis = retryResponse.text;
-          console.log('✅ Retry successful. Replaced analysis with consumer-focused content.');
+      // 🎯 NEW: Enhanced domain guardrail for consumer protection cases
+      if (domainHint === 'consumer-protection' || isConsumerCase) {
+        const propertyIndicators = ['texas property code', 'trespass to try title', 'adverse possession', 'encroach', 'easement', 'deed', 'fixture', 'premises liability'];
+        const consumerIndicators = ['debt', 'collection', 'fdcpa', 'dtpa', 'finance code', 'harass', 'garnishment', 'validation', 'deceptive trade practices'];
+        const containsProperty = propertyIndicators.some(k => analysis.toLowerCase().includes(k));
+        const containsConsumer = consumerIndicators.some(k => analysis.toLowerCase().includes(k));
+        
+        if (containsProperty && !containsConsumer) {
+          console.warn('⚠️ DOMAIN VIOLATION: Generated property/premises content for consumer-protection case. Retrying with hard constraint...');
+          const strongConstraint = `\n\nCRITICAL DOMAIN CONSTRAINT: This is a consumer protection/debt collection matter (DTPA/FDCPA). You MUST NOT include real estate/property law content (e.g., Texas Property Code, trespass to try title, encroachment, adverse possession, easements, premises liability) under any circumstances. Focus EXCLUSIVELY on DTPA (Bus. & Com. Code § 17.41 et seq.), Texas Finance Code Ch. 392 (TDCA), and FDCPA. If the facts mention property or premises, ignore those aspects and focus only on consumer protection violations.`;
+          const retryResponse = await generateLegalAnalysis(
+            userContent,
+            systemPrompt + strongConstraint,
+            geminiApiKey,
+            { temperature: 0.2, maxTokens: 8192 }
+          );
+          if (retryResponse?.text) {
+            analysis = retryResponse.text;
+            console.log('✅ Domain constraint retry successful. Replaced with consumer-focused content.');
+          }
+        } else {
+          console.log('✅ Domain validation passed - content appropriate for consumer protection case');
         }
       }
 
@@ -561,12 +621,13 @@ serve(async (req) => {
 
     // Add note about source of analysis
     if (analysis) {
-      const sourceNote = `*Analysis generated from ${analysisSource}${clientDocuments.length > 0 ? ` (${clientDocuments.length} document${clientDocuments.length > 1 ? 's' : ''}: ${clientDocuments.map(doc => doc.title).join(', ')})` : ''}${relevantResearchUpdates.length > 0 ? ` with ${relevantResearchUpdates.length} research update(s) integrated` : ''}*\n\n`;
+      const domainNote = domainHint ? ` (domain-locked to ${domainHint})` : '';
+      const sourceNote = `*Analysis generated from ${analysisSource}${domainNote}${clientDocuments.length > 0 ? ` (${clientDocuments.length} document${clientDocuments.length > 1 ? 's' : ''}: ${clientDocuments.map(doc => doc.title).join(', ')})` : ''}${relevantResearchUpdates.length > 0 ? ` with ${relevantResearchUpdates.length} research update(s) integrated` : ''}*\n\n`;
       analysis = sourceNote + analysis;
-      console.log(`Legal analysis generated successfully from ${analysisSource} with research integration`);
+      console.log(`Legal analysis generated successfully from ${analysisSource} with domain lock: ${domainHint}`);
     }
 
-    // Save the analysis to the database with proper user association
+    // Save the analysis to the database with proper user association and domain hint
     try {
       // Get the current timestamp
       const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -576,7 +637,7 @@ serve(async (req) => {
         client_id: clientId,
         case_id: caseId || null, // Important: Use the provided case ID or null for client-level
         content: analysis,
-        case_type: detectedCaseType,
+        case_type: domainHint || detectedCaseType, // Prefer domain hint over detection
         law_references: knowledgeBaseLawReferences,
         timestamp: timestamp,
         user_id: userId // Use the authenticated user's ID instead of clientId
@@ -588,7 +649,8 @@ serve(async (req) => {
         case_type: analysisData.case_type,
         has_content: !!analysisData.content,
         content_length: analysisData.content.length,
-        user_id: analysisData.user_id
+        user_id: analysisData.user_id,
+        domain_locked: !!domainHint
       });
 
       const { data: savedAnalysis, error: saveError } = await supabase
@@ -618,8 +680,13 @@ serve(async (req) => {
           title: doc.title,
           isPdfDocument: doc.isPdfDocument
         })),
-        caseType: detectedCaseType,
-        analysisSource
+        caseType: domainHint || detectedCaseType, // Prefer domain hint over detection
+        analysisSource,
+        metadata: {
+          domainLocked: !!domainHint,
+          domainHint: domainHint,
+          provider: 'gemini-direct'
+        }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

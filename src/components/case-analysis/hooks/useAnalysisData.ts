@@ -35,8 +35,7 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           .select("*")
           .eq("client_id", clientId)
           .eq("case_id", caseId)
-          .order("created_at", { ascending: false })
-          .limit(1);
+          .order("created_at", { ascending: false });
 
         if (caseError) {
           throw new Error(`Failed to fetch case-specific analysis: ${caseError.message}`);
@@ -44,6 +43,15 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
 
         analyses = caseAnalyses;
         console.log(`Found ${analyses?.length || 0} case-specific analysis records`);
+        
+        // 🎯 NEW: Prefer consumer-protection analyses if multiple exist
+        if (analyses && analyses.length > 1) {
+          const consumerAnalyses = analyses.filter(a => a.case_type === 'consumer-protection');
+          if (consumerAnalyses.length > 0) {
+            console.log(`📋 Preferring consumer-protection analysis over other types`);
+            analyses = [consumerAnalyses[0]]; // Use most recent consumer analysis
+          }
+        }
       } else {
         // If no case ID, look for client-level analysis (case_id IS NULL)
         console.log(`Looking for client-level analysis (no case specified)`);
@@ -52,8 +60,7 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           .select("*")
           .eq("client_id", clientId)
           .is("case_id", null)
-          .order("created_at", { ascending: false })
-          .limit(1);
+          .order("created_at", { ascending: false });
 
         if (clientError) {
           throw new Error(`Failed to fetch client-level analysis: ${clientError.message}`);
@@ -61,11 +68,20 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
 
         analyses = clientAnalyses;
         console.log(`Found ${analyses?.length || 0} client-level analysis records`);
+        
+        // 🎯 NEW: Prefer consumer-protection analyses for client-level too
+        if (analyses && analyses.length > 1) {
+          const consumerAnalyses = analyses.filter(a => a.case_type === 'consumer-protection');
+          if (consumerAnalyses.length > 0) {
+            console.log(`📋 Preferring consumer-protection analysis over other types`);
+            analyses = [consumerAnalyses[0]]; // Use most recent consumer analysis
+          }
+        }
       }
 
       if (analyses && analyses.length > 0) {
         const analysis = analyses[0];
-        console.log(`Using analysis: ID=${analysis.id}, case_id=${analysis.case_id}, created_at=${analysis.created_at}`);
+        console.log(`Using analysis: ID=${analysis.id}, case_id=${analysis.case_id}, case_type=${analysis.case_type}, created_at=${analysis.created_at}`);
         
         // Extract legal citations from the analysis content and map to knowledge base
         const extractedCitations = extractLegalCitations(analysis.content);
@@ -105,7 +121,7 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
         };
 
         setAnalysisData(transformedData);
-        console.log("Analysis data set successfully");
+        console.log("Analysis data set successfully with case type:", analysis.case_type);
       } else {
         console.log(`No analysis found for the specified criteria`);
         setAnalysisData(null);

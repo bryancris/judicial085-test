@@ -1,143 +1,101 @@
 
-export function buildSystemPrompt(
+// Build comprehensive system prompt for legal analysis generation
+export const buildSystemPrompt = (
   analysisSource: string,
   relevantLawReferences: any[],
   hasConversation: boolean,
   clientDocuments: any[],
   detectedCaseType: string,
-  researchUpdates?: any[]
-): string {
-  // Create base system prompt optimized for Gemini's 2M context window
-  let systemPrompt = `
-You are an expert Texas attorney and legal analyst. Using Gemini's extensive context window, analyze ALL provided information comprehensively. Based on the ${analysisSource} provided, generate a thorough legal analysis with the following sections:
+  researchUpdates?: any[],
+  domainHint?: string
+) => {
+  const effectiveCaseType = domainHint || detectedCaseType;
+  console.log(`Building system prompt with effective case type: ${effectiveCaseType}`);
+  
+  let systemPrompt = `You are an expert Texas attorney providing detailed legal analysis. You will analyze the provided ${analysisSource} and generate a comprehensive legal assessment.`;
 
-CRITICAL FOCUS REQUIREMENT: Analyze ONLY the specific legal situation and facts presented in the current conversation/documents. Do not mix or confuse different legal topics. If you see any unrelated legal content (such as animal protection cases when the actual case is about real estate), completely ignore the unrelated content and focus exclusively on the current case facts.
+  // Add domain-specific instructions based on case type
+  if (effectiveCaseType === "consumer-protection") {
+    systemPrompt += `\n\nCRITICAL DOMAIN FOCUS: This is a consumer protection case under Texas and federal law. You MUST focus exclusively on:
+- Texas Deceptive Trade Practices-Consumer Protection Act (DTPA) - Texas Business & Commerce Code § 17.41 et seq.
+- Texas Debt Collection Act (TDCA) - Texas Finance Code Chapter 392
+- Fair Debt Collection Practices Act (FDCPA) - 15 U.S.C. § 1692 et seq.
+- Fair Credit Reporting Act (FCRA) - 15 U.S.C. § 1681 et seq.
+- Consumer Financial Protection Bureau (CFPB) regulations
 
-1. **RELEVANT TEXAS LAW:** Identify and briefly explain Texas laws, statutes, or precedents that apply to this case.
-   - When citing Texas statutes, use the format: "Texas Civil Practice and Remedies Code § 75.001" or similar standard legal citation format
-   - For case law, use italics with the format: *Wal-Mart Stores, Inc. v. Gonzalez*
-   - Be specific with statute numbers and section references when possible
-   ${relevantLawReferences.length > 0 ? `\nConsider these specific Texas law references that may be relevant to this case:\n${relevantLawReferences.map(ref => `- ${ref.title || 'Texas Law'}: ${ref.content ? ref.content.substring(0, 200) + '...' : 'No preview available'}`).join('\n')}` : ''}
-
-2. **PRELIMINARY ANALYSIS:** Analyze the key facts from the ${analysisSource} and their legal implications under Texas law.
-
-${hasConversation ? `CRITICAL: Facts have been provided via the conversation. Look for messages with "FACTS:" role or any substantive case details. Do not state that facts are missing or insufficient. Extract and use the facts from the conversation directly. Begin your response with a short "FACT SUMMARY" bullet list grounded only in the conversation before the analysis sections.
-
-STRICT CONTENT FILTER: Focus exclusively on the facts of the current case. Ignore any unrelated legal topics that may appear in the context.` : ''}
-
-3. **POTENTIAL LEGAL ISSUES:** Identify potential legal challenges, considerations, or defenses that may arise.
-
-4. **RECOMMENDED FOLLOW-UP QUESTIONS:** Suggest exactly 4 specific questions the attorney should ${hasConversation ? 'ask the client next' : 'investigate further'} to gather important information for the case.
-
-Format your response in Markdown with bold section headers. Under the "**RECOMMENDED FOLLOW-UP QUESTIONS**" section, 
-format each question as a numbered list with the exact format:
-
-1. First question text
-2. Second question text
-3. Third question text
-4. Fourth question text
-
-Make sure each question:
-- Starts with a number followed by a period and a space (e.g. "1. ")
-- Is clear and specific
-- Is directly relevant to the case
-- Is on its own line
-
-After the last follow-up question, don't add any additional content, comments, or new sections. Generate exactly 4 follow-up questions, no more and no less.
-
-${researchUpdates && researchUpdates.length > 0 ? `
-
-CRITICAL INTEGRATION INSTRUCTIONS:
-Research updates have been provided that must be seamlessly integrated into your analysis. DO NOT create separate "Research Update" sections. Instead:
-- Incorporate relevant statutes and legal information into the **RELEVANT TEXAS LAW** section
-- Include factual details and legal implications in the **PRELIMINARY ANALYSIS** section  
-- Address any new legal issues in the **POTENTIAL LEGAL ISSUES** section
-- The content should read as a cohesive analysis, not as separate updates appended to existing content
-- Preserve the important legal details from research updates but present them as part of your comprehensive analysis
-
-IMPORTANT: Do not add "**RESEARCH UPDATE**" headers or treat these as appendices. Integrate the substantive content naturally into the appropriate sections above.` : ''}
-`;
-
-
-  // Add client documents section if available
-  if (clientDocuments.length > 0) {
-    const clientDocumentsPrompt = `
-${hasConversation ? 'IMPORTANT: The client has also provided the following documents related to this case that should be considered in your analysis:' : 'IMPORTANT: The analysis should be based on the following client documents:'}
-
-${clientDocuments.map((doc, index) => 
-  `DOCUMENT ${index + 1}: ${doc.title} ${doc.uploadedAt ? `(Uploaded: ${new Date(doc.uploadedAt).toLocaleDateString()})` : ''}
-${doc.content}`
-).join('\n\n')}
-
-When analyzing this case, SPECIFICALLY reference information from these ${hasConversation ? 'client documents' : 'documents'} where relevant. When you use information from a document, clearly indicate which document you're referencing. ${hasConversation ? 'These client-provided documents should supplement the conversation analysis.' : 'Base your entire analysis on these documents.'}
-`;
-    systemPrompt += clientDocumentsPrompt;
+DO NOT include content about real estate law, property law, premises liability, trespass to try title, adverse possession, easements, or Texas Property Code unless explicitly and directly relevant to consumer protection violations.`;
+  } else if (effectiveCaseType === "animal-protection") {
+    systemPrompt += `\n\nCASE TYPE FOCUS: This involves animal protection and safety issues under Texas Health & Safety Code Chapter 822 and related statutes.`;
+  } else if (effectiveCaseType === "personal-injury") {
+    systemPrompt += `\n\nCASE TYPE FOCUS: This is a personal injury matter involving Texas tort law, negligence principles, and damage calculations.`;
   }
 
-  // Add case-specific prompts
-  if (detectedCaseType === "consumer-protection") {
-    systemPrompt += getConsumerProtectionPrompt();
+  // Add law references if available
+  if (relevantLawReferences && relevantLawReferences.length > 0) {
+    systemPrompt += `\n\nRELEVANT LEGAL AUTHORITIES:\n`;
+    relevantLawReferences.forEach(ref => {
+      systemPrompt += `- ${ref.title}: ${ref.content}\n`;
+    });
   }
 
-  if (detectedCaseType === "animal-protection") {
-    systemPrompt += getAnimalProtectionPrompt();
+  // Add document context
+  if (clientDocuments && clientDocuments.length > 0) {
+    systemPrompt += `\n\nDOCUMENT CONTEXT: You have access to ${clientDocuments.length} client document(s) that should be referenced in your analysis.`;
+  }
+
+  // Add research updates context
+  if (researchUpdates && researchUpdates.length > 0) {
+    systemPrompt += `\n\nRESEARCH INTEGRATION: You have ${researchUpdates.length} research update(s) to integrate into your analysis. These should be woven into the appropriate sections rather than kept as separate updates.`;
+  }
+
+  // Core analysis structure requirements
+  systemPrompt += `\n\nYour analysis must include these sections with proper markdown formatting:
+
+**CASE SUMMARY:**
+Concise overview of the legal matter and key facts.
+
+**RELEVANT TEXAS LAW:**
+Applicable statutes, regulations, and case law with specific citations.`;
+
+  // Case-type specific requirements
+  if (effectiveCaseType === "consumer-protection") {
+    systemPrompt += `
+Focus on DTPA violations, FDCPA violations, debt collection practices, and consumer remedies.`;
+  }
+
+  systemPrompt += `
+
+**PRELIMINARY ANALYSIS:**
+Detailed legal analysis applying law to facts.
+
+**CASE STRENGTHS:**
+Favorable factors and strong legal arguments.
+
+**CASE WEAKNESSES:**
+Potential challenges and opposing arguments.
+
+**POTENTIAL LEGAL ISSUES:**
+Key legal questions and complications.
+
+**RECOMMENDED FOLLOW-UP QUESTIONS:**
+Specific questions to gather additional information (numbered list).
+
+**NEXT STEPS:**
+Recommended actions and strategy.`;
+
+  // Add specific formatting and quality requirements
+  systemPrompt += `\n\nFORMATTING REQUIREMENTS:
+- Use proper markdown formatting with ** for section headers
+- Include specific Texas statute citations where applicable
+- Reference case law with proper citations when relevant
+- Keep analysis factual and professional
+- Avoid speculation beyond reasonable legal inferences
+- Provide actionable recommendations`;
+
+  // Add domain constraint reminder if domain locked
+  if (domainHint) {
+    systemPrompt += `\n\nDOMAIN CONSTRAINT REMINDER: This analysis is domain-locked to ${domainHint}. Ensure all content relates specifically to this area of law and avoid drift into unrelated legal domains.`;
   }
 
   return systemPrompt;
-}
-
-function getConsumerProtectionPrompt(): string {
-  return `
-IMPORTANT: This appears to be a Consumer Protection/Deceptive Trade Practices case. In your analysis, be sure to address:
-
-1. The Texas Deceptive Trade Practices-Consumer Protection Act (DTPA), Texas Business & Commerce Code § 17.41-17.63:
-   - Cite specific violations from § 17.46(b)'s "laundry list" that apply to this case
-   - Identify if the case involves a "false, misleading, or deceptive act" under § 17.46(a)
-   - Determine if there are failures to disclose information under § 17.46(b)(24)
-   - Assess if warranty breaches exist under § 17.50(a)(2)
-   - Consider unconscionable actions under § 17.50(a)(3)
-
-2. The Texas Home Solicitation Act (Texas Business & Commerce Code § 601.001 et seq.):
-   - Determine if a 3-day right of rescission applies
-   - Verify if proper notice of cancellation was provided
-   - Check compliance with door-to-door sales requirements
-
-3. The Texas Debt Collection Act (Texas Finance Code § 392.001 et seq.):
-   - Identify any prohibited debt collection methods
-   - Note any misrepresentations about debt amount or character
-
-4. Available Remedies:
-   - Economic damages under DTPA § 17.50(b)(1)
-   - Potential for treble damages for knowing violations under § 17.50(b)(1)
-   - Mental anguish damages if conduct was committed knowingly
-   - Attorney's fees under § 17.50(d)
-   - Injunctive relief possibilities
-   - Contract rescission options
-
-When analyzing these issues, connect specific facts from the conversation to the exact statutory provisions they violate. Prioritize violations by severity and impact on the consumer's case.
-`;
-}
-
-function getAnimalProtectionPrompt(): string {
-  return `
-IMPORTANT: This appears to involve animal protection/cruelty issues. In your analysis, be sure to address:
-
-1. Texas Penal Code § 42.092 - Cruelty to Animals:
-   - Identify if there's intentional or knowing torture, serious bodily injury, or killing of animals
-   - Determine if there's failure to provide necessary food, water, shelter, or veterinary care
-   - Assess if animals were abandoned in circumstances where death, serious bodily injury, or suffering was likely
-
-2. Civil remedies and consumer protection aspects:
-   - If involving pet boarding, grooming, or veterinary services, consider DTPA violations for deceptive practices
-   - Breach of contract for failure to provide promised care
-   - Negligence claims for failure to meet standard of care
-
-3. Available Remedies:
-   - Criminal penalties under Penal Code § 42.092
-   - Civil damages for veterinary expenses, replacement costs, and emotional distress
-   - Injunctive relief to prevent further harm
-   - Consumer protection remedies if commercial services were involved
-
-Connect the specific facts to the relevant statutory provisions and identify both criminal and civil liability issues.
-`;
-}
+};
