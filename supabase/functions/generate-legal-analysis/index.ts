@@ -563,6 +563,19 @@ console.log('📋 Fact-based analysis mode enabled');
     console.log("Generated analysis length:", analysis?.length || 0);
     console.log("Source:", analysisSource, "Case type:", detectedCaseType);
 
+    // Extract fact sources and citations for validation
+    const factSources = analysisSource === 'client conversation' ? 
+      [{ type: 'conversation', source: 'Client intake and conversation' }] : 
+      clientDocuments.map(doc => ({ type: 'document', source: doc.title || doc.id }));
+    
+    const citationsForValidation = extractedCitations.map(citation => ({
+      citation: citation,
+      type: 'statute',
+      jurisdiction: 'Texas'
+    }));
+    
+    console.log(`📋 Returning extracted data: ${factSources.length} fact sources, ${citationsForValidation.length} citations`);
+
     // Return enhanced knowledge base law references with direct PDF URLs
     return new Response(
       JSON.stringify({ 
@@ -573,6 +586,8 @@ console.log('📋 Fact-based analysis mode enabled');
           title: doc.title,
           isPdfDocument: doc.isPdfDocument
         })),
+        factSources: factSources,
+        citations: citationsForValidation,
         caseType: detectedCaseType,
         analysisSource,
         metadata: {

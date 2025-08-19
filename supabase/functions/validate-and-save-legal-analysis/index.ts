@@ -139,11 +139,17 @@ serve(async (req) => {
     }
 
 
+    // Pass through the extracted fact sources and citations as JSON
+    const factSourcesJson = JSON.stringify(factSources || []);
+    const citationsJson = JSON.stringify(citations || []);
+    
+    console.log(`📋 Validation input: ${factSources?.length || 0} fact sources, ${citations?.length || 0} citations`);
+
     const { data: validationResult, error: validationError } = await supabase
       .rpc('validate_legal_analysis', {
         analysis_content: content,
-        fact_sources: factSources,
-        citations: citations
+        fact_sources: factSourcesJson,
+        citations: citationsJson
       }) as { data: ValidationResult[] | null; error: any };
 
     if (validationError) {

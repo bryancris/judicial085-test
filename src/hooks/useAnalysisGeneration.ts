@@ -77,7 +77,9 @@ export const useAnalysisGeneration = (clientId?: string, caseId?: string) => {
           caseId,
           analysisType: caseId ? "case-analysis" : "client-intake",
           lawReferences: result.lawReferences || [],
-          documentsUsed: result.documentsUsed || []
+          documentsUsed: result.documentsUsed || [],
+          factSources: result.factSources || [],
+          citations: result.citations || []
         }
       );
       if (!saveResult.success) {

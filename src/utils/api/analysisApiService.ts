@@ -13,6 +13,8 @@ export const generateLegalAnalysis = async (
   analysis: string; 
   lawReferences?: any[]; 
   documentsUsed?: any[];
+  factSources?: any[];
+  citations?: any[];
   error?: string 
 }> => {
   try {
@@ -22,6 +24,8 @@ export const generateLegalAnalysis = async (
       analysis: string; 
       lawReferences?: any[];
       documentsUsed?: any[];
+      factSources?: any[];
+      citations?: any[];
       caseType?: string;
     }>(
       "generate-legal-analysis", 
@@ -42,7 +46,9 @@ export const generateLegalAnalysis = async (
     return { 
       analysis: data?.analysis || "",
       lawReferences: data?.lawReferences || [],
-      documentsUsed: data?.documentsUsed || []
+      documentsUsed: data?.documentsUsed || [],
+      factSources: data?.factSources || [],
+      citations: data?.citations || []
     };
   } catch (err: any) {
     console.error("Error generating legal analysis:", err);
