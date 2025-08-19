@@ -115,21 +115,53 @@ serve(async (req) => {
     const userId = user.id;
     console.log(`Authenticated user ID: ${userId}`);
 
-    // Remove domain locking - let analysis be fact-based
-    console.log('📋 Analyzing facts without domain constraints');
+// Remove domain locking - let analysis be fact-based
+console.log('📋 Analyzing facts without domain constraints');
 
-    // 🎯 NEW: Orchestrate 3-agent pipeline first, with fallback to direct analysis
-    const isInternalLegalResearch = researchFocus === 'legal-analysis';
-    if (!isInternalLegalResearch) {
+// Prepare conversation messages early (use provided or fetch from DB)
+const hasProvidedConversation = Array.isArray(conversation) && conversation.length > 0;
+let conversationMessages = hasProvidedConversation ? conversation : [];
+let hasConversation = conversationMessages.length > 0;
+if (!hasConversation) {
+  console.log("No conversation provided, fetching client messages from database");
+  try {
+    let messageQuery = supabase.from("client_messages").select("*").eq("client_id", clientId);
+    if (caseId) {
+      console.log(`Trying to fetch case-specific messages for case: ${caseId}`);
+      messageQuery = messageQuery.eq("case_id", caseId);
+      console.log("📅 Case-specific run: fetching ALL messages (no 24h limit)");
+    } else {
+      console.log(`Fetching client-level messages (case_id IS NULL)`);
+      messageQuery = messageQuery.is("case_id", null);
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      messageQuery = messageQuery.gte('created_at', oneDayAgo);
+      console.log("📅 Client-level run: applying 24h message filter");
+    }
+    const { data: dbMessages, error: messageError } = await messageQuery.order("created_at", { ascending: true });
+    if (messageError) {
+      console.error("Error fetching messages:", messageError);
+    } else if (dbMessages && dbMessages.length > 0) {
+      console.log(`Found ${dbMessages.length} messages in database`);
+      conversationMessages = dbMessages.map(msg => ({ content: msg.content, timestamp: msg.timestamp, role: msg.role }));
+      hasConversation = conversationMessages.length > 0;
+    }
+  } catch (dbError) {
+    console.error("Database error when fetching messages:", dbError);
+  }
+}
+console.log(`Final conversation status: ${hasConversation}, length: ${conversationMessages?.length || 0}`);
+
+// 🎯 NEW: Orchestrate 3-agent pipeline first, with fallback to direct analysis
+const isInternalLegalResearch = researchFocus === 'legal-analysis';
+if (!isInternalLegalResearch) {
       console.log('🎯 Starting 3-agent coordination for client:', clientId);
       
       try {
-        // Build research query from conversation with domain context
-        let researchQuery = conversation && conversation.length > 0
-          ? conversation.slice(-5).map((msg: any) => `${msg.role}: ${msg.content}`).join('\n')
-          : 'Analyze client legal situation and provide comprehensive analysis';
-
-        // Let research be fact-based without domain constraints
+        // Build research query from actual fact pattern (use last 10 messages for focus)
+        const msgsForQuery = (conversationMessages || []).slice(-10);
+        const researchQuery = msgsForQuery.length > 0
+          ? msgsForQuery.map((m: any) => `${m.role}: ${m.content}`).join('\n')
+          : 'No conversation available. Analyze uploaded documents and generate a fact-based legal analysis.';
 
         console.log('📋 Calling ai-agent-coordinator with query length:', researchQuery.length);
 
@@ -140,8 +172,7 @@ serve(async (req) => {
             clientId,
             caseId,
             researchTypes: ['legal-research', 'current-research', 'similar-cases'],
-            requestContext,
-            undefined // No domain hint - let analysis be fact-based
+            requestContext
           },
           headers: {
             Authorization: authHeader
@@ -207,14 +238,14 @@ serve(async (req) => {
       );
     }
 
-    // Log the request details for debugging and validate content
-    const factPatternPreview = conversation && conversation.length > 0 
-      ? conversation.map(msg => msg.content).join(' ').substring(0, 200)
-      : "No conversation provided";
-    
-    console.log(`Generating legal analysis for client: ${clientId}${caseId ? `, case: ${caseId}` : ''}`);
-    console.log(`Conversation length: ${conversation?.length || 0}`);
-    console.log("📝 Fact pattern preview:", factPatternPreview);
+// Log the request details for debugging and validate content
+const factPatternPreview = hasConversation 
+  ? conversationMessages.map(msg => msg.content).join(' ').substring(0, 200)
+  : "No conversation provided";
+
+console.log(`Generating legal analysis for client: ${clientId}${caseId ? `, case: ${caseId}` : ''}`);
+console.log(`Conversation length: ${conversationMessages?.length || 0}`);
+console.log("📝 Fact pattern preview:", factPatternPreview);
     console.log(`Research updates to integrate: ${researchUpdates?.length || 0}`);
     console.log('📋 Fact-based analysis mode enabled');
 
