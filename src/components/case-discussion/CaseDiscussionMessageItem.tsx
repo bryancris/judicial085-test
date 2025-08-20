@@ -5,8 +5,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { User, Bot, Search, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { processMarkdown } from "@/utils/markdownProcessor";
-import { processLawReferencesSync } from "@/utils/lawReferenceUtils";
 import ResearchFindingsButton from "./ResearchFindingsButton";
 
 interface CaseDiscussionMessageItemProps {
@@ -27,21 +25,16 @@ const CaseDiscussionMessageItem: React.FC<CaseDiscussionMessageItemProps> = ({
   const researchType = hasResearchSection ? 
     (message.content.includes("similar court cases") || message.content.includes("Find similar court cases") ? "similar-cases" : "legal-research") : null;
   
-  // Process content with markdown and law references
-  const processedContent = React.useMemo(() => {
+  // Sanitize only problematic Unicode; render as plain text (no HTML processing)
+  const sanitizedText = React.useMemo(() => {
     let content = message.content;
-    
-    // Remove only Unicode artifacts that cause vertical display issues - preserve formatting
+
     content = content
-      // Remove zero-width spaces and invisible characters
       .replace(/[\u200B-\u200D\uFEFF]/g, '')
-      // Remove directional marks that can cause layout issues
       .replace(/[\u061C\u200E\u200F\u202A-\u202E]/g, '')
-      // Remove control characters but preserve line breaks and tabs
       .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '');
-    
-    content = processLawReferencesSync(content);
-    return processMarkdown(content);
+
+    return content;
   }, [message.content]);
 
   return (
@@ -87,17 +80,15 @@ const CaseDiscussionMessageItem: React.FC<CaseDiscussionMessageItemProps> = ({
           "px-4 py-2 rounded-lg relative",
           isAttorney ? "bg-purple-100 text-purple-900" : "bg-blue-100 text-blue-900"
         )}>
-          <div 
-            className="text-sm prose prose-sm max-w-none break-words overflow-wrap-anywhere select-text"
-            style={{ 
-              userSelect: 'text',
-              wordBreak: 'break-word',
-              overflowWrap: 'anywhere',
+          <div
+            className="cd-message-content text-sm max-w-none select-text"
+            style={{
               whiteSpace: 'pre-wrap',
               lineHeight: '1.5'
             }}
-            dangerouslySetInnerHTML={{ __html: processedContent }}
-          />
+          >
+            {sanitizedText}
+          </div>
           
           {/* Research Findings Button for all AI messages */}
           {!isAttorney && clientId && (

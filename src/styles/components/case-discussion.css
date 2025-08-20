@@ -78,3 +78,39 @@
   background-color: rgba(59, 130, 246, 0.3);
   color: inherit;
 }
+
+/* Scoped, safe message content styling */
+.cd-message-content {
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+
+  font-feature-settings: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+
+  unicode-bidi: isolate;
+  direction: ltr;
+
+  writing-mode: horizontal-tb;
+  text-orientation: mixed;
+
+  contain: content;
+}
+
+.cd-message-content ::selection {
+  background-color: rgba(59, 130, 246, 0.3);
+  color: inherit;
+}
+
+.cd-message-content ::-moz-selection {
+  background-color: rgba(59, 130, 246, 0.3);
+  color: inherit;
+}
