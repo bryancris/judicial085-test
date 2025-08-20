@@ -17,6 +17,7 @@ import Admin from "./pages/Admin";
 import FAQ from "./pages/FAQ";
 import QuickConsult from "./pages/QuickConsult";
 import Pricing from "./pages/Pricing";
+import ContactUs from "./pages/ContactUs";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/faq" element={<FAQ />} />
+            <Route path="/contact-us" element={<ContactUs />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
