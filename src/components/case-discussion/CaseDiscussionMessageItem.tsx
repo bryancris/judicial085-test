@@ -78,7 +78,14 @@ const CaseDiscussionMessageItem: React.FC<CaseDiscussionMessageItemProps> = ({
           isAttorney ? "bg-purple-100 text-purple-900" : "bg-blue-100 text-blue-900"
         )}>
           <div 
-            className="text-sm prose prose-sm max-w-none"
+            className="text-sm prose prose-sm max-w-none break-words overflow-wrap-anywhere select-text"
+            style={{ 
+              userSelect: 'text',
+              wordBreak: 'break-word',
+              overflowWrap: 'anywhere',
+              whiteSpace: 'pre-wrap',
+              lineHeight: '1.5'
+            }}
             dangerouslySetInnerHTML={{ __html: processedContent }}
           />
           

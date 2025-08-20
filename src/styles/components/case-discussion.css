@@ -1,9 +1,22 @@
-/* Case Discussion List Formatting - Only fix list positioning without affecting colors */
+/* Case Discussion Message Formatting - Improved text rendering and layout */
+.prose {
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
 .prose ol {
   list-style-type: decimal;
   list-style-position: inside;
   padding-left: 0;
   margin: 1rem 0;
+  word-break: normal;
 }
 
 .prose ul {
@@ -11,6 +24,7 @@
   list-style-position: inside;
   padding-left: 0;
   margin: 1rem 0;
+  word-break: normal;
 }
 
 .prose ol > li,
@@ -18,4 +32,35 @@
   text-indent: 0;
   padding-left: 0;
   margin: 0.5rem 0;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+.prose p {
+  margin: 0.75rem 0;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  margin: 1rem 0 0.5rem 0;
+  line-height: 1.4;
+}
+
+.prose strong {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Prevent text selection artifacts */
+.prose ::selection {
+  background-color: rgba(59, 130, 246, 0.3);
+  color: inherit;
+}
+
+.prose ::-moz-selection {
+  background-color: rgba(59, 130, 246, 0.3);
+  color: inherit;
 }
