@@ -10,6 +10,7 @@ import { Case } from "@/types/case";
 import { supabase } from '@/integrations/supabase/client';
 import DocumentGrid from './DocumentGrid';
 import DocumentPreviewDialog from './DocumentPreviewDialog';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface ClientDocumentsSectionProps {
   clientId: string;
@@ -51,6 +52,7 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
   const [selectedDocument, setSelectedDocument] = useState<DocumentWithContent | null>(null);
   const [documentContent, setDocumentContent] = useState<string>('');
   const [loadingContent, setLoadingContent] = useState(false);
+  const { isAdmin, isSuperAdmin } = useUserRole();
 
   const handleDocumentOpen = async (document: DocumentWithContent) => {
     setSelectedDocument(document);
@@ -136,7 +138,7 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
   };
 
   // Show cleanup button if there are documents and we're in full view
-  const shouldShowCleanup = fullView && documents.length > 1;
+  const shouldShowCleanup = fullView && documents.length > 1 && (isAdmin || isSuperAdmin);
 
   return (
     <>
