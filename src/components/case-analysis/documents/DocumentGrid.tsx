@@ -2,13 +2,15 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { DocumentWithContent } from "@/types/knowledge";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Loader2 } from "lucide-react";
 import DocumentCard from './DocumentCard';
 import DocumentSkeletons from './DocumentSkeletons';
 
 interface DocumentGridProps {
   documents: DocumentWithContent[];
   isLoading: boolean;
+  hasMore?: boolean;
+  loadMore?: () => void;
   caseId?: string;
   onDocumentOpen: (document: DocumentWithContent) => void;
   onPdfOpen: (url: string) => void;
@@ -21,6 +23,8 @@ interface DocumentGridProps {
 const DocumentGrid: React.FC<DocumentGridProps> = ({
   documents,
   isLoading,
+  hasMore,
+  loadMore,
   caseId,
   onDocumentOpen,
   onPdfOpen,
@@ -63,18 +67,47 @@ const DocumentGrid: React.FC<DocumentGridProps> = ({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {sortedDocuments.map((document) => (
-        <DocumentCard
-          key={document.id}
-          document={document}
-          onDocumentOpen={onDocumentOpen}
-          onPdfOpen={onPdfOpen}
-          onDeleteDocument={onDeleteDocument}
-          onToggleAnalysis={onToggleAnalysis}
-          isProcessing={isProcessing}
-        />
-      ))}
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <p className="text-sm text-muted-foreground">
+          Showing {documents.length} document{documents.length !== 1 ? 's' : ''}
+          {hasMore && ' (more available)'}
+        </p>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {sortedDocuments.map((document) => (
+          <DocumentCard
+            key={document.id}
+            document={document}
+            onDocumentOpen={onDocumentOpen}
+            onPdfOpen={onPdfOpen}
+            onDeleteDocument={onDeleteDocument}
+            onToggleAnalysis={onToggleAnalysis}
+            isProcessing={isProcessing}
+          />
+        ))}
+      </div>
+
+      {hasMore && loadMore && (
+        <div className="flex justify-center mt-6">
+          <Button 
+            onClick={loadMore}
+            variant="outline"
+            disabled={isLoading}
+            className="min-w-[200px]"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              'Load More Documents'
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

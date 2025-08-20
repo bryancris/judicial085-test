@@ -15,6 +15,8 @@ interface ClientDocumentsSectionProps {
   clientId: string;
   documents: DocumentWithContent[];
   isLoading: boolean;
+  hasMore?: boolean;
+  loadMore?: () => void;
   onProcessDocument: (title: string, content: string, metadata?: any) => Promise<any>;
   onDeleteDocument: (documentId: string) => Promise<any>;
   onToggleDocumentAnalysis: (documentId: string, includeInAnalysis: boolean) => Promise<any>;
@@ -31,6 +33,8 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
   clientId,
   documents,
   isLoading,
+  hasMore,
+  loadMore,
   onProcessDocument,
   onDeleteDocument,
   onToggleDocumentAnalysis,
@@ -152,6 +156,8 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
         <DocumentGrid
           documents={documents}
           isLoading={isLoading}
+          hasMore={hasMore}
+          loadMore={loadMore}
           caseId={caseId}
           onDocumentOpen={handleDocumentOpen}
           onPdfOpen={handlePdfOpen}

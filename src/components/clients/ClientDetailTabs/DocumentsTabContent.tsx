@@ -14,18 +14,22 @@ const DocumentsTabContent: React.FC<DocumentsTabContentProps> = ({ clientId }) =
   const {
     documents,
     loading,
+    hasMore,
+    loadMore,
     isProcessing,
     processDocument,
     deleteDocument,
     toggleDocumentAnalysis,
     refreshDocuments
-  } = useClientDocuments(clientId, 5, "all");
+  } = useClientDocuments(clientId, 20, "all");
 
   return (
     <ClientDocumentsSection
       clientId={clientId}
       documents={documents}
       isLoading={loading}
+      hasMore={hasMore}
+      loadMore={loadMore}
       onProcessDocument={processDocument}
       onDeleteDocument={deleteDocument}
       onToggleDocumentAnalysis={toggleDocumentAnalysis}
