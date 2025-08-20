@@ -16,14 +16,14 @@ const SecuritySection = () => {
           </p>
         </div>
 
-        <div className="bg-gradient-to-br from-blue-50 to-gray-100 p-6 rounded-xl border border-blue-100 shadow-sm mb-12">
+        <div className="bg-gradient-to-br from-blue-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 p-6 rounded-xl border border-blue-100 dark:border-gray-700 shadow-sm mb-12">
           <div className="flex flex-col md:flex-row items-center gap-6">
-            <div className="bg-white p-6 rounded-full shadow-md">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-full shadow-md">
               <Shield className="w-16 h-16 text-brand-burgundy" />
             </div>
             <div>
-              <h3 className="text-2xl font-bold mb-3">Attorney-Client Privilege Protected</h3>
-              <p className="text-lg text-gray-700">
+              <h3 className="text-2xl font-bold mb-3 dark:text-white">Attorney-Client Privilege Protected</h3>
+              <p className="text-lg text-gray-700 dark:text-gray-300">
                 Most legal platforms pool client data across users to train their AI models, creating serious confidentiality risks. 
                 <strong className="text-brand-burgundy"> Our approach is fundamentally different</strong> - we maintain complete data isolation on dedicated secure servers, 
                 ensuring your client information never leaves your control and is never used to enhance services for other attorneys.
