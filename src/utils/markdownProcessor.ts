@@ -11,8 +11,11 @@ export const processMarkdown = (text: string): string => {
     pedantic: false,       // Use relaxed parsing rules
   });
 
-  // Clean and normalize the text first
-  let cleanedText = text
+  // Clean and sanitize the text first - CRITICAL: Remove Unicode artifacts
+  let cleanedText = sanitizeTextContent(text);
+  
+  // Normalize the text
+  cleanedText = cleanedText
     .trim()
     .replace(/\r\n/g, '\n')           // Normalize line endings
     .replace(/\n{3,}/g, '\n\n')       // Collapse multiple newlines to double
@@ -111,6 +114,49 @@ const fixBrokenNumbering = (text: string): string => {
   fixed = fixed.replace(/(\d+)\.\n+([A-Z][a-z])/g, '$1. $2');
   
   return fixed;
+};
+
+/**
+ * Sanitize text content to remove Unicode control characters and artifacts
+ * This fixes the vertical character display issues
+ */
+const sanitizeTextContent = (text: string): string => {
+  if (!text) return '';
+  
+  let sanitized = text;
+  
+  // Remove common Unicode control characters and artifacts
+  sanitized = sanitized
+    // Remove BOM (Byte Order Mark)
+    .replace(/\uFEFF/g, '')
+    // Remove zero-width spaces and similar invisible characters
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    // Remove line separator and paragraph separator
+    .replace(/[\u2028\u2029]/g, '\n')
+    // Remove other control characters except tab, newline, carriage return
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '')
+    // Remove vertical tab characters
+    .replace(/\v/g, '')
+    // Remove form feed characters
+    .replace(/\f/g, '')
+    // Remove any remaining problematic Unicode ranges
+    .replace(/[\uE000-\uF8FF]/g, '') // Private use area
+    .replace(/[\uFFF0-\uFFFF]/g, '') // Specials block
+    // Remove directional marks that can cause layout issues
+    .replace(/[\u061C\u200E\u200F\u202A-\u202E]/g, '')
+    // Clean up any remaining invisible or formatting characters
+    .replace(/[\u00AD\u034F\u180E\u17B4\u17B5]/g, '');
+  
+  // Normalize whitespace but preserve intentional formatting
+  sanitized = sanitized
+    // Replace multiple spaces with single space (but preserve intentional formatting)
+    .replace(/[ \t]{2,}/g, ' ')
+    // Clean up any weird spacing around punctuation
+    .replace(/\s+([.,;:!?])/g, '$1')
+    // Fix spacing after punctuation
+    .replace(/([.,;:!?])([^\s\n])/g, '$1 $2');
+  
+  return sanitized;
 };
 
 // Completely rewritten function with better debugging and simpler patterns

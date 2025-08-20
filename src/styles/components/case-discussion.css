@@ -9,6 +9,20 @@
   -webkit-user-select: text;
   -moz-user-select: text;
   -ms-user-select: text;
+  
+  /* Prevent Unicode artifacts and display issues */
+  font-feature-settings: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  
+  /* Hide any potential control characters or artifacts */
+  unicode-bidi: embed;
+  direction: ltr;
+  
+  /* Ensure proper text flow */
+  writing-mode: horizontal-tb;
+  text-orientation: mixed;
 }
 
 .prose ol {
