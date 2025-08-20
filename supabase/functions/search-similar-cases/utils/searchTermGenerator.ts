@@ -18,6 +18,14 @@ export function generateSearchTerms(content: string, caseType: string): string {
       return animalSpecificTerms;
     }
     
+    // For HOA cases, use specialized HOA search strategy
+    if (detectHOACase(content, caseType)) {
+      const hoaSpecificTerms = generateHOASearchTerms(content);
+      console.log(`=== HOA SEARCH TERMS ===`);
+      console.log(`Generated terms: ${hoaSpecificTerms}`);
+      return hoaSpecificTerms;
+    }
+    
     // Extract key phrases from the content for other case types
     const keyPhrases = extractKeyPhrases(content, caseType);
     
@@ -101,6 +109,94 @@ function generateAnimalProtectionSearchTerms(content: string): string {
   return finalTerms.join(' ');
 }
 
+// Detect HOA cases from content and case type
+function detectHOACase(content: string, caseType: string): boolean {
+  const lowerContent = content.toLowerCase();
+  const lowerCaseType = caseType.toLowerCase();
+  
+  const hoaIndicators = [
+    'hoa', 'homeowners association', 'homeowner association',
+    'cc&r', 'restrictive covenant', 'deed restriction',
+    'commercial vehicle', 'hoa board', 'property restriction',
+    'selective enforcement', 'covenant enforcement'
+  ];
+  
+  return hoaIndicators.some(indicator => 
+    lowerContent.includes(indicator) || lowerCaseType.includes(indicator)
+  );
+}
+
+// Specialized search term generation for HOA cases
+function generateHOASearchTerms(content: string): string {
+  const lowerContent = content.toLowerCase();
+  const searchTerms: string[] = [];
+  
+  console.log("🏘️ Generating HOA-specific search terms...");
+  
+  // PRIORITY 1: Core HOA enforcement terms
+  searchTerms.push('"HOA selective enforcement"');
+  searchTerms.push('"homeowners association"');
+  
+  // PRIORITY 2: Legal concept terms
+  if (lowerContent.includes("selective") || lowerContent.includes("enforcement")) {
+    searchTerms.push('"selective enforcement"');
+    searchTerms.push('"discriminatory enforcement"');
+    console.log("✅ Added selective enforcement terms");
+  }
+  
+  // PRIORITY 3: Property Code references
+  if (lowerContent.includes("property code") || lowerContent.includes("202") || lowerContent.includes("204")) {
+    searchTerms.push('"Texas Property Code 202"');
+    searchTerms.push('"Texas Property Code 204"');
+    console.log("✅ Added Property Code terms");
+  }
+  
+  // PRIORITY 4: Restrictive covenant terms
+  if (lowerContent.includes("cc&r") || lowerContent.includes("covenant") || lowerContent.includes("restriction")) {
+    searchTerms.push('"restrictive covenants"');
+    searchTerms.push('"CC&R enforcement"');
+    console.log("✅ Added covenant terms");
+  }
+  
+  // PRIORITY 5: Commercial vehicle specific terms
+  if (lowerContent.includes("vehicle") || lowerContent.includes("commercial")) {
+    searchTerms.push('"commercial vehicle restriction"');
+    searchTerms.push('"HOA vehicle policy"');
+    console.log("✅ Added vehicle restriction terms");
+  }
+  
+  // PRIORITY 6: Legal defense terms
+  if (lowerContent.includes("waiver") || lowerContent.includes("estoppel")) {
+    searchTerms.push('"waiver estoppel"');
+    searchTerms.push('"HOA waiver defense"');
+    console.log("✅ Added legal defense terms");
+  }
+  
+  // PRIORITY 7: Board authority and conflicts
+  if (lowerContent.includes("board") || lowerContent.includes("conflict")) {
+    searchTerms.push('"HOA board authority"');
+    searchTerms.push('"conflict of interest"');
+    console.log("✅ Added board authority terms");
+  }
+  
+  // Add Texas for jurisdiction
+  searchTerms.push("Texas");
+  
+  // If we don't have enough specific terms, add fallback HOA terms
+  if (searchTerms.length < 4) {
+    console.log("⚠️ Not enough specific terms, adding fallback HOA terms");
+    searchTerms.push('"deed restrictions"');
+    searchTerms.push('"homeowner rights"');
+    searchTerms.push('"HOA enforcement"');
+  }
+  
+  // Limit to most important terms for focused search
+  const finalTerms = searchTerms.slice(0, 7);
+  console.log(`🏘️ Final HOA search terms: ${finalTerms.join(' ')}`);
+  
+  return finalTerms.join(' ');
+}
+
 // Get default search terms based on case type when no content available
 function getDefaultSearchTermsForCaseType(caseType: string): string {
   console.log(`Getting default search terms for case type: ${caseType}`);
@@ -108,6 +204,10 @@ function getDefaultSearchTermsForCaseType(caseType: string): string {
   switch (caseType) {
     case "animal-protection":
       return '"Texas Penal Code 42.092" "animal cruelty" "pet boarding negligence" Texas';
+    case "hoa":
+    case "homeowners":
+    case "hoa-enforcement":
+      return '"HOA selective enforcement" "restrictive covenants" "Texas Property Code 202" Texas';
     case "consumer-protection":
       return '"DTPA" "deceptive trade practices" "consumer protection" Texas';
     case "personal-injury":
@@ -345,6 +445,15 @@ export function addExplicitLegalTerms(searchTerms: string, content: string, case
   
   const normalizedType = (caseType || "").toLowerCase().replace(/[-_\s]/g, "");
   const lowerContent = content.toLowerCase();
+  
+  // For HOA cases, add specific HOA legal terms
+  if (normalizedType.includes("hoa") || normalizedType.includes("homeowner") || 
+      lowerContent.includes("hoa") || lowerContent.includes("homeowner") ||
+      lowerContent.includes("cc&r") || lowerContent.includes("restrictive covenant")) {
+    const hoaTerms = `${searchTerms} "HOA selective enforcement" "restrictive covenants" "Texas Property Code 202" "waiver estoppel"`;
+    console.log(`✅ Enhanced HOA terms: ${hoaTerms}`);
+    return hoaTerms;
+  }
   
   // For premises liability/slip and fall cases
   if (normalizedType.includes("general") || normalizedType.includes("premises") || 

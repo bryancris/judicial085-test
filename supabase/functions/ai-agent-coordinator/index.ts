@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { query, clientId, caseId, researchTypes, requestContext } = await req.json();
+    const { query, clientId, caseId, researchTypes, requestContext, context } = await req.json();
     
     console.log('🎯 AI Agent Coordinator received request:', { 
       query: query.substring(0, 200) + '...',
@@ -65,7 +65,7 @@ serve(async (req) => {
     }
 
     // Determine query analysis and routing
-    const queryAnalysis = analyzeQuery(query, requestContext);
+    const queryAnalysis = analyzeQuery(query, requestContext, context);
     console.log('🔍 Query Analysis:', queryAnalysis);
 
     // Initialize research agents in parallel
@@ -161,7 +161,7 @@ serve(async (req) => {
 });
 
 // Helper function to analyze query intent and requirements
-function analyzeQuery(query: string, requestContext?: string) {
+function analyzeQuery(query: string, requestContext?: string, context?: any) {
   const lowerQuery = query.toLowerCase();
   
   // Check for specific legal research indicators
@@ -169,17 +169,37 @@ function analyzeQuery(query: string, requestContext?: string) {
   const hasDocumentType = /\b(letter|memo|brief|motion|complaint|contract|agreement)\b/.test(lowerQuery);
   const isClientIntake = /\b(client|intake|consultation|meeting)\b/.test(lowerQuery);
   
+  // Detect HOA-specific cases
+  const isHOACase = context?.isHOACase || detectHOAContext(query, context);
+  
   return {
     originalQuery: query.length > 100 ? query.substring(0, 100) + '...' : query,
     hasDraftingKeyword,
     hasDocumentType,
     requestContext: requestContext || 'none',
     isClientIntake,
-    requestType: determineRequestType(lowerQuery, hasDraftingKeyword, hasDocumentType)
+    isHOACase,
+    requestType: determineRequestType(lowerQuery, hasDraftingKeyword, hasDocumentType, isHOACase)
   };
 }
 
-function determineRequestType(query: string, hasDrafting: boolean, hasDocType: boolean): string {
+function detectHOAContext(query: string, context?: any): boolean {
+  const hoaIndicators = [
+    'hoa', 'homeowners association', 'restrictive covenant', 'cc&r',
+    'commercial vehicle', 'selective enforcement', 'deed restriction'
+  ];
+  
+  const combinedText = [
+    query,
+    context?.caseDescription || '',
+    context?.incidentDescription || ''
+  ].join(' ').toLowerCase();
+  
+  return hoaIndicators.some(indicator => combinedText.includes(indicator));
+}
+
+function determineRequestType(query: string, hasDrafting: boolean, hasDocType: boolean, isHOACase?: boolean): string {
+  if (isHOACase) return 'HOA_RESEARCH';
   if (hasDrafting && hasDocType) return 'DOCUMENT_DRAFTING';
   if (query.includes('case law') || query.includes('precedent')) return 'CASE_RESEARCH';
   if (query.includes('statute') || query.includes('regulation')) return 'STATUTORY_RESEARCH';
@@ -289,6 +309,19 @@ SYNTHESIS INSTRUCTIONS:
 4. Structure your response with clear sections
 5. Include specific citations where available
 6. Ensure consistency and remove contradictions`;
+
+  // Add HOA-specific instructions if detected
+  if (queryAnalysis?.isHOACase) {
+    synthesisPrompt += `
+
+🏘️ HOA CASE DETECTED - SPECIAL INSTRUCTIONS:
+- Focus on HOA law, restrictive covenants, and Texas Property Code sections 202 and 204
+- Emphasize cases involving selective enforcement, waiver, and estoppel defenses
+- Look for precedents involving commercial vehicle restrictions in residential communities
+- Highlight Texas court decisions on HOA board authority and enforcement consistency
+- Include relevant CC&R interpretation cases
+- Focus on homeowner remedies against discriminatory HOA enforcement`;
+  }
 
   // Add fact-based synthesis instructions
   synthesisPrompt += `

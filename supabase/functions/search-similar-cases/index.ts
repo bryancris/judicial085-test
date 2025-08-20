@@ -105,23 +105,27 @@ serve(async (req) => {
       recentMessages?.slice(0, 3).map(m => m.content).join(' ') || ''
     ].filter(Boolean);
 
-    const searchQuery = `Can you find me some case law related to: ${contextElements.join('. ')}. I need similar cases that deal with these legal issues, particularly focusing on case precedents that would be relevant for analysis.`;
+    // Detect HOA cases and enhance search
+    const isHOACase = detectHOACase(contextElements);
+    const searchQuery = buildTargetedSearchQuery(contextElements, isHOACase);
 
     console.log('🤖 Calling AI Agent Coordinator for intelligent case research...');
 
     // Use AI Agent Coordinator for intelligent case finding
     const { data: aiResponse, error: aiError } = await supabase.functions.invoke('ai-agent-coordinator', {
-      body: {
-        query: searchQuery,
-        clientId,
-        researchTypes: ['legal-research', 'current-research'],
-        context: {
-          caseTypes,
-          caseDescription,
-          incidentDescription,
-          searchFocus: 'similar-cases'
+        body: {
+          query: searchQuery,
+          clientId,
+          researchTypes: ['legal-research', 'current-research'],
+          context: {
+            caseTypes,
+            caseDescription,
+            incidentDescription,
+            searchFocus: 'similar-cases',
+            isHOACase,
+            specificSearchTerms: isHOACase ? generateHOASearchTerms(contextElements) : null
+          }
         }
-      }
     });
 
     if (aiError) {
@@ -171,6 +175,13 @@ serve(async (req) => {
     if (similarCases.length === 0) {
       const extractedCases = extractCasesFromContent(synthesizedContent);
       similarCases.push(...extractedCases);
+    }
+
+    // For HOA cases with insufficient results, try CourtListener fallback
+    if (isHOACase && similarCases.length < 3) {
+      console.log("🏘️ HOA case with insufficient results, trying CourtListener fallback...");
+      const fallbackCases = await tryCourtListenerFallback(contextElements);
+      similarCases.push(...fallbackCases);
     }
 
     console.log(`🎯 Found ${similarCases.length} similar cases through AI analysis`);
@@ -342,4 +353,98 @@ function extractCasesFromContent(content: string): SimilarCase[] {
   }
   
   return cases;
+}
+
+/**
+ * Detect if this is an HOA-related case
+ */
+function detectHOACase(contextElements: string[]): boolean {
+  const combinedText = contextElements.join(' ').toLowerCase();
+  
+  const hoaIndicators = [
+    'hoa', 'homeowners association', 'homeowner association',
+    'cc&r', 'restrictive covenant', 'deed restriction',
+    'commercial vehicle', 'hoa board', 'property restriction',
+    'selective enforcement', 'covenant enforcement',
+    'homeowners', 'homeowner'
+  ];
+  
+  return hoaIndicators.some(indicator => combinedText.includes(indicator));
+}
+
+/**
+ * Build targeted search query based on case type
+ */
+function buildTargetedSearchQuery(contextElements: string[], isHOACase: boolean): string {
+  const baseContext = contextElements.join('. ');
+  
+  if (isHOACase) {
+    return `Find me HOA and homeowners association legal precedents specifically related to: ${baseContext}. 
+
+I need cases that deal with:
+- HOA selective enforcement of CC&Rs and restrictive covenants
+- Commercial vehicle restrictions in residential communities
+- Texas Property Code sections 202 and 204 (HOA governance)
+- Discriminatory or inconsistent enforcement by HOA boards
+- Waiver and estoppel defenses against HOA enforcement
+- Homeowners association board conflicts of interest
+- Texas cases involving deed restrictions and covenant enforcement
+
+Focus on Texas court decisions that establish precedents for HOA disputes, especially cases involving selective enforcement, waiver, estoppel, and Property Code violations.`;
+  }
+  
+  return `Can you find me some case law related to: ${baseContext}. I need similar cases that deal with these legal issues, particularly focusing on case precedents that would be relevant for analysis.`;
+}
+
+/**
+ * Generate HOA-specific search terms for fallback
+ */
+function generateHOASearchTerms(contextElements: string[]): string[] {
+  const combinedText = contextElements.join(' ').toLowerCase();
+  const terms = [];
+  
+  // Core HOA terms
+  terms.push('"HOA selective enforcement"');
+  terms.push('"homeowners association"');
+  terms.push('"restrictive covenants"');
+  
+  // Texas Property Code
+  terms.push('"Texas Property Code 202"');
+  terms.push('"Texas Property Code 204"');
+  
+  // Specific to commercial vehicle cases
+  if (combinedText.includes('vehicle') || combinedText.includes('commercial')) {
+    terms.push('"commercial vehicle restriction"');
+    terms.push('"CC&R vehicle"');
+  }
+  
+  // Legal concepts
+  terms.push('"selective enforcement"');
+  terms.push('"waiver estoppel"');
+  terms.push('"deed restrictions"');
+  
+  return terms;
+}
+
+/**
+ * CourtListener fallback for HOA cases
+ */
+async function tryCourtListenerFallback(contextElements: string[]): Promise<SimilarCase[]> {
+  try {
+    console.log("🔍 Attempting CourtListener fallback for HOA case...");
+    
+    const hoaSearchTerms = generateHOASearchTerms(contextElements);
+    const searchQuery = hoaSearchTerms.slice(0, 4).join(' OR ') + ' Texas';
+    
+    console.log(`CourtListener search terms: ${searchQuery}`);
+    
+    // This would be a direct CourtListener API call
+    // For now, return empty array since we don't have the API key here
+    // In a real implementation, this would make the API call
+    
+    return [];
+  } catch (error) {
+    console.error("CourtListener fallback failed:", error);
+    return [];
+  }
 }
