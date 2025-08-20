@@ -147,14 +147,12 @@ const sanitizeTextContent = (text: string): string => {
     // Clean up any remaining invisible or formatting characters
     .replace(/[\u00AD\u034F\u180E\u17B4\u17B5]/g, '');
   
-  // Normalize whitespace but preserve intentional formatting
+  // Preserve line breaks and formatting structure - only fix actual spacing issues
   sanitized = sanitized
-    // Replace multiple spaces with single space (but preserve intentional formatting)
-    .replace(/[ \t]{2,}/g, ' ')
-    // Clean up any weird spacing around punctuation
-    .replace(/\s+([.,;:!?])/g, '$1')
-    // Fix spacing after punctuation
-    .replace(/([.,;:!?])([^\s\n])/g, '$1 $2');
+    // Replace multiple consecutive spaces/tabs with single space (but preserve line breaks)
+    .replace(/[ \t]{3,}/g, ' ')
+    // Clean up spacing before punctuation only if excessive
+    .replace(/[ \t]+([.,;:!?])/g, '$1');
   
   return sanitized;
 };

@@ -31,15 +31,14 @@ const CaseDiscussionMessageItem: React.FC<CaseDiscussionMessageItemProps> = ({
   const processedContent = React.useMemo(() => {
     let content = message.content;
     
-    // Additional content sanitization for display issues
+    // Remove only Unicode artifacts that cause vertical display issues - preserve formatting
     content = content
-      // Remove any Unicode artifacts that might cause vertical display issues
-      .replace(/[\u200B-\u200D\uFEFF\u061C\u200E\u200F\u202A-\u202E]/g, '')
-      // Clean up any control characters
-      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '')
-      // Normalize whitespace
-      .replace(/\s+/g, ' ')
-      .trim();
+      // Remove zero-width spaces and invisible characters
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')
+      // Remove directional marks that can cause layout issues
+      .replace(/[\u061C\u200E\u200F\u202A-\u202E]/g, '')
+      // Remove control characters but preserve line breaks and tabs
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '');
     
     content = processLawReferencesSync(content);
     return processMarkdown(content);
