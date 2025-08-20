@@ -6,7 +6,13 @@ export type DocumentType = 'pdf' | 'docx' | 'text' | 'unknown';
  * Utility function to detect document type from various sources
  */
 export const getDocumentType = (document: DocumentWithContent): DocumentType => {
-  // Check metadata file type first
+  // Check document-level processing notes first (for Mammoth.js Word processing)
+  const documentProcessingNotes = document.processing_notes || '';
+  if (documentProcessingNotes.includes('Mammoth.js extraction') || documentProcessingNotes.includes('Word document')) {
+    return 'docx';
+  }
+  
+  // Check metadata file type
   const metadata = document.contents?.[0]?.metadata;
   if (metadata?.fileType === 'pdf' || metadata?.isPdfDocument) {
     return 'pdf';
@@ -24,7 +30,7 @@ export const getDocumentType = (document: DocumentWithContent): DocumentType => 
     return 'docx';
   }
   
-  // Check processing notes for Mammoth.js (Word processor signature)
+  // Check chunk-level processing notes (fallback)
   const processingNotes = metadata?.processingNotes || '';
   if (processingNotes.includes('Mammoth.js extraction') || processingNotes.includes('Word document')) {
     return 'docx';

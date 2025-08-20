@@ -9,6 +9,7 @@ export interface DocumentMetadata {
   case_id?: string | null;
   client_id?: string | null;
   include_in_analysis?: boolean;
+  processing_notes?: string | null;
 }
 
 export interface DocumentContent {
@@ -34,6 +35,7 @@ export interface DocumentMetadataDetail {
 export interface DocumentWithContent extends DocumentMetadata {
   contents: DocumentContent[];
   fetchError?: string | null; // Track if there was an error fetching content
+  processing_notes?: string | null; // Processing notes from document processing
 }
 
 // Interface for document search results
