@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { DocumentWithContent } from "@/types/knowledge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Trash2, ExternalLink, Loader2 } from "lucide-react";
+import { FileText, Trash2, ExternalLink, Loader2, File, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { getDocumentType, getDocumentBadgeText, getDocumentActionText, canViewInline } from "@/utils/documentTypeUtils";
 
 interface DocumentCardProps {
   document: DocumentWithContent;
@@ -50,6 +51,11 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
     }
   };
 
+  // Detect document type and get properties
+  const docType = getDocumentType(document);
+  const badgeText = getDocumentBadgeText(docType);
+  const actionText = getDocumentActionText(docType);
+  
   // Ensure we have a boolean value for the switch
   const isIncludedInAnalysis = Boolean(document.include_in_analysis);
 
@@ -71,7 +77,13 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
           
           {document.url && (
             <Badge variant="outline">
-              <FileText className="h-3 w-3 mr-1" /> PDF
+              {docType === 'pdf' ? (
+                <><FileText className="h-3 w-3 mr-1" /> {badgeText}</>
+              ) : docType === 'docx' ? (
+                <><File className="h-3 w-3 mr-1" /> {badgeText}</>
+              ) : (
+                <><FileText className="h-3 w-3 mr-1" /> {badgeText}</>
+              )}
             </Badge>
           )}
         </div>
@@ -96,11 +108,26 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => onPdfOpen(document.url!)}
+                onClick={() => {
+                  if (canViewInline(docType)) {
+                    onPdfOpen(document.url!);
+                  } else {
+                    // For Word docs, trigger download
+                    const link = window.document.createElement('a');
+                    link.href = document.url!;
+                    link.download = document.title || 'document';
+                    window.document.body.appendChild(link);
+                    link.click();
+                    window.document.body.removeChild(link);
+                  }
+                }}
                 disabled={isDeleting}
               >
-                <ExternalLink className="h-4 w-4 mr-1" />
-                View PDF
+                {canViewInline(docType) ? (
+                  <><ExternalLink className="h-4 w-4 mr-1" /> {actionText}</>
+                ) : (
+                  <><Download className="h-4 w-4 mr-1" /> {actionText}</>
+                )}
               </Button>
             )}
           </div>

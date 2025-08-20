@@ -2,7 +2,8 @@
 import React from "react";
 import { CardContent, CardFooter } from "@/components/ui/card";
 import { DocumentWithContent } from "@/types/knowledge";
-import { FileText, FileIcon } from "lucide-react";
+import { FileText, FileIcon, File } from "lucide-react";
+import { getDocumentType } from "@/utils/documentTypeUtils";
 
 interface DocumentCardContentProps {
   document: DocumentWithContent;
@@ -17,8 +18,10 @@ const DocumentCardContent: React.FC<DocumentCardContentProps> = ({
 }) => {
   // Extract document content for display
   const content = document.contents?.[0]?.content || "";
-  // Check if this is a PDF document
-  const isPdf = document.contents?.[0]?.metadata?.isPdfDocument || document.contents?.[0]?.metadata?.fileType === "pdf";
+  // Detect document type
+  const docType = getDocumentType(document);
+  const isPdf = docType === 'pdf';
+  const isDocx = docType === 'docx';
   
   // Truncate content for display
   const truncatedContent = content.length > 150 
@@ -40,6 +43,8 @@ const DocumentCardContent: React.FC<DocumentCardContentProps> = ({
           <div className="flex items-center">
             {isPdf ? (
               <FileIcon className="h-5 w-5 text-red-500 mr-2 flex-shrink-0" />
+            ) : isDocx ? (
+              <File className="h-5 w-5 text-blue-600 mr-2 flex-shrink-0" />
             ) : (
               <FileText className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
             )}
@@ -57,6 +62,11 @@ const DocumentCardContent: React.FC<DocumentCardContentProps> = ({
             <div className="text-gray-600 text-sm italic flex items-center">
               <FileIcon className="h-4 w-4 mr-1 text-red-500" />
               PDF Document - Click to preview
+            </div>
+          ) : isDocx ? (
+            <div className="text-gray-600 text-sm italic flex items-center">
+              <File className="h-4 w-4 mr-1 text-blue-600" />
+              Word Document - Click to download
             </div>
           ) : (
             <p 
