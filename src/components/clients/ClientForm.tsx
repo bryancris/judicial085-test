@@ -11,11 +11,14 @@ import { clientSchema, ClientFormValues, defaultValues } from "./ClientFormSchem
 import PersonalInfoFields from "./PersonalInfoFields";
 import AddressFields from "./AddressFields";
 import CaseInfoFields from "./CaseInfoFields";
+import PostClientCreationDialog from "./PostClientCreationDialog";
 
 const ClientForm = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [showCaseDialog, setShowCaseDialog] = React.useState(false);
+  const [newClient, setNewClient] = React.useState<any>(null);
 
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
@@ -58,15 +61,25 @@ const ClientForm = () => {
       
       if (error) throw error;
       
-      // Navigate to the newly created client's page
-      if (newClient) {
-        navigate(`/clients/${newClient.id}`);
-      }
+      // Check if user has disabled the case creation prompt
+      const hidePrompt = localStorage.getItem('hidePostClientCasePrompt') === 'true';
       
-      toast({
-        title: "Client added successfully",
-        description: `${data.first_name} ${data.last_name} has been added to your client list.`,
-      });
+      if (hidePrompt) {
+        // Navigate directly if user has disabled the prompt
+        navigate(`/clients/${newClient.id}`);
+        toast({
+          title: "Client added successfully",
+          description: `${data.first_name} ${data.last_name} has been added to your client list.`,
+        });
+      } else {
+        // Show the case creation dialog
+        setNewClient(newClient);
+        setShowCaseDialog(true);
+        toast({
+          title: "Client added successfully",
+          description: `${data.first_name} ${data.last_name} has been added to your client list.`,
+        });
+      }
       
     } catch (error: any) {
       console.error("Error adding client:", error);
@@ -80,38 +93,56 @@ const ClientForm = () => {
     }
   }
 
+  const handleCaseDialogComplete = () => {
+    if (newClient) {
+      navigate(`/clients/${newClient.id}`);
+    }
+  };
+
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <div className="space-y-6">
-          <h3 className="text-lg font-medium">Client Information</h3>
-          <PersonalInfoFields control={form.control} />
-        </div>
-        
-        <div className="space-y-6">
-          <h3 className="text-lg font-medium">Address</h3>
-          <AddressFields control={form.control} />
-        </div>
-        
-        <div className="space-y-6">
-          <h3 className="text-lg font-medium">Notes</h3>
-          <CaseInfoFields control={form.control} />
-        </div>
-        
-        <div className="flex justify-end">
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? (
-              <>
-                <span className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                Saving...
-              </>
-            ) : (
-              "Add Client"
-            )}
-          </Button>
-        </div>
-      </form>
-    </Form>
+    <>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <div className="space-y-6">
+            <h3 className="text-lg font-medium">Client Information</h3>
+            <PersonalInfoFields control={form.control} />
+          </div>
+          
+          <div className="space-y-6">
+            <h3 className="text-lg font-medium">Address</h3>
+            <AddressFields control={form.control} />
+          </div>
+          
+          <div className="space-y-6">
+            <h3 className="text-lg font-medium">Notes</h3>
+            <CaseInfoFields control={form.control} />
+          </div>
+          
+          <div className="flex justify-end">
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <span className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Saving...
+                </>
+              ) : (
+                "Add Client"
+              )}
+            </Button>
+          </div>
+        </form>
+      </Form>
+
+      {newClient && (
+        <PostClientCreationDialog
+          isOpen={showCaseDialog}
+          onOpenChange={setShowCaseDialog}
+          clientId={newClient.id}
+          clientName={`${newClient.first_name} ${newClient.last_name}`}
+          onComplete={handleCaseDialogComplete}
+        />
+      )}
+    </>
   );
 };
 
