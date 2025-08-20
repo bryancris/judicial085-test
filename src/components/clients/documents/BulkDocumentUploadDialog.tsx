@@ -126,150 +126,154 @@ const BulkDocumentUploadDialog: React.FC<BulkDocumentUploadDialogProps> = ({
           </DialogTitle>
         </DialogHeader>
         
-        <div className="flex-1 space-y-6 overflow-hidden">
-          {/* Case Selection */}
-          {allowCaseSelection && (
-            <div className="space-y-2">
-              <Label>Default Case Assignment</Label>
-              <CaseSelector
-                cases={cases}
-                selectedCaseId={selectedCaseId}
-                onCaseSelect={setSelectedCaseId}
-                allowClientLevel={true}
-                placeholder="Select default case for all documents"
-              />
-              <p className="text-xs text-muted-foreground">
-                You can assign individual documents to different cases below.
-              </p>
-            </div>
-          )}
-
-          {/* File Selection */}
-          <div className="space-y-2">
-            <Label>Select Documents</Label>
-            <BulkFileUploadInput
-              onFilesSelected={handleFilesSelected}
-              isProcessing={isProcessing}
-              maxFiles={10}
-              disabled={isProcessing}
-            />
-          </div>
-
-          {/* Upload Queue */}
-          {uploadQueue.length > 0 && (
-            <div className="space-y-4 flex-1 min-h-0">
-              <div className="flex items-center justify-between">
-                <Label>Upload Queue ({uploadQueue.length} files)</Label>
-                <div className="flex gap-2">
-                  {failedFiles.length > 0 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={retryFailedFiles}
-                      disabled={isProcessing}
-                    >
-                      <RotateCcw className="h-3 w-3 mr-1" />
-                      Retry Failed
-                    </Button>
-                  )}
-                  {completedFiles.length > 0 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={clearCompletedFiles}
-                      disabled={isProcessing}
-                    >
-                      <Trash2 className="h-3 w-3 mr-1" />
-                      Clear Completed
-                    </Button>
-                  )}
-                </div>
+        <ScrollArea className="flex-1 max-h-[calc(90vh-12rem)]">
+          <div className="space-y-6 pr-4">
+            {/* Case Selection */}
+            {allowCaseSelection && (
+              <div className="space-y-2">
+                <Label>Default Case Assignment</Label>
+                <CaseSelector
+                  cases={cases}
+                  selectedCaseId={selectedCaseId}
+                  onCaseSelect={setSelectedCaseId}
+                  allowClientLevel={true}
+                  placeholder="Select default case for all documents"
+                />
+                <p className="text-xs text-muted-foreground">
+                  You can assign individual documents to different cases below.
+                </p>
               </div>
+            )}
 
-              {/* Progress Summary */}
-              {isProcessing && (
-                <Alert>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <AlertDescription>
-                    Processing: {currentlyProcessing || 'Preparing...'}
-                    <br />
-                    {completedFiles.length} completed, {failedFiles.length} failed, {pendingFiles.length + processingFiles.length} remaining
-                  </AlertDescription>
-                </Alert>
-              )}
+            {/* File Selection */}
+            <div className="space-y-2">
+              <Label>Select Documents</Label>
+              <BulkFileUploadInput
+                onFilesSelected={handleFilesSelected}
+                isProcessing={isProcessing}
+                maxFiles={10}
+                disabled={isProcessing}
+              />
+            </div>
 
-              {/* File List */}
-              <ScrollArea className="flex-1 border rounded-md">
-                <div className="p-4 space-y-3">
-                  {uploadQueue.map((fileItem, index) => (
-                    <div key={`${fileItem.file.name}-${index}`} className="space-y-3 p-3 border rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 min-w-0">
-                          {getStatusIcon(fileItem.status)}
-                          <span className="font-medium truncate">{fileItem.file.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            ({(fileItem.file.size / 1024 / 1024).toFixed(1)} MB)
-                          </span>
-                          {getStatusBadge(fileItem.status)}
-                        </div>
-                        {fileItem.status === 'pending' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeFileFromQueue(index)}
-                            disabled={isProcessing}
-                          >
-                            <XCircle className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
+            {/* Upload Queue */}
+            {uploadQueue.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label>Upload Queue ({uploadQueue.length} files)</Label>
+                  <div className="flex gap-2">
+                    {failedFiles.length > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={retryFailedFiles}
+                        disabled={isProcessing}
+                      >
+                        <RotateCcw className="h-3 w-3 mr-1" />
+                        Retry Failed
+                      </Button>
+                    )}
+                    {completedFiles.length > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={clearCompletedFiles}
+                        disabled={isProcessing}
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Clear Completed
+                      </Button>
+                    )}
+                  </div>
+                </div>
 
-                      {fileItem.status === 'processing' && fileItem.progress !== undefined && (
-                        <Progress value={fileItem.progress} className="h-2" />
-                      )}
+                {/* Progress Summary */}
+                {isProcessing && (
+                  <Alert>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <AlertDescription>
+                      Processing: {currentlyProcessing || 'Preparing...'}
+                      <br />
+                      {completedFiles.length} completed, {failedFiles.length} failed, {pendingFiles.length + processingFiles.length} remaining
+                    </AlertDescription>
+                  </Alert>
+                )}
 
-                      {fileItem.error && (
-                        <Alert variant="destructive" className="py-2">
-                          <AlertDescription className="text-xs">
-                            {fileItem.error}
-                          </AlertDescription>
-                        </Alert>
-                      )}
-
-                      {(fileItem.status === 'pending' || fileItem.status === 'failed') && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div className="space-y-1">
-                            <Label className="text-xs">Document Title</Label>
-                            <Input
-                              value={fileItem.title}
-                              onChange={(e) => handleTitleChange(index, e.target.value)}
-                              disabled={isProcessing}
-                              className="h-8 text-xs"
-                            />
+                {/* File List */}
+                <div className="border rounded-md max-h-60 overflow-y-auto">
+                  <div className="p-4 space-y-3">
+                    {uploadQueue.map((fileItem, index) => (
+                      <div key={`${fileItem.file.name}-${index}`} className="space-y-3 p-3 border rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {getStatusIcon(fileItem.status)}
+                            <span className="font-medium truncate">{fileItem.file.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              ({(fileItem.file.size / 1024 / 1024).toFixed(1)} MB)
+                            </span>
+                            {getStatusBadge(fileItem.status)}
                           </div>
-                          {allowCaseSelection && (
-                            <div className="space-y-1">
-                              <Label className="text-xs">Case Assignment</Label>
-                              <CaseSelector
-                                cases={cases}
-                                selectedCaseId={fileItem.caseId}
-                                onCaseSelect={(caseId) => handleCaseChange(index, caseId)}
-                                allowClientLevel={true}
-                                placeholder="Select case"
-                              />
-                            </div>
+                          {fileItem.status === 'pending' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeFileFromQueue(index)}
+                              disabled={isProcessing}
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
                           )}
                         </div>
-                      )}
-                    </div>
-                  ))}
+
+                        {fileItem.status === 'processing' && fileItem.progress !== undefined && (
+                          <Progress value={fileItem.progress} className="h-2" />
+                        )}
+
+                        {fileItem.error && (
+                          <Alert variant="destructive" className="py-2">
+                            <AlertDescription className="text-xs">
+                              {fileItem.error}
+                            </AlertDescription>
+                          </Alert>
+                        )}
+
+                        {(fileItem.status === 'pending' || fileItem.status === 'failed') && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <Label className="text-xs">Document Title</Label>
+                              <Input
+                                value={fileItem.title}
+                                onChange={(e) => handleTitleChange(index, e.target.value)}
+                                disabled={isProcessing}
+                                className="h-8 text-xs"
+                              />
+                            </div>
+                            {allowCaseSelection && (
+                              <div className="space-y-1">
+                                <Label className="text-xs">Case Assignment</Label>
+                                <CaseSelector
+                                  cases={cases}
+                                  selectedCaseId={fileItem.caseId}
+                                  onCaseSelect={(caseId) => handleCaseChange(index, caseId)}
+                                  allowClientLevel={true}
+                                  placeholder="Select case"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </ScrollArea>
-            </div>
-          )}
+              </div>
+            )}
+          </div>
+        </ScrollArea>
 
+        <div className="border-t pt-4 space-y-4">
           <Separator />
-
+          
           {/* Actions */}
           <div className="flex justify-between items-center">
             <div className="text-sm text-muted-foreground">
