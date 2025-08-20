@@ -2,9 +2,10 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { DocumentWithContent } from "@/types/knowledge";
-import { Loader2, PlusCircle, BookText, Trash2 } from "lucide-react";
+import { Loader2, PlusCircle, BookText, Trash2, Upload } from "lucide-react";
 import DocumentUploadDialog from "@/components/clients/DocumentUploadDialog";
 import DocumentCleanupDialog from "@/components/clients/DocumentCleanupDialog";
+import BulkDocumentUploadDialog from "@/components/clients/documents/BulkDocumentUploadDialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Case } from "@/types/case";
 import { supabase } from '@/integrations/supabase/client';
@@ -48,6 +49,7 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
   onRefreshDocuments
 }) => {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [bulkUploadDialogOpen, setBulkUploadDialogOpen] = useState(false);
   const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<DocumentWithContent | null>(null);
   const [documentContent, setDocumentContent] = useState<string>('');
@@ -184,20 +186,36 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
             )}
           </div>
           
-          <Button
-            onClick={() => setUploadDialogOpen(true)}
-            className="flex items-center gap-2"
-            disabled={isProcessing}
-          >
-            {isProcessing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <PlusCircle className="h-4 w-4" />
-            )}
-            {caseId 
-              ? "Add Case Document" 
-              : "Add Client Document"}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setBulkUploadDialogOpen(true)}
+              className="flex items-center gap-2"
+              disabled={isProcessing}
+            >
+              {isProcessing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+              Bulk Upload
+            </Button>
+            
+            <Button
+              onClick={() => setUploadDialogOpen(true)}
+              className="flex items-center gap-2"
+              disabled={isProcessing}
+            >
+              {isProcessing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <PlusCircle className="h-4 w-4" />
+              )}
+              {caseId 
+                ? "Add Case Document" 
+                : "Add Client Document"}
+            </Button>
+          </div>
         </div>
 
         <DocumentUploadDialog
@@ -205,6 +223,17 @@ const ClientDocumentsSection: React.FC<ClientDocumentsSectionProps> = ({
           onClose={() => setUploadDialogOpen(false)}
           onUpload={handleDocumentUpload}
           isProcessing={isProcessing}
+          clientId={clientId}
+          caseId={caseId}
+          caseName={caseName}
+          cases={cases}
+          allowCaseSelection={allowCaseSelection}
+          onUploadSuccess={handleUploadSuccess}
+        />
+
+        <BulkDocumentUploadDialog
+          isOpen={bulkUploadDialogOpen}
+          onClose={() => setBulkUploadDialogOpen(false)}
           clientId={clientId}
           caseId={caseId}
           caseName={caseName}
