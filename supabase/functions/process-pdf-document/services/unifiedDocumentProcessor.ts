@@ -36,6 +36,7 @@
 
 import { processPdfDocument } from '../processors/pdfDocumentProcessor.ts';
 import { extractTextWithMistralOcr } from './mistralOcrService.ts';
+import { processWordDocument } from '../processors/wordDocumentProcessor.ts';
 
 export interface DocumentExtractionResult {
   text: string;
@@ -85,8 +86,13 @@ export async function processDocument(
   
   // For other file types, use existing processors
   if (detectedType === 'docx') {
-    console.log('Word document processing not yet implemented - creating placeholder');
-    return createDocumentPlaceholder(fileData, fileName, 'docx');
+    try {
+      console.log('📄 Processing Word document with mammoth.js...');
+      return await processWordDocument(fileData, fileName);
+    } catch (error) {
+      console.error('❌ Word document processing failed:', error);
+      return createDocumentPlaceholder(fileData, fileName, 'docx', `Word document processing failed: ${error.message}`);
+    }
   }
   
   throw new Error(`Unsupported file type: ${detectedType}`);
