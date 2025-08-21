@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { ErrorAlert } from './ErrorAlert';
 import { AuthForm, FormValues } from './AuthForm';
 import { AuthToggle } from './AuthToggle';
+import { ForgotPasswordLink } from './ForgotPasswordLink';
 
 interface AuthCardProps {
   isLogin: boolean;
@@ -37,6 +38,7 @@ export const AuthCard: React.FC<AuthCardProps> = ({
           isLoading={isLoading} 
           onSubmit={onSubmit} 
         />
+        <ForgotPasswordLink isLogin={isLogin} />
       </CardContent>
       <CardFooter>
         <AuthToggle 
