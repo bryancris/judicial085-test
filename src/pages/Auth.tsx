@@ -85,6 +85,10 @@ const Auth = () => {
     setError(null);
   };
 
+  const handleSignUpRedirect = () => {
+    navigate('/pricing');
+  };
+
   // Show loading while checking auth state
   if (isLoading) {
     return (
@@ -112,7 +116,7 @@ const Auth = () => {
           isLoading={isSubmitting}
           error={error}
           onSubmit={handleSubmit}
-          onToggleAuthMode={toggleAuthMode}
+          onToggleAuthMode={isLogin ? handleSignUpRedirect : toggleAuthMode}
         />
       </div>
     </div>
