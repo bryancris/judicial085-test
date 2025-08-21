@@ -1,5 +1,8 @@
 project_id = "ghpljdgecjmhkwkfctgy"
 
+[functions.send-contact-message]
+verify_jwt = false
+
 [functions.ai-agent-coordinator]
 verify_jwt = false
 
