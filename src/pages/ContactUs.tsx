@@ -57,7 +57,7 @@ const ContactUs = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground">contact@judicialjunction.com</p>
+                  <p className="text-muted-foreground">info@judicialjunction.ai</p>
                   <p className="text-sm text-muted-foreground mt-1">We respond within 24 hours</p>
                 </CardContent>
               </Card>
