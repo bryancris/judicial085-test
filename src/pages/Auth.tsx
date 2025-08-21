@@ -7,6 +7,7 @@ import { useAuthState } from "@/hooks/useAuthState";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { FormValues } from "@/components/auth/AuthForm";
+import NavBar from "@/components/NavBar";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -103,14 +104,17 @@ const Auth = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-      <AuthCard
-        isLogin={isLogin}
-        isLoading={isSubmitting}
-        error={error}
-        onSubmit={handleSubmit}
-        onToggleAuthMode={toggleAuthMode}
-      />
+    <div className="min-h-screen flex flex-col">
+      <NavBar />
+      <div className="flex-1 flex items-center justify-center bg-gray-100 p-4">
+        <AuthCard
+          isLogin={isLogin}
+          isLoading={isSubmitting}
+          error={error}
+          onSubmit={handleSubmit}
+          onToggleAuthMode={toggleAuthMode}
+        />
+      </div>
     </div>
   );
 };
