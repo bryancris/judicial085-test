@@ -45,7 +45,7 @@ const HeroSection: React.FC = () => {
             
             <div className="flex flex-wrap gap-4 pt-4 animate-fade-in" style={{ animationDelay: "0.4s" }}>
               <Button className="bg-brand-gold hover:bg-brand-gold/90 text-black font-medium flex items-center gap-2 hover-scale">
-                Get Launch Updates
+                Get Early Access + Updates
                 <Mail className="h-4 w-4" />
               </Button>
               <div className="inline-flex items-center gap-2 bg-gradient-to-r from-gray-700/80 to-gray-600/80 backdrop-blur-sm px-4 py-2 rounded-full text-sm text-gray-200 border border-gray-500/30 shadow-lg">
