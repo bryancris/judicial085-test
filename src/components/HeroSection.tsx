@@ -10,10 +10,12 @@ const FeatureCard: React.FC<{ title: string; description: string; icon: React.Re
   icon 
 }) => {
   return (
-    <Card className="dark-card text-foreground p-3 flex flex-col items-start">
-      <div className="mb-2">{icon}</div>
-      <h3 className="text-base font-semibold mb-1">{title}</h3>
-      <p className="text-xs text-gray-600 dark:text-gray-300">{description}</p>
+    <Card className="dark-card text-foreground p-4 flex flex-col items-start h-full min-h-[140px] justify-between">
+      <div className="flex flex-col flex-1">
+        <div className="mb-3">{icon}</div>
+        <h3 className="text-base font-semibold mb-2 leading-tight">{title}</h3>
+        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{description}</p>
+      </div>
     </Card>
   );
 };
@@ -56,8 +58,8 @@ const HeroSection: React.FC = () => {
           </div>
           
           <div className="relative">
-            <div className="p-4 max-w-lg mx-auto">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="p-4 max-w-2xl mx-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
                   <FeatureCard
                     title="Document Upload & Analysis"
@@ -76,7 +78,7 @@ const HeroSection: React.FC = () => {
                 <div className="animate-fade-in" style={{ animationDelay: "0.4s" }}>
                   <FeatureCard
                     title="Document Templates & Automation"
-                    description="Upload your firm's templates for instant reuse and automation"
+                    description="Upload firm templates for instant reuse and automation"
                     icon={<div className="flex items-center justify-center w-8 h-8 rounded-md bg-green-700 bg-opacity-80">
                       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -135,7 +137,7 @@ const HeroSection: React.FC = () => {
                 <div className="animate-fade-in" style={{ animationDelay: "0.8s" }}>
                   <FeatureCard
                     title="Voice-Powered Legal Research"
-                    description="Speak your legal questions and get instant Texas law answers"
+                    description="Voice commands for instant Texas law research"
                     icon={<div className="flex items-center justify-center w-8 h-8 rounded-md bg-indigo-700 bg-opacity-80">
                       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
