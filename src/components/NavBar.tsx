@@ -77,6 +77,7 @@ const NavBar: React.FC = () => {
         
         <nav className="hidden md:flex items-center space-x-8">
           <Link to="/features" className="font-medium hover:text-brand-burgundy dark:text-gray-200 dark:hover:text-brand-gold transition-colors">Features</Link>
+          <Link to="/about-us" className="font-medium hover:text-brand-burgundy dark:text-gray-200 dark:hover:text-brand-gold transition-colors">About Us</Link>
           <Link to="/pricing" className="font-medium hover:text-brand-burgundy dark:text-gray-200 dark:hover:text-brand-gold transition-colors">Pricing</Link>
           <Link to="/contact-us" className="font-medium hover:text-brand-burgundy dark:text-gray-200 dark:hover:text-brand-gold transition-colors">Contact Us</Link>
           {session && (

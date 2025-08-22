@@ -18,6 +18,7 @@ import FAQ from "./pages/FAQ";
 import QuickConsult from "./pages/QuickConsult";
 import Pricing from "./pages/Pricing";
 import ContactUs from "./pages/ContactUs";
+import AboutUs from "./pages/AboutUs";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/document-library" element={<DocumentLibrary />} />
             <Route path="/knowledge" element={<Knowledge />} />
             <Route path="/features" element={<Features />} />
+            <Route path="/about-us" element={<AboutUs />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/faq" element={<FAQ />} />
