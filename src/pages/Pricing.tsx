@@ -214,7 +214,7 @@ const Pricing: React.FC = () => {
                 </tr>
                 <tr>
                   <td className="py-4 px-6 text-gray-700 dark:text-gray-300 font-medium">Target Market</td>
-                  <td className="py-4 px-6 text-center text-brand-burgundy dark:text-brand-gold font-medium">Solo/Small Firms</td>
+                  <td className="py-4 px-6 text-center text-brand-burgundy dark:text-brand-gold font-medium">Small & Large Firms</td>
                   <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">Large Firms</td>
                   <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">Large Firms</td>
                   <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">BigLaw/Fortune 500</td>
