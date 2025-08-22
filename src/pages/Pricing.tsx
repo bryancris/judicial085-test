@@ -162,23 +162,89 @@ const Pricing: React.FC = () => {
           </div>
         </div>
 
-        {/* CTA Section */}
-        <div className="text-center mt-16">
-          <h2 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">
-            Ready to Transform Your Practice?
+        {/* Competitor Comparison Section */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg mt-16">
+          <h2 className="text-3xl font-bold text-center mb-4 text-gray-900 dark:text-white">
+            How We Compare to Industry Leaders
           </h2>
-          <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-            Join hundreds of legal professionals who trust Judicial Junction
+          <p className="text-lg text-gray-600 dark:text-gray-300 text-center mb-8 max-w-4xl mx-auto">
+            See why Texas attorneys are choosing our specialized platform over expensive, one-size-fits-all solutions
           </p>
-          <div className="space-x-4">
+          
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b-2 border-gray-200 dark:border-gray-700">
+                  <th className="text-left py-4 px-6 text-gray-900 dark:text-white font-semibold">Comparison</th>
+                  <th className="text-center py-4 px-6 text-brand-burgundy dark:text-brand-gold font-semibold">Our Platform</th>
+                  <th className="text-center py-4 px-6 text-gray-600 dark:text-gray-400 font-semibold">Westlaw/CoCounsel</th>
+                  <th className="text-center py-4 px-6 text-gray-600 dark:text-gray-400 font-semibold">Other Competitors</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                <tr>
+                  <td className="py-4 px-6 text-gray-700 dark:text-gray-300 font-medium">Monthly Cost</td>
+                  <td className="py-4 px-6 text-center text-brand-burgundy dark:text-brand-gold font-semibold">$300-600</td>
+                  <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">$3,000+ (Base + AI)</td>
+                  <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">$2,000+</td>
+                </tr>
+                <tr>
+                  <td className="py-4 px-6 text-gray-700 dark:text-gray-300 font-medium">Texas Law Focus</td>
+                  <td className="py-4 px-6 text-center">
+                    <Check className="h-5 w-5 text-green-500 mx-auto" />
+                  </td>
+                  <td className="py-4 px-6 text-center text-gray-400">—</td>
+                  <td className="py-4 px-6 text-center text-gray-400">—</td>
+                </tr>
+                <tr>
+                  <td className="py-4 px-6 text-gray-700 dark:text-gray-300 font-medium">Data Privacy & Isolation</td>
+                  <td className="py-4 px-6 text-center">
+                    <Check className="h-5 w-5 text-green-500 mx-auto" />
+                  </td>
+                  <td className="py-4 px-6 text-center text-red-500">Shared/Training</td>
+                  <td className="py-4 px-6 text-center text-red-500">Varies</td>
+                </tr>
+                <tr>
+                  <td className="py-4 px-6 text-gray-700 dark:text-gray-300 font-medium">Target Market</td>
+                  <td className="py-4 px-6 text-center text-brand-burgundy dark:text-brand-gold font-medium">Solo/Small Firms</td>
+                  <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">Large Firms</td>
+                  <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">Enterprise</td>
+                </tr>
+                <tr>
+                  <td className="py-4 px-6 text-gray-700 dark:text-gray-300 font-medium">AI Features</td>
+                  <td className="py-4 px-6 text-center text-brand-burgundy dark:text-brand-gold font-medium">Multi-Agent System</td>
+                  <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">General AI</td>
+                  <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">Basic AI</td>
+                </tr>
+                <tr>
+                  <td className="py-4 px-6 text-gray-700 dark:text-gray-300 font-medium">Setup Complexity</td>
+                  <td className="py-4 px-6 text-center">
+                    <span className="text-green-500 font-medium">Simple</span>
+                  </td>
+                  <td className="py-4 px-6 text-center text-red-500">Complex</td>
+                  <td className="py-4 px-6 text-center text-red-500">Complex</td>
+                </tr>
+                <tr>
+                  <td className="py-4 px-6 text-gray-700 dark:text-gray-300 font-medium">Contract Requirements</td>
+                  <td className="py-4 px-6 text-center">
+                    <span className="text-green-500 font-medium">Month-to-Month</span>
+                  </td>
+                  <td className="py-4 px-6 text-center text-red-500">Multi-Year</td>
+                  <td className="py-4 px-6 text-center text-red-500">Annual+</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-8 text-center">
+            <p className="text-lg text-gray-600 dark:text-gray-300 mb-6">
+              Ready to join Texas attorneys who've made the switch to specialized, affordable legal AI?
+            </p>
             <Button 
               size="lg"
               className="bg-brand-burgundy hover:bg-brand-burgundy/90 text-white dark:bg-brand-gold dark:hover:bg-brand-gold/90 dark:text-gray-900"
             >
-              Start Free Trial
-            </Button>
-            <Button variant="outline" size="lg">
-              Schedule Demo
+              Get Started Today
             </Button>
           </div>
         </div>
