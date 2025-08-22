@@ -51,7 +51,10 @@ const HeroSection: React.FC = () => {
             <div className="flex flex-wrap gap-4 pt-4 animate-fade-in" style={{ animationDelay: "0.4s" }}>
               <Button 
                 className="bg-brand-gold hover:bg-brand-gold/90 text-black font-medium flex items-center gap-2 hover-scale"
-                onClick={() => setShowEarlyAccessDialog(true)}
+                onClick={() => {
+                  console.log('Button clicked, opening dialog');
+                  setShowEarlyAccessDialog(true);
+                }}
               >
                 Get Early Access + Updates
                 <Mail className="h-4 w-4" />
@@ -160,6 +163,13 @@ const HeroSection: React.FC = () => {
         </div>
       </div>
 
+      {/* Debug info */}
+      {showEarlyAccessDialog && (
+        <div className="fixed top-4 right-4 bg-red-500 text-white p-2 z-[9999]">
+          Dialog should be open: {showEarlyAccessDialog.toString()}
+        </div>
+      )}
+      
       <EarlyAccessDialog 
         open={showEarlyAccessDialog} 
         onOpenChange={setShowEarlyAccessDialog} 

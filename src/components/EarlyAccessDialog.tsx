@@ -14,6 +14,7 @@ interface EarlyAccessDialogProps {
 }
 
 const EarlyAccessDialog: React.FC<EarlyAccessDialogProps> = ({ open, onOpenChange }) => {
+  console.log('EarlyAccessDialog render, open:', open);
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
