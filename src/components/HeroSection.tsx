@@ -48,7 +48,8 @@ const HeroSection: React.FC = () => {
                 Start Free Trial
                 <ArrowRight className="h-4 w-4" />
               </Button>
-              <div className="inline-block bg-gray-800/70 backdrop-blur-sm px-3 py-1 rounded-full text-sm text-gray-300">
+              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-gray-700/80 to-gray-600/80 backdrop-blur-sm px-4 py-2 rounded-full text-sm text-gray-200 border border-gray-500/30 shadow-lg">
+                <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
                 Coming Soon
               </div>
             </div>
