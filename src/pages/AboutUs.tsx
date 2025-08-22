@@ -11,190 +11,148 @@ const AboutUs = () => {
           {/* Hero Section */}
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
-              Legal AI Battlefield: Where Judicial Junction Dominates
+              About Judicial Junction
             </h1>
             <p className="text-lg text-muted-foreground max-w-4xl mx-auto">
-              Judicial Junction occupies a <strong>uniquely defensible position</strong> in the $26.7 billion legal technology market, 
-              serving as the only Texas law-specialized AI platform with native Court Listener integration.
+              We're building the future of legal AI, designed specifically for Texas practitioners who need more than generic solutions.
             </p>
           </div>
 
-          {/* Introduction */}
+          {/* Our Story */}
           <Card className="mb-8">
             <CardContent className="p-8">
+              <h2 className="text-2xl font-bold text-foreground mb-4">Our Story</h2>
               <p className="text-foreground leading-relaxed mb-4">
-                While established giants like Westlaw and LexisNexis battle for enterprise dominance and AI startups like Harvey chase billion-dollar valuations, 
-                Judicial Junction has carved out an underserved niche that combines sophisticated AI capabilities with deep Texas legal expertise at accessible pricing.
+                We started Judicial Junction because we saw a fundamental problem in legal technology. While giants like Westlaw and LexisNexis 
+                offer comprehensive databases, they treat every state the same. As Texas practitioners ourselves, we knew firsthand how frustrating 
+                it was to pay premium prices for generic tools that didn't understand the nuances of Texas law.
               </p>
               <p className="text-foreground leading-relaxed">
-                The legal technology landscape divides into distinct competitive tiers, each serving different market segments. Judicial Junction bridges the gap 
-                between expensive enterprise solutions and basic consumer tools, offering professional-grade AI analysis specifically optimized for Texas legal practice. 
-                This positioning addresses a critical market gap where traditional platforms provide broad coverage but lack state-specific depth, while AI-first 
-                competitors focus on general legal capabilities without jurisdictional specialization.
+                We believed there had to be a better way. What if we could combine cutting-edge AI with deep expertise in Texas law? What if we 
+                could make powerful legal research tools accessible to solo practitioners and small firms, not just BigLaw? That's how 
+                Judicial Junction was born.
               </p>
             </CardContent>
           </Card>
 
-          {/* Established Research Platform Fortress */}
+          {/* Our Mission */}
           <Card className="mb-8">
             <CardContent className="p-8">
-              <h2 className="text-2xl font-bold text-foreground mb-4">The Established Research Platform Fortress</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-4">Our Mission</h2>
               <p className="text-foreground leading-relaxed mb-4">
-                Traditional legal research platforms maintain their dominance through comprehensive databases and institutional relationships, 
-                but show vulnerability to specialized competitors. <strong>Westlaw leads with Thomson Reuters' vast resources</strong>, offering CoCounsel AI 
-                integration and Westlaw Precision's advanced features at premium pricing ($175-566 monthly per user with annual commitments). 
-                Their strength lies in comprehensive federal and state law coverage, but Texas practitioners often find generic approaches insufficient 
-                for nuanced state law questions.
-              </p>
-              <p className="text-foreground leading-relaxed mb-4">
-                <strong>LexisNexis counters with Lexis+ AI and Protégé assistant</strong>, providing flexible pricing from $75-295 monthly with personalized AI learning. 
-                Their Texas coverage includes specialized publications like Dorsaneo Texas Litigation Guide, but the platform lacks integrated court data feeds. 
-                Bloomberg Law targets litigation with predictive analytics and business intelligence, while vLex (having acquired Fastcase) offers Vincent AI 
-                with global capabilities but limited Texas specialization.
+                We're on a mission to democratize sophisticated legal AI for Texas practitioners. We believe that every attorney, regardless of 
+                firm size, should have access to the same caliber of AI-powered research tools that large firms enjoy. But more than that, we 
+                believe those tools should understand Texas law as deeply as you do.
               </p>
               <p className="text-foreground leading-relaxed">
-                These established platforms share common weaknesses that Judicial Junction exploits: <strong>high costs, complex implementations, and generic 
-                state law treatment</strong>. A typical small Texas firm pays $4,000-15,000 annually for comprehensive Westlaw or LexisNexis access, 
-                compared to Judicial Junction's $3,600-7,200 yearly cost with superior Texas-specific functionality.
+                Our goal isn't to replace legal expertise—it's to amplify it. We want to give you more time to practice law by handling the 
+                research heavy lifting, while ensuring everything we suggest is grounded in Texas-specific legal knowledge.
               </p>
             </CardContent>
           </Card>
 
-          {/* AI-Powered Legal Tools */}
+          {/* Why Texas */}
           <Card className="mb-8">
             <CardContent className="p-8">
-              <h2 className="text-2xl font-bold text-foreground mb-4">AI-Powered Legal Tools Reshape Competition</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-4">Why We Focus on Texas</h2>
               <p className="text-foreground leading-relaxed mb-4">
-                The AI legal tools segment demonstrates the market's rapid evolution toward sophisticated automation. <strong>Harvey AI commands a $5 billion valuation</strong> 
-                with custom GPT-4 models serving elite law firms, but focuses on enterprise clients with pricing estimated at $500-1,200 annually per lawyer. 
-                Their custom model approach provides advanced capabilities, yet lacks state-specific training or court data integration.
+                Texas isn't just another state—it's a legal ecosystem unto itself. With over 100,000 licensed attorneys and unique laws governing 
+                everything from oil and gas to community property, Texas practitioners deal with complexities that generic platforms simply can't 
+                handle effectively.
               </p>
               <p className="text-foreground leading-relaxed mb-4">
-                <strong>Spellbook dominates contract drafting</strong> through native Microsoft Word integration, serving 3,000+ firms globally with transparent pricing 
-                and ease of use. However, their generalist approach cannot match Judicial Junction's Texas statute validation and security interest analysis. 
-                Luminance excels in contract analytics across 70 countries but requires custom pricing negotiations and lacks jurisdictional specialization.
+                We've seen too many attorneys struggle with platforms that understand federal law perfectly but stumble on Texas homestead exemptions, 
+                security interest perfection under Texas UCC Article 9, or the intricacies of Texas contract law. By focusing exclusively on Texas, 
+                we can build something truly specialized rather than broadly adequate.
               </p>
               <p className="text-foreground leading-relaxed">
-                The AI tools landscape reveals a critical gap: <strong>no platform combines sophisticated AI with state-specific legal expertise</strong>. 
-                While Harvey provides custom models and Spellbook offers seamless integration, none deliver the jurisdictional depth that Texas practitioners 
-                need for complex state law analysis.
+                Plus, we're Texans ourselves. We understand the market, the culture, and the unique challenges facing practitioners in the Lone Star State.
               </p>
             </CardContent>
           </Card>
 
-          {/* Market Consolidation */}
+          {/* Our Technology */}
           <Card className="mb-8">
             <CardContent className="p-8">
-              <h2 className="text-2xl font-bold text-foreground mb-4">Market Consolidation Creates Opportunities</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-4">Our Technology</h2>
               <p className="text-foreground leading-relaxed mb-4">
-                Recent market consolidation illustrates the legal tech industry's maturation. Thomson Reuters acquired Casetext for $650 million, 
-                integrating CoCounsel technology into Westlaw. LexisNexis absorbed Lex Machina and Ravel Law, while other startups like ROSS Intelligence 
-                shuttered under copyright litigation pressure. This consolidation benefits Judicial Junction by removing direct competitors and validating 
-                the market's appetite for AI-powered legal research.
+                We've built something different from the ground up. Instead of using a single AI model like most platforms, we use a multi-agent 
+                system where different AI specialists handle different aspects of your research. One agent specializes in case law, another in 
+                statutes, another in contracts—all trained specifically on Texas legal materials.
               </p>
               <p className="text-foreground leading-relaxed mb-4">
-                <strong>Pricing analysis reveals Judicial Junction's competitive advantage</strong>. While established platforms require annual contracts and 
-                complex pricing tiers, Judicial Junction offers transparent month-to-month pricing at $300 (Professional) and $600 (Enterprise) monthly 
-                for attorney-paralegal teams. This pricing sits between budget options like Fastcase ($65-95 monthly) and premium AI platforms like CoCounsel 
-                ($225-500 monthly), providing sophisticated capabilities at accessible rates.
+                We're also the only platform with native Court Listener integration, giving you real-time access to federal court data as cases 
+                develop. No more waiting for traditional databases to update—you see new decisions and filings as they happen.
               </p>
               <p className="text-foreground leading-relaxed">
-                For small Texas firms, <strong>total cost of ownership comparisons strongly favor Judicial Junction</strong>. A three-attorney, two-paralegal firm 
-                typically pays $15,000-40,000 annually for established platforms versus $18,000-21,600 for comprehensive Judicial Junction coverage. 
-                The month-to-month flexibility eliminates long-term commitment risks while providing enterprise-grade AI capabilities.
+                And because we believe in the power of conversation, we've built voice chat functionality that lets you research the way you think—by 
+                talking through problems rather than typing keyword searches.
               </p>
             </CardContent>
           </Card>
 
-          {/* Technology Differentiation */}
+          {/* Our Values */}
           <Card className="mb-8">
             <CardContent className="p-8">
-              <h2 className="text-2xl font-bold text-foreground mb-4">Technology Differentiation Drives Competitive Advantage</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-4">Our Values</h2>
               <p className="text-foreground leading-relaxed mb-4">
-                Judicial Junction's technical architecture creates multiple competitive moats. The <strong>multi-agent AI system surpasses single-model approaches</strong> 
-                used by most competitors, enabling sophisticated legal reasoning across different practice areas. Voice chat functionality represents unique innovation 
-                in professional legal AI, as no major competitor offers conversational voice interaction for legal queries.
+                <strong>Accessibility First:</strong> We believe powerful AI shouldn't be locked behind enterprise pricing. That's why we offer 
+                month-to-month pricing with no long-term contracts. You can get started for $300/month and scale up as you grow.
               </p>
               <p className="text-foreground leading-relaxed mb-4">
-                <strong>Court Listener integration provides unmatched real-time court data access</strong>. While traditional platforms rely on curated databases 
-                updated periodically, Judicial Junction delivers current case decisions and court activity directly from Court Listener's federal court data. 
-                This capability proves particularly valuable for litigation practitioners monitoring case developments and identifying relevant precedents.
+                <strong>Privacy by Design:</strong> Your clients' information is sacred. We've built our platform with privacy as a core principle, 
+                not an afterthought. Your data stays your data.
+              </p>
+              <p className="text-foreground leading-relaxed mb-4">
+                <strong>Texas Expertise:</strong> We don't try to be everything to everyone. We'd rather be excellent at serving Texas practitioners 
+                than mediocre at serving everyone.
               </p>
               <p className="text-foreground leading-relaxed">
-                The platform's <strong>semantic search using vector embeddings</strong> outperforms traditional keyword matching employed by many competitors. 
-                Combined with Texas law specialization, this enables practitioners to find relevant precedents and statutes that generic platforms miss. 
-                Document analysis capabilities extract key information while validating compliance with Texas-specific requirements like liquidated damages 
-                provisions and security interest perfection.
+                <strong>Continuous Innovation:</strong> Legal AI is evolving rapidly, and so are we. We're constantly improving our models, adding 
+                new features, and deepening our Texas law expertise.
               </p>
             </CardContent>
           </Card>
 
-          {/* State Specialization */}
+          {/* Our Commitment */}
           <Card className="mb-8">
             <CardContent className="p-8">
-              <h2 className="text-2xl font-bold text-foreground mb-4">State Specialization Creates Defensive Positioning</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-4">Our Commitment to You</h2>
               <p className="text-foreground leading-relaxed mb-4">
-                Texas legal market characteristics strongly support Judicial Junction's specialized approach. With over 100,000 licensed attorneys and unique 
-                state laws governing oil and gas, real estate, business entities, and consumer protection, Texas practitioners frequently encounter situations 
-                where generic legal research platforms fall short. <strong>Community property rules, homestead exemptions, and Texas-specific contract requirements</strong> 
-                demand specialized knowledge that established platforms treat superficially.
+                We're not just building software—we're building a platform that understands the unique challenges of practicing law in Texas. 
+                Whether you're handling oil and gas transactions, real estate closings, business formations, or litigation, we're committed to 
+                providing AI that thinks like a Texas lawyer.
               </p>
               <p className="text-foreground leading-relaxed mb-4">
-                Judicial Junction's <strong>Texas statute integration and validation</strong> provides practitioners with confidence that contract provisions comply 
-                with state requirements. This capability proves especially valuable for security interests, where Texas UCC Article 9 variations significantly 
-                impact enforceability. No competitor offers comparable state-specific validation, creating a sustainable competitive advantage.
+                We know that adopting new technology can be daunting, especially when it comes to something as critical as legal research. That's 
+                why we offer comprehensive support, training, and a community of Texas practitioners who are as passionate about excellent legal 
+                work as you are.
               </p>
               <p className="text-foreground leading-relaxed">
-                The platform's focus on <strong>solo and small firm practitioners</strong> addresses an underserved market segment. While enterprise platforms 
-                optimize for large firm workflows, Judicial Junction's simple setup and integrated practice management features serve smaller practices effectively. 
-                This market segment shows strong growth potential as legal technology adoption accelerates across firm sizes.
+                Most importantly, we're committed to earning your trust every day. We're not a faceless corporation—we're fellow members of the 
+                Texas legal community, and we're here for the long haul.
               </p>
             </CardContent>
           </Card>
 
-          {/* Future Market Position */}
+          {/* Looking Forward */}
           <Card className="mb-8">
             <CardContent className="p-8">
-              <h2 className="text-2xl font-bold text-foreground mb-4">Future Market Position and Strategic Opportunities</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-4">Looking Forward</h2>
               <p className="text-foreground leading-relaxed mb-4">
-                Legal AI market trends favor Judicial Junction's positioning. <strong>Agentic AI workflows</strong> are replacing simple chatbot interfaces, 
-                aligning with the platform's multi-agent architecture. <strong>State-specific specialization</strong> becomes increasingly valuable as practitioners 
-                recognize limitations of generic AI training. The shift toward <strong>subscription pricing with flexible terms</strong> benefits platforms offering 
-                month-to-month options over annual contracts.
+                The legal profession is changing, and AI is going to be part of that change whether we embrace it or not. We believe the key is 
+                building AI that enhances rather than replaces human judgment—AI that understands not just the law, but the law as it applies 
+                in Texas courtrooms, with Texas judges, under Texas procedures.
               </p>
               <p className="text-foreground leading-relaxed mb-4">
-                Regulatory developments support specialized platforms. <strong>ABA Formal Opinion 512</strong> emphasizes competence requirements for AI use, 
-                favoring platforms with demonstrated expertise in specific practice areas. State bar associations increasingly provide guidance on AI ethics, 
-                creating opportunities for compliant platforms to gain market share.
+                We're working on exciting new features like enhanced document analysis, automated compliance checking for Texas-specific requirements, 
+                and deeper integrations with the practice management tools you already use. But no matter how sophisticated our technology becomes, 
+                our focus remains the same: serving Texas practitioners who refuse to compromise on quality.
               </p>
               <p className="text-foreground leading-relaxed">
-                <strong>Competitive threats remain manageable</strong> given current market dynamics. Established platforms focus on enterprise clients and broad 
-                coverage rather than state specialization. AI startups target either consumer markets or large firm enterprise sales, leaving the small-to-medium 
-                Texas firm segment underserved. No competitor has announced plans for comparable Court Listener integration or Texas law specialization.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Conclusion */}
-          <Card className="mb-8">
-            <CardContent className="p-8">
-              <h2 className="text-2xl font-bold text-foreground mb-4">Conclusion</h2>
-              <p className="text-foreground leading-relaxed mb-4">
-                Judicial Junction occupies a <strong>strategically advantageous position</strong> in the evolving legal technology landscape. The combination of 
-                Texas law specialization, Court Listener integration, multi-agent AI architecture, and accessible pricing creates multiple defensive moats 
-                against competition. While established platforms offer broader coverage and AI startups provide advanced features, <strong>no competitor matches 
-                Judicial Junction's focused expertise in Texas legal practice</strong>.
-              </p>
-              <p className="text-foreground leading-relaxed mb-4">
-                The platform should <strong>emphasize its unique differentiators</strong> in competitive positioning: Texas-specific AI training, real-time court 
-                data access, voice interaction capabilities, and month-to-month pricing flexibility. These advantages create compelling value propositions for 
-                Texas practitioners seeking sophisticated AI capabilities without enterprise complexity or costs. Success depends on maintaining technological 
-                leadership in Texas law specialization while expanding integration capabilities with popular practice management tools.
-              </p>
-              <p className="text-foreground leading-relaxed">
-                Market trends toward AI specialization, regulatory compliance emphasis, and subscription pricing flexibility strongly support Judicial Junction's 
-                strategic direction. The platform's biggest opportunity lies in capturing market share from practitioners dissatisfied with generic solutions 
-                while building deeper Texas legal expertise that becomes increasingly difficult for competitors to replicate.
+                We invite you to join us on this journey. Try Judicial Junction and experience what it's like to have AI that truly understands 
+                Texas law. Because when you're representing clients in the greatest state in the union, you deserve tools that are as exceptional 
+                as the work you do.
               </p>
             </CardContent>
           </Card>
