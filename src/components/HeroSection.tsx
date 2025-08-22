@@ -1,8 +1,9 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Mail } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import EarlyAccessDialog from '@/components/EarlyAccessDialog';
 
 const FeatureCard: React.FC<{ title: string; description: string; icon: React.ReactNode }> = ({ 
   title, 
@@ -21,6 +22,8 @@ const FeatureCard: React.FC<{ title: string; description: string; icon: React.Re
 };
 
 const HeroSection: React.FC = () => {
+  const [showEarlyAccessDialog, setShowEarlyAccessDialog] = useState(false);
+
   return (
     <section className="hero-section text-white relative overflow-hidden">
       <div className="animated-bg"></div>
@@ -46,7 +49,10 @@ const HeroSection: React.FC = () => {
             </p>
             
             <div className="flex flex-wrap gap-4 pt-4 animate-fade-in" style={{ animationDelay: "0.4s" }}>
-              <Button className="bg-brand-gold hover:bg-brand-gold/90 text-black font-medium flex items-center gap-2 hover-scale">
+              <Button 
+                className="bg-brand-gold hover:bg-brand-gold/90 text-black font-medium flex items-center gap-2 hover-scale"
+                onClick={() => setShowEarlyAccessDialog(true)}
+              >
                 Get Early Access + Updates
                 <Mail className="h-4 w-4" />
               </Button>
@@ -153,6 +159,11 @@ const HeroSection: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <EarlyAccessDialog 
+        open={showEarlyAccessDialog} 
+        onOpenChange={setShowEarlyAccessDialog} 
+      />
     </section>
   );
 };

@@ -1005,6 +1005,48 @@ export type Database = {
         }
         Relationships: []
       }
+      early_access_signups: {
+        Row: {
+          comments: string | null
+          created_at: string
+          email: string
+          firm_name: string | null
+          first_name: string
+          id: string
+          last_name: string
+          phone: string | null
+          role: string | null
+          state: string | null
+          updated_at: string
+        }
+        Insert: {
+          comments?: string | null
+          created_at?: string
+          email: string
+          firm_name?: string | null
+          first_name: string
+          id?: string
+          last_name: string
+          phone?: string | null
+          role?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Update: {
+          comments?: string | null
+          created_at?: string
+          email?: string
+          firm_name?: string | null
+          first_name?: string
+          id?: string
+          last_name?: string
+          phone?: string | null
+          role?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       firm_case_types: {
         Row: {
           created_at: string

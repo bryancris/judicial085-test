@@ -10,6 +10,7 @@ import { Building2, Users, Shield, UserPlus } from "lucide-react";
 import AdminDashboardSkeleton from "@/components/admin/AdminDashboardSkeleton";
 import FirmsManagement from "@/components/admin/FirmsManagement";
 import UsersManagement from "@/components/admin/UsersManagement";
+import EarlyAccessManagement from "@/components/admin/EarlyAccessManagement";
 import CreateUserDialog from "@/components/admin/CreateUserDialog";
 import { Button } from "@/components/ui/button";
 
@@ -142,9 +143,10 @@ const Admin = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="firms" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="firms">Law Firms</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="early-access">Early Access</TabsTrigger>
           </TabsList>
 
           <TabsContent value="firms" className="space-y-6">
@@ -153,6 +155,10 @@ const Admin = () => {
 
           <TabsContent value="users" className="space-y-6">
             <UsersManagement />
+          </TabsContent>
+
+          <TabsContent value="early-access" className="space-y-6">
+            <EarlyAccessManagement />
           </TabsContent>
         </Tabs>
 
