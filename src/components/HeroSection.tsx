@@ -10,10 +10,10 @@ const FeatureCard: React.FC<{ title: string; description: string; icon: React.Re
   icon 
 }) => {
   return (
-    <Card className="dark-card text-foreground p-4 flex flex-col items-start">
+    <Card className="dark-card text-foreground p-3 flex flex-col items-start">
       <div className="mb-2">{icon}</div>
-      <h3 className="text-lg font-semibold mb-1">{title}</h3>
-      <p className="text-sm text-gray-600 dark:text-gray-300">{description}</p>
+      <h3 className="text-base font-semibold mb-1">{title}</h3>
+      <p className="text-xs text-gray-600 dark:text-gray-300">{description}</p>
     </Card>
   );
 };
@@ -57,7 +57,7 @@ const HeroSection: React.FC = () => {
           
           <div className="relative">
             <div className="p-4 max-w-lg mx-auto">
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
                   <FeatureCard
                     title="Case Analysis"
