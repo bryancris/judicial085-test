@@ -132,13 +132,13 @@ const EarlyAccessManagement: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Firm</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>State</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Signed Up</TableHead>
+                    <TableHead className="w-[120px]">Name</TableHead>
+                    <TableHead className="w-[180px]">Email</TableHead>
+                    <TableHead className="w-[150px]">Firm</TableHead>
+                    <TableHead className="w-[80px]">Role</TableHead>
+                    <TableHead className="w-[60px]">State</TableHead>
+                    <TableHead className="w-[120px]">Phone</TableHead>
+                    <TableHead>Comments</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -166,8 +166,14 @@ const EarlyAccessManagement: React.FC = () => {
                         ) : '-'}
                       </TableCell>
                       <TableCell>{signup.phone || '-'}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatDistanceToNow(new Date(signup.created_at), { addSuffix: true })}
+                      <TableCell className="max-w-[300px]">
+                        {signup.comments ? (
+                          <div className="truncate" title={signup.comments}>
+                            {signup.comments}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -182,31 +188,6 @@ const EarlyAccessManagement: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Comments Section */}
-      {signups && signups.some(s => s.comments) && (
-        <Card>
-          <CardHeader>
-            <CardTitle>User Comments & Interests</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {signups
-                .filter(s => s.comments)
-                .map((signup) => (
-                  <div key={signup.id} className="border-l-2 border-primary/20 pl-4">
-                    <div className="font-medium text-sm">
-                      {signup.first_name} {signup.last_name}
-                      {signup.firm_name && ` - ${signup.firm_name}`}
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {signup.comments}
-                    </p>
-                  </div>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };
