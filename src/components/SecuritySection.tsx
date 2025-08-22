@@ -25,8 +25,8 @@ const SecuritySection = () => {
               <h3 className="text-2xl font-bold mb-3 dark:text-white">Attorney-Client Privilege Protected</h3>
               <p className="text-lg text-gray-700 dark:text-gray-300">
                 Most legal platforms pool client data across users to train their AI models, creating serious confidentiality risks. 
-                <strong className="text-brand-burgundy"> Our approach is fundamentally different</strong> - we maintain complete data isolation on dedicated secure servers, 
-                ensuring your client information never leaves your control and is never used to enhance services for other attorneys.
+                <strong className="text-brand-burgundy"> Our approach is fundamentally different</strong> - we maintain complete data isolation with robust security measures, 
+                ensuring your client information is never used to enhance services for other attorneys.
                 Your clients' data belongs to you and you alone.
               </p>
               <Button className="mt-4 bg-brand-burgundy hover:bg-brand-burgundy/90 text-white">
@@ -40,7 +40,7 @@ const SecuritySection = () => {
           <h3 className="text-2xl font-bold mb-4 text-center">Simple, Focused Tools That Save You Precious Hours</h3>
           <p className="text-lg text-gray-700 text-center mb-8 max-w-4xl mx-auto">
             Unlike bloated legal software that wastes your time, our streamlined platform targets the exact pain points 
-            that consume most of your billable hours. Texas attorneys report saving <span className="text-brand-burgundy font-semibold">15+ hours weekly</span> with our focused approach.
+            that consume most of your billable hours. Our focused approach is designed to save attorneys significant time on routine tasks.
           </p>
           
           <div className="grid md:grid-cols-3 gap-8">
@@ -48,9 +48,9 @@ const SecuritySection = () => {
               <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-4 mx-auto">
                 <Users className="w-7 h-7 text-[#0EA5E9]" />
               </div>
-              <h4 className="text-xl font-semibold mb-2 text-center">Client Intake Simplified</h4>
+              <h4 className="text-xl font-semibold mb-2 text-center">Document Analysis</h4>
               <p className="text-gray-600">
-                Reduce intake time by 75% with AI-assisted forms that gather essential information while maintaining complete data security. No more repetitive paperwork or lost intake notes.
+                Upload and analyze legal documents with AI assistance that extracts key information while maintaining complete data security. Perfect for case preparation and document review.
               </p>
             </div>
             
@@ -58,9 +58,9 @@ const SecuritySection = () => {
               <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-4 mx-auto">
                 <FileSearch className="w-7 h-7 text-[#0EA5E9]" />
               </div>
-              <h4 className="text-xl font-semibold mb-2 text-center">Discovery Response Automation</h4>
+              <h4 className="text-xl font-semibold mb-2 text-center">Discovery Response Support</h4>
               <p className="text-gray-600">
-                Transform 6+ hours of discovery response preparation into 45 minutes with our Texas-specific AI tools that maintain attorney oversight while eliminating tedious formatting work.
+                Streamline discovery response preparation with our Texas-specific AI tools that help organize information while maintaining attorney oversight and control.
               </p>
             </div>
             
@@ -81,9 +81,9 @@ const SecuritySection = () => {
             <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-4 mx-auto">
               <Database className="w-7 h-7 text-[#0EA5E9]" />
             </div>
-            <h3 className="text-xl font-semibold mb-2">Dedicated Secure Servers</h3>
+            <h3 className="text-xl font-semibold mb-2">Secure Data Isolation</h3>
             <p className="text-gray-600">
-              Each attorney gets a dedicated database on our secure servers, ensuring your client data remains completely separate from others.
+              Advanced security measures ensure your client data remains completely separate and protected, with strict access controls and data isolation protocols.
             </p>
           </div>
           
