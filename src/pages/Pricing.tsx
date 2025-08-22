@@ -178,7 +178,9 @@ const Pricing: React.FC = () => {
                   <th className="text-left py-4 px-6 text-gray-900 dark:text-white font-semibold">Comparison</th>
                   <th className="text-center py-4 px-6 text-brand-burgundy dark:text-brand-gold font-semibold">Our Platform</th>
                   <th className="text-center py-4 px-6 text-gray-600 dark:text-gray-400 font-semibold">Westlaw/CoCounsel</th>
-                  <th className="text-center py-4 px-6 text-gray-600 dark:text-gray-400 font-semibold">Other Competitors</th>
+                  <th className="text-center py-4 px-6 text-gray-600 dark:text-gray-400 font-semibold">LexisNexis</th>
+                  <th className="text-center py-4 px-6 text-gray-600 dark:text-gray-400 font-semibold">Harvey AI</th>
+                  <th className="text-center py-4 px-6 text-gray-600 dark:text-gray-400 font-semibold">Bloomberg Law</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -186,13 +188,17 @@ const Pricing: React.FC = () => {
                   <td className="py-4 px-6 text-gray-700 dark:text-gray-300 font-medium">Monthly Cost</td>
                   <td className="py-4 px-6 text-center text-brand-burgundy dark:text-brand-gold font-semibold">$300-600</td>
                   <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">$3,000+ (Base + AI)</td>
-                  <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">$2,000+</td>
+                  <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">$2,400-12,000+</td>
+                  <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">$1,200-3,000+/user</td>
+                  <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">$6,000+/attorney</td>
                 </tr>
                 <tr>
                   <td className="py-4 px-6 text-gray-700 dark:text-gray-300 font-medium">Texas Law Focus</td>
                   <td className="py-4 px-6 text-center">
                     <Check className="h-5 w-5 text-green-500 mx-auto" />
                   </td>
+                  <td className="py-4 px-6 text-center text-gray-400">—</td>
+                  <td className="py-4 px-6 text-center text-gray-400">—</td>
                   <td className="py-4 px-6 text-center text-gray-400">—</td>
                   <td className="py-4 px-6 text-center text-gray-400">—</td>
                 </tr>
@@ -202,19 +208,25 @@ const Pricing: React.FC = () => {
                     <Check className="h-5 w-5 text-green-500 mx-auto" />
                   </td>
                   <td className="py-4 px-6 text-center text-red-500">Shared/Training</td>
-                  <td className="py-4 px-6 text-center text-red-500">Varies</td>
+                  <td className="py-4 px-6 text-center text-red-500">Standard</td>
+                  <td className="py-4 px-6 text-center text-green-500">Zero Retention</td>
+                  <td className="py-4 px-6 text-center text-red-500">Standard</td>
                 </tr>
                 <tr>
                   <td className="py-4 px-6 text-gray-700 dark:text-gray-300 font-medium">Target Market</td>
                   <td className="py-4 px-6 text-center text-brand-burgundy dark:text-brand-gold font-medium">Solo/Small Firms</td>
                   <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">Large Firms</td>
-                  <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">Enterprise</td>
+                  <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">Large Firms</td>
+                  <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">BigLaw/Fortune 500</td>
+                  <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">Large Firms</td>
                 </tr>
                 <tr>
                   <td className="py-4 px-6 text-gray-700 dark:text-gray-300 font-medium">AI Features</td>
                   <td className="py-4 px-6 text-center text-brand-burgundy dark:text-brand-gold font-medium">Multi-Agent System</td>
                   <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">General AI</td>
-                  <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">Basic AI</td>
+                  <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">Lexis+ AI</td>
+                  <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">Advanced GPT-4</td>
+                  <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">Limited AI</td>
                 </tr>
                 <tr>
                   <td className="py-4 px-6 text-gray-700 dark:text-gray-300 font-medium">Setup Complexity</td>
@@ -223,6 +235,8 @@ const Pricing: React.FC = () => {
                   </td>
                   <td className="py-4 px-6 text-center text-red-500">Complex</td>
                   <td className="py-4 px-6 text-center text-red-500">Complex</td>
+                  <td className="py-4 px-6 text-center text-red-500">Enterprise Setup</td>
+                  <td className="py-4 px-6 text-center text-red-500">Complex</td>
                 </tr>
                 <tr>
                   <td className="py-4 px-6 text-gray-700 dark:text-gray-300 font-medium">Contract Requirements</td>
@@ -230,7 +244,31 @@ const Pricing: React.FC = () => {
                     <span className="text-green-500 font-medium">Month-to-Month</span>
                   </td>
                   <td className="py-4 px-6 text-center text-red-500">Multi-Year</td>
-                  <td className="py-4 px-6 text-center text-red-500">Annual+</td>
+                  <td className="py-4 px-6 text-center text-red-500">Annual</td>
+                  <td className="py-4 px-6 text-center text-red-500">Custom Enterprise</td>
+                  <td className="py-4 px-6 text-center text-red-500">Annual Flat Rate</td>
+                </tr>
+                <tr>
+                  <td className="py-4 px-6 text-gray-700 dark:text-gray-300 font-medium">Voice Interface</td>
+                  <td className="py-4 px-6 text-center">
+                    <Check className="h-5 w-5 text-green-500 mx-auto" />
+                  </td>
+                  <td className="py-4 px-6 text-center text-gray-400">—</td>
+                  <td className="py-4 px-6 text-center text-gray-400">—</td>
+                  <td className="py-4 px-6 text-center text-gray-400">—</td>
+                  <td className="py-4 px-6 text-center text-gray-400">—</td>
+                </tr>
+                <tr>
+                  <td className="py-4 px-6 text-gray-700 dark:text-gray-300 font-medium">Real-time Court Data</td>
+                  <td className="py-4 px-6 text-center">
+                    <Check className="h-5 w-5 text-green-500 mx-auto" />
+                  </td>
+                  <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">Limited Dockets</td>
+                  <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">Limited</td>
+                  <td className="py-4 px-6 text-center text-gray-400">—</td>
+                  <td className="py-4 px-6 text-center">
+                    <Check className="h-5 w-5 text-green-500 mx-auto" />
+                  </td>
                 </tr>
               </tbody>
             </table>
