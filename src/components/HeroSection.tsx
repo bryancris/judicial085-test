@@ -131,6 +131,21 @@ const HeroSection: React.FC = () => {
                     </div>}
                   />
                 </div>
+                
+                <div className="animate-fade-in" style={{ animationDelay: "0.8s" }}>
+                  <FeatureCard
+                    title="Voice-Powered Legal Research"
+                    description="Speak your legal questions and get instant Texas law answers"
+                    icon={<div className="flex items-center justify-center w-8 h-8 rounded-md bg-indigo-700 bg-opacity-80">
+                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="22"></line>
+                        <line x1="8" y1="22" x2="16" y2="22"></line>
+                      </svg>
+                    </div>}
+                  />
+                </div>
               </div>
             </div>
           </div>
