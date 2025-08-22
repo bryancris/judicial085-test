@@ -56,35 +56,84 @@ const HeroSection: React.FC = () => {
           </div>
           
           <div className="relative">
-            <div className="p-4 max-w-md mx-auto">
-              <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
-                <FeatureCard
-                  title="Case Analysis"
-                  description="Faster insights from legal documents"
-                  icon={<div className="flex items-center justify-center w-8 h-8 rounded-md bg-brand-burgundy bg-opacity-80">
-                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                      <polyline points="14 2 14 8 20 8"></polyline>
-                      <line x1="16" y1="13" x2="8" y2="13"></line>
-                      <line x1="16" y1="17" x2="8" y2="17"></line>
-                      <polyline points="10 9 9 9 8 9"></polyline>
-                    </svg>
-                  </div>}
-                />
-              </div>
-              
-              <div className="mt-6 animate-fade-in" style={{ animationDelay: "0.5s" }}>
-                <FeatureCard
-                  title="100% Texas Law Focus"
-                  description="No hallucinations or made-up statutes"
-                  icon={<div className="flex items-center justify-center w-8 h-8 rounded-md bg-purple-700 bg-opacity-80">
-                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-                      <path d="M2 17l10 5 10-5"></path>
-                      <path d="M2 12l10 5 10-5"></path>
-                    </svg>
-                  </div>}
-                />
+            <div className="p-4 max-w-lg mx-auto">
+              <div className="grid grid-cols-1 gap-4">
+                <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
+                  <FeatureCard
+                    title="Case Analysis"
+                    description="Faster insights from legal documents"
+                    icon={<div className="flex items-center justify-center w-8 h-8 rounded-md bg-brand-burgundy bg-opacity-80">
+                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                      </svg>
+                    </div>}
+                  />
+                </div>
+                
+                <div className="animate-fade-in" style={{ animationDelay: "0.4s" }}>
+                  <FeatureCard
+                    title="Month-to-Month Contracts"
+                    description="No long-term commitments required"
+                    icon={<div className="flex items-center justify-center w-8 h-8 rounded-md bg-green-700 bg-opacity-80">
+                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M8 2v4"></path>
+                        <path d="M16 2v4"></path>
+                        <rect width="18" height="18" x="3" y="4" rx="2"></rect>
+                        <path d="M3 10h18"></path>
+                        <path d="M10 16l2 2 4-4"></path>
+                      </svg>
+                    </div>}
+                  />
+                </div>
+                
+                <div className="animate-fade-in" style={{ animationDelay: "0.5s" }}>
+                  <FeatureCard
+                    title="Court Database Integration"
+                    description="Complete Texas court records access"
+                    icon={<div className="flex items-center justify-center w-8 h-8 rounded-md bg-blue-700 bg-opacity-80">
+                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 6h18"></path>
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                      </svg>
+                    </div>}
+                  />
+                </div>
+                
+                <div className="animate-fade-in" style={{ animationDelay: "0.6s" }}>
+                  <FeatureCard
+                    title="100% Texas Law Focus"
+                    description="No hallucinations or made-up statutes"
+                    icon={<div className="flex items-center justify-center w-8 h-8 rounded-md bg-purple-700 bg-opacity-80">
+                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                        <path d="M2 17l10 5 10-5"></path>
+                        <path d="M2 12l10 5 10-5"></path>
+                      </svg>
+                    </div>}
+                  />
+                </div>
+                
+                <div className="animate-fade-in" style={{ animationDelay: "0.7s" }}>
+                  <FeatureCard
+                    title="Voice Interface"
+                    description="Natural conversation with AI assistant"
+                    icon={<div className="flex items-center justify-center w-8 h-8 rounded-md bg-orange-700 bg-opacity-80">
+                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="22"></line>
+                        <line x1="8" y1="22" x2="16" y2="22"></line>
+                      </svg>
+                    </div>}
+                  />
+                </div>
               </div>
             </div>
           </div>
