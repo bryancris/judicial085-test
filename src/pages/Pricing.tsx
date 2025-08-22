@@ -259,16 +259,14 @@ const Pricing: React.FC = () => {
                   <td className="py-4 px-6 text-center text-gray-400">—</td>
                 </tr>
                 <tr>
-                  <td className="py-4 px-6 text-gray-700 dark:text-gray-300 font-medium">Real-time Court Data</td>
+                  <td className="py-4 px-6 text-gray-700 dark:text-gray-300 font-medium">Court Database Integration</td>
                   <td className="py-4 px-6 text-center">
-                    <Check className="h-5 w-5 text-green-500 mx-auto" />
+                    <span className="text-green-500 font-medium">Comprehensive Records</span>
                   </td>
                   <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">Limited Dockets</td>
                   <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">Limited</td>
                   <td className="py-4 px-6 text-center text-gray-400">—</td>
-                  <td className="py-4 px-6 text-center">
-                    <Check className="h-5 w-5 text-green-500 mx-auto" />
-                  </td>
+                  <td className="py-4 px-6 text-center text-gray-600 dark:text-gray-400">Strong Docket Coverage</td>
                 </tr>
               </tbody>
             </table>
