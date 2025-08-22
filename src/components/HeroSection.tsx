@@ -48,9 +48,9 @@ const HeroSection: React.FC = () => {
                 Start Free Trial
                 <ArrowRight className="h-4 w-4" />
               </Button>
-              <Button variant="outline" className="bg-transparent border-gray-400 hover:bg-white/10 text-white hover-scale">
-                Book a Demo
-              </Button>
+              <div className="inline-block bg-gray-800/70 backdrop-blur-sm px-3 py-1 rounded-full text-sm text-gray-300">
+                Coming Soon
+              </div>
             </div>
           </div>
           
