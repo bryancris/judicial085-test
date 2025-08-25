@@ -94,7 +94,7 @@ const ContactUs = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground">(555) 123-4567</p>
+                  <p className="text-muted-foreground">(800) 441-3370</p>
                   <p className="text-sm text-muted-foreground mt-1">Monday - Friday, 9 AM - 6 PM CST</p>
                 </CardContent>
               </Card>
