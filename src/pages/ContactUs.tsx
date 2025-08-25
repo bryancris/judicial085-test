@@ -124,8 +124,9 @@ const ContactUs = () => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground">
-                    123 Legal Plaza<br />
-                    Austin, TX 78701<br />
+                    1200 South 2nd St.<br />
+                    Suite B3<br />
+                    McAllen, TX 78501<br />
                     United States
                   </p>
                 </CardContent>
