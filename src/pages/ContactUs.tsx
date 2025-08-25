@@ -95,7 +95,7 @@ const ContactUs = () => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground">(800) 441-3370</p>
-                  <p className="text-sm text-muted-foreground mt-1">Monday - Friday, 9 AM - 6 PM CST</p>
+                  <p className="text-sm text-muted-foreground mt-1">Monday - Friday, 8 AM - 5 PM CST</p>
                 </CardContent>
               </Card>
 
@@ -108,8 +108,8 @@ const ContactUs = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-1 text-muted-foreground">
-                    <p>Monday - Friday: 9:00 AM - 6:00 PM</p>
-                    <p>Saturday: 10:00 AM - 2:00 PM</p>
+                    <p>Monday - Friday: 8:00 AM - 5:00 PM</p>
+                    <p>Saturday: Closed</p>
                     <p>Sunday: Closed</p>
                   </div>
                 </CardContent>
