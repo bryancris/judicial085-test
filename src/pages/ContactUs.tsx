@@ -204,13 +204,6 @@ const ContactUs = () => {
                 </CardContent>
               </Card>
 
-              <div className="mt-6 p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  <strong>Important:</strong> This form is for general inquiries only. 
-                  Submitting this form does not create an attorney-client relationship. 
-                  Do not include confidential or sensitive information in your message.
-                </p>
-              </div>
             </div>
           </div>
         </div>
