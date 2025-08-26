@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 import NavBar from '@/components/NavBar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Gavel, FileSearch, MessageSquare, Database, Shield, Clock, Scale, Mic, FileEdit, BookOpen, FileText } from 'lucide-react';
@@ -83,12 +84,12 @@ const Features = () => {
           <article className="mb-12">
             <header className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-semibold">Professional — $300/month</h2>
-              <a
-                href="/pricing"
+              <Link
+                to="/pricing"
                 className="px-4 py-2 bg-brand-burgundy dark:bg-brand-burgundy/90 text-white rounded-md hover:bg-brand-burgundy/90 dark:hover:bg-brand-burgundy/80 transition-colors"
               >
                 Choose Professional
-              </a>
+              </Link>
             </header>
             <p className="text-muted-foreground mb-6">Includes the core tools to run your practice.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8">
@@ -121,12 +122,12 @@ const Features = () => {
           <article>
             <header className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-semibold">Enterprise — $600/month</h2>
-              <a
-                href="/pricing"
+              <Link
+                to="/pricing"
                 className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-foreground rounded-md hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
               >
                 Choose Enterprise
-              </a>
+              </Link>
             </header>
             <p className="text-muted-foreground mb-6">Everything in Professional, plus:</p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8">
