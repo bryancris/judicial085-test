@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Mail, Phone, Clock, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import jjLogo from '@/assets/jj-logo.png';
 
 const ContactUs = () => {
   const [formData, setFormData] = useState({
@@ -201,6 +202,15 @@ const ContactUs = () => {
                       {isSubmitting ? 'Sending...' : 'Send Message'}
                     </Button>
                   </form>
+                  
+                  {/* Logo under Send Message button */}
+                  <div className="flex justify-center mt-6">
+                    <img 
+                      src={jjLogo} 
+                      alt="Judicial Junction Logo" 
+                      className="w-16 h-16 object-contain"
+                    />
+                  </div>
                 </CardContent>
               </Card>
 
