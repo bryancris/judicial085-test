@@ -1,25 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Download } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-
-interface EarlyAccessSignup {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  firm_name: string | null;
-  role: string | null;
-  state: string | null;
-  phone: string | null;
-  comments: string | null;
-  created_at: string;
-}
+import { exportEarlyAccessSignupsToCSV, type EarlyAccessSignup } from '@/utils/csvExport';
 
 const EarlyAccessManagement: React.FC = () => {
+  const [isExporting, setIsExporting] = useState(false);
+
   const { data: signups, isLoading, error } = useQuery({
     queryKey: ['early-access-signups'],
     queryFn: async () => {
@@ -32,6 +24,19 @@ const EarlyAccessManagement: React.FC = () => {
       return data as EarlyAccessSignup[];
     }
   });
+
+  const handleExportCSV = async () => {
+    if (!signups || signups.length === 0) return;
+    
+    setIsExporting(true);
+    try {
+      exportEarlyAccessSignupsToCSV(signups);
+    } catch (error) {
+      console.error('Export failed:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const totalSignups = signups?.length || 0;
   const attorneySignups = signups?.filter(s => s.role === 'attorney').length || 0;
@@ -121,10 +126,26 @@ const EarlyAccessManagement: React.FC = () => {
       {/* Signups Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Early Access Signups</CardTitle>
-          <CardDescription>
-            All users who have signed up for early access and updates
-          </CardDescription>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle>Early Access Signups</CardTitle>
+              <CardDescription>
+                All users who have signed up for early access and updates
+              </CardDescription>
+            </div>
+            {signups && signups.length > 0 && (
+              <Button 
+                onClick={handleExportCSV} 
+                disabled={isExporting}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" />
+                {isExporting ? 'Exporting...' : 'Export CSV'}
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {signups && signups.length > 0 ? (
