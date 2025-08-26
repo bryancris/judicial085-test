@@ -1,5 +1,6 @@
 
 @import './styles/base.css';
+@import './styles/granite-backgrounds.css';
 @import './styles/animations.css';
 @import './styles/hero.css';
 @import './styles/components.css';

@@ -38,6 +38,11 @@
     --brand-gold: 41 85% 53%;
     --brand-burgundy: 354 69% 31%;
     --brand-light-grey: 220 14% 96%;
+
+    /* Granite background system */
+    --granite-texture: url('/textures/light-granite.jpg');
+    --granite-overlay: hsl(0 0% 100% / 0.85);
+    --granite-overlay-opacity: 1;
   }
 
   .dark {
@@ -73,6 +78,10 @@
     --brand-gold: 41 85% 60%;
     --brand-burgundy: 354 69% 45%;
     --brand-light-grey: 220 14% 30%;
+
+    /* Dark theme granite overrides */
+    --granite-texture: url('/textures/dark-granite.jpg');
+    --granite-overlay: hsl(222 47% 11% / 0.75);
   }
 
   *, ::before, ::after {

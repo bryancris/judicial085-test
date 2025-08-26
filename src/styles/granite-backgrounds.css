@@ -1,0 +1,37 @@
+/* Granite background system */
+
+/* Base granite texture styling */
+body {
+  background-image: var(--granite-texture);
+  background-size: 400px 400px;
+  background-repeat: repeat;
+  background-attachment: fixed;
+  background-position: 0 0;
+  position: relative;
+}
+
+/* Overlay for readability */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--granite-overlay);
+  pointer-events: none;
+  z-index: -1;
+  opacity: var(--granite-overlay-opacity);
+}
+
+/* Ensure main content stays above overlay */
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+/* Smooth transition when theme changes */
+body,
+body::before {
+  transition: background-image 0.3s ease, background-color 0.3s ease, opacity 0.3s ease;
+}
