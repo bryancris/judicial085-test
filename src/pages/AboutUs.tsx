@@ -81,8 +81,8 @@ const AboutUs = () => {
                 statutes, another in contracts—all trained specifically on Texas legal materials.
               </p>
               <p className="text-foreground leading-relaxed mb-4">
-                We aggregate curated public datasets and trusted third‑party sources to keep our materials current and reliable. We prioritize 
-                accuracy and stability with scheduled updates—not real‑time feeds.
+                We aggregate curated public datasets and trusted third‑party sources to keep our materials current and reliable. Our approach 
+                emphasizes accuracy and comprehensiveness, with regular updates to ensure you have access to the most relevant legal information.
               </p>
               <p className="text-foreground leading-relaxed">
                 And because we believe in the power of conversation, we've built voice chat functionality that lets you research the way you think—by 
