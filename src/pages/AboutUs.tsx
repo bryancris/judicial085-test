@@ -81,8 +81,8 @@ const AboutUs = () => {
                 statutes, another in contracts—all trained specifically on Texas legal materials.
               </p>
               <p className="text-foreground leading-relaxed mb-4">
-                We're also the only platform with native Court Listener integration, giving you real-time access to federal court data as cases 
-                develop. No more waiting for traditional databases to update—you see new decisions and filings as they happen.
+                We aggregate curated public datasets and trusted third‑party sources to keep our materials current and reliable. We prioritize 
+                accuracy and stability with scheduled updates—not real‑time feeds.
               </p>
               <p className="text-foreground leading-relaxed">
                 And because we believe in the power of conversation, we've built voice chat functionality that lets you research the way you think—by 
