@@ -105,9 +105,9 @@ const SecuritySection = () => {
             <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-4 mx-auto">
               <Key className="w-7 h-7 text-[#0EA5E9]" />
             </div>
-            <h3 className="text-xl font-semibold mb-2">Military-Grade Encryption</h3>
+            <h3 className="text-xl font-semibold mb-2">Industry-Standard Encryption</h3>
             <p className="text-gray-600">
-              Military-grade encryption for data storage and transmission ensures your sensitive client information remains protected at all times.
+              Your sensitive client information is protected with enterprise-grade encryption for data storage and transmission.
             </p>
           </div>
           
@@ -115,9 +115,9 @@ const SecuritySection = () => {
             <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-4 mx-auto">
               <CheckCircle className="w-7 h-7 text-[#0EA5E9]" />
             </div>
-            <h3 className="text-xl font-semibold mb-2">Texas Ethics Compliant</h3>
+            <h3 className="text-xl font-semibold mb-2">Privacy-First Design</h3>
             <p className="text-gray-600">
-              Our system is designed to exceed Texas Bar ethics requirements for client confidentiality and data protection.
+              Built with attorney-client privilege in mind, our system maintains strict data separation and follows legal industry best practices.
             </p>
           </div>
         </div>
