@@ -24,7 +24,7 @@ const AboutUs = () => {
               <h2 className="text-3xl font-bold text-blue-800 dark:text-blue-300 mb-6">Our Story</h2>
               <p className="text-foreground leading-relaxed mb-4">
                 We started Judicial Junction because we saw a fundamental problem in legal technology. While giants like Westlaw and LexisNexis 
-                offer comprehensive databases, they treat every state the same. As Texas practitioners ourselves, we knew firsthand how frustrating 
+                offer comprehensive databases, they treat every state the same. Working closely with Texas practitioners, we learned firsthand how frustrating 
                 it was to pay premium prices for generic tools that didn't understand the nuances of Texas law.
               </p>
               <p className="text-foreground leading-relaxed">
@@ -66,7 +66,7 @@ const AboutUs = () => {
                 we can build something truly specialized rather than broadly adequate.
               </p>
               <p className="text-foreground leading-relaxed">
-                Plus, we're Texans ourselves. We understand the market, the culture, and the unique challenges facing practitioners in the Lone Star State.
+                Plus, we're deeply connected to the Texas legal community. We understand the market, the culture, and the unique challenges facing practitioners in the Lone Star State.
               </p>
             </CardContent>
           </Card>
@@ -139,8 +139,8 @@ const AboutUs = () => {
                 work as you are.
               </p>
               <p className="text-foreground leading-relaxed">
-                Most importantly, we're committed to earning your trust every day. We're not a faceless corporation—we're fellow members of the 
-                Texas legal community, and we're here for the long haul.
+                Most importantly, we're committed to earning your trust every day. We're not a faceless corporation—we're deeply connected to the 
+                Texas legal community and work closely with practitioners throughout the state, and we're here for the long haul.
               </p>
             </CardContent>
           </Card>
