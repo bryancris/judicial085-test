@@ -44,7 +44,7 @@ const HeroSection: React.FC = () => {
             </h2>
             
             <p className="text-gray-300 text-lg animate-fade-in" style={{ animationDelay: "0.2s" }}>
-              Turn fact patterns into full cases — gives Texas attorneys AI-powered tools for case analysis, document automation, and precedent discovery, all focused on Texas law.
+              Turn fact patterns into cases — gives Texas attorneys AI-powered tools for case analysis, document automation, and precedent discovery, all focused on Texas law.
             </p>
             
             <div className="flex flex-wrap gap-4 pt-4 animate-fade-in" style={{ animationDelay: "0.4s" }}>
