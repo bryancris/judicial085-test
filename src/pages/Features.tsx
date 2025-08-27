@@ -182,28 +182,6 @@ const Features = () => {
           </div>
         </section>
 
-        <section>
-          <div className="text-center">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-50 mb-6">Ready to transform your legal practice?</h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-              Join legal professionals who are using AI to enhance their practice, save time, and deliver better outcomes for clients.
-            </p>
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <a 
-                href="/auth" 
-                className="px-8 py-3 bg-brand-burgundy dark:bg-brand-burgundy/90 text-white font-medium rounded-md hover:bg-brand-burgundy/90 dark:hover:bg-brand-burgundy/80 transition-colors"
-              >
-                Start Your Practice
-              </a>
-              <a 
-                href="#" 
-                className="px-8 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-md hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-              >
-                Schedule a Demo
-              </a>
-            </div>
-          </div>
-        </section>
       </main>
     </div>
   );
