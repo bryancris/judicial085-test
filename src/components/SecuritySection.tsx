@@ -2,6 +2,7 @@
 import React from 'react';
 import { Shield, Lock, Server, CheckCircle, Database, Key, Clock, FileSearch, Users } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 const SecuritySection = () => {
   return (
@@ -54,7 +55,10 @@ const SecuritySection = () => {
               </p>
             </div>
             
-            <div className="bg-gray-50 p-6 rounded-lg border border-gray-100">
+            <div className="bg-gray-50 p-6 rounded-lg border border-gray-100 relative">
+              <Badge className="absolute top-2 right-2 bg-orange-100 text-orange-800 border-orange-200">
+                Coming Soon
+              </Badge>
               <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-4 mx-auto">
                 <FileSearch className="w-7 h-7 text-[#0EA5E9]" />
               </div>
