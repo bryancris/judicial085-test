@@ -144,8 +144,8 @@ const HeroSection: React.FC = () => {
                 
                 <div className="animate-fade-in" style={{ animationDelay: "0.8s" }}>
                   <FeatureCard
-                    title="Voice-Powered Legal Research"
-                    description="Voice commands for instant Texas law research"
+                    title="Voice-Powered Tools"
+                    description="Ask questions out loud no typing required"
                     icon={<div className="flex items-center justify-center w-8 h-8 rounded-md bg-indigo-700 bg-opacity-80">
                       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
