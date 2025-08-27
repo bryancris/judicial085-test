@@ -18,8 +18,8 @@ const StreamlineSection: React.FC = () => {
       description: "Organize client details and case information in one intuitive dashboard."
     },
     {
-      title: "Discovery Response Burden",
-      description: "Automate responses to discovery requests with Texas law-specific AI assistance."
+      title: "Strategic Case Development",
+      description: "Build winning case strategies from fact patterns using AI analysis of precedents and potential outcomes."
     }
   ];
 
