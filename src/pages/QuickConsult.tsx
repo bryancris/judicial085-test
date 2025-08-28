@@ -13,6 +13,7 @@ const QuickConsult = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(false);
 
   // Show loading while checking auth state
   if (isLoading) {
@@ -49,6 +50,17 @@ const QuickConsult = () => {
           </div>
           
           <div className="flex items-center gap-2">
+            {isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowSidebar(true)}
+                className="text-muted-foreground hover:text-foreground"
+                title="Chat History"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -74,7 +86,11 @@ const QuickConsult = () => {
       {/* Main Content */}
       <main className="flex-1 flex flex-col">
         <div className="flex-1 min-h-0">
-          <QuickConsultChat />
+          <QuickConsultChat 
+            isMobile={isMobile}
+            showSidebar={showSidebar}
+            onCloseSidebar={() => setShowSidebar(false)}
+          />
         </div>
       </main>
 

@@ -10,8 +10,19 @@ import { processMarkdown } from "@/utils/markdownProcessor";
 import { QuickConsultExportButton } from "@/components/quick-consult/export/QuickConsultExportButton";
 import CreateClientFromQuickConsultDialog from "@/components/clients/CreateClientFromQuickConsultDialog";
 import QuickConsultSidebar from "./QuickConsultSidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-const QuickConsultChat = () => {
+interface QuickConsultChatProps {
+  isMobile?: boolean;
+  showSidebar?: boolean;
+  onCloseSidebar?: () => void;
+}
+
+const QuickConsultChat = ({ 
+  isMobile = false, 
+  showSidebar = false, 
+  onCloseSidebar 
+}: QuickConsultChatProps = {}) => {
   const [input, setInput] = useState("");
   const [showCreateClientDialog, setShowCreateClientDialog] = useState(false);
   const { 
@@ -96,13 +107,18 @@ const QuickConsultChat = () => {
   return (
     <div className="h-full flex bg-background">
       {/* Sidebar */}
-      <QuickConsultSidebar
-        sessions={sessions}
-        currentSessionId={currentSessionId}
-        onSessionSelect={selectSession}
-        onNewChat={handleNewChat}
-        onSessionDelete={deleteSession}
-      />
+      {(!isMobile || showSidebar) && (
+        <QuickConsultSidebar
+          sessions={sessions}
+          currentSessionId={currentSessionId}
+          onSessionSelect={selectSession}
+          onNewChat={handleNewChat}
+          onSessionDelete={deleteSession}
+          isMobile={isMobile}
+          isOpen={showSidebar}
+          onClose={onCloseSidebar}
+        />
+      )}
       
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
