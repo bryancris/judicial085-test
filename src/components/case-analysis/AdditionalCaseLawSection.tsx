@@ -281,9 +281,15 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
       if (concepts.length) parts.push(concepts.slice(0, 2).join(', '));
       if (keyFactors.length) parts.push(keyFactors.slice(0, 2).join(', '));
 
-      const shortSummary = `${legalArea.replace(/-/g, ' ')} — ${parts.join('; ')}`.slice(0, 220);
-      const query = `Find Texas case law for this case summary: ${shortSummary}. Return 3-5 Texas civil cases with citation, court, date, short summary, and outcome.`;
-
+      // Generate simple, natural language search terms
+      const searchTerms = [
+        "Texas",
+        legalArea.replace(/-/g, ' '),
+        ...concepts.slice(0, 2),
+        "cases"
+      ].filter(Boolean).join(' ');
+      
+      const query = searchTerms;
       const fullContext = (analysisData?.content || analysisData?.summary || '').toString();
 
       return {
@@ -326,8 +332,13 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
         return [...new Set(keywords)]; // Remove duplicates
       }
       
+      // Simple fallback query
+      const fallbackQuery = keywordContext 
+        ? `Texas ${keywordContext} cases`.replace(/,/g, ' ').replace(/\s+/g, ' ').trim()
+        : `Texas ${caseType || 'legal'} cases`;
+        
       return {
-        query: `Find Texas case law for this case summary: ${keywordContext || caseType || 'this legal matter'}`,
+        query: fallbackQuery,
         searchType: 'legal-research',
         context: context.substring(0, 3000),
         analysisMetadata: null

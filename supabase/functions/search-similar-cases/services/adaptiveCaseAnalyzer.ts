@@ -218,40 +218,36 @@ Respond only with valid JSON. Do not include markdown code fences or any extra t
 export function generateAdaptiveSearchTerms(analysisResult: CaseAnalysisResult): string {
   const searchTerms: string[] = [];
   
-  // Add specific statutes (highest priority)
-  if (analysisResult.relevantStatutes.length > 0) {
-    analysisResult.relevantStatutes.forEach(statute => {
-      if (statute.trim()) {
-        searchTerms.push(`"${statute}"`);
-      }
-    });
-  }
-  
-  // Add key legal concepts
-  analysisResult.legalConcepts.forEach(concept => {
-    if (concept.trim()) {
-      searchTerms.push(`"${concept}"`);
-    }
-  });
-  
-  // Add important factual elements
-  analysisResult.keyFactors.slice(0, 2).forEach(factor => {
-    if (factor.trim()) {
-      searchTerms.push(`"${factor}"`);
-    }
-  });
-  
-  // Add primary legal area
-  if (analysisResult.primaryLegalArea && analysisResult.primaryLegalArea !== "general-legal-matter") {
-    const areaTerms = analysisResult.primaryLegalArea.replace(/-/g, ' ');
-    searchTerms.push(`"${areaTerms}"`);
-  }
-  
-  // Always include Texas for local relevance
+  // Start with Texas for jurisdiction
   searchTerms.push("Texas");
   
-  const finalTerms = searchTerms.slice(0, 8).join(' ');
-  console.log(`Generated adaptive search terms: ${finalTerms}`);
+  // Add primary legal area (simplified)
+  if (analysisResult.primaryLegalArea && analysisResult.primaryLegalArea !== "general-legal-matter") {
+    const areaTerms = analysisResult.primaryLegalArea.replace(/-/g, ' ');
+    searchTerms.push(areaTerms);
+  }
+  
+  // Add 1-2 key legal concepts (no quotes, natural language)
+  const topConcepts = analysisResult.legalConcepts.slice(0, 2);
+  topConcepts.forEach(concept => {
+    if (concept.trim()) {
+      // Simplify concept names for better search
+      const simplifiedConcept = concept
+        .replace(/Texas\s+/gi, '')
+        .replace(/\s+Law$/gi, ' law')
+        .replace(/Act\s*\([^)]+\)/gi, '')
+        .trim();
+      if (simplifiedConcept) {
+        searchTerms.push(simplifiedConcept);
+      }
+    }
+  });
+  
+  // Add "cases" at the end
+  searchTerms.push("cases");
+  
+  const finalTerms = searchTerms.join(' ');
+  console.log(`Generated simplified search terms: ${finalTerms}`);
   
   return finalTerms;
 }
