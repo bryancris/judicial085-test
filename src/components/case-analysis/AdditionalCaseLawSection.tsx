@@ -182,6 +182,11 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
         }
 
         if (existingCases && existingCases.length > 0) {
+          // Check if data is fresh (within 24 hours)
+          const mostRecentCase = existingCases[0];
+          const caseDate = new Date((mostRecentCase as any).created_at);
+          const hoursAgo = (Date.now() - caseDate.getTime()) / (1000 * 60 * 60);
+          const isFresh = hoursAgo < 24;
           // Convert database format to component format
           const formattedCases: PerplexityCase[] = existingCases.map((dbCase: any) => ({
             caseName: dbCase.case_name,
@@ -229,11 +234,15 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
 
           setCases(formattedCases);
           setHasSearched(true);
-          setLastUpdated(new Date((existingCases as any)[0]?.created_at || Date.now()).toLocaleDateString());
+          setLastUpdated(caseDate.toLocaleDateString());
+          
+          console.log(`✅ Loaded ${formattedCases.length} existing additional case law entries (${isFresh ? 'fresh' : 'stale'})`);
         } else {
-          // No existing cases found, auto-search if analysis data is available
-          if ((analysisData?.content || analysisData?.summary || caseType) && !autoSearchAttempted) {
-            console.log('No existing additional case law found, auto-searching...');
+          // No existing cases found, auto-search ONLY if analysis data is available and specific to this analysis
+          if ((analysisData?.content || analysisData?.summary) && 
+              analysisData?.id && 
+              !autoSearchAttempted) {
+            console.log('No existing additional case law found for this specific analysis, auto-searching...');
             setAutoSearchAttempted(true);
             searchAdditionalCases();
           }
@@ -246,16 +255,10 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
     };
 
     loadExistingCases();
-  }, [clientId]);
+  }, [clientId, analysisData?.id]); // Added analysisData?.id to dependencies
 
-  // Auto-search when analysis data becomes available
-  useEffect(() => {
-    if ((analysisData?.content || analysisData?.summary) && !hasSearched && cases.length === 0 && !autoSearchAttempted) {
-      console.log('Analysis data available, auto-searching for additional case law...');
-      setAutoSearchAttempted(true);
-      searchAdditionalCases();
-    }
-  }, [analysisData, hasSearched, cases.length, autoSearchAttempted]);
+  // Auto-search when analysis data becomes available - REMOVED to prevent redundant searches
+  // The main useEffect above handles loading and auto-searching properly
 
   // Function to save new cases to the database
   const saveNewCasesToDatabase = async (
@@ -848,16 +851,28 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
             </Badge>
           )}
         </CardTitle>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={searchAdditionalCases}
-          disabled={isLoading}
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-          {hasSearched ? 'Refresh' : 'Search Cases'}
-        </Button>
+        <div className="flex flex-col items-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={searchAdditionalCases}
+            disabled={isLoading}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            {hasSearched ? 'Refresh Cases (Fresh Search)' : 'Search Cases'}
+          </Button>
+          
+          {cases.length > 0 && lastUpdated && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              <span>Last updated: {lastUpdated}</span>
+              <Badge variant="secondary" className="text-xs">
+                Cached
+              </Badge>
+            </div>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         {/* Search Prompt Section */}

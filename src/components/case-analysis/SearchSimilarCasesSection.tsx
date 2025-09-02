@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { SimilarCase } from "./SimilarCasesDialog";
 import { searchSimilarCases } from "@/utils/api/analysisApiService";
-import { saveSimilarCases } from "@/utils/api/similarCasesApiService";
+import { saveSimilarCases, loadSimilarCases, checkSimilarCasesExist } from "@/utils/api/similarCasesApiService";
 import { useEnhancedSimilarCasesSearch } from "@/hooks/useEnhancedSimilarCasesSearch";
 import { useToast } from "@/hooks/use-toast";
 import SearchSimilarCasesButton from "./SearchSimilarCasesButton";
 import SimilarCasesDialog from "./SimilarCasesDialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 
 export interface SearchSimilarCasesSectionProps {
@@ -26,6 +27,9 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchResult, setSearchResult] = useState<any>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [existingCasesCount, setExistingCasesCount] = useState(0);
   const { toast } = useToast();
   const { searchWithCache, isSearching: isEnhancedSearching } = useEnhancedSimilarCasesSearch();
   
@@ -38,11 +42,47 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
     setSearchResult(null);
     setIsDialogOpen(false);
     setIsSearchingCases(false);
+    setLastUpdated(null);
+    setExistingCasesCount(0);
   }, [clientId]);
+
+  // Check for existing cases when legalAnalysisId changes
+  useEffect(() => {
+    const checkExistingCases = async () => {
+      if (!clientId || !legalAnalysisId) return;
+      
+      try {
+        const { similarCases, metadata } = await loadSimilarCases(clientId, legalAnalysisId);
+        if (similarCases.length > 0) {
+          setExistingCasesCount(similarCases.length);
+          // Try to parse a reasonable timestamp
+          const timestamp = new Date(); // Default to now if we can't determine when they were created
+          setLastUpdated(timestamp);
+        }
+      } catch (error) {
+        console.error("Error checking existing cases:", error);
+      }
+    };
+
+    checkExistingCases();
+  }, [clientId, legalAnalysisId]);
 
   const handleSearchSimilarCases = async () => {
     if (isSearchingCases || isEnhancedSearching) return;
     
+    // Check if recent cases exist and warn about API costs
+    if (existingCasesCount > 0 && lastUpdated) {
+      const hoursAgo = (Date.now() - lastUpdated.getTime()) / (1000 * 60 * 60);
+      if (hoursAgo < 24) {
+        setShowConfirmDialog(true);
+        return;
+      }
+    }
+
+    performSearch();
+  };
+
+  const performSearch = async () => {
     setIsSearchingCases(true);
     setIsDialogOpen(true);
     setSearchError(null);
@@ -165,6 +205,18 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
       setIsSearchingCases(false);
     }
   };
+
+  const formatTimestamp = (date: Date): string => {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffHours < 1) return "less than 1 hour ago";
+    if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+    return date.toLocaleDateString();
+  };
   
   // Helper function to determine case type from results
   const determineCaseTypeFromResults = (cases: SimilarCase[]): string => {
@@ -204,10 +256,11 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
 
   return (
     <>
-      
       <SearchSimilarCasesButton 
         onClick={handleSearchSimilarCases}
         isLoading={isSearchingCases || isEnhancedSearching}
+        lastUpdated={lastUpdated ? formatTimestamp(lastUpdated) : undefined}
+        existingCasesCount={existingCasesCount}
       />
 
       <SimilarCasesDialog 
@@ -218,6 +271,31 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
         error={searchError}
         searchResult={searchResult}
       />
+
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Fresh Search</AlertDialogTitle>
+            <AlertDialogDescription>
+              You already have {existingCasesCount} similar cases from {lastUpdated ? formatTimestamp(lastUpdated) : 'recently'}. 
+              Running a fresh search will consume API tokens and may return similar results.
+              <br /><br />
+              <strong>Continue with fresh search?</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowConfirmDialog(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              setShowConfirmDialog(false);
+              performSearch();
+            }}>
+              Search Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
