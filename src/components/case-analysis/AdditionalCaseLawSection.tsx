@@ -187,14 +187,77 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
     }
   };
 
-  // Generate adaptive search context - no hardcoded defaults
-  const buildSearchContext = (analysisData: any) => {
-    return {
-      analysis_summary: analysisData?.summary || '',
-      legal_issues: analysisData?.legal_issues || '',
-      case_description: analysisData?.description || '',
-      // Let the server extract context adaptively
-    };
+  // Generate adaptive Perplexity search query based on case analysis
+  const buildAdaptivePerplexityQuery = async (clientId: string) => {
+    try {
+      console.log('=== Running adaptive case analysis ===');
+      
+      // Call the adaptive case analyzer
+      const { data: analysisResp, error: analysisError } = await supabase.functions.invoke('search-similar-cases', {
+        body: { clientId, action: 'analyze-only' }
+      });
+
+      if (analysisError) {
+        console.warn('Adaptive analysis failed, using fallback:', analysisError);
+        throw new Error('Analysis service unavailable');
+      }
+
+      const caseAnalysis = analysisResp?.analysis;
+      if (!caseAnalysis || caseAnalysis.confidence < 0.3) {
+        console.log('Low confidence analysis, using fallback approach');
+        throw new Error('Low confidence analysis');
+      }
+
+      console.log('Adaptive analysis successful:', caseAnalysis);
+
+      // Build targeted query based on legal area and concepts
+      const legalArea = caseAnalysis.primaryLegalArea || 'general-legal-matter';
+      const concepts = caseAnalysis.legalConcepts || [];
+      const statutes = caseAnalysis.relevantStatutes || [];
+      const searchTerms = caseAnalysis.searchTerms || [];
+
+      // Build focused Perplexity query
+      let query = `Find Texas civil court cases related to ${legalArea.replace(/-/g, ' ')}`;
+      
+      if (concepts.length > 0) {
+        query += ` involving: ${concepts.join(', ')}`;
+      }
+      
+      if (statutes.length > 0) {
+        query += ` with statutes: ${statutes.join(', ')}`;
+      }
+      
+      query += ' in Texas';
+      
+      if (searchTerms.length > 0) {
+        const factualContext = searchTerms.filter(term => 
+          !term.toLowerCase().includes('texas') && 
+          !concepts.some(concept => term.toLowerCase().includes(concept.toLowerCase()))
+        ).slice(0, 3);
+        
+        if (factualContext.length > 0) {
+          query += `. Facts: ${factualContext.join(', ')}`;
+        }
+      }
+      
+      query += '. Focus on precedential cases with similar legal issues.';
+
+      return {
+        query,
+        searchType: 'legal-research',
+        analysisMetadata: caseAnalysis
+      };
+
+    } catch (error) {
+      console.log('Using fallback query approach:', error);
+      // Fallback to simple text-based query
+      const analysisText = (analysisData?.content || analysisData?.summary || caseType || '').slice(0, 1000);
+      return {
+        query: `Find legal cases relevant to ${caseType || 'this matter'}. Facts: ${analysisText}. Focus on precedential Texas cases when applicable.`,
+        searchType: 'current-research',
+        analysisMetadata: null
+      };
+    }
   };
 
   const searchAdditionalCases = async () => {
@@ -211,15 +274,19 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
     setError(null);
 
     try {
-      console.log('=== Additional Case Law: Perplexity research ===');
-      const analysisText = (analysisData?.content || analysisData?.summary || '').slice(0, 6000);
-      const query = `Find legal cases relevant to ${caseType || 'this matter'}. Facts: ${analysisText}. Focus on precedential Texas cases when applicable.`;
+      console.log('=== Additional Case Law: Starting adaptive search ===');
+      
+      // Get adaptive query based on case analysis
+      const { query, searchType, analysisMetadata } = await buildAdaptivePerplexityQuery(clientId);
+      
+      console.log('Using query:', query.substring(0, 200) + '...');
+      console.log('Search type:', searchType);
 
       const { data: resp, error: fxError } = await supabase.functions.invoke('perplexity-research', {
         body: {
           query,
           clientId,
-          searchType: 'current-research',
+          searchType,
           requestContext: 'additional-case-law',
           limit: 10
         }
@@ -232,7 +299,14 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
       const content = (resp as any)?.content || '';
       const citations = (resp as any)?.citations || [];
 
-      const newCases: PerplexityCase[] = extractCasesFromText(content, citations);
+      console.log('Perplexity response received, extracting cases...');
+      let newCases: PerplexityCase[] = extractCasesFromText(content, citations);
+
+      // Apply post-filtering based on analysis metadata
+      if (analysisMetadata && newCases.length > 0) {
+        console.log('Applying adaptive filtering...');
+        newCases = filterRelevantCases(newCases, analysisMetadata);
+      }
 
       if (clientId) {
         await saveNewCasesToDatabase(newCases, clientId, analysisData?.id);
@@ -245,7 +319,7 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
       if (newCases.length > 0) {
         toast({
           title: "Additional Cases Found",
-          description: `Found ${newCases.length} cases from Perplexity research.`,
+          description: `Found ${newCases.length} relevant cases using adaptive search.`,
         });
       } else {
         // Clear any stale results for this specific analysis so old cases don't linger
@@ -263,7 +337,7 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
       }
 
     } catch (error: any) {
-      console.error('Error in Perplexity case search:', error);
+      console.error('Error in adaptive Perplexity case search:', error);
       setError(error.message || 'Failed to search for additional cases');
       toast({
         title: "Search Failed",
@@ -273,6 +347,37 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Filter cases based on analysis metadata to ensure relevance
+  const filterRelevantCases = (cases: PerplexityCase[], analysisMetadata: any): PerplexityCase[] => {
+    const legalConcepts = analysisMetadata.legalConcepts || [];
+    const primaryArea = analysisMetadata.primaryLegalArea || '';
+    
+    return cases.filter(caseItem => {
+      // Exclude criminal cases
+      const caseText = `${caseItem.caseName} ${caseItem.relevantFacts} ${caseItem.outcome}`.toLowerCase();
+      const criminalKeywords = ['state of texas v', 'indictment', 'criminal', 'dwi', 'dui', 'theft', 'assault', 'murder'];
+      
+      if (criminalKeywords.some(keyword => caseText.includes(keyword))) {
+        console.log(`Filtered out criminal case: ${caseItem.caseName}`);
+        return false;
+      }
+
+      // Require at least one legal concept match for focused areas
+      if (legalConcepts.length > 0 && primaryArea !== 'general-legal-matter') {
+        const hasConceptMatch = legalConcepts.some(concept => 
+          caseText.includes(concept.toLowerCase())
+        );
+        
+        if (!hasConceptMatch) {
+          console.log(`Filtered out irrelevant case: ${caseItem.caseName}`);
+          return false;
+        }
+      }
+
+      return true;
+    });
   };
 
   const parseAICoordinatorResponse = (content: string, citations: string[], sources: any[]): PerplexityCase[] => {

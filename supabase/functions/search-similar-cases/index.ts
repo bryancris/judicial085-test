@@ -53,10 +53,11 @@ serve(async (req) => {
     console.log("=== ENHANCED SEARCH SIMILAR CASES FUNCTION START ===");
     
     // Parse request body with error handling
-    let clientId;
+    let clientId, action;
     try {
       const body = await req.json();
       clientId = body.clientId;
+      action = body.action;
     } catch (parseError) {
       console.error("❌ Failed to parse request body:", parseError);
       return new Response(JSON.stringify({
@@ -87,6 +88,34 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Handle analyze-only action for Additional Case Law
+    if (action === 'analyze-only') {
+      console.log('🧠 Analyzing case for Additional Case Law...');
+      
+      try {
+        const { analyzeCase } = await import('./services/adaptiveCaseAnalyzer.ts');
+        const analysisResult = await analyzeCase(clientId);
+        
+        return new Response(JSON.stringify({
+          analysis: analysisResult,
+          success: true
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } catch (error) {
+        console.error('❌ Case analysis failed:', error);
+        return new Response(JSON.stringify({
+          analysis: null,
+          success: false,
+          error: error.message
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
 
     // Get client data and recent legal analysis
     const { data: clientData, error: clientError } = await supabase
