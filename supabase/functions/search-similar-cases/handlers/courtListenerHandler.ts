@@ -1,6 +1,6 @@
 import { corsHeaders } from "../utils/corsUtils.ts";
 import { addExplicitLegalTerms } from "../utils/searchTermGenerator.ts";
-import { detectCaseTypeFromContent } from "../utils/caseTypeDetector.ts";
+import { determineFinalCaseType } from "../utils/caseTypeDetector.ts";
 
 // Texas courts for filtering to ensure only Texas precedents are returned
 const TEXAS_COURTS = [
@@ -20,7 +20,7 @@ export async function processCourtListenerResults(
   
   try {
     // Detect case type from content if not provided
-    const detectedType = caseType || detectCaseTypeFromContent(currentSearchDocument);
+    const detectedType = caseType || determineFinalCaseType(currentSearchDocument);
     console.log(`=== COURTLISTENER SEARCH START ===`);
     console.log(`Using case type for search: ${detectedType}`);
     console.log(`Original search terms: ${searchTerms}`);
@@ -148,6 +148,28 @@ export async function processCourtListenerResults(
 export function extractRelevantSnippet(opinionText: string, searchTerms: string): string {
   if (!opinionText) return "No opinion text available";
   
+  // For lemon law cases, look for specific indicators
+  if (searchTerms.includes("lemon") || searchTerms.includes("vehicle") || searchTerms.includes("warranty") || 
+      searchTerms.includes("motor vehicle") || searchTerms.includes("2301")) {
+    const lemonLawIndicators = [
+      "lemon law", "motor vehicle", "warranty breach", "repair attempts", "substantial impairment",
+      "automotive defects", "manufacturer liability", "vehicle replacement", "occupations code 2301",
+      "reasonable repair", "automotive warranty", "defective vehicle"
+    ];
+    
+    const paragraphs = opinionText.split(/\n\n+/);
+    
+    // Look for paragraphs containing lemon law terms
+    for (const paragraph of paragraphs) {
+      const paraLower = paragraph.toLowerCase();
+      for (const indicator of lemonLawIndicators) {
+        if (paraLower.includes(indicator)) {
+          return paragraph.length > 300 ? paragraph.substring(0, 297) + '...' : paragraph;
+        }
+      }
+    }
+  }
+  
   // For animal protection cases, look for specific indicators
   if (searchTerms.includes("animal") || searchTerms.includes("42.092") || searchTerms.includes("pet")) {
     const animalIndicators = [
@@ -198,6 +220,32 @@ export function extractRelevantSnippet(opinionText: string, searchTerms: string)
 // Extract the outcome from a court opinion
 export function extractOutcomeFromOpinion(opinionText: string): string {
   if (!opinionText) return "Case outcome details not available";
+  
+  // Look for lemon law specific outcomes
+  if (opinionText.toLowerCase().includes("lemon") || opinionText.toLowerCase().includes("vehicle") ||
+      opinionText.toLowerCase().includes("warranty") || opinionText.toLowerCase().includes("motor vehicle")) {
+    const lemonLawOutcomes = [
+      "lemon law", "vehicle replacement", "warranty breach", "manufacturer liability",
+      "automotive defects", "repair attempts", "refund awarded", "replacement vehicle",
+      "substantial impairment", "occupations code 2301"
+    ];
+    
+    const paragraphs = opinionText.split(/\n\n+/);
+    
+    for (const paragraph of paragraphs) {
+      const paraLower = paragraph.toLowerCase();
+      for (const outcome of lemonLawOutcomes) {
+        if (paraLower.includes(outcome)) {
+          const sentences = paragraph.split(/\.\s+/);
+          for (const sentence of sentences) {
+            if (sentence.toLowerCase().includes(outcome)) {
+              return sentence.trim() + '.';
+            }
+          }
+        }
+      }
+    }
+  }
   
   // Look for animal protection specific outcomes
   if (opinionText.toLowerCase().includes("animal") || opinionText.toLowerCase().includes("pet")) {

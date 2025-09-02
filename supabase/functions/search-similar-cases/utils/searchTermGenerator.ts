@@ -10,6 +10,14 @@ export function generateSearchTerms(content: string, caseType: string): string {
     console.log(`Case type: ${caseType}`);
     console.log(`Content preview: ${content.substring(0, 200)}...`);
     
+    // For lemon law cases, use very specific search strategy
+    if (caseType === "lemon-law" || isLemonLawCase(content)) {
+      const lemonLawSpecificTerms = generateLemonLawSearchTerms(content);
+      console.log(`=== LEMON LAW SEARCH TERMS ===`);
+      console.log(`Generated terms: ${lemonLawSpecificTerms}`);
+      return lemonLawSpecificTerms;
+    }
+    
     // For animal protection cases, use very specific search strategy
     if (caseType === "animal-protection") {
       const animalSpecificTerms = generateAnimalProtectionSearchTerms(content);
@@ -36,6 +44,74 @@ export function generateSearchTerms(content: string, caseType: string): string {
     console.error("Error generating search terms:", error);
     return getDefaultSearchTermsForCaseType(caseType);
   }
+}
+
+// Helper function to detect lemon law cases
+function isLemonLawCase(content: string): boolean {
+  const lowerContent = content.toLowerCase();
+  const lemonLawIndicators = [
+    "lemon law", "vehicle defects", "warranty breach", "repair attempts", 
+    "motor vehicle", "automotive", "substantial impairment", "manufacturer",
+    "texas occupations code 2301"
+  ];
+  
+  let score = 0;
+  lemonLawIndicators.forEach(indicator => {
+    if (lowerContent.includes(indicator)) {
+      score++;
+    }
+  });
+  
+  return score >= 2;
+}
+
+// Generate specialized search terms for lemon law cases
+function generateLemonLawSearchTerms(content: string): string {
+  console.log("=== GENERATING LEMON LAW SEARCH TERMS ===");
+  
+  const baseTerms = [
+    "Texas Lemon Law",
+    "Texas Occupations Code 2301",
+    "motor vehicle warranty breach",
+    "automotive defects",
+    "reasonable repair attempts",
+    "substantial impairment vehicle",
+    "manufacturer liability",
+    "vehicle replacement remedy",
+    "lemon law refund",
+    "automotive manufacturer defects"
+  ];
+  
+  const additionalTerms: string[] = [];
+  const lowerContent = content.toLowerCase();
+  
+  // Add specific automotive terms found in content
+  if (lowerContent.includes("dealership") || lowerContent.includes("dealer")) {
+    additionalTerms.push("automotive dealership liability");
+  }
+  
+  if (lowerContent.includes("transmission") || lowerContent.includes("engine") || lowerContent.includes("electrical")) {
+    additionalTerms.push("major automotive system defects");
+  }
+  
+  if (lowerContent.includes("safety") || lowerContent.includes("accident")) {
+    additionalTerms.push("automotive safety defects");
+  }
+  
+  if (lowerContent.includes("used car") || lowerContent.includes("pre-owned")) {
+    additionalTerms.push("used vehicle lemon law");
+  }
+  
+  // Add Texas-specific lemon law statutes
+  if (lowerContent.includes("2301.601") || lowerContent.includes("lemon law")) {
+    additionalTerms.push("Texas Occupations Code §2301.601");
+    additionalTerms.push("Texas Occupations Code §2301.604");
+  }
+  
+  const finalTerms = [...baseTerms, ...additionalTerms].join(" ");
+  console.log(`Generated lemon law search terms: ${finalTerms}`);
+  
+  return finalTerms;
 }
 
 // Specialized search term generation for animal protection cases
@@ -202,6 +278,8 @@ function getDefaultSearchTermsForCaseType(caseType: string): string {
   console.log(`Getting default search terms for case type: ${caseType}`);
   
   switch (caseType) {
+    case "lemon-law":
+      return '"Texas Lemon Law" "Texas Occupations Code 2301" "motor vehicle warranty breach" "automotive defects" Texas';
     case "animal-protection":
       return '"Texas Penal Code 42.092" "animal cruelty" "pet boarding negligence" Texas';
     case "hoa":
@@ -445,6 +523,16 @@ export function addExplicitLegalTerms(searchTerms: string, content: string, case
   
   const normalizedType = (caseType || "").toLowerCase().replace(/[-_\s]/g, "");
   const lowerContent = content.toLowerCase();
+  
+  // For lemon law cases, add automotive-specific legal terms
+  if (normalizedType.includes("lemon") || normalizedType.includes("vehicle") || 
+      lowerContent.includes("lemon law") || lowerContent.includes("vehicle") ||
+      lowerContent.includes("warranty") || lowerContent.includes("motor vehicle") ||
+      lowerContent.includes("automotive") || lowerContent.includes("2301")) {
+    const lemonTerms = `${searchTerms} "Texas Lemon Law" "motor vehicle warranty breach" "automotive defects" "Texas Occupations Code 2301" "reasonable repair attempts"`;
+    console.log(`✅ Enhanced lemon law terms: ${lemonTerms}`);
+    return lemonTerms;
+  }
   
   // For HOA cases, add specific HOA legal terms
   if (normalizedType.includes("hoa") || normalizedType.includes("homeowner") || 

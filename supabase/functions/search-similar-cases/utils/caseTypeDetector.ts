@@ -39,6 +39,7 @@ function detectCaseTypeFromContent(content: string): string {
   console.log(`Sample text: ${lowerContent.substring(0, 200)}`);
   
   const typeScores: { [key: string]: number } = {
+    "lemon-law": 0,
     "premises-liability": 0,
     "personal-injury": 0,
     "consumer-protection": 0,
@@ -47,6 +48,41 @@ function detectCaseTypeFromContent(content: string): string {
     "property-law": 0,
     "general": 0
   };
+  
+  // Enhanced lemon law detection (highest priority)
+  if (lowerContent.includes("lemon law") || lowerContent.includes("lemon-law")) {
+    typeScores["lemon-law"] += 80;
+    console.log("🚗 FOUND: Lemon law terms - Adding 80 to lemon-law");
+  }
+  
+  if (lowerContent.includes("vehicle") || lowerContent.includes("motor vehicle") || lowerContent.includes("car") || 
+      lowerContent.includes("truck") || lowerContent.includes("automotive")) {
+    typeScores["lemon-law"] += 40;
+    console.log("🚗 FOUND: Vehicle terms - Adding 40 to lemon-law");
+  }
+  
+  if (lowerContent.includes("warranty") && (lowerContent.includes("vehicle") || lowerContent.includes("car") || 
+      lowerContent.includes("motor") || lowerContent.includes("automotive"))) {
+    typeScores["lemon-law"] += 45;
+    console.log("🚗 FOUND: Vehicle warranty terms - Adding 45 to lemon-law");
+  }
+  
+  if (lowerContent.includes("repair attempts") || lowerContent.includes("defects") || lowerContent.includes("substantial impairment") ||
+      lowerContent.includes("reasonable repair") || lowerContent.includes("manufacturer") || lowerContent.includes("dealership")) {
+    typeScores["lemon-law"] += 35;
+    console.log("🚗 FOUND: Lemon law specific terms - Adding 35 to lemon-law");
+  }
+  
+  if (lowerContent.includes("texas occupations code") && (lowerContent.includes("2301") || lowerContent.includes("motor vehicle"))) {
+    typeScores["lemon-law"] += 50;
+    console.log("🚗 FOUND: Texas Lemon Law statute - Adding 50 to lemon-law");
+  }
+  
+  if (lowerContent.includes("refund") && lowerContent.includes("replacement") && 
+      (lowerContent.includes("vehicle") || lowerContent.includes("car"))) {
+    typeScores["lemon-law"] += 30;
+    console.log("🚗 FOUND: Lemon law remedies - Adding 30 to lemon-law");
+  }
   
   // Enhanced premises liability detection
   if (lowerContent.includes("slip") || lowerContent.includes("fall")) {
@@ -71,8 +107,9 @@ function detectCaseTypeFromContent(content: string): string {
     console.log("🏢 FOUND: Premises liability terms - Adding 35 to premises-liability");
   }
   
-  // Consumer protection detection
-  if (lowerContent.includes("dtpa") || lowerContent.includes("deceptive trade practices")) {
+  // Consumer protection detection (but differentiate from lemon law)
+  if ((lowerContent.includes("dtpa") || lowerContent.includes("deceptive trade practices")) && 
+      !lowerContent.includes("vehicle") && !lowerContent.includes("car") && !lowerContent.includes("motor")) {
     typeScores["consumer-protection"] += 50;
   }
   if (lowerContent.includes("consumer protection") || lowerContent.includes("false advertising")) {

@@ -126,7 +126,7 @@ ${content.substring(0, 4000)}
 
 Please respond with a JSON object containing:
 {
-  "primaryLegalArea": "primary area of law (e.g., property-law, personal-injury, consumer-protection, contract-law, criminal-law, employment-law, family-law, etc.)",
+  "primaryLegalArea": "primary area of law (e.g., lemon-law, property-law, personal-injury, consumer-protection, contract-law, criminal-law, employment-law, family-law, etc.)",
   "legalConcepts": ["array of 3-5 key legal concepts"],
   "relevantStatutes": ["array of specific statutes mentioned or applicable"],
   "keyFactors": ["array of 3-5 important factual elements"],
@@ -135,10 +135,13 @@ Please respond with a JSON object containing:
 }
 
 Guidelines:
-- Be specific about the legal area (use property-law for HOA cases, real estate disputes)
-- Extract actual statute numbers when mentioned
+- CRITICAL: If this involves vehicles, cars, trucks, automotive warranties, lemon law, manufacturer defects, repair attempts, or motor vehicles, use "lemon-law" as primaryLegalArea
+- Use property-law for HOA cases, real estate disputes
+- Use consumer-protection for general DTPA cases that don't involve vehicles
+- Extract actual statute numbers when mentioned (especially Texas Occupations Code 2301 for lemon law)
 - Focus on legal concepts that would help find similar cases
 - Generate search terms that combine legal concepts with factual elements
+- For lemon law cases, include terms like "Texas Lemon Law", "motor vehicle warranty", "automotive defects", "reasonable repair attempts"
 - Set confidence based on clarity and specificity of the content
 - For Texas cases, include "Texas" in search terms
 - If unclear, use broader legal categories
