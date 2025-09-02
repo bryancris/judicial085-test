@@ -143,7 +143,7 @@ Guidelines:
 - For Texas cases, include "Texas" in search terms
 - If unclear, use broader legal categories
 
-Respond only with valid JSON.`;
+Respond only with valid JSON. Do not include markdown code fences or any extra text; return a single minified JSON object.`;
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -174,8 +174,27 @@ Respond only with valid JSON.`;
       throw new Error("No analysis received from OpenAI");
     }
 
-    // Parse the JSON response
-    const analysisResult = JSON.parse(analysisText.trim());
+    // Parse the JSON response robustly (strip code fences, extract JSON object)
+    let jsonText = analysisText.trim()
+      .replace(/```json\s*/gi, '')
+      .replace(/```/g, '')
+      .trim();
+
+    if (!(jsonText.trim().startsWith('{') && jsonText.trim().endsWith('}'))) {
+      const start = jsonText.indexOf('{');
+      const end = jsonText.lastIndexOf('}');
+      if (start !== -1 && end !== -1 && end > start) {
+        jsonText = jsonText.slice(start, end + 1);
+      }
+    }
+
+    let analysisResult: any;
+    try {
+      analysisResult = JSON.parse(jsonText);
+    } catch (e) {
+      console.error('Failed to parse analysis JSON. Raw start:', analysisText.substring(0, 200));
+      throw e;
+    }
     
     // Validate and clean the result
     const cleanResult: CaseAnalysisResult = {

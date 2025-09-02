@@ -127,20 +127,30 @@ Focus on Texas jurisdiction and precedential cases.`;
                            query.toLowerCase().includes('breach');
       
       if (isContractCase) {
-        enhancedQuery = `Texas construction and contract law research for: ${query}
+        enhancedQuery = `Find 3-5 verified Texas legal cases related to: ${query}
+
+Return ONLY a JSON array of cases in this exact format:
+[
+  {
+    "caseName": "Exact case name v. Defendant",
+    "court": "Specific Texas court name", 
+    "citation": "Legal citation",
+    "date": "Decision date",
+    "relevantFacts": "Key facts that make this case relevant",
+    "outcome": "Actual court decision/outcome",
+    "url": "Direct link if available"
+  }
+]
 
 Requirements:
-1. Find 3-5 relevant TEXAS legal cases with:
-   - Complete case names (Plaintiff v. Defendant)
-   - Texas court names (Supreme Court of Texas, Texas Court of Appeals, District Courts)
-   - Legal citations (Tex. citation format)
-   - Brief case summaries focusing on construction/contract issues
-   - Outcomes/holdings related to warranties, breach, or construction
-2. Include relevant Texas statutes (Property Code, Business & Commerce Code sections only)
-3. Focus on Texas construction law, warranty law, and contract law
-4. Provide concise practical legal guidance
-
-Focus on Texas jurisdiction only and verified, authoritative sources.`;
+- Return exactly 3-5 cases from Texas jurisdiction only
+- Focus on Texas civil cases (exclude criminal unless specifically requested)
+- Only Texas Supreme Court, Texas Court of Appeals, or Texas District Courts
+- Only real, verified legal cases from Texas
+- No analysis, reasoning, or thinking process
+- No introductory text or explanations
+- Must be valid JSON format
+- Filter for construction, warranty, or contract issues`;
       } else {
         enhancedQuery = `Find 3-5 verified Texas legal cases related to: ${query}
 
@@ -297,10 +307,21 @@ Requirements:
     
     // Try to parse JSON for legal-research, fallback to prose
     let structuredCases = null;
-    if (normalizedSearchType === 'legal-research' && content.trim().startsWith('[')) {
+    if (normalizedSearchType === 'legal-research') {
       try {
-        structuredCases = JSON.parse(content);
-        console.log('Successfully parsed', structuredCases?.length || 0, 'structured cases');
+        let jsonBlock = content.trim()
+          .replace(/```json\s*/gi, '')
+          .replace(/```/g, '')
+          .trim();
+        if (!jsonBlock.startsWith('[')) {
+          const start = jsonBlock.indexOf('[');
+          const end = jsonBlock.lastIndexOf(']');
+          if (start !== -1 && end !== -1 && end > start) {
+            jsonBlock = jsonBlock.slice(start, end + 1);
+          }
+        }
+        structuredCases = JSON.parse(jsonBlock);
+        console.log('Successfully parsed', Array.isArray(structuredCases) ? structuredCases.length : 0, 'structured cases');
       } catch (parseError) {
         console.log('JSON parse failed, using prose content:', parseError.message);
       }

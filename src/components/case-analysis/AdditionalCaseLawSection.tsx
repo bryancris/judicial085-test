@@ -210,41 +210,26 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
 
       console.log('Adaptive analysis successful:', caseAnalysis);
 
-      // Build targeted query based on legal area and concepts
+      // Build short case summary and Texas case law query
       const legalArea = caseAnalysis.primaryLegalArea || 'general-legal-matter';
       const concepts = caseAnalysis.legalConcepts || [];
+      const keyFactors = caseAnalysis.keyFactors || [];
       const statutes = caseAnalysis.relevantStatutes || [];
-      const searchTerms = caseAnalysis.searchTerms || [];
 
-      // Build focused Perplexity query
-      let query = `Find Texas civil court cases related to ${legalArea.replace(/-/g, ' ')}`;
-      
-      if (concepts.length > 0) {
-        query += ` involving: ${concepts.join(', ')}`;
-      }
-      
-      if (statutes.length > 0) {
-        query += ` with statutes: ${statutes.join(', ')}`;
-      }
-      
-      query += ' in Texas';
-      
-      if (searchTerms.length > 0) {
-        const factualContext = searchTerms.filter(term => 
-          !term.toLowerCase().includes('texas') && 
-          !concepts.some(concept => term.toLowerCase().includes(concept.toLowerCase()))
-        ).slice(0, 3);
-        
-        if (factualContext.length > 0) {
-          query += `. Facts: ${factualContext.join(', ')}`;
-        }
-      }
-      
-      query += '. Focus on precedential cases with similar legal issues.';
+      const parts: string[] = [];
+      if (statutes.length) parts.push(`statutes: ${statutes.slice(0, 2).join(', ')}`);
+      if (concepts.length) parts.push(concepts.slice(0, 2).join(', '));
+      if (keyFactors.length) parts.push(keyFactors.slice(0, 2).join(', '));
+
+      const shortSummary = `${legalArea.replace(/-/g, ' ')} — ${parts.join('; ')}`.slice(0, 220);
+      const query = `Find Texas case law for this case summary: ${shortSummary}. Return 3-5 Texas civil cases with citation, court, date, short summary, and outcome.`;
+
+      const fullContext = (analysisData?.content || analysisData?.summary || '').toString();
 
       return {
         query,
         searchType: 'legal-research',
+        context: fullContext.substring(0, 3000),
         analysisMetadata: caseAnalysis
       };
 
@@ -282,7 +267,7 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
       }
       
       return {
-        query: `Find relevant Texas legal cases for: ${keywordContext || caseType || 'this legal matter'}`,
+        query: `Find Texas case law for this case summary: ${keywordContext || caseType || 'this legal matter'}`,
         searchType: 'legal-research',
         context: context.substring(0, 3000),
         analysisMetadata: null
@@ -320,7 +305,7 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
           searchType,
           requestContext: 'additional-case-law',
           limit: 10,
-          model: 'sonar',
+          model: 'sonar-pro',
           context
         }
       });
@@ -341,7 +326,7 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
             searchType,
             requestContext: 'additional-case-law',
             limit: 5,
-            model: 'sonar',
+            model: 'sonar-pro',
             quickMode: true,
             context: context ? context.substring(0, 1500) : undefined
           }
