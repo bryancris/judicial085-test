@@ -6,6 +6,7 @@ import { useEnhancedSimilarCasesSearch } from "@/hooks/useEnhancedSimilarCasesSe
 import { useToast } from "@/hooks/use-toast";
 import SearchSimilarCasesButton from "./SearchSimilarCasesButton";
 import SimilarCasesDialog from "./SimilarCasesDialog";
+import SimilarCasesSection from "./SimilarCasesSection";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 
@@ -67,11 +68,11 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
     checkExistingCases();
   }, [clientId, legalAnalysisId]);
 
-  const handleSearchSimilarCases = async () => {
+  const handleSearchSimilarCases = async (forceRefresh: boolean = false) => {
     if (isSearchingCases || isEnhancedSearching) return;
     
-    // Check if recent cases exist and warn about API costs
-    if (existingCasesCount > 0 && lastUpdated) {
+    // Check if recent cases exist and warn about API costs (unless forced)
+    if (!forceRefresh && existingCasesCount > 0 && lastUpdated) {
       const hoursAgo = (Date.now() - lastUpdated.getTime()) / (1000 * 60 * 60);
       if (hoursAgo < 24) {
         setShowConfirmDialog(true);
@@ -257,7 +258,7 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
   return (
     <>
       <SearchSimilarCasesButton 
-        onClick={handleSearchSimilarCases}
+        onClick={() => handleSearchSimilarCases()}
         isLoading={isSearchingCases || isEnhancedSearching}
         lastUpdated={lastUpdated ? formatTimestamp(lastUpdated) : undefined}
         existingCasesCount={existingCasesCount}
@@ -270,6 +271,24 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
         isLoading={isSearchingCases || isEnhancedSearching}
         error={searchError}
         searchResult={searchResult}
+      />
+
+      <SimilarCasesSection
+        similarCases={similarCases}
+        isLoading={isSearchingCases}
+        caseType={determineCaseTypeFromResults(similarCases) || caseType}
+        analysisFound={true}
+        fallbackUsed={searchResult?.fallbackUsed}
+        searchMetadata={{
+          cacheUsed: searchResult?.cacheUsed,
+          freshApiCall: searchResult?.freshApiCall,
+          searchStrategy: searchResult?.searchStrategy,
+          responseTime: searchResult?.responseTime,
+          totalResults: searchResult?.totalResults
+        }}
+        lastUpdated={lastUpdated ? formatTimestamp(lastUpdated) : undefined}
+        existingCasesCount={existingCasesCount}
+        onRefresh={() => handleSearchSimilarCases(true)}
       />
 
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>

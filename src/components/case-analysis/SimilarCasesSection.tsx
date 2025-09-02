@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Scale, ExternalLink, Gavel, Shield, CheckCircle, AlertTriangle } from "lucide-react";
+import { Scale, ExternalLink, Gavel, Shield, CheckCircle, AlertTriangle, RefreshCw, Clock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,9 @@ export interface SimilarCasesSectionProps {
     responseTime?: number;
     totalResults?: number;
   };
+  lastUpdated?: string;
+  existingCasesCount?: number;
+  onRefresh?: () => void;
 }
 
 const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
@@ -53,7 +56,10 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
   clientId,
   legalAnalysisId,
   onCasesFound,
-  searchMetadata
+  searchMetadata,
+  lastUpdated,
+  existingCasesCount,
+  onRefresh
 }) => {
   
   // Separate cases by source
@@ -109,13 +115,26 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
         
         <Card className="mb-6 shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xl font-semibold flex items-center">
-              <Scale className="h-5 w-5 mr-2 text-blue-500" />
-              Similar Cases
-              {caseType && caseType !== "general" && (
-                <Badge variant="outline" className="ml-2">
-                  {caseType.replace("-", " ")}
-                </Badge>
+            <CardTitle className="text-xl font-semibold flex items-center justify-between">
+              <div className="flex items-center">
+                <Scale className="h-5 w-5 mr-2 text-blue-500" />
+                Similar Cases
+                {caseType && caseType !== "general" && (
+                  <Badge variant="outline" className="ml-2">
+                    {caseType.replace("-", " ")}
+                  </Badge>
+                )}
+              </div>
+              {onRefresh && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onRefresh}
+                  className="flex items-center gap-1"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  Refresh Cases
+                </Button>
               )}
             </CardTitle>
           </CardHeader>
@@ -129,6 +148,19 @@ const SimilarCasesSection: React.FC<SimilarCasesSectionProps> = ({
                   : "No similar cases found in legal databases."
                 }
               </p>
+              
+              {/* Show cache status if cases were previously searched */}
+              {lastUpdated && existingCasesCount !== undefined && (
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mt-4">
+                  <Clock className="h-3 w-3" />
+                  <span>
+                    Last search: {lastUpdated}
+                  </span>
+                  <Badge variant="secondary" className="text-xs">
+                    Cached
+                  </Badge>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
