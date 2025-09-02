@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, ExternalLink, AlertCircle, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { invokeFunction } from '@/utils/api/baseApiService';
+
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import LawReferenceLink from '@/components/knowledge/LawReferenceLink';
@@ -114,7 +114,7 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
           setLastUpdated(new Date((existingCases as any)[0]?.created_at || Date.now()).toLocaleDateString());
         } else {
           // No existing cases found, auto-search if analysis data is available
-          if ((analysisData?.summary || caseType) && !autoSearchAttempted) {
+          if ((analysisData?.content || analysisData?.summary || caseType) && !autoSearchAttempted) {
             console.log('No existing additional case law found, auto-searching...');
             setAutoSearchAttempted(true);
             searchAdditionalCases();
@@ -132,7 +132,7 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
 
   // Auto-search when analysis data becomes available
   useEffect(() => {
-    if (analysisData?.summary && !hasSearched && cases.length === 0 && !autoSearchAttempted) {
+    if ((analysisData?.content || analysisData?.summary) && !hasSearched && cases.length === 0 && !autoSearchAttempted) {
       console.log('Analysis data available, auto-searching for additional case law...');
       setAutoSearchAttempted(true);
       searchAdditionalCases();
@@ -211,68 +211,43 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
     setError(null);
 
     try {
-      console.log('=== Starting Adaptive Case Law Search ===');
-      console.log('Using adaptive search-similar-cases function...');
+      console.log('=== Additional Case Law: Perplexity research ===');
+      const analysisText = (analysisData?.content || analysisData?.summary || '').slice(0, 6000);
+      const query = `Find legal cases relevant to ${caseType || 'this matter'}. Facts: ${analysisText}. Focus on precedential Texas cases when applicable.`;
 
-      // Call the enhanced search-similar-cases function directly
-      // It will build its own adaptive context from client data and analysis
-      const { data, error: functionError } = await invokeFunction('search-similar-cases', {
-        clientId
+      const { data: resp, error: fxError } = await supabase.functions.invoke('perplexity-research', {
+        body: {
+          query,
+          clientId,
+          searchType: 'current-research',
+          requestContext: 'additional-case-law',
+          limit: 10
+        }
       });
 
-      console.log('=== Adaptive Search Response ===');
-      console.log('Data:', data);
-      console.log('Error:', functionError);
-
-      if (functionError) {
-        throw new Error(functionError);
+      if (fxError) {
+        throw new Error(fxError.message || fxError);
       }
 
-      const searchResult = data as AdaptiveSearchResponse;
-      
-      if (searchResult?.similarCases && Array.isArray(searchResult.similarCases)) {
-        // Convert similar cases format to additional case law format
-        const newCases: PerplexityCase[] = searchResult.similarCases.map((similarCase: any) => ({
-          caseName: similarCase.clientName || "Case name not available",
-          court: similarCase.court || "Court information available",
-          citation: similarCase.citation || "Citation available",
-          date: similarCase.dateDecided || "Date available",
-          relevantFacts: similarCase.relevantFacts || "Relevant facts extracted",
-          outcome: similarCase.outcome || "Legal outcome available",
-          url: similarCase.url || undefined
-        }));
+      const content = (resp as any)?.content || '';
+      const citations = (resp as any)?.citations || [];
 
-        // Save (and scope) the results to this analysis, clearing stale ones for this analysis
-        if (clientId) {
-          await saveNewCasesToDatabase(newCases, clientId, analysisData?.id);
-        }
+      const newCases: PerplexityCase[] = extractCasesFromText(content, citations);
 
-        setCases(newCases);
-        setLastUpdated(new Date().toLocaleDateString());
-        setHasSearched(true);
-        
-        // Show search metadata if available
-        const metadata = searchResult.searchMetadata;
-        const description = metadata 
-          ? `Found ${newCases.length} cases using ${metadata.context?.area_of_law || 'legal'} analysis (${metadata.filtering?.avg_relevance || 0} avg relevance)`
-          : `Found ${newCases.length} additional cases from adaptive legal research.`;
-        
+      if (clientId) {
+        await saveNewCasesToDatabase(newCases, clientId, analysisData?.id);
+      }
+
+      setCases(newCases);
+      setLastUpdated(new Date().toLocaleDateString());
+      setHasSearched(true);
+
+      if (newCases.length > 0) {
         toast({
           title: "Additional Cases Found",
-          description,
+          description: `Found ${newCases.length} cases from Perplexity research.`,
         });
-
-        // Show filtering info if cases were filtered out
-        if (metadata?.filtering?.total_candidates > newCases.length) {
-          const filtered = metadata.filtering.total_candidates - newCases.length;
-          console.log(`🎯 Filtered out ${filtered} irrelevant cases using adaptive scoring`);
-        }
       } else {
-        // No cases found
-        setCases([]);
-        setHasSearched(true);
-        setLastUpdated(new Date().toLocaleDateString());
-
         // Clear any stale results for this specific analysis so old cases don't linger
         if (clientId && analysisData?.id) {
           await supabase
@@ -281,7 +256,6 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
             .eq('client_id', clientId)
             .eq('legal_analysis_id', analysisData.id);
         }
-        
         toast({
           title: "No Additional Cases Found",
           description: "No high-confidence cases found for this analysis. Try refining the case description.",
@@ -289,7 +263,7 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
       }
 
     } catch (error: any) {
-      console.error('Error in adaptive case search:', error);
+      console.error('Error in Perplexity case search:', error);
       setError(error.message || 'Failed to search for additional cases');
       toast({
         title: "Search Failed",
