@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, ExternalLink, AlertCircle, Clock } from 'lucide-react';
+import { RefreshCw, ExternalLink, AlertCircle, Clock, Edit, Save, X, RotateCcw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Textarea } from '@/components/ui/textarea';
 
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -74,7 +74,60 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
     contextLength?: number;
     quickMode?: boolean;
   }>({});
+  
+  // Prompt editing state
+  const [isEditingPrompt, setIsEditingPrompt] = useState(false);
+  const [customPrompt, setCustomPrompt] = useState<string>("");
+  const [editedPrompt, setEditedPrompt] = useState<string>("");
   const { toast } = useToast();
+
+  // Load custom prompt from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem(`case-law-prompt-${clientId}`);
+    if (saved) {
+      setCustomPrompt(saved);
+    }
+  }, [clientId]);
+
+  // Prompt management functions
+  const handleEditPrompt = () => {
+    setEditedPrompt(customPrompt || debugInfo.query || "");
+    setIsEditingPrompt(true);
+  };
+
+  const handleSavePrompt = () => {
+    setCustomPrompt(editedPrompt);
+    if (clientId) {
+      localStorage.setItem(`case-law-prompt-${clientId}`, editedPrompt);
+    }
+    setIsEditingPrompt(false);
+    toast({
+      title: "Prompt Saved",
+      description: "Custom search prompt has been saved. Use 'Search Cases' to apply it.",
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditedPrompt("");
+    setIsEditingPrompt(false);
+  };
+
+  const handleResetPrompt = () => {
+    setCustomPrompt("");
+    if (clientId) {
+      localStorage.removeItem(`case-law-prompt-${clientId}`);
+    }
+    setIsEditingPrompt(false);
+    toast({
+      title: "Prompt Reset",
+      description: "Reset to default AI-generated prompt. Use 'Search Cases' to apply it.",
+    });
+  };
+
+  // Get the effective query (custom or generated)
+  const getEffectiveQuery = () => {
+    return customPrompt || debugInfo.query || "";
+  };
 
   // Load existing additional case law on component mount and auto-search if analysis available
   useEffect(() => {
@@ -298,8 +351,26 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
     try {
       console.log('=== Additional Case Law: Starting adaptive search ===');
       
-      // Get adaptive query based on case analysis
-      const { query, searchType, context, analysisMetadata } = await buildAdaptivePerplexityQuery(clientId);
+      let query: string;
+      let searchType: string;
+      let context: string;
+      let analysisMetadata: any;
+
+      // Use custom prompt if available, otherwise use adaptive query
+      if (customPrompt) {
+        console.log('Using custom prompt for search');
+        query = customPrompt;
+        searchType = 'legal-research';
+        context = (analysisData?.content || analysisData?.summary || '').toString().substring(0, 3000);
+        analysisMetadata = null;
+      } else {
+        // Get adaptive query based on case analysis
+        const adaptiveResult = await buildAdaptivePerplexityQuery(clientId);
+        query = adaptiveResult.query;
+        searchType = adaptiveResult.searchType;
+        context = adaptiveResult.context;
+        analysisMetadata = adaptiveResult.analysisMetadata;
+      }
       
       // Store debug information for display
       setDebugInfo({
@@ -692,40 +763,17 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
   };
 
   return (
-    <TooltipProvider>
-      <Card className="w-full">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <div className="h-2 w-2 bg-purple-500 rounded-full"></div>
-            Additional Case Law
-            {debugInfo.query && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge variant="outline" className="ml-2 cursor-help">
-                    {debugInfo.query.length > 60 ? `${debugInfo.query.substring(0, 60)}...` : debugInfo.query}
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-3xl max-h-96 overflow-y-auto p-4">
-                  <div className="space-y-3">
-                    <div className="break-words">
-                      <strong className="text-primary">Query:</strong> 
-                      <div className="mt-1 font-mono text-sm bg-muted p-2 rounded whitespace-pre-wrap break-words">
-                        {debugInfo.query}
-                      </div>
-                    </div>
-                    <div><strong className="text-primary">Search Type:</strong> <span className="font-mono">{debugInfo.searchType}</span></div>
-                    <div><strong className="text-primary">Context Length:</strong> <span className="font-mono">{debugInfo.contextLength?.toLocaleString()} chars</span></div>
-                    <div><strong className="text-primary">Quick Mode:</strong> <span className="font-mono">{debugInfo.quickMode ? 'Yes' : 'No'}</span></div>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            )}
-            {!debugInfo.query && caseType && (
-              <Badge variant="outline" className="ml-2">
-                {caseType}
-              </Badge>
-            )}
-          </CardTitle>
+    <Card className="w-full">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-base font-semibold flex items-center gap-2">
+          <div className="h-2 w-2 bg-purple-500 rounded-full"></div>
+          Additional Case Law
+          {caseType && (
+            <Badge variant="outline" className="ml-2">
+              {caseType}
+            </Badge>
+          )}
+        </CardTitle>
         <Button
           variant="outline"
           size="sm"
@@ -738,6 +786,88 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
         </Button>
       </CardHeader>
       <CardContent>
+        {/* Search Prompt Section */}
+        {getEffectiveQuery() && (
+          <div className="mb-6 p-4 border border-border rounded-lg bg-muted/30">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-medium">Search Prompt</h4>
+              <div className="flex items-center gap-2">
+                {!isEditingPrompt && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleEditPrompt}
+                    className="h-8 px-2"
+                  >
+                    <Edit className="h-3 w-3 mr-1" />
+                    Edit
+                  </Button>
+                )}
+                {customPrompt && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleResetPrompt}
+                    className="h-8 px-2"
+                  >
+                    <RotateCcw className="h-3 w-3 mr-1" />
+                    Reset
+                  </Button>
+                )}
+              </div>
+            </div>
+            
+            {isEditingPrompt ? (
+              <div className="space-y-3">
+                <Textarea
+                  value={editedPrompt}
+                  onChange={(e) => setEditedPrompt(e.target.value)}
+                  className="min-h-24 font-mono text-sm"
+                  placeholder="Enter your custom search prompt..."
+                />
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleSavePrompt}
+                    disabled={!editedPrompt.trim()}
+                  >
+                    <Save className="h-3 w-3 mr-1" />
+                    Save
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCancelEdit}
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="font-mono text-sm bg-background p-3 rounded border whitespace-pre-wrap break-words">
+                  {getEffectiveQuery()}
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-muted-foreground">
+                  <div>
+                    <span className="font-medium">Type:</span> {debugInfo.searchType || 'legal-research'}
+                  </div>
+                  <div>
+                    <span className="font-medium">Context:</span> {debugInfo.contextLength?.toLocaleString() || '0'} chars
+                  </div>
+                  <div>
+                    <span className="font-medium">Quick Mode:</span> {debugInfo.quickMode ? 'Yes' : 'No'}
+                  </div>
+                  <div>
+                    <span className="font-medium">Source:</span> {customPrompt ? 'Custom' : 'AI Generated'}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         {error && (
           <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-md mb-4">
             <AlertCircle className="h-4 w-4" />
@@ -839,7 +969,6 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
           </div>
         )}
       </CardContent>
-      </Card>
-    </TooltipProvider>
+    </Card>
   );
 };
