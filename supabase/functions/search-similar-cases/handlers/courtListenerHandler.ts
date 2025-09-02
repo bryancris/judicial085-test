@@ -1,6 +1,6 @@
 import { corsHeaders } from "../utils/corsUtils.ts";
 import { addExplicitLegalTerms } from "../utils/searchTermGenerator.ts";
-import { detectCaseTypeFromText } from "../utils/caseTypeDetector.ts";
+import { detectCaseTypeFromContent } from "../utils/caseTypeDetector.ts";
 
 // Texas courts for filtering to ensure only Texas precedents are returned
 const TEXAS_COURTS = [
@@ -20,7 +20,7 @@ export async function processCourtListenerResults(
   
   try {
     // Detect case type from content if not provided
-    const detectedType = caseType || detectCaseTypeFromText(currentSearchDocument);
+    const detectedType = caseType || detectCaseTypeFromContent(currentSearchDocument);
     console.log(`=== COURTLISTENER SEARCH START ===`);
     console.log(`Using case type for search: ${detectedType}`);
     console.log(`Original search terms: ${searchTerms}`);

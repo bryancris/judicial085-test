@@ -311,6 +311,25 @@ interface SimilarCaseCardProps {
 }
 
 const SimilarCaseCard: React.FC<SimilarCaseCardProps> = ({ similarCase }) => {
+  // Function to validate if a case is legitimate (not corrupted data)
+  const isValidCase = (): boolean => {
+    // Check if case name looks like a real court case
+    if (!similarCase.clientName || similarCase.clientName.length < 5) return false;
+    
+    // Must contain " v. " or " v " (versus) for court cases, unless it's an internal case
+    if (similarCase.source !== "internal" && !similarCase.clientName.match(/\s+v\.?\s+/i)) return false;
+    
+    // Check for internal document terms that indicate corrupted data
+    const internalTerms = [
+      'Legal Strategy', 'Next Steps', 'Analysis', 'Recommendation',
+      'Summary', 'Introduction', 'Background', 'Conclusion',
+      'I.', 'II.', 'III.', 'IV.', 'V.', 'VI.', 'VII.', 'VIII.',
+      'A.', 'B.', 'C.', 'D.', 'E.', 'F.'
+    ];
+    
+    return !internalTerms.some(term => similarCase.clientName.includes(term));
+  };
+
   // Relaxed URL validation to allow legitimate legal URLs
   const isValidWorkingUrl = (url: string): boolean => {
     if (!url || typeof url !== 'string') return false;
@@ -400,6 +419,12 @@ const SimilarCaseCard: React.FC<SimilarCaseCardProps> = ({ similarCase }) => {
 
   const validUrl = getValidExternalUrl();
 
+  // Don't render the case if it's corrupted data
+  if (!isValidCase()) {
+    console.warn('Skipping invalid case:', similarCase.clientName);
+    return null;
+  }
+
   return (
     <div className="border p-4 rounded-md hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start mb-2">
@@ -412,10 +437,13 @@ const SimilarCaseCard: React.FC<SimilarCaseCardProps> = ({ similarCase }) => {
           <Badge variant="outline">
             {Math.round(similarCase.similarity)}% match
           </Badge>
-          <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-            <CheckCircle className="h-3 w-3 mr-1" />
-            Verified Source
-          </Badge>
+          {/* Only show verified badge for legitimate court cases with valid URLs */}
+          {validUrl && (
+            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+              <CheckCircle className="h-3 w-3 mr-1" />
+              Verified Source
+            </Badge>
+          )}
         </div>
       </div>
       

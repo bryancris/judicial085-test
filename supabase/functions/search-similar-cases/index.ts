@@ -500,6 +500,12 @@ function extractCasesFromAIResponse(content: string, citations: any[]): any[] {
   
   // Process verified citations first
   citations.filter(c => c.source === 'CourtListener' && c.verified).forEach((citation: any) => {
+    // Validate case name
+    if (!citation.title || !isValidCaseName(citation.title)) {
+      console.warn(`Skipping invalid case name: ${citation.title}`);
+      return;
+    }
+    
     cases.push({
       case_name: citation.title,
       court: citation.court || "Court not specified",
@@ -512,12 +518,19 @@ function extractCasesFromAIResponse(content: string, citations: any[]): any[] {
     });
   });
 
-  // Fallback: extract from content
+  // Fallback: extract from content - but validate more strictly
   if (cases.length === 0) {
     const casePattern = /\*\*([A-Z][^v]*v\.[^*]+)\*\*/g;
     let match;
     while ((match = casePattern.exec(content)) !== null && cases.length < 5) {
       const caseName = match[1].trim();
+      
+      // Validate case name before adding
+      if (!isValidCaseName(caseName) || containsInternalDocumentTerms(caseName)) {
+        console.warn(`Skipping invalid or internal document case name: ${caseName}`);
+        continue;
+      }
+      
       cases.push({
         case_name: caseName,
         court: "Court not specified",
@@ -673,20 +686,65 @@ function scoreCase(candidate: any, context: LegalContext): any {
 }
 
 /**
+ * Validate if a string is a valid case name
+ */
+function isValidCaseName(caseName: string): boolean {
+  if (!caseName || caseName.length < 5) return false;
+  
+  // Must contain " v. " or " v " (versus)
+  if (!caseName.match(/\s+v\.?\s+/i)) return false;
+  
+  // Must start with capital letter or number
+  if (!caseName.match(/^[A-Z0-9]/)) return false;
+  
+  // Should not be too long (likely corrupted data)
+  if (caseName.length > 150) return false;
+  
+  return true;
+}
+
+/**
+ * Check if case name contains internal document terms
+ */
+function containsInternalDocumentTerms(caseName: string): boolean {
+  const internalTerms = [
+    'Legal Strategy', 'Next Steps', 'Analysis', 'Recommendation',
+    'Summary', 'Introduction', 'Background', 'Conclusion',
+    'I.', 'II.', 'III.', 'IV.', 'V.', 'VI.', 'VII.', 'VIII.',
+    'A.', 'B.', 'C.', 'D.', 'E.', 'F.'
+  ];
+  
+  return internalTerms.some(term => caseName.includes(term));
+}
+
+/**
  * Extract facts from content around case name
  */
 function extractFactsFromContent(content: string, caseName: string): string {
+  // Don't extract facts from document structure terms
+  if (containsInternalDocumentTerms(caseName)) {
+    return "Case facts extracted from legal research";
+  }
+  
   const caseIndex = content.indexOf(caseName);
   if (caseIndex !== -1) {
     const contextArea = content.substring(Math.max(0, caseIndex - 200), caseIndex + caseName.length + 300);
     const sentences = contextArea.split(/[.!?]+/).filter(s => s.trim().length > 20);
-    const relevantSentences = sentences.filter(sentence => 
-      sentence.toLowerCase().includes('contract') ||
-      sentence.toLowerCase().includes('breach') ||
-      sentence.toLowerCase().includes('warranty') ||
-      sentence.toLowerCase().includes('facts') ||
-      sentence.toLowerCase().includes('involved')
-    );
+    
+    // Filter out sentences that look like document structure
+    const relevantSentences = sentences.filter(sentence => {
+      const lower = sentence.toLowerCase();
+      return (
+        (lower.includes('contract') ||
+         lower.includes('breach') ||
+         lower.includes('warranty') ||
+         lower.includes('facts') ||
+         lower.includes('involved')) &&
+        !lower.includes('strategy') &&
+        !lower.includes('recommendation') &&
+        !lower.includes('next steps')
+      );
+    });
     
     if (relevantSentences.length > 0) {
       return relevantSentences.slice(0, 2).join('. ').trim() + '.';
