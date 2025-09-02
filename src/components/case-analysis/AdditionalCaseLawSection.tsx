@@ -40,6 +40,22 @@ interface AICoordinatorResponse {
   error?: string;
 }
 
+interface AdaptiveSearchResponse {
+  similarCases: any[];
+  searchMetadata?: {
+    context?: {
+      area_of_law?: string;
+    };
+    filtering?: {
+      total_candidates?: number;
+      avg_relevance?: string;
+    };
+  };
+  fallbackUsed?: boolean;
+  analysisFound?: boolean;
+  searchStrategy?: string;
+}
+
 export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
   analysisData,
   clientId,
@@ -152,63 +168,21 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
     }
   };
 
-  // Extract legal concepts from preliminary analysis
-  const extractLegalConcepts = (analysisData: any) => {
-    const concepts = {
-      contractTerms: [] as string[],
-      legalIssues: [] as string[],
-      statutes: [] as string[],
-      jurisdiction: 'Texas',
-      caseType: 'contract'
+  // Generate adaptive search context - no hardcoded defaults
+  const buildSearchContext = (analysisData: any) => {
+    return {
+      analysis_summary: analysisData?.summary || '',
+      legal_issues: analysisData?.legal_issues || '',
+      case_description: analysisData?.description || '',
+      // Let the server extract context adaptively
     };
-
-    const analysisText = (analysisData?.summary || analysisData?.preliminaryAnalysis || '').toLowerCase();
-    
-    // Detect contract-related terms
-    const contractTerms = [
-      'breach of contract', 'express warranty', 'implied warranty', 'construction contract',
-      'home renovation', 'material substitution', 'contractual obligations',
-      'performance', 'damages', 'remedies', 'consideration'
-    ];
-    
-    // Detect specific legal issues
-    const legalIssues = [
-      'warranty breach', 'material breach', 'substantial performance',
-      'construction defects', 'consumer protection', 'deceptive trade practices'
-    ];
-    
-    // Detect Texas statutes
-    const statutePatterns = [
-      'property code', 'business.*commerce code', 'dtpa', 'deceptive trade practices'
-    ];
-    
-    contractTerms.forEach(term => {
-      if (analysisText.includes(term)) {
-        concepts.contractTerms.push(term);
-      }
-    });
-    
-    legalIssues.forEach(issue => {
-      if (analysisText.includes(issue)) {
-        concepts.legalIssues.push(issue);
-      }
-    });
-    
-    statutePatterns.forEach(pattern => {
-      const regex = new RegExp(pattern, 'i');
-      if (regex.test(analysisText)) {
-        concepts.statutes.push(pattern.replace('.*', ' & '));
-      }
-    });
-    
-    return concepts;
   };
 
   const searchAdditionalCases = async () => {
-    if (!analysisData?.summary && !caseType) {
+    if (!clientId) {
       toast({
         title: "Search Not Available",
-        description: "Analysis data is required to search for additional cases.",
+        description: "Client ID is required to search for additional cases.",
         variant: "destructive",
       });
       return;
@@ -218,73 +192,16 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
     setError(null);
 
     try {
-      // Check authentication status first
-      console.log('=== Authentication Check ===');
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      console.log('Current session status:', { 
-        hasSession: !!session, 
-        sessionError,
-        userId: session?.user?.id,
-        expiresAt: session?.expires_at
+      console.log('=== Starting Adaptive Case Law Search ===');
+      console.log('Using adaptive search-similar-cases function...');
+
+      // Call the enhanced search-similar-cases function directly
+      // It will build its own adaptive context from client data and analysis
+      const { data, error: functionError } = await invokeFunction('search-similar-cases', {
+        clientId
       });
 
-      // Refresh session if needed
-      if (!session) {
-        console.log('No session found, attempting to refresh...');
-        const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
-        console.log('Session refresh result:', { 
-          hasRefreshedSession: !!refreshedSession, 
-          refreshError 
-        });
-        
-        if (!refreshedSession && refreshError) {
-          throw new Error('Authentication required. Please log in again.');
-        }
-      }
-
-      // Extract legal concepts from preliminary analysis
-      const concepts = extractLegalConcepts(analysisData);
-      
-      // Build enhanced search query with specific legal concepts
-      let searchQuery = '';
-      if (concepts.contractTerms.length > 0 || concepts.legalIssues.length > 0) {
-        const combinedTerms = [...concepts.contractTerms, ...concepts.legalIssues].join(' OR ');
-        searchQuery = `Find additional legal cases related to: ${combinedTerms}`;
-        
-        if (concepts.statutes.length > 0) {
-          searchQuery += ` AND ${concepts.statutes.join(' OR ')}`;
-        }
-      } else {
-        // Fallback to original logic
-        searchQuery = analysisData?.summary 
-          ? `Find additional legal cases similar to: ${analysisData.summary.substring(0, 500)}`
-          : `Find legal cases related to ${caseType} law`;
-      }
-
-      // Prepare context for AI Agent Coordinator
-      const contextData = {
-        caseTypes: [caseType || 'contract law'],
-        caseDescription: analysisData?.summary || '',
-        incidentDescription: analysisData?.description || '',
-        searchFocus: 'additional-case-law'
-      };
-
-      console.log('=== Calling AI Agent Coordinator ===');
-      console.log('Parameters:', {
-        query: searchQuery.substring(0, 100) + '...',
-        clientId,
-        researchTypes: ['legal-research', 'current-research']
-      });
-
-      // Call AI Agent Coordinator instead of perplexity-research
-      const { data, error: functionError } = await invokeFunction('ai-agent-coordinator', {
-        query: searchQuery,
-        clientId,
-        researchTypes: ['legal-research', 'current-research'],
-        context: contextData
-      });
-
-      console.log('=== AI Agent Coordinator Response ===');
+      console.log('=== Adaptive Search Response ===');
       console.log('Data:', data);
       console.log('Error:', functionError);
 
@@ -292,15 +209,21 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
         throw new Error(functionError);
       }
 
-      const aiResponse = data as AICoordinatorResponse;
+      const searchResult = data as AdaptiveSearchResponse;
       
-      if (aiResponse?.success && aiResponse?.content) {
-        let newCases: PerplexityCase[] = [];
-        
-        // Parse the AI Agent Coordinator response
-        newCases = parseAICoordinatorResponse(aiResponse.content, aiResponse.citations || [], aiResponse.sources || []);
+      if (searchResult?.similarCases && Array.isArray(searchResult.similarCases)) {
+        // Convert similar cases format to additional case law format
+        const newCases: PerplexityCase[] = searchResult.similarCases.map((similarCase: any) => ({
+          caseName: similarCase.clientName || "Case name not available",
+          court: similarCase.court || "Court information available",
+          citation: similarCase.citation || "Citation available",
+          date: similarCase.dateDecided || "Date available",
+          relevantFacts: similarCase.relevantFacts || "Relevant facts extracted",
+          outcome: similarCase.outcome || "Legal outcome available",
+          url: similarCase.url || undefined
+        }));
 
-        // Save the new cases to the database
+        // Save the new cases to the database  
         if (newCases.length > 0 && clientId) {
           await saveNewCasesToDatabase(newCases, clientId);
         }
@@ -309,41 +232,36 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
         setLastUpdated(new Date().toLocaleDateString());
         setHasSearched(true);
         
+        // Show search metadata if available
+        const metadata = searchResult.searchMetadata;
+        const description = metadata 
+          ? `Found ${newCases.length} cases using ${metadata.context?.area_of_law || 'legal'} analysis (${metadata.filtering?.avg_relevance || 0} avg relevance)`
+          : `Found ${newCases.length} additional cases from adaptive legal research.`;
+        
         toast({
           title: "Additional Cases Found",
-          description: `Found ${newCases.length} additional cases from AI-powered legal research.`,
-        });
-      } else {
-        // Fallback to old method if AI Agent Coordinator fails
-        console.log('=== Falling back to perplexity-research ===');
-        const fallbackResult = await invokeFunction('perplexity-research', {
-          query: searchQuery,
-          searchType: 'legal-research',
-          context: concepts,
-          limit: 5
+          description,
         });
 
-        const fallbackData = fallbackResult.data as PerplexityResult;
-        if (fallbackData?.content) {
-          const newCases = extractCasesFromText(fallbackData.content, fallbackData.citations || []);
-          
-          if (newCases.length > 0 && clientId) {
-            await saveNewCasesToDatabase(newCases, clientId);
-          }
-
-          setCases(newCases);
-          setLastUpdated(new Date().toLocaleDateString());
-          setHasSearched(true);
-          
-          toast({
-            title: "Additional Cases Found",
-            description: `Found ${newCases.length} additional cases from legal databases.`,
-          });
+        // Show filtering info if cases were filtered out
+        if (metadata?.filtering?.total_candidates > newCases.length) {
+          const filtered = metadata.filtering.total_candidates - newCases.length;
+          console.log(`🎯 Filtered out ${filtered} irrelevant cases using adaptive scoring`);
         }
+      } else {
+        // No cases found
+        setCases([]);
+        setHasSearched(true);
+        setLastUpdated(new Date().toLocaleDateString());
+        
+        toast({
+          title: "No Additional Cases Found",
+          description: "No high-confidence cases found for this analysis. Try refining the case description.",
+        });
       }
 
     } catch (error: any) {
-      console.error('Error searching additional cases:', error);
+      console.error('Error in adaptive case search:', error);
       setError(error.message || 'Failed to search for additional cases');
       toast({
         title: "Search Failed",
