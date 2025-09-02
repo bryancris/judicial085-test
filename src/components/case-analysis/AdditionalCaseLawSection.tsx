@@ -79,10 +79,16 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
 
       try {
         // Check for existing saved additional case law
-        const { data: existingCases, error } = await supabase
+        let query = supabase
           .from('additional_case_law' as any)
           .select('*')
-          .eq('client_id', clientId)
+          .eq('client_id', clientId);
+
+        if (analysisData?.id) {
+          query = query.eq('legal_analysis_id', analysisData.id);
+        }
+
+        const { data: existingCases, error } = await query
           .order('created_at', { ascending: false });
 
         if (error) {
@@ -134,17 +140,26 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
   }, [analysisData, hasSearched, cases.length, autoSearchAttempted]);
 
   // Function to save new cases to the database
-  const saveNewCasesToDatabase = async (newCases: PerplexityCase[], clientId: string) => {
+  const saveNewCasesToDatabase = async (
+    newCases: PerplexityCase[], 
+    clientId: string,
+    legalAnalysisId?: string
+  ) => {
     try {
-      // First, clear existing cases for this client to avoid duplicates
-      await supabase
+      // First, clear existing cases for this client/analysis to avoid duplicates
+      let del = supabase
         .from('additional_case_law' as any)
         .delete()
         .eq('client_id', clientId);
+      if (legalAnalysisId) {
+        del = del.eq('legal_analysis_id', legalAnalysisId);
+      }
+      await del;
 
-      // Insert new cases
+      // Insert new cases (if any)
       const casesToInsert = newCases.map(caseItem => ({
         client_id: clientId,
+        legal_analysis_id: legalAnalysisId || null,
         case_name: caseItem.caseName,
         court: caseItem.court,
         citation: caseItem.citation,
@@ -154,14 +169,18 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
         url: caseItem.url
       }));
 
-      const { error } = await supabase
-        .from('additional_case_law' as any)
-        .insert(casesToInsert);
+      if (casesToInsert.length > 0) {
+        const { error } = await supabase
+          .from('additional_case_law' as any)
+          .insert(casesToInsert);
 
-      if (error) {
-        console.error('Error saving cases to database:', error);
+        if (error) {
+          console.error('Error saving cases to database:', error);
+        } else {
+          console.log('Successfully saved', newCases.length, 'cases to database');
+        }
       } else {
-        console.log('Successfully saved', newCases.length, 'cases to database');
+        console.log('No new cases to insert; cleared stale entries for this analysis.');
       }
     } catch (error) {
       console.error('Error in saveNewCasesToDatabase:', error);
@@ -223,9 +242,9 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
           url: similarCase.url || undefined
         }));
 
-        // Save the new cases to the database  
-        if (newCases.length > 0 && clientId) {
-          await saveNewCasesToDatabase(newCases, clientId);
+        // Save (and scope) the results to this analysis, clearing stale ones for this analysis
+        if (clientId) {
+          await saveNewCasesToDatabase(newCases, clientId, analysisData?.id);
         }
 
         setCases(newCases);
@@ -253,6 +272,15 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
         setCases([]);
         setHasSearched(true);
         setLastUpdated(new Date().toLocaleDateString());
+
+        // Clear any stale results for this specific analysis so old cases don't linger
+        if (clientId && analysisData?.id) {
+          await supabase
+            .from('additional_case_law' as any)
+            .delete()
+            .eq('client_id', clientId)
+            .eq('legal_analysis_id', analysisData.id);
+        }
         
         toast({
           title: "No Additional Cases Found",

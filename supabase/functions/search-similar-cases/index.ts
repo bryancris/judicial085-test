@@ -117,7 +117,7 @@ serve(async (req) => {
         .limit(5),
       supabase
         .from('legal_analyses')
-        .select('summary, legal_issues, analysis_content')
+        .select('id, case_id, content, case_type, fact_sources, law_references')
         .eq('client_id', clientId)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -313,8 +313,8 @@ async function buildAdaptiveContext(clientData: any, messages: any[], analysis: 
     clientData.case_description || '',
     clientData.incident_description || '',
     ...(clientData.case_types || []),
-    analysis?.summary || '',
-    analysis?.legal_issues || '',
+    analysis?.content || '',
+    analysis?.case_type || '',
     messages.slice(0, 3).map(m => m.content).join(' ')
   ].filter(Boolean).join('. ');
 
@@ -407,7 +407,7 @@ function buildHeuristicContext(clientData: any, analysis: any): LegalContext {
   const text = [
     clientData.case_description || '',
     clientData.incident_description || '',
-    analysis?.summary || ''
+    analysis?.content || ''
   ].join(' ').toLowerCase();
 
   // Detect area of law
