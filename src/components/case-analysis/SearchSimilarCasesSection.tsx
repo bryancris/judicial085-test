@@ -6,7 +6,7 @@ import { useEnhancedSimilarCasesSearch } from "@/hooks/useEnhancedSimilarCasesSe
 import { useToast } from "@/hooks/use-toast";
 import SearchSimilarCasesButton from "./SearchSimilarCasesButton";
 import SimilarCasesDialog from "./SimilarCasesDialog";
-import SimilarCasesSection from "./SimilarCasesSection";
+
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 
@@ -273,23 +273,6 @@ const SearchSimilarCasesSection: React.FC<SearchSimilarCasesSectionProps> = ({
         searchResult={searchResult}
       />
 
-      <SimilarCasesSection
-        similarCases={similarCases}
-        isLoading={isSearchingCases}
-        caseType={determineCaseTypeFromResults(similarCases) || caseType}
-        analysisFound={true}
-        fallbackUsed={searchResult?.fallbackUsed}
-        searchMetadata={{
-          cacheUsed: searchResult?.cacheUsed,
-          freshApiCall: searchResult?.freshApiCall,
-          searchStrategy: searchResult?.searchStrategy,
-          responseTime: searchResult?.responseTime,
-          totalResults: searchResult?.totalResults
-        }}
-        lastUpdated={lastUpdated ? formatTimestamp(lastUpdated) : undefined}
-        existingCasesCount={existingCasesCount}
-        onRefresh={() => handleSearchSimilarCases(true)}
-      />
 
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent>
