@@ -142,32 +142,16 @@ Requirements:
 
 Focus on Texas jurisdiction only and verified, authoritative sources.`;
       } else {
-        enhancedQuery = `Legal research for: ${query}
-
-Requirements:
-1. If specific Texas statutes are mentioned, provide relevant statute sections (not full text)
-2. Find and summarize 3-5 relevant legal cases with:
-   - Complete case names (Plaintiff v. Defendant)
-   - Court names and jurisdictions  
-   - Legal citations
-   - Brief case summaries
-   - Outcomes/holdings
-3. Provide concise Texas law analysis
-4. Include practical legal guidance
-
-Focus on verified, authoritative sources.`;
-      }
-    } else if (searchType === 'similar-cases') {
-      enhancedQuery = `Find 3-5 verified legal cases from TEXAS COURTS ONLY similar to: ${query}
+        enhancedQuery = `Find 3-5 verified Texas legal cases related to: ${query}
 
 Return ONLY a JSON array of cases in this exact format:
 [
   {
     "caseName": "Exact case name v. Defendant",
-    "court": "Specific Texas court name",
+    "court": "Specific Texas court name", 
     "citation": "Legal citation",
     "date": "Decision date",
-    "relevantFacts": "Key facts that make this case similar",
+    "relevantFacts": "Key facts that make this case relevant",
     "outcome": "Actual court decision/outcome",
     "url": "Direct link if available"
   }
@@ -175,12 +159,14 @@ Return ONLY a JSON array of cases in this exact format:
 
 Requirements:
 - Return exactly 3-5 cases from Texas jurisdiction only
+- Focus on Texas civil cases (exclude criminal unless specifically requested)
 - Only Texas Supreme Court, Texas Court of Appeals, or Texas District Courts
 - Only real, verified legal cases from Texas
 - No analysis, reasoning, or thinking process
 - No introductory text or explanations
 - Must be valid JSON format
-- Do NOT include cases from other states`;
+- Filter for cases relevant to the legal issues mentioned`;
+      }
     }
 
     if (context) {
@@ -224,8 +210,8 @@ Requirements:
           messages: [
             {
               role: 'system',
-              content: normalizedSearchType === 'similar-cases' 
-                ? 'You are a legal case database. Return only verified case information in the requested JSON format. Do not include analysis, reasoning, or explanations.'
+              content: normalizedSearchType === 'legal-research' 
+                ? 'You are a legal case database. Return only verified case information in the requested JSON format. Do not include analysis, reasoning, or explanations. Focus on Texas civil cases and exclude criminal matters unless specifically requested.'
                 : 'You are a legal research expert. Provide concise legal information including: 1) Relevant statute sections when mentioned, 2) 3-5 relevant cases with summaries, 3) Clear legal analysis with actionable guidance. Be concise and focused.'
             },
             {
@@ -233,7 +219,7 @@ Requirements:
               content: enhancedQuery
             }
           ],
-          max_tokens: quickMode ? 700 : (normalizedSearchType === 'similar-cases' ? 1200 : 900),
+          max_tokens: quickMode ? 700 : (normalizedSearchType === 'legal-research' ? 1200 : 900),
           temperature: 0.1,
           top_p: 0.9,
           return_citations: true,
@@ -307,9 +293,23 @@ Requirements:
       choices: data.choices?.length || 0
     });
 
+    const content = data.choices[0]?.message?.content || '';
+    
+    // Try to parse JSON for legal-research, fallback to prose
+    let structuredCases = null;
+    if (normalizedSearchType === 'legal-research' && content.trim().startsWith('[')) {
+      try {
+        structuredCases = JSON.parse(content);
+        console.log('Successfully parsed', structuredCases?.length || 0, 'structured cases');
+      } catch (parseError) {
+        console.log('JSON parse failed, using prose content:', parseError.message);
+      }
+    }
+
     return new Response(JSON.stringify({
       success: true,
-      content: data.choices[0]?.message?.content || '',
+      content,
+      structuredCases,
       model: data.model,
       usage: data.usage,
       citations: data.citations || [],

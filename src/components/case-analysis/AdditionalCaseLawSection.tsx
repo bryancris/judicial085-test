@@ -258,7 +258,7 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
       const legalKeywords = extractLocalKeywords(context);
       const keywordContext = legalKeywords.length > 0 ? legalKeywords.slice(0, 10).join(', ') : '';
       
-      // Local keyword extraction function
+      // Local keyword extraction function  
       function extractLocalKeywords(text: string): string[] {
         const keywords: string[] = [];
         const legalTerms = [
@@ -266,7 +266,9 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
           'foreclosure', 'probate', 'injunction', 'HOA', 'fraud', 'misrepresentation', 'UCC',
           'DTPA', 'property', 'deed', 'title', 'insurance', 'damages', 'liability', 'tort',
           'defamation', 'employment', 'discrimination', 'harassment', 'wrongful termination',
-          'bankruptcy', 'divorce', 'custody', 'alimony', 'support', 'estate', 'will', 'trust'
+          'bankruptcy', 'divorce', 'custody', 'alimony', 'support', 'estate', 'will', 'trust',
+          'lemon law', 'automobile', 'vehicle', 'car', 'truck', 'defect', 'repair', 'refund',
+          'replacement', 'manufacturer', 'dealer', 'merchantability', 'fitness for purpose'
         ];
         
         const lowerText = text.toLowerCase();
@@ -357,14 +359,33 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
 
       const content = (resp as any)?.content || '';
       const citations = (resp as any)?.citations || [];
+      const structuredCases = (resp as any)?.structuredCases;
 
       console.log('Perplexity response received, extracting cases...');
-      let newCases: PerplexityCase[] = extractCasesFromText(content, citations);
+      let newCases: PerplexityCase[] = [];
+      
+      // Prefer structured JSON cases if available
+      if (structuredCases && Array.isArray(structuredCases) && structuredCases.length > 0) {
+        console.log('Using structured JSON cases:', structuredCases.length);
+        newCases = structuredCases.map((caseData: any) => ({
+          caseName: caseData.caseName || caseData.case_name || 'Case name not available',
+          court: caseData.court || 'Court information not available',
+          citation: caseData.citation || 'Citation pending',
+          date: caseData.date || caseData.date_decided || 'Date not available',
+          relevantFacts: caseData.relevantFacts || caseData.relevant_facts || '',
+          outcome: caseData.outcome || '',
+          url: caseData.url || undefined
+        }));
+      } else {
+        // Fallback to text extraction
+        console.log('No structured cases, extracting from text...');
+        newCases = extractCasesFromText(content, citations);
+      }
 
-      // Apply post-filtering based on analysis metadata
-      if (analysisMetadata && newCases.length > 0) {
-        console.log('Applying adaptive filtering...');
-        newCases = filterRelevantCases(newCases, analysisMetadata);
+      // Apply stronger topic filtering
+      if (newCases.length > 0) {
+        console.log('Applying relevance filtering...');
+        newCases = filterCasesByRelevance(newCases, analysisData?.content || '', analysisMetadata);
       }
 
       if (clientId) {
@@ -408,33 +429,55 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
     }
   };
 
-  // Filter cases based on analysis metadata to ensure relevance
-  const filterRelevantCases = (cases: PerplexityCase[], analysisMetadata: any): PerplexityCase[] => {
-    const legalConcepts = analysisMetadata.legalConcepts || [];
-    const primaryArea = analysisMetadata.primaryLegalArea || '';
-    
+  // Enhanced filtering for case relevance
+  const filterCasesByRelevance = (cases: PerplexityCase[], analysisContent: string, analysisMetadata: any): PerplexityCase[] => {
     return cases.filter(caseItem => {
-      // Exclude criminal cases
       const caseText = `${caseItem.caseName} ${caseItem.relevantFacts} ${caseItem.outcome}`.toLowerCase();
-      const criminalKeywords = ['state of texas v', 'indictment', 'criminal', 'dwi', 'dui', 'theft', 'assault', 'murder'];
       
-      if (criminalKeywords.some(keyword => caseText.includes(keyword))) {
+      // Exclude criminal cases (unless context suggests criminal law)
+      const criminalKeywords = ['state of texas v', 'indictment', 'criminal', 'dwi', 'dui', 'theft', 'assault', 'murder', 'prosecution'];
+      const isCriminal = criminalKeywords.some(keyword => caseText.includes(keyword));
+      const contextSuggestsCriminal = analysisContent.toLowerCase().includes('criminal') || 
+                                     analysisContent.toLowerCase().includes('prosecution');
+      
+      if (isCriminal && !contextSuggestsCriminal) {
         console.log(`Filtered out criminal case: ${caseItem.caseName}`);
         return false;
       }
 
-      // Require at least one legal concept match for focused areas
-      if (legalConcepts.length > 0 && primaryArea !== 'general-legal-matter') {
-        const hasConceptMatch = legalConcepts.some(concept => 
-          caseText.includes(concept.toLowerCase())
-        );
-        
-        if (!hasConceptMatch) {
-          console.log(`Filtered out irrelevant case: ${caseItem.caseName}`);
-          return false;
-        }
+      // Positive filters - prefer cases with these terms if they appear in analysis
+      const analysisLower = analysisContent.toLowerCase();
+      const positiveTerms = ['warranty', 'lemon law', 'construction', 'contract', 'breach', 'negligence', 'property', 'defect'];
+      const hasPositiveMatch = positiveTerms.some(term => 
+        analysisLower.includes(term) && caseText.includes(term)
+      );
+
+      // Negative filters - exclude obviously irrelevant topics
+      const negativeTerms = ['divorce', 'custody', 'alimony', 'bankruptcy', 'probate', 'will', 'inheritance'];
+      const hasNegativeMatch = negativeTerms.some(term => 
+        !analysisLower.includes(term) && caseText.includes(term)
+      );
+
+      if (hasNegativeMatch) {
+        console.log(`Filtered out off-topic case: ${caseItem.caseName}`);
+        return false;
       }
 
+      // If we have positive matches, prefer those
+      if (hasPositiveMatch) {
+        console.log(`Kept relevant case: ${caseItem.caseName}`);
+        return true;
+      }
+
+      // For cases without clear positive/negative signals, apply concept matching if available
+      if (analysisMetadata?.legalConcepts?.length > 0) {
+        const hasConceptMatch = analysisMetadata.legalConcepts.some(concept => 
+          caseText.includes(concept.toLowerCase())
+        );
+        return hasConceptMatch;
+      }
+
+      // Default: keep the case if no strong signals either way
       return true;
     });
   };
