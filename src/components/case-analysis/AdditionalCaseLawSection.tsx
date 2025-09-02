@@ -705,12 +705,17 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
                     {debugInfo.query.length > 60 ? `${debugInfo.query.substring(0, 60)}...` : debugInfo.query}
                   </Badge>
                 </TooltipTrigger>
-                <TooltipContent className="max-w-md">
-                  <div className="space-y-2">
-                    <div><strong>Query:</strong> {debugInfo.query}</div>
-                    <div><strong>Search Type:</strong> {debugInfo.searchType}</div>
-                    <div><strong>Context Length:</strong> {debugInfo.contextLength} chars</div>
-                    <div><strong>Quick Mode:</strong> {debugInfo.quickMode ? 'Yes' : 'No'}</div>
+                <TooltipContent className="max-w-3xl max-h-96 overflow-y-auto p-4">
+                  <div className="space-y-3">
+                    <div className="break-words">
+                      <strong className="text-primary">Query:</strong> 
+                      <div className="mt-1 font-mono text-sm bg-muted p-2 rounded whitespace-pre-wrap break-words">
+                        {debugInfo.query}
+                      </div>
+                    </div>
+                    <div><strong className="text-primary">Search Type:</strong> <span className="font-mono">{debugInfo.searchType}</span></div>
+                    <div><strong className="text-primary">Context Length:</strong> <span className="font-mono">{debugInfo.contextLength?.toLocaleString()} chars</span></div>
+                    <div><strong className="text-primary">Quick Mode:</strong> <span className="font-mono">{debugInfo.quickMode ? 'Yes' : 'No'}</span></div>
                   </div>
                 </TooltipContent>
               </Tooltip>
