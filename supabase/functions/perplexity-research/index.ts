@@ -8,10 +8,11 @@ const corsHeaders = {
 
 interface PerplexityRequest {
   query: string;
-  model?: 'sonar' | 'sonar-pro' | 'sonar-deep-research' | 'sonar-reasoning';
+  model?: 'sonar-small' | 'sonar' | 'sonar-pro' | 'sonar-deep-research' | 'sonar-reasoning';
   searchType?: 'legal-research' | 'similar-cases' | 'general';
   context?: string;
   limit?: number;
+  quickMode?: boolean;
 }
 
 interface PerplexityResponse {
@@ -81,7 +82,7 @@ serve(async (req) => {
       );
     }
 
-    const { query, model = 'sonar-pro', searchType = 'general', context, limit }: PerplexityRequest = requestBody;
+    const { query, model = 'sonar-small', searchType = 'general', context, limit, quickMode = false }: PerplexityRequest = requestBody;
 
     if (!query) {
       console.error('Query is missing from request');
@@ -163,8 +164,17 @@ Requirements:
       enhancedQuery += ` Context: ${context}`;
     }
 
-    // Use faster model for similar-cases to prevent timeouts
-    const selectedModel = searchType === 'similar-cases' ? 'sonar-pro' : 'sonar-pro';
+    // Select model based on request parameters
+    let selectedModel = model;
+    if (quickMode || searchType === 'similar-cases') {
+      selectedModel = 'llama-3.1-sonar-small-128k-online'; // Fastest model
+    } else if (model === 'sonar-small') {
+      selectedModel = 'llama-3.1-sonar-small-128k-online';
+    } else if (model === 'sonar') {
+      selectedModel = 'llama-3.1-sonar-large-128k-online';
+    } else if (model === 'sonar-pro') {
+      selectedModel = 'llama-3.1-sonar-large-128k-online';
+    }
     console.log('Making request to Perplexity API with model:', selectedModel);
 
     // Create timeout wrapper for the API call
@@ -196,13 +206,13 @@ Requirements:
               content: enhancedQuery
             }
           ],
-          max_tokens: searchType === 'similar-cases' ? 1500 : 2000, // Reduced tokens for faster responses
+          max_tokens: quickMode ? 800 : (searchType === 'similar-cases' ? 1200 : 1500), // Reduced tokens for faster responses
           temperature: 0.1,
           top_p: 0.9,
           return_citations: true,
           return_images: false,
           search_domain_filter: ['justia.com', 'caselaw.findlaw.com', 'scholar.google.com', 'courtlistener.com', 'law.cornell.edu', 'txcourts.gov'],
-          search_recency_filter: 'month'
+          search_recency_filter: quickMode ? 'year' : 'month'
         }),
         signal: controller.signal
       });
@@ -213,12 +223,15 @@ Requirements:
         console.error('Perplexity API request timed out after', timeoutMs, 'ms');
         return new Response(
           JSON.stringify({ 
+            success: false,
             error: 'Request timeout',
             details: `The search took too long and was cancelled after ${timeoutMs / 1000} seconds. Try using a simpler search query.`,
             timeout: true,
-            retryable: true
+            retryable: true,
+            content: '',
+            citations: []
           }),
-          { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
@@ -262,6 +275,7 @@ Requirements:
     });
 
     return new Response(JSON.stringify({
+      success: true,
       content: data.choices[0]?.message?.content || '',
       model: data.model,
       usage: data.usage,

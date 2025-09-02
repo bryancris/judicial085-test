@@ -282,18 +282,43 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
       console.log('Using query:', query.substring(0, 200) + '...');
       console.log('Search type:', searchType);
 
-      const { data: resp, error: fxError } = await supabase.functions.invoke('perplexity-research', {
+      // Try the search with regular model first
+      let { data: resp, error: fxError } = await supabase.functions.invoke('perplexity-research', {
         body: {
           query,
           clientId,
           searchType,
           requestContext: 'additional-case-law',
-          limit: 10
+          limit: 10,
+          model: 'sonar-small'
         }
       });
 
-      if (fxError) {
-        throw new Error(fxError.message || fxError);
+      // If timeout or error, retry with quick mode
+      if (fxError || (resp as any)?.timeout || !(resp as any)?.success) {
+        console.log('First attempt failed or timed out, retrying with quick mode...');
+        
+        const retryResult = await supabase.functions.invoke('perplexity-research', {
+          body: {
+            query: query.length > 500 ? query.substring(0, 500) + '...' : query, // Truncate query
+            clientId,
+            searchType,
+            requestContext: 'additional-case-law',
+            limit: 5, // Fewer results
+            model: 'sonar-small',
+            quickMode: true
+          }
+        });
+
+        if (!retryResult.error && (retryResult.data as any)?.success) {
+          resp = retryResult.data;
+          fxError = null;
+          console.log('Quick mode retry succeeded');
+        }
+      }
+
+      if (fxError || !(resp as any)?.success) {
+        throw new Error(fxError?.message || (resp as any)?.error || 'Search failed');
       }
 
       const content = (resp as any)?.content || '';
