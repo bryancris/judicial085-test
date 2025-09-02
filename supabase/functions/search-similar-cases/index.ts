@@ -538,14 +538,46 @@ function extractCasesFromAIResponse(content: string, citations: any[]): any[] {
  * Search CourtListener with expanded terms
  */
 async function searchCourtListener(context: LegalContext): Promise<any[]> {
-  // This would integrate with CourtListener API
-  // For now, return empty array as placeholder
-  console.log('CourtListener search would use:', {
-    keywords: [...context.positive_keywords, ...context.issues],
-    statutes: context.statutes,
-    jurisdiction: context.jurisdiction.state
-  });
-  return [];
+  try {
+    const courtListenerApiKey = Deno.env.get('COURTLISTENER_API_KEY');
+    
+    if (!courtListenerApiKey) {
+      console.log('CourtListener API key not found, skipping CourtListener search');
+      return [];
+    }
+
+    // Convert legal context to search terms
+    const searchTerms = [
+      ...context.positive_keywords,
+      ...context.issues,
+      ...context.statutes
+    ].join(' ');
+
+    // Create search document from facts summary
+    const searchDocument = context.facts_summary || 'Legal case analysis';
+    
+    // Use the case type from area of law
+    const caseType = context.area_of_law || 'legal';
+
+    console.log('🔍 Searching CourtListener with terms:', searchTerms);
+
+    // Import and call the existing CourtListener handler
+    const { processCourtListenerResults } = await import('./handlers/courtListenerHandler.ts');
+    
+    const results = await processCourtListenerResults(
+      searchTerms,
+      searchDocument,
+      courtListenerApiKey,
+      caseType
+    );
+
+    console.log(`✅ CourtListener returned ${results.length} results`);
+    return results;
+
+  } catch (error) {
+    console.error('❌ Error in CourtListener search:', error);
+    return [];
+  }
 }
 
 /**
