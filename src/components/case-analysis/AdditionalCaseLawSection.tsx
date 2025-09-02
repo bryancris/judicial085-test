@@ -129,6 +129,30 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
     return customPrompt || debugInfo.query || "";
   };
 
+  // Generate fallback query for cases without stored metadata
+  const generateFallbackQuery = () => {
+    if (analysisData?.content || analysisData?.summary) {
+      const context = analysisData?.content || analysisData?.summary || '';
+      const keywords = ['Texas', caseType || 'legal', 'cases'].filter(Boolean);
+      
+      // Try to extract key legal terms from the analysis
+      const legalTerms = [
+        'lemon law', 'DTPA', 'warranty', 'breach', 'consumer protection',
+        'negligence', 'contract', 'fraud', 'liability', 'damages'
+      ];
+      
+      const lowerContext = context.toLowerCase();
+      const foundTerms = legalTerms.filter(term => lowerContext.includes(term));
+      
+      if (foundTerms.length > 0) {
+        return `Texas ${foundTerms.slice(0, 2).join(' ')} cases`;
+      }
+      
+      return keywords.join(' ');
+    }
+    return `Texas ${caseType || 'legal'} cases`;
+  };
+
   // Load existing additional case law on component mount and auto-search if analysis available
   useEffect(() => {
     const loadExistingCases = async () => {
@@ -169,6 +193,40 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
             url: dbCase.url || undefined
           }));
 
+          // Restore search metadata from the first case if available
+          const firstCase = existingCases[0] as any;
+          if (firstCase?.validation_status) {
+            try {
+              const metadata = JSON.parse(firstCase.validation_status);
+              if (metadata.searchQuery) {
+                setDebugInfo({
+                  query: metadata.searchQuery,
+                  searchType: 'legal-research',
+                  contextLength: metadata.contextLength || 0,
+                  quickMode: metadata.quickMode || false
+                });
+              }
+            } catch (e) {
+              // If parsing fails, generate a fallback query
+              const fallbackQuery = generateFallbackQuery();
+              setDebugInfo({
+                query: fallbackQuery,
+                searchType: 'legal-research',
+                contextLength: 0,
+                quickMode: false
+              });
+            }
+          } else {
+            // Generate fallback query for older cases without stored metadata
+            const fallbackQuery = generateFallbackQuery();
+            setDebugInfo({
+              query: fallbackQuery,
+              searchType: 'legal-research',
+              contextLength: 0,
+              quickMode: false
+            });
+          }
+
           setCases(formattedCases);
           setHasSearched(true);
           setLastUpdated(new Date((existingCases as any)[0]?.created_at || Date.now()).toLocaleDateString());
@@ -203,7 +261,8 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
   const saveNewCasesToDatabase = async (
     newCases: PerplexityCase[], 
     clientId: string,
-    legalAnalysisId?: string
+    legalAnalysisId?: string,
+    searchQuery?: string
   ) => {
     try {
       // First, clear existing cases for this client/analysis to avoid duplicates
@@ -217,7 +276,7 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
       await del;
 
       // Insert new cases (if any)
-      const casesToInsert = newCases.map(caseItem => ({
+      const casesToInsert = newCases.map((caseItem, index) => ({
         client_id: clientId,
         legal_analysis_id: legalAnalysisId || null,
         case_name: caseItem.caseName,
@@ -226,7 +285,11 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
         date_decided: caseItem.date,
         relevant_facts: caseItem.relevantFacts,
         outcome: caseItem.outcome,
-        url: caseItem.url
+        url: caseItem.url,
+        // Store search metadata in the first case entry
+        ...(index === 0 && searchQuery ? { 
+          validation_status: JSON.stringify({ searchQuery }) 
+        } : {})
       }));
 
       if (casesToInsert.length > 0) {
@@ -473,7 +536,7 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
       }
 
       if (clientId) {
-        await saveNewCasesToDatabase(newCases, clientId, analysisData?.id);
+        await saveNewCasesToDatabase(newCases, clientId, analysisData?.id, query);
       }
 
       setCases(newCases);
