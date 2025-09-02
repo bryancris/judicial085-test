@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, ExternalLink, AlertCircle, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -67,6 +68,12 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
   const [hasSearched, setHasSearched] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [autoSearchAttempted, setAutoSearchAttempted] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<{
+    query?: string;
+    searchType?: string;
+    contextLength?: number;
+    quickMode?: boolean;
+  }>({});
   const { toast } = useToast();
 
   // Load existing additional case law on component mount and auto-search if analysis available
@@ -294,6 +301,14 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
       // Get adaptive query based on case analysis
       const { query, searchType, context, analysisMetadata } = await buildAdaptivePerplexityQuery(clientId);
       
+      // Store debug information for display
+      setDebugInfo({
+        query,
+        searchType,
+        contextLength: context?.length || 0,
+        quickMode: false
+      });
+      
       console.log('Using query:', query.substring(0, 200) + '...');
       console.log('Search type:', searchType);
 
@@ -335,6 +350,8 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
         if (!retryResult.error && (retryResult.data as any)?.success) {
           resp = retryResult.data;
           console.log('Quick mode retry succeeded');
+          // Update debug info for quick mode
+          setDebugInfo(prev => ({ ...prev, quickMode: true }));
         } else {
           // Show the original error details to user
           const errorDetails = (resp as any)?.details || (resp as any)?.error || 'Search failed';
@@ -675,17 +692,35 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <div className="h-2 w-2 bg-purple-500 rounded-full"></div>
-          Additional Case Law
-          {caseType && (
-            <Badge variant="outline" className="ml-2">
-              {caseType}
-            </Badge>
-          )}
-        </CardTitle>
+    <TooltipProvider>
+      <Card className="w-full">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <div className="h-2 w-2 bg-purple-500 rounded-full"></div>
+            Additional Case Law
+            {debugInfo.query && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="outline" className="ml-2 cursor-help">
+                    {debugInfo.query.length > 60 ? `${debugInfo.query.substring(0, 60)}...` : debugInfo.query}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-md">
+                  <div className="space-y-2">
+                    <div><strong>Query:</strong> {debugInfo.query}</div>
+                    <div><strong>Search Type:</strong> {debugInfo.searchType}</div>
+                    <div><strong>Context Length:</strong> {debugInfo.contextLength} chars</div>
+                    <div><strong>Quick Mode:</strong> {debugInfo.quickMode ? 'Yes' : 'No'}</div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {!debugInfo.query && caseType && (
+              <Badge variant="outline" className="ml-2">
+                {caseType}
+              </Badge>
+            )}
+          </CardTitle>
         <Button
           variant="outline"
           size="sm"
@@ -799,6 +834,7 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
           </div>
         )}
       </CardContent>
-    </Card>
+      </Card>
+    </TooltipProvider>
   );
 };
