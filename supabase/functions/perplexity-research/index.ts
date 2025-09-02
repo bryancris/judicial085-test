@@ -9,7 +9,7 @@ const corsHeaders = {
 interface PerplexityRequest {
   query: string;
   model?: 'sonar-small' | 'sonar' | 'sonar-pro' | 'sonar-deep-research' | 'sonar-reasoning';
-  searchType?: 'legal-research' | 'similar-cases' | 'general';
+  searchType?: 'legal-research' | 'similar-cases' | 'current-research' | 'general';
   context?: string;
   limit?: number;
   quickMode?: boolean;
@@ -82,21 +82,44 @@ serve(async (req) => {
       );
     }
 
-    const { query, model = 'sonar-small', searchType = 'general', context, limit, quickMode = false }: PerplexityRequest = requestBody;
+    const { query, model = 'sonar', searchType = 'general', context, limit, quickMode = false }: PerplexityRequest = requestBody;
 
     if (!query) {
       console.error('Query is missing from request');
       return new Response(
-        JSON.stringify({ error: 'Query is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          success: false,
+          error: 'Query is required',
+          details: 'The query parameter is missing from the request body'
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    // Log request details
     console.log(`Perplexity ${model} request for ${searchType}:`, query.substring(0, 100) + '...');
+    console.log('Query length:', query.length);
+    console.log('Context provided:', !!context);
+    console.log('Quick mode:', quickMode);
 
-    // Enhance query based on search type
+    // Treat current-research as legal-research for consistency
+    const normalizedSearchType = searchType === 'current-research' ? 'legal-research' : searchType;
+
+    // Robust context-first mode for generic queries
     let enhancedQuery = query;
-    if (searchType === 'legal-research') {
+    if ((query.toLowerCase().includes('general') || query.length < 50) && context) {
+      console.log('Using context-first mode for generic query');
+      enhancedQuery = `Based on this legal context: ${context.substring(0, 3000)}
+      
+Find 3-5 relevant Texas legal cases with:
+- Complete case names (Plaintiff v. Defendant)  
+- Texas court names (Supreme Court of Texas, Texas Court of Appeals, District Courts)
+- Legal citations (Tex. citation format)
+- Brief case summaries focusing on the main legal issues
+- Outcomes/holdings
+      
+Focus on Texas jurisdiction and precedential cases.`;
+    } else if (normalizedSearchType === 'legal-research') {
       // Check if this is a contract/construction case based on query content
       const isContractCase = query.toLowerCase().includes('contract') || 
                            query.toLowerCase().includes('construction') ||
@@ -164,18 +187,22 @@ Requirements:
       enhancedQuery += ` Context: ${context}`;
     }
 
-    // Select model based on request parameters
-    let selectedModel = model;
-    if (quickMode || searchType === 'similar-cases') {
-      selectedModel = 'llama-3.1-sonar-small-128k-online'; // Fastest model
+    // Map to native Perplexity model names  
+    let selectedModel: string;
+    if (quickMode || normalizedSearchType === 'similar-cases') {
+      selectedModel = 'sonar'; // Fastest model
     } else if (model === 'sonar-small') {
-      selectedModel = 'llama-3.1-sonar-small-128k-online';
-    } else if (model === 'sonar') {
-      selectedModel = 'llama-3.1-sonar-large-128k-online';
-    } else if (model === 'sonar-pro') {
-      selectedModel = 'llama-3.1-sonar-large-128k-online';
+      selectedModel = 'sonar';
+    } else if (model === 'sonar' || model === 'sonar-pro') {
+      selectedModel = 'sonar-pro';
+    } else if (model === 'sonar-deep-research') {
+      selectedModel = 'sonar-deep-research';
+    } else if (model === 'sonar-reasoning') {
+      selectedModel = 'sonar-reasoning';
+    } else {
+      selectedModel = 'sonar'; // Fallback for unrecognized models
     }
-    console.log('Making request to Perplexity API with model:', selectedModel);
+    console.log('Selected model:', selectedModel, 'for search type:', normalizedSearchType);
 
     // Create timeout wrapper for the API call
     const timeoutMs = 25000; // 25 second timeout to stay well within Edge Function limits
@@ -197,7 +224,7 @@ Requirements:
           messages: [
             {
               role: 'system',
-              content: searchType === 'similar-cases' 
+              content: normalizedSearchType === 'similar-cases' 
                 ? 'You are a legal case database. Return only verified case information in the requested JSON format. Do not include analysis, reasoning, or explanations.'
                 : 'You are a legal research expert. Provide concise legal information including: 1) Relevant statute sections when mentioned, 2) 3-5 relevant cases with summaries, 3) Clear legal analysis with actionable guidance. Be concise and focused.'
             },
@@ -206,13 +233,13 @@ Requirements:
               content: enhancedQuery
             }
           ],
-          max_tokens: quickMode ? 800 : (searchType === 'similar-cases' ? 1200 : 1500), // Reduced tokens for faster responses
+          max_tokens: quickMode ? 700 : (normalizedSearchType === 'similar-cases' ? 1200 : 900),
           temperature: 0.1,
           top_p: 0.9,
           return_citations: true,
           return_images: false,
-          search_domain_filter: ['justia.com', 'caselaw.findlaw.com', 'scholar.google.com', 'courtlistener.com', 'law.cornell.edu', 'txcourts.gov'],
-          search_recency_filter: quickMode ? 'year' : 'month'
+          search_domain_filter: ['casetext.com', 'law.justia.com', 'courtlistener.com', 'scholar.google.com', 'law.cornell.edu', 'txcourts.gov'],
+          search_recency_filter: 'year'
         }),
         signal: controller.signal
       });
@@ -245,10 +272,13 @@ Requirements:
       console.error('Perplexity API error:', response.status, errorText);
       return new Response(
         JSON.stringify({ 
+          success: false,
           error: `Perplexity API error: ${response.status}`,
-          details: errorText 
+          details: errorText,
+          content: '',
+          citations: []
         }),
-        { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -259,10 +289,13 @@ Requirements:
       console.error('Perplexity returned non-JSON response:', responseText.substring(0, 200));
       return new Response(
         JSON.stringify({ 
+          success: false,
           error: 'Perplexity API returned invalid response format',
-          details: 'Expected JSON but received: ' + (contentType || 'unknown')
+          details: 'Expected JSON but received: ' + (contentType || 'unknown'),
+          content: '',
+          citations: []
         }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -280,8 +313,8 @@ Requirements:
       model: data.model,
       usage: data.usage,
       citations: data.citations || [],
-      searchType,
-      query: enhancedQuery
+      searchType: normalizedSearchType,
+      query: enhancedQuery.substring(0, 120) + '...'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -289,10 +322,13 @@ Requirements:
   } catch (error) {
     console.error('Error in perplexity-research function:', error);
     return new Response(JSON.stringify({ 
+      success: false,
       error: 'Internal server error',
-      details: error.message 
+      details: error.message,
+      content: '',
+      citations: []
     }), {
-      status: 500,
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

@@ -250,11 +250,39 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
 
     } catch (error) {
       console.log('Using fallback query approach:', error);
-      // Fallback to simple text-based query
-      const analysisText = (analysisData?.content || analysisData?.summary || caseType || '').slice(0, 1000);
+      
+      // Build context from analysis data
+      const context = analysisData?.content || analysisData?.summary || '';
+      
+      // Extract legal keywords locally as fallback
+      const legalKeywords = extractLocalKeywords(context);
+      const keywordContext = legalKeywords.length > 0 ? legalKeywords.slice(0, 10).join(', ') : '';
+      
+      // Local keyword extraction function
+      function extractLocalKeywords(text: string): string[] {
+        const keywords: string[] = [];
+        const legalTerms = [
+          'negligence', 'breach', 'warranty', 'contract', 'construction', 'easement', 'lien', 
+          'foreclosure', 'probate', 'injunction', 'HOA', 'fraud', 'misrepresentation', 'UCC',
+          'DTPA', 'property', 'deed', 'title', 'insurance', 'damages', 'liability', 'tort',
+          'defamation', 'employment', 'discrimination', 'harassment', 'wrongful termination',
+          'bankruptcy', 'divorce', 'custody', 'alimony', 'support', 'estate', 'will', 'trust'
+        ];
+        
+        const lowerText = text.toLowerCase();
+        legalTerms.forEach(term => {
+          if (lowerText.includes(term)) {
+            keywords.push(term);
+          }
+        });
+        
+        return [...new Set(keywords)]; // Remove duplicates
+      }
+      
       return {
-        query: `Find legal cases relevant to ${caseType || 'this matter'}. Facts: ${analysisText}. Focus on precedential Texas cases when applicable.`,
-        searchType: 'current-research',
+        query: `Find relevant Texas legal cases for: ${keywordContext || caseType || 'this legal matter'}`,
+        searchType: 'legal-research',
+        context: context.substring(0, 3000),
         analysisMetadata: null
       };
     }
@@ -277,7 +305,7 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
       console.log('=== Additional Case Law: Starting adaptive search ===');
       
       // Get adaptive query based on case analysis
-      const { query, searchType, analysisMetadata } = await buildAdaptivePerplexityQuery(clientId);
+      const { query, searchType, context, analysisMetadata } = await buildAdaptivePerplexityQuery(clientId);
       
       console.log('Using query:', query.substring(0, 200) + '...');
       console.log('Search type:', searchType);
@@ -290,35 +318,41 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
           searchType,
           requestContext: 'additional-case-law',
           limit: 10,
-          model: 'sonar-small'
+          model: 'sonar',
+          context
         }
       });
 
-      // If timeout or error, retry with quick mode
-      if (fxError || (resp as any)?.timeout || !(resp as any)?.success) {
-        console.log('First attempt failed or timed out, retrying with quick mode...');
+      // Handle edge function success/error responses
+      if (fxError) {
+        throw new Error(`Edge Function returned a non-2xx status code: ${fxError.message}`);
+      }
+
+      // Check if edge function returned success: false
+      if (!(resp as any)?.success) {
+        console.log('First attempt failed, retrying with quick mode...');
         
         const retryResult = await supabase.functions.invoke('perplexity-research', {
           body: {
-            query: query.length > 500 ? query.substring(0, 500) + '...' : query, // Truncate query
+            query: query.length > 500 ? query.substring(0, 500) + '...' : query,
             clientId,
             searchType,
             requestContext: 'additional-case-law',
-            limit: 5, // Fewer results
-            model: 'sonar-small',
-            quickMode: true
+            limit: 5,
+            model: 'sonar',
+            quickMode: true,
+            context: context ? context.substring(0, 1500) : undefined
           }
         });
 
         if (!retryResult.error && (retryResult.data as any)?.success) {
           resp = retryResult.data;
-          fxError = null;
           console.log('Quick mode retry succeeded');
+        } else {
+          // Show the original error details to user
+          const errorDetails = (resp as any)?.details || (resp as any)?.error || 'Search failed';
+          throw new Error(errorDetails);
         }
-      }
-
-      if (fxError || !(resp as any)?.success) {
-        throw new Error(fxError?.message || (resp as any)?.error || 'Search failed');
       }
 
       const content = (resp as any)?.content || '';
