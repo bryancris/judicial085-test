@@ -11,15 +11,15 @@ const StreamlineSection: React.FC = () => {
     },
     {
       title: "Complex Documentation",
-      description: "Generate clear, concise legal documents with our simple AI interface."
+      description: "Document template assistance with attorney review required for all outputs."
     },
     {
       title: "Client Information Management",
       description: "Organize client details and case information in one intuitive dashboard."
     },
     {
-      title: "Strategic Case Development",
-      description: "Build winning case strategies from fact patterns using AI analysis of precedents and potential outcomes."
+      title: "Strategic Case Research",
+      description: "Research assistance for case preparation using AI analysis of precedents - Attorney judgment and verification required."
     }
   ];
 
@@ -27,10 +27,15 @@ const StreamlineSection: React.FC = () => {
     <section className="py-20 bg-white">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold mb-6">Simplicity That Saves Time</h2>
+          <h2 className="text-4xl font-bold mb-6">Research Assistance That Saves Time</h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            While other legal software overcomplicates your workflow, we focus on eliminating the four key pain points that consume most of your billable hours.
+            While other legal software overcomplicates your workflow, we focus on providing research assistance for the four key areas that consume most of your billable hours. All outputs require attorney review and professional judgment.
           </p>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-6 max-w-4xl mx-auto">
+            <p className="text-amber-800 font-medium text-center">
+              <strong>FOR ATTORNEY USE ONLY:</strong> Research assistance tool. Not a substitute for attorney advice. Attorney supervision required for all AI outputs.
+            </p>
+          </div>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
@@ -67,7 +72,7 @@ const StreamlineSection: React.FC = () => {
                 <li className="flex items-start">
                   <Check className="w-6 h-6 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
                   <span className="text-gray-700">
-                    <strong>AI That Actually Helps</strong> - Real time-saving assistance, not just another tool to manage
+                    <strong>AI Research Assistance</strong> - Time-saving research support with required attorney verification
                   </span>
                 </li>
                 <li className="flex items-start">

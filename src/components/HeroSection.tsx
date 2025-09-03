@@ -40,15 +40,15 @@ const HeroSection: React.FC = () => {
             </div>
             
             <h2 className="text-5xl font-bold leading-tight animate-fade-in">
-              AI-Powered <span className="gold-text">Legal Assistant</span> for Texas Law
+              AI-Powered <span className="gold-text">Research Assistant</span> for Texas Law
             </h2>
             
             <p className="text-gray-300 text-lg animate-fade-in" style={{ animationDelay: "0.2s" }}>
-              Turn fact patterns into cases — gives Texas attorneys AI-powered research and analysis tools for case analysis, document automation, and precedent discovery, all focused on Texas law.
+              Research assistance for fact pattern analysis — gives Texas attorneys AI-powered research tools for case research assistance, document template assistance, and precedent discovery, all focused on Texas law.
             </p>
-            <p className="text-gray-400 text-sm italic animate-fade-in" style={{ animationDelay: "0.3s" }}>
-              Attorney research assistance tool - Not a substitute for attorney advice
-            </p>
+            <div className="bg-amber-900/30 border border-amber-500/30 rounded-lg p-3 text-amber-200 text-sm animate-fade-in" style={{ animationDelay: "0.3s" }}>
+              <strong>ATTORNEY SUPERVISION REQUIRED:</strong> Research assistance tool only. Not a substitute for attorney advice. All AI output requires attorney review and professional judgment.
+            </div>
             
             <div className="flex flex-wrap gap-4 pt-4 animate-fade-in" style={{ animationDelay: "0.4s" }}>
               <Button 
@@ -88,8 +88,8 @@ const HeroSection: React.FC = () => {
                 
                 <div className="animate-fade-in" style={{ animationDelay: "0.4s" }}>
                   <FeatureCard
-                    title="Document Templates & Automation"
-                    description="Upload firm templates for instant reuse and automation"
+                    title="Document Template Assistance"
+                    description="Upload firm templates for research assistance - Attorney review required"
                     icon={<div className="flex items-center justify-center w-8 h-8 rounded-md bg-green-700 bg-opacity-80">
                       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -134,7 +134,7 @@ const HeroSection: React.FC = () => {
                 <div className="animate-fade-in" style={{ animationDelay: "0.7s" }}>
                   <FeatureCard
                     title="Real-Time Research Assistance"
-                    description="Instant research support for attorney use"
+                    description="Research support requiring attorney supervision and verification"
                     icon={<div className="flex items-center justify-center w-8 h-8 rounded-md bg-orange-700 bg-opacity-80">
                       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>

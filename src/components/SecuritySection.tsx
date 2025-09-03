@@ -49,9 +49,9 @@ const SecuritySection = () => {
               <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-4 mx-auto">
                 <Users className="w-7 h-7 text-[#0EA5E9]" />
               </div>
-              <h4 className="text-xl font-semibold mb-2 text-center">Document Analysis</h4>
+              <h4 className="text-xl font-semibold mb-2 text-center">Document Research Assistance</h4>
               <p className="text-gray-600">
-                Upload and analyze legal documents with AI assistance that extracts key information while maintaining complete data security. Perfect for case preparation and document review.
+                Upload and analyze documents with AI research assistance that extracts key information while maintaining complete data security. Attorney supervision and verification required for all outputs.
               </p>
             </div>
             
@@ -62,9 +62,9 @@ const SecuritySection = () => {
               <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-4 mx-auto">
                 <FileSearch className="w-7 h-7 text-[#0EA5E9]" />
               </div>
-              <h4 className="text-xl font-semibold mb-2 text-center">Discovery Response Support</h4>
+              <h4 className="text-xl font-semibold mb-2 text-center">Discovery Research Support</h4>
               <p className="text-gray-600">
-                Streamline discovery response preparation with our Texas-specific AI tools that help organize information while maintaining attorney oversight and control.
+                Research assistance for discovery preparation with Texas-specific AI tools. Attorney oversight, verification, and professional judgment required for all outputs.
               </p>
             </div>
             
@@ -72,9 +72,9 @@ const SecuritySection = () => {
               <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-4 mx-auto">
                 <Clock className="w-7 h-7 text-[#0EA5E9]" />
               </div>
-              <h4 className="text-xl font-semibold mb-2 text-center">Case Analysis In Minutes</h4>
+              <h4 className="text-xl font-semibold mb-2 text-center">Case Research Assistance</h4>
               <p className="text-gray-600">
-                Analyze case strengths and weaknesses in minutes, not hours, with our Texas law-trained AI that provides actionable insights while keeping your client information completely secure.
+                Research assistance for case analysis with Texas law-trained AI that provides research insights. Attorney review, verification, and professional judgment required for all outputs.
               </p>
             </div>
           </div>

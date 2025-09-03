@@ -43,6 +43,7 @@ export const LegalTermsProvider: React.FC<LegalTermsProviderProps> = ({ children
 
   const declineTerms = () => {
     // Redirect to terms page or close application
+    alert('Access to this platform is restricted to licensed attorneys only. This tool provides research assistance and is not a substitute for attorney advice.');
     window.location.href = '/terms-of-service';
   };
 
