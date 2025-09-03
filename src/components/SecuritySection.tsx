@@ -51,7 +51,7 @@ const SecuritySection = () => {
               </div>
               <h4 className="text-xl font-semibold mb-2 text-center">Document Research Assistance</h4>
               <p className="text-gray-600">
-                Upload and analyze documents with AI research assistance that extracts key information while maintaining complete data security. Attorney supervision and verification required for all outputs.
+                Upload and analyze documents with AI research assistance that extracts key information while maintaining complete data security.
               </p>
             </div>
             
@@ -64,7 +64,7 @@ const SecuritySection = () => {
               </div>
               <h4 className="text-xl font-semibold mb-2 text-center">Discovery Research Support</h4>
               <p className="text-gray-600">
-                Research assistance for discovery preparation with Texas-specific AI tools. Attorney oversight, verification, and professional judgment required for all outputs.
+                Research assistance for discovery preparation with Texas-specific AI tools.
               </p>
             </div>
             
@@ -74,7 +74,7 @@ const SecuritySection = () => {
               </div>
               <h4 className="text-xl font-semibold mb-2 text-center">Case Research Assistance</h4>
               <p className="text-gray-600">
-                Research assistance for case analysis with Texas law-trained AI that provides research insights. Attorney review, verification, and professional judgment required for all outputs.
+                Research assistance for case analysis with Texas law-trained AI that provides research insights.
               </p>
             </div>
           </div>
