@@ -1,6 +1,7 @@
 import React from 'react';
 import NavBar from '@/components/NavBar';
 import { Card, CardContent } from '@/components/ui/card';
+import { LegalFooter } from '@/components/legal/LegalFooter';
 
 const AboutUs = () => {
   return (
@@ -14,7 +15,7 @@ const AboutUs = () => {
               About Judicial Junction
             </h1>
             <p className="text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
-              We're building the future of legal AI, designed specifically for Texas practitioners who need more than generic solutions.
+              We're building the future of legal research assistance, designed specifically for Texas attorneys who need more than generic solutions.
             </p>
           </div>
 
@@ -45,8 +46,8 @@ const AboutUs = () => {
                 believe those tools should understand Texas law as deeply as you do.
               </p>
               <p className="text-foreground leading-relaxed">
-                Our goal isn't to replace legal expertise—it's to amplify it. We want to give you more time to practice law by handling the 
-                research heavy lifting, while ensuring everything we suggest is grounded in Texas-specific legal knowledge.
+                Our goal isn't to replace legal expertise—it's to support legal research. We want to give you more time to practice law by providing 
+                research assistance, while ensuring all outputs require attorney review and verification for Texas-specific legal applications.
               </p>
             </CardContent>
           </Card>
@@ -77,16 +78,17 @@ const AboutUs = () => {
               <h2 className="text-3xl font-bold text-cyan-800 dark:text-cyan-300 mb-6">Our Technology</h2>
               <p className="text-foreground leading-relaxed mb-4">
                 We've built something different from the ground up. Instead of using a single AI model like most platforms, we use a multi-agent 
-                system where different AI specialists handle different aspects of your research. One agent specializes in case law, another in 
-                statutes, another in contracts—all trained specifically on Texas legal materials.
+                system where different AI specialists handle different aspects of your research assistance. One agent specializes in case law research, another in 
+                statute research, another in contract analysis—all trained specifically on Texas legal materials to support attorney research.
               </p>
               <p className="text-foreground leading-relaxed mb-4">
                 We aggregate curated public datasets and trusted third‑party sources to keep our materials current and reliable. Our approach 
-                emphasizes accuracy and comprehensiveness, with regular updates to ensure you have access to the most relevant legal information.
+                emphasizes accuracy and comprehensiveness, with regular updates to ensure you have access to the most relevant legal research information. 
+                All AI outputs require attorney review and professional judgment for legal application.
               </p>
               <p className="text-foreground leading-relaxed">
-                And because we believe in the power of conversation, we've built voice chat functionality that lets you research the way you think—by 
-                talking through problems rather than typing keyword searches.
+                And because we believe in the power of conversation, we've built voice chat functionality that lets you conduct research the way you think—by 
+                talking through problems rather than typing keyword searches. All research results require attorney verification and analysis.
               </p>
             </CardContent>
           </Card>
@@ -129,9 +131,9 @@ const AboutUs = () => {
             <CardContent className="p-8">
               <h2 className="text-3xl font-bold text-rose-800 dark:text-rose-300 mb-6">Our Commitment to You</h2>
               <p className="text-foreground leading-relaxed mb-4">
-                We're not just building software—we're building a platform that understands the unique challenges of practicing law in Texas. 
+                We're not just building software—we're building a research assistance platform that understands the unique challenges of practicing law in Texas. 
                 Whether you're handling oil and gas transactions, real estate closings, business formations, or litigation, we're committed to 
-                providing AI that thinks like a Texas lawyer.
+                providing AI research assistance trained on Texas legal materials, with all outputs requiring attorney review and verification.
               </p>
               <p className="text-foreground leading-relaxed mb-4">
                 We know that adopting new technology can be daunting, especially when it comes to something as critical as legal research. That's 
@@ -155,19 +157,20 @@ const AboutUs = () => {
                 in Texas courtrooms, with Texas judges, under Texas procedures.
               </p>
               <p className="text-foreground leading-relaxed mb-4">
-                We're working on exciting new features like enhanced document analysis, automated compliance checking for Texas-specific requirements, 
-                and deeper integrations with the practice management tools you already use. But no matter how sophisticated our technology becomes, 
-                our focus remains the same: serving Texas practitioners who refuse to compromise on quality.
+                We're working on exciting new features like enhanced document analysis assistance, compliance research assistance for Texas-specific requirements, 
+                and deeper integrations with the practice management tools you already use. All features provide research assistance requiring attorney 
+                supervision and verification. But no matter how sophisticated our technology becomes, our focus remains the same: serving Texas practitioners who refuse to compromise on quality.
               </p>
               <p className="text-foreground leading-relaxed">
-                We invite you to join us on this journey. Try Judicial Junction and experience what it's like to have AI that truly understands 
-                Texas law. Because when you're representing clients in the greatest state in the union, you deserve tools that are as exceptional 
-                as the work you do.
+                We invite you to join us on this journey. Try Judicial Junction and experience what it's like to have AI research assistance trained on 
+                Texas legal materials. Because when you're representing clients in the greatest state in the union, you deserve research tools that are as exceptional 
+                as the work you do—with your professional expertise guiding every decision.
               </p>
             </CardContent>
           </Card>
         </div>
       </main>
+      <LegalFooter />
     </div>
   );
 };
