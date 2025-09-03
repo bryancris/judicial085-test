@@ -4,12 +4,12 @@ import { FileText, Loader2 } from "lucide-react";
 import { exportQuickConsult } from "@/utils/exportService";
 import { useToast } from "@/hooks/use-toast";
 
-interface QuickConsultExportButtonProps {
+interface AttorneyResearchExportButtonProps {
   sessionId: string;
   disabled?: boolean;
 }
 
-export const QuickConsultExportButton: React.FC<QuickConsultExportButtonProps> = ({
+export const AttorneyResearchExportButton: React.FC<AttorneyResearchExportButtonProps> = ({
   sessionId,
   disabled = false
 }) => {
@@ -27,7 +27,7 @@ export const QuickConsultExportButton: React.FC<QuickConsultExportButtonProps> =
       
       toast({
         title: "Export Successful",
-        description: "Quick consult session has been exported as Word document.",
+        description: "Attorney research session has been exported as Word document.",
       });
     } catch (error: any) {
       console.error('Export failed:', error);

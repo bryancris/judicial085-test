@@ -4,11 +4,12 @@ import { Navigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Menu, Users, Upload } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
-import QuickConsultChat from "@/components/clients/chat/QuickConsultChat";
+import AttorneyResearchChat from "@/components/clients/chat/AttorneyResearchChat";
 import { useIsMobile } from "@/hooks/use-mobile";
-import QuickConsultDocumentUploadDialog from "@/components/quick-consult/QuickConsultDocumentUploadDialog";
+import AttorneyResearchDocumentUploadDialog from "@/components/attorney-research/AttorneyResearchDocumentUploadDialog";
+import { LegalDisclaimer } from "@/components/legal/LegalDisclaimer";
 
-const QuickConsult = () => {
+const AttorneyResearch = () => {
   const { session, isLoading } = useAuthState();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -46,7 +47,7 @@ const QuickConsult = () => {
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-lg font-semibold">Quick Consult</h1>
+            <h1 className="text-lg font-semibold">Attorney Research Assistant</h1>
           </div>
           
           <div className="flex items-center gap-2">
@@ -83,10 +84,15 @@ const QuickConsult = () => {
         </div>
       </header>
 
+      {/* Legal Disclaimer */}
+      <div className="border-b bg-amber-50 dark:bg-amber-950/20 px-4 py-2">
+        <LegalDisclaimer variant="inline" className="text-center" />
+      </div>
+
       {/* Main Content */}
       <main className="flex-1 flex flex-col">
         <div className="flex-1 min-h-0">
-          <QuickConsultChat 
+          <AttorneyResearchChat 
             isMobile={isMobile}
             showSidebar={showSidebar}
             onCloseSidebar={() => setShowSidebar(false)}
@@ -95,7 +101,7 @@ const QuickConsult = () => {
       </main>
 
       {/* Upload Dialog */}
-      <QuickConsultDocumentUploadDialog
+      <AttorneyResearchDocumentUploadDialog
         isOpen={showUploadDialog}
         onClose={() => setShowUploadDialog(false)}
         onUpload={() => {
@@ -107,4 +113,4 @@ const QuickConsult = () => {
   );
 };
 
-export default QuickConsult;
+export default AttorneyResearch;

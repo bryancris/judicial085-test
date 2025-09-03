@@ -7,23 +7,23 @@ import { useQuickConsult } from "@/hooks/useQuickConsult";
 import { useQuickConsultSessions } from "@/hooks/useQuickConsultSessions";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { processMarkdown } from "@/utils/markdownProcessor";
-import { QuickConsultExportButton } from "@/components/quick-consult/export/QuickConsultExportButton";
-import CreateClientFromQuickConsultDialog from "@/components/clients/CreateClientFromQuickConsultDialog";
-import QuickConsultSidebar from "./QuickConsultSidebar";
+import { AttorneyResearchExportButton } from "@/components/attorney-research/export/AttorneyResearchExportButton";
+import CreateClientFromAttorneyResearchDialog from "@/components/clients/CreateClientFromAttorneyResearchDialog";
+import AttorneyResearchSidebar from "./AttorneyResearchSidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { LegalDisclaimer } from "@/components/legal/LegalDisclaimer";
 
-interface QuickConsultChatProps {
+interface AttorneyResearchChatProps {
   isMobile?: boolean;
   showSidebar?: boolean;
   onCloseSidebar?: () => void;
 }
 
-const QuickConsultChat = ({ 
+const AttorneyResearchChat = ({ 
   isMobile = false, 
   showSidebar = false, 
   onCloseSidebar 
-}: QuickConsultChatProps = {}) => {
+}: AttorneyResearchChatProps = {}) => {
   const [input, setInput] = useState("");
   const [showCreateClientDialog, setShowCreateClientDialog] = useState(false);
   const { 
@@ -109,7 +109,7 @@ const QuickConsultChat = ({
     <div className="h-full flex bg-background">
       {/* Sidebar */}
       {(!isMobile || showSidebar) && (
-        <QuickConsultSidebar
+        <AttorneyResearchSidebar
           sessions={sessions}
           currentSessionId={currentSessionId}
           onSessionSelect={selectSession}
@@ -139,7 +139,7 @@ const QuickConsultChat = ({
                 Create Client
               </Button>
               {messages.length > 0 && currentSessionId && (
-                <QuickConsultExportButton 
+                <AttorneyResearchExportButton 
                   sessionId={currentSessionId} 
                   disabled={isLoading}
                 />
@@ -273,7 +273,7 @@ const QuickConsultChat = ({
       </div>
       
       {/* Create Client Dialog */}
-      <CreateClientFromQuickConsultDialog
+      <CreateClientFromAttorneyResearchDialog
         open={showCreateClientDialog}
         onOpenChange={setShowCreateClientDialog}
         messages={messages}
@@ -283,4 +283,4 @@ const QuickConsultChat = ({
   );
 };
 
-export default QuickConsultChat;
+export default AttorneyResearchChat;

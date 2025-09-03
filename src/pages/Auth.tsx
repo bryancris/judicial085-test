@@ -52,8 +52,8 @@ const Auth = () => {
             title: "Login successful",
             description: "Welcome back!",
           });
-          // Redirect mobile users to Quick Consult, desktop users to Clients
-          navigate(isMobile ? "/quick-consult" : "/clients");
+          // Redirect mobile users to Attorney Research, desktop users to Clients
+          navigate(isMobile ? "/attorney-research" : "/clients");
         } else {
           setError("No session created. Please check your credentials and try again.");
         }
@@ -103,8 +103,8 @@ const Auth = () => {
 
   // Redirect if already logged in
   if (session) {
-    // Redirect mobile users to Quick Consult, desktop users to Clients
-    return <Navigate to={isMobile ? "/quick-consult" : "/clients"} />;
+    // Redirect mobile users to Attorney Research, desktop users to Clients
+    return <Navigate to={isMobile ? "/attorney-research" : "/clients"} />;
   }
 
   return (

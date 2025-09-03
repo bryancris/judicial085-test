@@ -27,8 +27,8 @@ const Features = () => {
       color: "text-brand-burgundy dark:text-brand-gold"
     },
     {
-      title: "Quick Consult",
-      description: "Get instant answers and guidance with AI; save chats and convert them into clients.",
+      title: "Attorney Research Assistant",
+      description: "Get AI-powered legal research assistance; save sessions and convert into client records. Attorney review required.",
       icon: MessageSquare,
       color: "text-brand-burgundy dark:text-brand-gold"
     },

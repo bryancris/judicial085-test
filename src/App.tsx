@@ -15,7 +15,7 @@ import Knowledge from "./pages/Knowledge";
 import Features from "./pages/Features";
 import Admin from "./pages/Admin";
 import FAQ from "./pages/FAQ";
-import QuickConsult from "./pages/QuickConsult";
+import AttorneyResearch from "./pages/AttorneyResearch";
 import Pricing from "./pages/Pricing";
 import ContactUs from "./pages/ContactUs";
 import AboutUs from "./pages/AboutUs";
@@ -37,7 +37,9 @@ const App = () => (
             <Route path="/clients" element={<Clients />} />
             <Route path="/clients/:id" element={<ClientDetail />} />
             
-            <Route path="/quick-consult" element={<QuickConsult />} />
+            <Route path="/attorney-research" element={<AttorneyResearch />} />
+            {/* Legacy redirect for old Quick Consult URLs */}
+            <Route path="/quick-consult" element={<AttorneyResearch />} />
             <Route path="/document-library" element={<DocumentLibrary />} />
             <Route path="/knowledge" element={<Knowledge />} />
             <Route path="/features" element={<Features />} />

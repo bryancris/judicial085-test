@@ -111,31 +111,31 @@ const FAQ = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                Quick Consult
-                <Badge variant="outline">AI Chat</Badge>
+                Attorney Research Assistant
+                <Badge variant="outline">AI Research</Badge>
               </CardTitle>
               <CardDescription>
-                Attorney research assistance and case analysis tools
+                AI-powered legal research assistance for attorneys
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Accordion type="single" collapsible>
                 <AccordionItem value="quick-consult">
-                  <AccordionTrigger>What is Quick Consult?</AccordionTrigger>
+                  <AccordionTrigger>What is the Attorney Research Assistant?</AccordionTrigger>
                   <AccordionContent>
-                    Quick Consult provides AI-powered research assistance for attorneys. Ask questions about legal matters, get case analysis, and receive research assistance without needing to create a formal client record first. All AI output requires attorney review and professional judgment.
+                    The Attorney Research Assistant provides AI-powered legal research assistance for licensed attorneys. Ask questions about legal matters, get case research, and receive analysis assistance without needing to create a formal client record first. All AI output provides research assistance only and requires attorney review and professional judgment.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="consult-sessions">
                   <AccordionTrigger>How do research sessions work?</AccordionTrigger>
                   <AccordionContent>
-                    Each Quick Consult creates a research session that saves your conversation history. You can return to previous sessions, continue research, and even convert research sessions into formal client records when needed. Remember that all AI output requires attorney review.
+                    Each research session saves your conversation history. You can return to previous sessions, continue research, and even convert research sessions into formal client records when needed. Remember that all AI output provides research assistance only and requires attorney review.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="convert-to-client">
-                  <AccordionTrigger>Can I convert a Quick Consult into a client record?</AccordionTrigger>
+                  <AccordionTrigger>Can I convert a research session into a client record?</AccordionTrigger>
                   <AccordionContent>
-                    Yes! If a Quick Consult research session leads to a potential client, you can easily convert the research session into a formal client record, preserving all the conversation history and insights gathered during the research. All information still requires attorney review before client use.
+                    Yes! If an Attorney Research Assistant session leads to a potential client, you can easily convert the research session into a formal client record, preserving all the conversation history and research insights. All information still requires attorney review before client use.
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>

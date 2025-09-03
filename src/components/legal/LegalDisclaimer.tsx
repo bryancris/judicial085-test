@@ -15,9 +15,9 @@ export const LegalDisclaimer: React.FC<LegalDisclaimerProps> = ({
     <>
       <AlertTriangle className="h-4 w-4" />
       <AlertDescription className="font-medium">
-        <strong>IMPORTANT LEGAL DISCLAIMER:</strong> This software is NOT a substitute for attorney advice. 
-        All AI-generated content must be reviewed by a licensed attorney. This tool is designed for attorney use only 
-        and does not provide legal advice or create an attorney-client relationship.
+        <strong>ATTORNEY RESEARCH ASSISTANT DISCLAIMER:</strong> This AI tool provides research assistance only. 
+        All output requires attorney review and professional judgment. This tool does not provide legal advice, 
+        legal conclusions, or create an attorney-client relationship. For attorney use only.
       </AlertDescription>
     </>
   );
@@ -33,7 +33,7 @@ export const LegalDisclaimer: React.FC<LegalDisclaimerProps> = ({
   if (variant === 'inline') {
     return (
       <div className={`text-xs text-muted-foreground italic ${className}`}>
-        This software is not a substitute for attorney advice. All AI-generated content must be reviewed by a licensed attorney.
+        Research assistance only. All AI output requires attorney review and professional judgment.
       </div>
     );
   }

@@ -10,7 +10,7 @@ import { useFirmDocumentProcessingService } from '@/hooks/documents/services/fir
 import { useFirmDocumentManager } from '@/hooks/useFirmDocumentManager';
 import { DocumentWithContent } from '@/types/knowledge';
 import DocumentLibraryCard from '@/components/knowledge/DocumentLibraryCard';
-import QuickConsultDocumentUploadDialog from '@/components/quick-consult/QuickConsultDocumentUploadDialog';
+import AttorneyResearchDocumentUploadDialog from '@/components/attorney-research/AttorneyResearchDocumentUploadDialog';
 import { TemplatesDialog } from '@/components/templates/TemplatesDialog';
 
 const DocumentLibrary = () => {
@@ -201,7 +201,7 @@ const DocumentLibrary = () => {
         )}
 
         {/* Upload Dialog */}
-        <QuickConsultDocumentUploadDialog
+        <AttorneyResearchDocumentUploadDialog
           isOpen={showUploadDialog}
           onClose={() => setShowUploadDialog(false)}
           onUpload={handleUpload}

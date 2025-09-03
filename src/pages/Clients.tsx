@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { User, UserPlus, MessageSquare, Loader2 } from 'lucide-react';
 import ClientForm from '@/components/clients/ClientForm';
 import ClientList from '@/components/clients/ClientList';
-import QuickConsultChat from '@/components/clients/chat/QuickConsultChat';
+import AttorneyResearchChat from '@/components/clients/chat/AttorneyResearchChat';
 import { useAuthState } from '@/hooks/useAuthState';
 import { useQuery } from '@tanstack/react-query';
 
@@ -136,7 +136,7 @@ const ClientsWithTimestamp = () => {
           </TabsContent>
           
           <TabsContent value="quick-consult" className="h-full">
-            <QuickConsultChat />
+            <AttorneyResearchChat />
           </TabsContent>
         </Tabs>
       </main>

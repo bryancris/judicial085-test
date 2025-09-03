@@ -82,6 +82,7 @@ const NavBar: React.FC = () => {
           <Link to="/contact-us" className="font-medium hover:text-brand-burgundy dark:text-gray-200 dark:hover:text-brand-gold transition-colors">Contact Us</Link>
           {session && (
             <>
+              <Link to="/attorney-research" className="font-medium hover:text-brand-burgundy dark:text-gray-200 dark:hover:text-brand-gold transition-colors">Research Assistant</Link>
               <Link to="/clients" className="font-medium hover:text-brand-burgundy dark:text-gray-200 dark:hover:text-brand-gold transition-colors">Clients</Link>
               <Link to="/document-library" className="font-medium hover:text-brand-burgundy dark:text-gray-200 dark:hover:text-brand-gold transition-colors">Document Library</Link>
               {isSuperAdmin && (

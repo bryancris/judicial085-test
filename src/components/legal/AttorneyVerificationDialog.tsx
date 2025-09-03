@@ -23,10 +23,10 @@ export const AttorneyVerificationDialog: React.FC<AttorneyVerificationDialogProp
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-amber-600">
             <AlertTriangle className="h-5 w-5" />
-            Attorney Use Verification Required
+            Attorney Research Assistant - Verification Required
           </DialogTitle>
           <DialogDescription>
-            This platform is designed exclusively for licensed attorneys and legal professionals.
+            This AI research assistant is designed exclusively for licensed attorneys and legal professionals.
           </DialogDescription>
         </DialogHeader>
         
@@ -36,11 +36,12 @@ export const AttorneyVerificationDialog: React.FC<AttorneyVerificationDialogProp
               IMPORTANT LEGAL DISCLAIMERS
             </h3>
             <ul className="space-y-2 text-sm text-amber-700 dark:text-amber-300">
-              <li>• This software is NOT a substitute for attorney advice</li>
+              <li>• This AI provides research assistance only, NOT legal advice or conclusions</li>
               <li>• All AI-generated content requires attorney review and professional judgment</li>
-              <li>• This tool provides research assistance only, not legal conclusions</li>
-              <li>• Use of this software does not create an attorney-client relationship</li>
+              <li>• Attorney must verify all research and citations independently</li>
+              <li>• Use of this tool does not create an attorney-client relationship</li>
               <li>• Attorney must ensure compliance with all applicable rules of professional conduct</li>
+              <li>• All work product generated must be reviewed before client use</li>
             </ul>
           </div>
 

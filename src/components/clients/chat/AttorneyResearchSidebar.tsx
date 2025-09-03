@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-interface QuickConsultSidebarProps {
+interface AttorneyResearchSidebarProps {
   sessions: ChatSession[];
   currentSessionId: string | null;
   onSessionSelect: (sessionId: string) => void;
@@ -22,7 +22,7 @@ interface QuickConsultSidebarProps {
   onClose?: () => void;
 }
 
-const QuickConsultSidebar = ({ 
+const AttorneyResearchSidebar = ({ 
   sessions,
   currentSessionId, 
   onSessionSelect, 
@@ -31,7 +31,7 @@ const QuickConsultSidebar = ({
   isMobile = false,
   isOpen = true,
   onClose
-}: QuickConsultSidebarProps) => {
+}: AttorneyResearchSidebarProps) => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredSessions = sessions.filter(session =>
@@ -323,4 +323,4 @@ const QuickConsultSidebar = ({
   );
 };
 
-export default QuickConsultSidebar;
+export default AttorneyResearchSidebar;
