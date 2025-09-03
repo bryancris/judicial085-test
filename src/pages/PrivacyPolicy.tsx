@@ -1,6 +1,7 @@
 import React from 'react';
 import NavBar from "@/components/NavBar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LegalFooter } from "@/components/legal/LegalFooter";
 
 const PrivacyPolicy = () => {
   return (
@@ -143,6 +144,7 @@ const PrivacyPolicy = () => {
           </Card>
         </div>
       </main>
+      <LegalFooter />
     </div>
   );
 };

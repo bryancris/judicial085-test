@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { LegalDisclaimer } from "@/components/legal/LegalDisclaimer";
+import { LegalFooter } from "@/components/legal/LegalFooter";
 
 const FAQ = () => {
   return (
@@ -405,6 +406,7 @@ const FAQ = () => {
           </Card>
         </div>
       </main>
+      <LegalFooter />
     </div>
   );
 };

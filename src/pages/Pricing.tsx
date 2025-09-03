@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, Star } from "lucide-react";
 import NavBar from '@/components/NavBar';
+import { LegalFooter } from '@/components/legal/LegalFooter';
 
 const Pricing: React.FC = () => {
   const tier1Features = [
     "Client Intake Management",
-    "AI-Powered Case Analysis", 
+    "AI Case Research Assistance (Attorney supervision required)", 
     "Case Discussion & Notes",
     "Attorney Research Assistant",
     "Document Hub & Storage",
@@ -18,9 +19,9 @@ const Pricing: React.FC = () => {
   const tier2Features = [
     "All Professional features",
     "Attorney Research Assistant",
-    "Discovery Management",
-    "Contract Generation & Management", 
-    "AI Document Creation",
+    "Discovery Research Support (Attorney supervision required)",
+    "Contract Research & Drafting Assistance (Attorney oversight required)", 
+    "AI Document Drafting Assistance (Attorney review required)",
     "Legal Templates Library",
     "1 Attorney + 1 Paralegal"
   ];
@@ -130,13 +131,13 @@ const Pricing: React.FC = () => {
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {[
                   { feature: "Client Intake", tier1: true, tier2: true },
-                  { feature: "Case Analysis", tier1: true, tier2: true },
+                  { feature: "Case Research Assistance", tier1: true, tier2: true },
                   { feature: "Case Discussion", tier1: true, tier2: true },
                   { feature: "Attorney Research Assistant", tier1: true, tier2: true },
                   { feature: "Document Hub", tier1: true, tier2: true },
-                  { feature: "Discovery Management", tier1: false, tier2: true },
-                  { feature: "Contract Generation", tier1: false, tier2: true },
-                  { feature: "AI Document Creation", tier1: false, tier2: true },
+                  { feature: "Discovery Research Support", tier1: false, tier2: true },
+                  { feature: "Contract Research & Drafting Assistance", tier1: false, tier2: true },
+                  { feature: "AI Document Drafting Assistance", tier1: false, tier2: true },
                   { feature: "Templates Library", tier1: false, tier2: true },
                 ].map((row, index) => (
                   <tr key={index}>
@@ -285,6 +286,7 @@ const Pricing: React.FC = () => {
           </div>
         </div>
       </main>
+      <LegalFooter />
     </div>
   );
 };

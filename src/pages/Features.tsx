@@ -5,6 +5,7 @@ import NavBar from '@/components/NavBar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Gavel, FileSearch, MessageSquare, Database, Shield, Clock, Scale, Mic, FileEdit, BookOpen, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { LegalFooter } from '@/components/legal/LegalFooter';
 
 const Features = () => {
   const proFeatures = [
@@ -15,14 +16,14 @@ const Features = () => {
       color: "text-brand-burgundy dark:text-brand-gold"
     },
     {
-      title: "AI Case Analysis",
-      description: "Assess case strengths, risks, and strategies with AI-generated insights.",
+      title: "AI Case Research Assistance",
+      description: "Research assistance for case strengths, risks, and strategies with AI-generated insights. Attorney supervision and verification required.",
       icon: Gavel,
       color: "text-brand-burgundy dark:text-brand-gold"
     },
     {
       title: "Case Discussion & Voice Chat",
-      description: "Discuss matters naturally using voice with real-time AI collaboration.",
+      description: "Research assistance through natural voice discussion with real-time AI collaboration. Attorney review and professional judgment required.",
       icon: Mic,
       color: "text-brand-burgundy dark:text-brand-gold"
     },
@@ -42,14 +43,14 @@ const Features = () => {
 
   const enterprisePlusFeatures = [
     {
-      title: "Contract Review & Drafting",
-      description: "Analyze contracts under Texas law with risk flags and suggested edits.",
+      title: "Contract Review & Drafting Assistance",
+      description: "AI research assistance for contract analysis under Texas law with risk flags and suggested edits. Attorney oversight and review required.",
       icon: Scale,
       color: "text-brand-burgundy dark:text-brand-gold"
     },
     {
-      title: "AI Document Creation",
-      description: "Generate pleadings, motions, and letters with a Google Docs-style editor.",
+      title: "AI Document Drafting Assistance",
+      description: "AI-assisted drafting of pleadings, motions, and letters with a Google Docs-style editor. Attorney review and verification required.",
       icon: FileEdit,
       color: "text-brand-burgundy dark:text-brand-gold"
     },
@@ -60,8 +61,8 @@ const Features = () => {
       color: "text-brand-burgundy dark:text-brand-gold"
     },
     {
-      title: "Discovery Management",
-      description: "Manage discovery requests and responses with AI assistance. Coming soon.",
+      title: "Discovery Research Support",
+      description: "Research assistance for discovery requests and responses with AI support. Attorney supervision required. Coming soon.",
       icon: FileText,
       color: "text-brand-burgundy dark:text-brand-gold",
       comingSoon: true
@@ -170,8 +171,8 @@ const Features = () => {
               </div>
               <div className="flex flex-col items-center text-center">
                 <div className="w-16 h-16 rounded-full bg-brand-burgundy dark:bg-brand-burgundy/80 flex items-center justify-center text-white text-2xl font-bold mb-4">2</div>
-                <h3 className="text-xl font-semibold mb-2">AI Analysis & Insights</h3>
-                <p className="text-gray-600 dark:text-gray-300">Our AI analyzes cases, contracts, and legal matters to provide strategic insights and recommendations.</p>
+                <h3 className="text-xl font-semibold mb-2">AI Research Assistance & Insights</h3>
+                <p className="text-gray-600 dark:text-gray-300">Our AI provides research assistance for cases, contracts, and legal matters with strategic insights and recommendations. Attorney review required.</p>
               </div>
               <div className="flex flex-col items-center text-center">
                 <div className="w-16 h-16 rounded-full bg-brand-burgundy dark:bg-brand-burgundy/80 flex items-center justify-center text-white text-2xl font-bold mb-4">3</div>
@@ -183,6 +184,7 @@ const Features = () => {
         </section>
 
       </main>
+      <LegalFooter />
     </div>
   );
 };
