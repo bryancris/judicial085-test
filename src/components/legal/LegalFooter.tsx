@@ -1,4 +1,5 @@
 import React from 'react';
+import { AlertTriangle, Scale } from 'lucide-react';
 import { LegalDisclaimer } from './LegalDisclaimer';
 
 export const LegalFooter: React.FC = () => {
@@ -37,7 +38,26 @@ export const LegalFooter: React.FC = () => {
           </div>
         </div>
         
+        {/* UPL Compliance Notice */}
         <div className="mt-6 pt-4 border-t">
+          <div className="bg-muted/30 border border-muted-foreground/20 rounded-lg p-4 mb-4">
+            <div className="flex items-start gap-3">
+              <Scale className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+              <div className="text-xs text-muted-foreground">
+                <strong className="block mb-1 text-foreground">TEXAS UPL COMPLIANCE NOTICE - ATTORNEY USE ONLY</strong>
+                <p className="leading-relaxed mb-2">
+                  This platform provides research assistance tools for licensed attorneys only. All AI outputs require attorney review, verification, and professional judgment. 
+                  This tool does not provide legal advice, legal conclusions, or create an attorney-client relationship. 
+                  Compliant with Texas Government Code §81.101 and Texas State Bar Ethics Opinion 705.
+                </p>
+                <p className="text-xs italic">
+                  By using this platform, attorneys acknowledge their duty to maintain competence under Texas Rule 1.01 
+                  and to independently verify all AI-generated content.
+                </p>
+              </div>
+            </div>
+          </div>
+          
           <LegalDisclaimer variant="inline" className="mb-2" />
           <p className="text-xs text-muted-foreground">
             © {new Date().getFullYear()} Judicial Junction. All rights reserved. 
