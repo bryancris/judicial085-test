@@ -50,6 +50,9 @@ export const LegalFooter: React.FC = () => {
                   This tool does not provide legal advice, legal conclusions, or create an attorney-client relationship. 
                   Compliant with Texas Government Code §81.101 and Texas State Bar Ethics Opinion 705.
                 </p>
+                <p className="leading-relaxed mb-2">
+                  Attorneys must comply with applicable court rules regarding AI disclosure when filing documents.
+                </p>
                 <p className="text-xs italic">
                   By using this platform, attorneys acknowledge their duty to maintain competence under Texas Rule 1.01 
                   and to independently verify all AI-generated content.
