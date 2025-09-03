@@ -74,6 +74,19 @@ export const useQuickConsultSessions = () => {
 
   const createNewSession = useCallback(async () => {
     try {
+      // Check if there's already an empty session with "New Chat" title
+      const existingEmptySession = sessions.find(session => 
+        session.title === "New Chat" && 
+        session.lastMessage === ""
+      );
+      
+      if (existingEmptySession) {
+        // Use the existing empty session instead of creating a new one
+        setCurrentSessionId(existingEmptySession.id);
+        localStorage.setItem('quickConsult_currentSessionId', existingEmptySession.id);
+        return existingEmptySession.id;
+      }
+      
       const { data, error } = await supabase
         .from('quick_consult_sessions' as any)
         .insert({
@@ -108,7 +121,7 @@ export const useQuickConsultSessions = () => {
       });
       return null;
     }
-  }, [toast]);
+  }, [toast, sessions]);
 
   const updateSession = useCallback(async (sessionId: string, title?: string, lastMessage?: string) => {
     try {

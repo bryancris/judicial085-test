@@ -81,6 +81,27 @@ const AttorneyResearchChat = ({
   };
 
   const handleNewChat = async () => {
+    // Check if current session is empty
+    if (currentSessionId && messages.length === 0) {
+      // Already in an empty session, just clear it
+      clearMessages();
+      return;
+    }
+    
+    // Check if there's an existing empty session with "New Chat" title
+    const existingEmptySession = sessions.find(session => 
+      session.title === "New Chat" && 
+      session.lastMessage === ""
+    );
+    
+    if (existingEmptySession) {
+      // Select the existing empty session instead of creating a new one
+      selectSession(existingEmptySession.id);
+      clearMessages();
+      return;
+    }
+    
+    // No empty session exists, create a new one
     await createNewSession();
     clearMessages();
   };
