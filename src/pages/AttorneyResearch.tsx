@@ -8,6 +8,7 @@ import AttorneyResearchChat from "@/components/clients/chat/AttorneyResearchChat
 import { useIsMobile } from "@/hooks/use-mobile";
 import AttorneyResearchDocumentUploadDialog from "@/components/attorney-research/AttorneyResearchDocumentUploadDialog";
 import { LegalDisclaimer } from "@/components/legal/LegalDisclaimer";
+import NavBar from "@/components/NavBar";
 
 const AttorneyResearch = () => {
   const { session, isLoading } = useAuthState();
@@ -35,8 +36,11 @@ const AttorneyResearch = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Mobile Header */}
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+      {/* Main Navigation */}
+      <NavBar />
+      
+      {/* Page Header */}
+      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-3">
             <Button
