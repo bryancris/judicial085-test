@@ -5,7 +5,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.52.0';
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,77 +36,176 @@ serve(async (req) => {
     - Has document type: ${hasDocumentType}
     - Is document creation request: ${isDocumentCreationRequest}`);
 
-    // Fetch client and case information if available
+    // Get comprehensive case data
     let clientInfo = null;
     let caseInfo = null;
+    let clientMessages = [];
+    let legalAnalyses = [];
+    let caseDiscussions = [];
+    let documentMetadata = [];
     
     if (clientId) {
-      const { data: client } = await supabase
-        .from('clients')
-        .select('first_name, last_name, email, phone, address, city, state, zip_code')
-        .eq('id', clientId)
-        .single();
-      clientInfo = client;
+      // Fetch all relevant data in parallel
+      const [clientResult, messagesResult, analysesResult, discussionsResult, documentsResult] = await Promise.all([
+        supabaseAdmin.from('clients').select('*').eq('id', clientId).single(),
+        supabaseAdmin.from('client_messages').select('*').eq('client_id', clientId).order('created_at', { ascending: true }),
+        supabaseAdmin.from('legal_analyses').select('*').eq('client_id', clientId).order('created_at', { ascending: false }),
+        supabaseAdmin.from('case_discussions').select('*').eq('client_id', clientId).order('created_at', { ascending: true }),
+        supabaseAdmin.from('document_metadata').select('*').eq('client_id', clientId).order('created_at', { ascending: false })
+      ]);
+      
+      clientInfo = clientResult.data;
+      clientMessages = messagesResult.data || [];
+      legalAnalyses = analysesResult.data || [];
+      caseDiscussions = discussionsResult.data || [];
+      documentMetadata = documentsResult.data || [];
     }
     
     if (caseId) {
-      const { data: caseData } = await supabase
+      const { data: case_data } = await supabaseAdmin
         .from('cases')
-        .select('case_title, case_type, case_description, case_notes, status')
+        .select('*')
         .eq('id', caseId)
         .single();
-      caseInfo = caseData;
+      caseInfo = case_data;
     }
 
-    // Prepare context for the AI
-    const contextInfo = `
-Current document context:
+    // Build comprehensive context for the AI
+    let contextInfo = `
+CURRENT DOCUMENT:
 - Title: "${documentTitle}"
 - Content: ${documentContent ? `"${documentContent}"` : "Empty document"}
 
-${clientInfo ? `
-Client Information:
+`;
+    
+    if (clientInfo) {
+      contextInfo += `CLIENT INFORMATION:
 - Name: ${clientInfo.first_name} ${clientInfo.last_name}
 - Email: ${clientInfo.email}
-- Phone: ${clientInfo.phone}
-- Address: ${clientInfo.address ? `${clientInfo.address}, ${clientInfo.city}, ${clientInfo.state} ${clientInfo.zip_code}` : 'Not provided'}
-` : ''}
+- Phone: ${clientInfo.phone}`;
+      
+      if (clientInfo.address) {
+        contextInfo += `\n- Address: ${clientInfo.address}`;
+        if (clientInfo.city) contextInfo += `, ${clientInfo.city}`;
+        if (clientInfo.state) contextInfo += `, ${clientInfo.state}`;
+        if (clientInfo.zip_code) contextInfo += ` ${clientInfo.zip_code}`;
+      }
+      
+      if (clientInfo.case_description) {
+        contextInfo += `\n- Case Description: ${clientInfo.case_description}`;
+      }
+      
+      if (clientInfo.case_types && clientInfo.case_types.length > 0) {
+        contextInfo += `\n- Case Types: ${clientInfo.case_types.join(', ')}`;
+      }
+      
+      contextInfo += '\n\n';
+    }
+    
+    if (caseInfo) {
+      contextInfo += `CASE INFORMATION:
+- Title: ${caseInfo.case_title}
+- Type: ${caseInfo.case_type || 'Not specified'}
+- Status: ${caseInfo.status}`;
+      
+      if (caseInfo.case_number) {
+        contextInfo += `\n- Case Number: ${caseInfo.case_number}`;
+      }
+      
+      if (caseInfo.case_description) {
+        contextInfo += `\n- Description: ${caseInfo.case_description}`;
+      }
+      
+      if (caseInfo.case_notes) {
+        contextInfo += `\n- Notes: ${caseInfo.case_notes}`;
+      }
+      
+      contextInfo += '\n\n';
+    }
 
-${caseInfo ? `
-Case Information:
-- Case Title: ${caseInfo.case_title}
-- Case Type: ${caseInfo.case_type || 'Not specified'}
-- Case Description: ${caseInfo.case_description || 'Not provided'}
-- Case Notes: ${caseInfo.case_notes || 'None'}
-- Status: ${caseInfo.status}
-` : ''}`;
+    // Add chronological case facts from client messages
+    if (clientMessages.length > 0) {
+      contextInfo += `CASE FACTS & CONVERSATION HISTORY:\n`;
+      clientMessages.forEach((message, index) => {
+        const timestamp = message.timestamp || new Date(message.created_at).toLocaleDateString();
+        contextInfo += `${index + 1}. [${timestamp}] ${message.role.toUpperCase()}: ${message.content}\n`;
+      });
+      contextInfo += '\n';
+    }
 
-    const systemPrompt = `You are an expert legal document assistant. You help users create, review, and improve legal documents. 
+    // Add existing legal analyses
+    if (legalAnalyses.length > 0) {
+      contextInfo += `EXISTING LEGAL ANALYSES:\n`;
+      legalAnalyses.forEach((analysis, index) => {
+        const timestamp = analysis.timestamp || new Date(analysis.created_at).toLocaleDateString();
+        contextInfo += `Analysis ${index + 1} [${timestamp}]:\n${analysis.content}\n\n`;
+      });
+    }
+
+    // Add case discussions
+    if (caseDiscussions.length > 0) {
+      contextInfo += `ATTORNEY-CLIENT DISCUSSIONS:\n`;
+      caseDiscussions.forEach((discussion, index) => {
+        const timestamp = discussion.timestamp || new Date(discussion.created_at).toLocaleDateString();
+        contextInfo += `${index + 1}. [${timestamp}] ${discussion.role.toUpperCase()}: ${discussion.content}\n`;
+      });
+      contextInfo += '\n';
+    }
+
+    // Add available documents
+    if (documentMetadata.length > 0) {
+      contextInfo += `AVAILABLE DOCUMENTS:\n`;
+      documentMetadata.forEach((doc, index) => {
+        contextInfo += `${index + 1}. ${doc.title} (${new Date(doc.created_at).toLocaleDateString()})\n`;
+      });
+      contextInfo += '\n';
+    }
+
+    const systemPrompt = `You are an expert legal document assistant with comprehensive knowledge of legal writing, formatting, and document types. You have access to complete case information including client details, conversation history, legal analyses, and case facts.
 
 ${contextInfo}
 
-Guidelines:
-- Provide specific, actionable advice about legal documents
-- Suggest improvements for clarity, structure, and legal accuracy
-- Help with grammar, formatting, and professional language
-- When suggesting edits, be specific about what to change
-- For empty documents, help with structure and content generation
-- Consider legal best practices and common document standards
-- Be concise but thorough in your responses
+CORE CAPABILITIES:
+- Create ANY type of legal document: pleadings, motions, discovery requests/responses, demand letters, contracts, briefs, timelines, witness lists, factual summaries, settlement agreements, etc.
+- Edit and improve existing documents with full case context
+- Generate chronological timelines from case facts
+- Draft discovery requests based on case issues
+- Create demand letters with specific damages and facts
+- Write motions with relevant legal theories and precedents
+- Format documents with proper legal structure and citations
 
-IMPORTANT: If the user is asking you to CREATE, WRITE, DRAFT, or GENERATE document content (not just advice), you must:
-1. Generate the actual document content in proper HTML format
-2. Include proper legal document structure and formatting
-3. Use appropriate legal language and clauses
-4. Start your response with "DOCUMENT_CONTENT:" followed by the complete HTML content
-5. Then provide a separate chat response explaining what you created
+DOCUMENT INTELLIGENCE:
+- Automatically detect document type from user request
+- Extract relevant facts from case history for specific document needs
+- Include appropriate legal standards and citations
+- Structure information chronologically for timelines
+- Organize issues and evidence for legal briefs
+- Personalize with correct client/case information
 
-Example format for document creation:
-DOCUMENT_CONTENT:<div><h1>Document Title</h1><p>Document content here...</p></div>
+FORMATTING STANDARDS:
+- Use proper legal document structure and headings
+- Include case captions when appropriate
+- Format dates consistently (MM/DD/YYYY)
+- Use formal legal language and tone
+- Include proper signature blocks and verification language
+- Apply court-specific formatting when jurisdiction is known
 
-I have created a [document type] for you. The document includes [brief description of what was included].
+CONTENT INTEGRATION:
+- Use actual case facts from conversation history
+- Reference existing legal analyses and conclusions
+- Include specific dates, events, and communications from case timeline
+- Incorporate client information (names, addresses, contact details)
+- Reference relevant documents and evidence available
 
-If the user asks you to review the document, provide specific feedback on structure, content, legal language, and areas for improvement.`;
+When creating substantial document content, use the marker "DOCUMENT_CONTENT:" followed by properly formatted HTML:
+- <h1>, <h2>, <h3> for headings and sections
+- <p> for paragraphs with proper spacing
+- <strong> for legal emphasis and defined terms
+- <ul>/<ol> and <li> for organized lists and elements
+- <table> for structured data when appropriate
+- Clean, professional HTML formatting
+
+CRITICAL: Always use actual case facts, dates, names, and details from the provided context. Never use placeholder text when real information is available.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -121,7 +220,7 @@ If the user asks you to review the document, provide specific feedback on struct
           { role: 'user', content: userMessage }
         ],
         temperature: 0.7,
-        max_tokens: 1000
+        max_tokens: 2000
       }),
     });
 
