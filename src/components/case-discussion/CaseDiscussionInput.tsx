@@ -1,8 +1,9 @@
 
 import React, { useState, useRef, useEffect } from "react";
-import { SendHorizonal, Loader2 } from "lucide-react";
+import { SendHorizonal, Loader2, Mic, MicOff } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
 import { Button } from "@/components/ui/button";
+import { useVoiceInput } from "@/hooks/useVoiceInput";
 
 interface CaseDiscussionInputProps {
   onSendMessage: (message: string) => void;
@@ -15,6 +16,7 @@ const CaseDiscussionInput: React.FC<CaseDiscussionInputProps> = ({
 }) => {
   const [message, setMessage] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { isRecording, isRequestingPermission, isSupported, toggleRecording } = useVoiceInput();
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -36,6 +38,24 @@ const CaseDiscussionInput: React.FC<CaseDiscussionInputProps> = ({
     }
   };
 
+  const handleVoiceToggle = async () => {
+    // Android compatibility: blur textarea when starting recording
+    if (!isRecording && textareaRef.current) {
+      textareaRef.current.blur();
+    }
+
+    await toggleRecording((text: string) => {
+      setMessage(text);
+    });
+
+    // Android compatibility: re-focus textarea when stopping recording
+    if (isRecording && textareaRef.current) {
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 100);
+    }
+  };
+
   return (
     <div className="border-t p-3 bg-background">
       <div className="flex gap-2 items-end">
@@ -49,6 +69,29 @@ const CaseDiscussionInput: React.FC<CaseDiscussionInputProps> = ({
           maxRows={6}
           disabled={isLoading}
         />
+        {isSupported && (
+          <Button
+            onClick={handleVoiceToggle}
+            disabled={isLoading}
+            variant="outline"
+            className={`${
+              isRecording
+                ? "bg-red-500 text-white border-red-500 hover:bg-red-600"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {isRequestingPermission ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : isRecording ? (
+              <MicOff className="h-4 w-4" />
+            ) : (
+              <Mic className="h-4 w-4" />
+            )}
+            <span className="sr-only">
+              {isRecording ? "Stop recording" : "Start voice input"}
+            </span>
+          </Button>
+        )}
         <Button
           onClick={handleSend}
           disabled={!message.trim() || isLoading}
@@ -63,7 +106,7 @@ const CaseDiscussionInput: React.FC<CaseDiscussionInputProps> = ({
         </Button>
       </div>
       <div className="text-xs text-muted-foreground mt-2">
-        Shift + Enter for new line • Use the Voice Chat tab for voice conversations
+        Shift + Enter for new line{isSupported && " • Click the microphone to use voice input"} • Use the Voice Chat tab for voice conversations
       </div>
     </div>
   );
