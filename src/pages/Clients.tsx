@@ -106,7 +106,7 @@ const ClientsWithTimestamp = () => {
                 className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white data-[state=active]:bg-teal-700 transition-colors"
               >
                 <MessageSquare className="h-4 w-4" />
-                Quick Consult
+                Research Assistant
               </TabsTrigger>
             </TabsList>
           </div>
