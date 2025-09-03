@@ -296,7 +296,7 @@ const AttorneyResearchChat = ({
             </form>
             <div className="text-xs text-muted-foreground mt-2 text-center">
               {isSupported && "Click the microphone to use voice input • "}
-              Shift + Enter for new line • Attorney review required for all AI output
+              Research can take up to ~1 minute • Shift + Enter for new line • Attorney review required for all AI output
             </div>
           </div>
         </div>

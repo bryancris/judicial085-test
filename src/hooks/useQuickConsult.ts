@@ -127,22 +127,73 @@ export const useQuickConsult = (clientId?: string, sessionId?: string, createNew
       // Continue anyway - user can retry if needed
     }
 
-    // Add retry logic for AI service call
-    let retryCount = 0;
-    const maxRetries = 2;
-    
-    while (retryCount <= maxRetries) {
+  // AI service timeout and retry configuration
+  const AI_SERVICE_TIMEOUT_MS = 65000; // 65 seconds to allow backend processing time
+  let retryCount = 0;
+  const maxRetries = 0; // Reduced retries since timeout is now longer
+  
+  while (retryCount <= maxRetries) {
+    try {
+      console.log(`Quick Consult: Sending message to AI service (attempt ${retryCount + 1}/${maxRetries + 1}) with ${AI_SERVICE_TIMEOUT_MS}ms timeout`);
+      const currentMessages = [...messages, userMessage];
+      
+      // Add timeout for AI service call with late arrival handling
+      const aiPromise = sendQuickConsultMessage(currentMessages, clientId);
+      const timeoutPromise = new Promise<any>((_, reject) => 
+        setTimeout(() => {
+          console.log('Quick Consult: Timeout fired after', AI_SERVICE_TIMEOUT_MS, 'ms');
+          reject(new Error('AI service timeout - please try again'));
+        }, AI_SERVICE_TIMEOUT_MS)
+      );
+      
+      let response;
+      let didTimeout = false;
+      
       try {
-        console.log(`Quick Consult: Sending message to AI service (attempt ${retryCount + 1}/${maxRetries + 1})`);
-        const currentMessages = [...messages, userMessage];
-        
-        // Add timeout for AI service call
-        const aiPromise = sendQuickConsultMessage(currentMessages, clientId);
-        const timeoutPromise = new Promise<any>((_, reject) => 
-          setTimeout(() => reject(new Error('AI service timeout - please try again')), 30000)
-        );
-        
-        const response = await Promise.race([aiPromise, timeoutPromise]);
+        response = await Promise.race([aiPromise, timeoutPromise]);
+      } catch (error) {
+        if (error.message.includes('timeout')) {
+          didTimeout = true;
+          console.log('Quick Consult: Setting up late arrival handler...');
+          
+          // Set up late arrival handler
+          aiPromise.then((lateResponse) => {
+            console.log('Quick Consult: Late arrival response received');
+            if (lateResponse && lateResponse.text && lateResponse.text.trim()) {
+              toast({
+                title: "Response Received",
+                description: "Your research response arrived after the timeout.",
+                duration: 5000,
+              });
+              
+              const assistantMessage: QuickConsultMessage = {
+                role: "assistant",
+                content: lateResponse.text,
+                timestamp: new Date().toLocaleTimeString(),
+              };
+
+              setMessages(prev => [...prev, assistantMessage]);
+              setLastResponse(lateResponse);
+              
+              // Save late arrival message to database (fire and forget)
+              Promise.resolve(
+                supabase
+                  .from('quick_consult_messages' as any)
+                  .insert({
+                    session_id: currentSessionId,
+                    role: 'assistant',
+                    content: lateResponse.text,
+                  } as any)
+              ).then(() => {
+                console.log('Quick Consult: Late arrival message saved');
+              }).catch(err => {
+                console.error('Quick Consult: Error saving late arrival message:', err);
+              });
+            }
+          }).catch(err => console.log('Quick Consult: Late arrival also failed:', err));
+        }
+        throw error;
+      }
         console.log("Quick Consult: Received AI response", { 
           hasResponse: !!response, 
           hasError: !!response?.error,
