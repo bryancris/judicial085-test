@@ -94,7 +94,7 @@ const NavBar: React.FC = () => {
           )}
         </nav>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3">
           <Button 
             variant="ghost" 
             size="icon"
@@ -104,13 +104,6 @@ const NavBar: React.FC = () => {
           >
             <HelpCircle className="h-5 w-5" />
             <span className="sr-only">Help & FAQ</span>
-          </Button>
-          
-          <Button variant="ghost" size="sm" asChild>
-            <a href="/terms-of-service" className="text-xs">Terms</a>
-          </Button>
-          <Button variant="ghost" size="sm" asChild>
-            <a href="/privacy-policy" className="text-xs">Privacy</a>
           </Button>
           
           <ThemeToggle />
