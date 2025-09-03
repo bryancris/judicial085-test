@@ -111,8 +111,17 @@ const AttorneyResearchChat = ({
   };
 
   const handleVoiceToggle = () => {
+    if (!isRecording) {
+      // Starting recording - blur textarea to prevent OS keyboard interference
+      textareaRef.current?.blur();
+    }
+    
     toggleRecording((text) => {
       setInput(text);
+      // Re-focus textarea when recording stops (next tick to ensure state updated)
+      if (isRecording) {
+        setTimeout(() => textareaRef.current?.focus(), 100);
+      }
     });
   };
 

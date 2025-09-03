@@ -24,21 +24,26 @@ export const useSpeechRecognition = () => {
       return { stop: () => {} };
     }
 
+    // Detect Android for special handling
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    
     console.log("Starting speech recognition process...");
     console.log("Protocol:", location.protocol);
     console.log("Hostname:", location.hostname);
     console.log("User Agent:", navigator.userAgent);
+    console.log("Is Android:", isAndroid);
 
     const attemptRecognition = (retryCount = 0) => {
       const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognitionAPI();
       
-      // Configure recognition
-      recognition.continuous = true;
+      // Configure recognition - use non-continuous on Android to reduce duplicates
+      recognition.continuous = !isAndroid;
       recognition.interimResults = true;
       recognition.lang = 'en-US';
       
       let finalTranscript = '';
+      let lastEmittedTranscript = '';
       let isAborted = false;
       let hasStarted = false;
       
@@ -51,6 +56,16 @@ export const useSpeechRecognition = () => {
       };
       
       recognition.onresult = (event: any) => {
+        // Android debug logs
+        if (isAndroid) {
+          console.log("Android voice result:", {
+            resultIndex: event.resultIndex,
+            resultsLength: event.results.length,
+            finalCount: Array.from(event.results).filter((r: any) => r.isFinal).length,
+            interimCount: Array.from(event.results).filter((r: any) => !r.isFinal).length
+          });
+        }
+        
         // Rebuild the complete transcript from all results
         let newFinalTranscript = '';
         let interimTranscript = '';
@@ -65,10 +80,50 @@ export const useSpeechRecognition = () => {
           }
         }
         
-        // Update final transcript and call callback with complete text
         finalTranscript = newFinalTranscript;
-        const completeTranscript = finalTranscript + interimTranscript;
-        onResultCallback(completeTranscript);
+        
+        // Smart merging for Android to prevent duplication
+        let completeTranscript;
+        if (isAndroid && finalTranscript && interimTranscript) {
+          // Check if interim starts with final (common Android behavior)
+          if (interimTranscript.toLowerCase().startsWith(finalTranscript.toLowerCase().trim())) {
+            completeTranscript = interimTranscript;
+          } else {
+            // Find overlap between end of final and start of interim
+            const finalWords = finalTranscript.trim().split(' ');
+            const interimWords = interimTranscript.trim().split(' ');
+            let overlapLength = 0;
+            
+            for (let i = 1; i <= Math.min(finalWords.length, interimWords.length); i++) {
+              const finalEnd = finalWords.slice(-i).join(' ').toLowerCase();
+              const interimStart = interimWords.slice(0, i).join(' ').toLowerCase();
+              if (finalEnd === interimStart) {
+                overlapLength = i;
+              }
+            }
+            
+            if (overlapLength > 0) {
+              completeTranscript = finalTranscript + ' ' + interimWords.slice(overlapLength).join(' ');
+            } else {
+              completeTranscript = finalTranscript + ' ' + interimTranscript;
+            }
+          }
+        } else {
+          completeTranscript = finalTranscript + interimTranscript;
+        }
+        
+        // Clean up transcript
+        completeTranscript = completeTranscript.trim().replace(/\s+/g, ' ');
+        
+        // Only emit if text has actually changed (prevents duplicates)
+        if (completeTranscript !== lastEmittedTranscript) {
+          lastEmittedTranscript = completeTranscript;
+          onResultCallback(completeTranscript);
+          
+          if (isAndroid) {
+            console.log("Android emitted:", completeTranscript);
+          }
+        }
       };
       
       recognition.onerror = (event: any) => {
@@ -114,7 +169,9 @@ export const useSpeechRecognition = () => {
       
       recognition.onend = () => {
         console.log("Speech recognition ended");
-        if (finalTranscript && !isAborted) {
+        // Don't re-emit on end to prevent duplicates - final text was already emitted in onresult
+        if (!isAndroid && finalTranscript && !isAborted && finalTranscript !== lastEmittedTranscript) {
+          lastEmittedTranscript = finalTranscript;
           onResultCallback(finalTranscript);
         }
       };
