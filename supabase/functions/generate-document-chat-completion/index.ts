@@ -23,8 +23,8 @@ serve(async (req) => {
 
     // Check if this is a document creation request - improved detection
     const messageLower = userMessage.toLowerCase();
-    const draftingKeywords = ['create', 'write', 'draft', 'generate', 'make', 'prepare'];
-    const documentTypes = ['document', 'contract', 'letter', 'memo', 'brief', 'discovery', 'motion', 'pleading', 'agreement', 'will', 'trust', 'waiver', 'lease', 'policy', 'form', 'template', 'notice'];
+    const draftingKeywords = ['create', 'write', 'draft', 'generate', 'make', 'prepare', 'build'];
+    const documentTypes = ['document', 'contract', 'letter', 'memo', 'brief', 'discovery', 'motion', 'pleading', 'agreement', 'will', 'trust', 'waiver', 'lease', 'policy', 'form', 'template', 'notice', 'timeline', 'summary', 'list'];
     
     const hasDraftingKeyword = draftingKeywords.some(keyword => messageLower.includes(keyword));
     const hasDocumentType = documentTypes.some(docType => messageLower.includes(docType));
@@ -197,15 +197,28 @@ CONTENT INTEGRATION:
 - Incorporate client information (names, addresses, contact details)
 - Reference relevant documents and evidence available
 
-When creating substantial document content, use the marker "DOCUMENT_CONTENT:" followed by properly formatted HTML:
-- <h1>, <h2>, <h3> for headings and sections
-- <p> for paragraphs with proper spacing
-- <strong> for legal emphasis and defined terms
-- <ul>/<ol> and <li> for organized lists and elements
-- <table> for structured data when appropriate
-- Clean, professional HTML formatting
+CRITICAL INSTRUCTIONS FOR DOCUMENT CREATION:
+When the user asks you to CREATE, WRITE, DRAFT, GENERATE, BUILD, or MAKE any document content (including timelines, summaries, lists, etc.), you MUST:
 
-CRITICAL: Always use actual case facts, dates, names, and details from the provided context. Never use placeholder text when real information is available.`;
+1. Always use the "DOCUMENT_CONTENT:" marker followed by properly formatted HTML
+2. Generate complete, professional document content - never just provide advice
+3. Use actual case facts, dates, names, and details from the provided context
+4. Structure the HTML with proper legal document formatting:
+   - <h1>, <h2>, <h3> for headings and sections
+   - <p> for paragraphs with proper spacing
+   - <strong> for legal emphasis and defined terms
+   - <ul>/<ol> and <li> for organized lists and elements
+   - <table> for structured data when appropriate
+   - Clean, professional HTML formatting
+
+5. After the DOCUMENT_CONTENT, provide a brief explanation of what you created
+
+Example format:
+DOCUMENT_CONTENT:<div><h1>Case Timeline</h1><h2>Events Summary</h2><p>This timeline details the key events...</p><ul><li><strong>Date:</strong> Event description</li></ul></div>
+
+I have created a comprehensive timeline document based on your case facts and conversation history.
+
+NEVER provide just advice or suggestions when document creation is requested - always generate the actual document content using the DOCUMENT_CONTENT marker.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
