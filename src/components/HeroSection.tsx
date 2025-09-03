@@ -46,9 +46,6 @@ const HeroSection: React.FC = () => {
             <p className="text-gray-300 text-lg animate-fade-in" style={{ animationDelay: "0.2s" }}>
               Research assistance for fact pattern analysis — gives Texas attorneys AI-powered research tools for case research assistance, document template assistance, and precedent discovery, all focused on Texas law.
             </p>
-            <div className="bg-amber-900/30 border border-amber-500/30 rounded-lg p-3 text-amber-200 text-sm animate-fade-in" style={{ animationDelay: "0.3s" }}>
-              <strong>ATTORNEY SUPERVISION REQUIRED:</strong> Research assistance tool only. Not a substitute for attorney advice. All AI output requires attorney review and professional judgment.
-            </div>
             
             <div className="flex flex-wrap gap-4 pt-4 animate-fade-in" style={{ animationDelay: "0.4s" }}>
               <Button 

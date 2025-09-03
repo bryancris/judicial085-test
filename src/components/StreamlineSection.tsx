@@ -31,11 +31,6 @@ const StreamlineSection: React.FC = () => {
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
             While other legal software overcomplicates your workflow, we focus on providing research assistance for the four key areas that consume most of your billable hours. All outputs require attorney review and professional judgment.
           </p>
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-6 max-w-4xl mx-auto">
-            <p className="text-amber-800 font-medium text-center">
-              <strong>FOR ATTORNEY USE ONLY:</strong> Research assistance tool. Not a substitute for attorney advice. Attorney supervision required for all AI outputs.
-            </p>
-          </div>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
