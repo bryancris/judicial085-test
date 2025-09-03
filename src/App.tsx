@@ -19,6 +19,8 @@ import QuickConsult from "./pages/QuickConsult";
 import Pricing from "./pages/Pricing";
 import ContactUs from "./pages/ContactUs";
 import AboutUs from "./pages/AboutUs";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +46,8 @@ const App = () => (
             <Route path="/admin" element={<Admin />} />
             <Route path="/faq" element={<FAQ />} />
             <Route path="/contact-us" element={<ContactUs />} />
+            <Route path="/terms-of-service" element={<TermsOfService />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

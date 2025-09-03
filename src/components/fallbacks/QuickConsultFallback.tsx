@@ -16,7 +16,7 @@ const QuickConsultFallback: React.FC = () => {
           Quick Consult
         </CardTitle>
         <CardDescription>
-          Quick legal consultation feature
+          Attorney research assistance feature
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -25,7 +25,7 @@ const QuickConsultFallback: React.FC = () => {
           <span className="text-sm">Service temporarily unavailable</span>
         </div>
         <p className="text-muted-foreground">
-          The Quick Consult feature is currently being updated. Please try again in a few moments.
+          The attorney research assistance feature is currently being updated. Please try again in a few moments.
         </p>
         <Button onClick={handleRetry} variant="outline" size="sm">
           Retry

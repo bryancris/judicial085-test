@@ -4,6 +4,7 @@ import NavBar from "@/components/NavBar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { LegalDisclaimer } from "@/components/legal/LegalDisclaimer";
 
 const FAQ = () => {
   return (
@@ -15,6 +16,9 @@ const FAQ = () => {
           <p className="text-muted-foreground text-lg">
             Get help with Judicial Junction's features and functionality
           </p>
+          <div className="mt-4">
+            <LegalDisclaimer variant="prominent" />
+          </div>
         </div>
 
         <div className="space-y-6">
@@ -111,7 +115,7 @@ const FAQ = () => {
                 <Badge variant="outline">AI Chat</Badge>
               </CardTitle>
               <CardDescription>
-                Instant AI legal consultation and advice
+                Attorney research assistance and case analysis tools
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -119,19 +123,19 @@ const FAQ = () => {
                 <AccordionItem value="quick-consult">
                   <AccordionTrigger>What is Quick Consult?</AccordionTrigger>
                   <AccordionContent>
-                    Quick Consult provides instant AI-powered legal advice and consultation. Ask questions about legal matters, get case analysis, and receive guidance without needing to create a formal client record first.
+                    Quick Consult provides AI-powered research assistance for attorneys. Ask questions about legal matters, get case analysis, and receive research assistance without needing to create a formal client record first. All AI output requires attorney review and professional judgment.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="consult-sessions">
-                  <AccordionTrigger>How do consultation sessions work?</AccordionTrigger>
+                  <AccordionTrigger>How do research sessions work?</AccordionTrigger>
                   <AccordionContent>
-                    Each Quick Consult creates a session that saves your conversation history. You can return to previous sessions, continue conversations, and even convert consultations into formal client records when needed.
+                    Each Quick Consult creates a research session that saves your conversation history. You can return to previous sessions, continue research, and even convert research sessions into formal client records when needed. Remember that all AI output requires attorney review.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="convert-to-client">
                   <AccordionTrigger>Can I convert a Quick Consult into a client record?</AccordionTrigger>
                   <AccordionContent>
-                    Yes! If a Quick Consult session leads to a potential client, you can easily convert the consultation into a formal client record, preserving all the conversation history and insights gathered during the consultation.
+                    Yes! If a Quick Consult research session leads to a potential client, you can easily convert the research session into a formal client record, preserving all the conversation history and insights gathered during the research. All information still requires attorney review before client use.
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>

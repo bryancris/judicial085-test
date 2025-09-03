@@ -11,6 +11,7 @@ import { QuickConsultExportButton } from "@/components/quick-consult/export/Quic
 import CreateClientFromQuickConsultDialog from "@/components/clients/CreateClientFromQuickConsultDialog";
 import QuickConsultSidebar from "./QuickConsultSidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { LegalDisclaimer } from "@/components/legal/LegalDisclaimer";
 
 interface QuickConsultChatProps {
   isMobile?: boolean;
@@ -125,7 +126,7 @@ const QuickConsultChat = ({
         {/* Header */}
         <div className="border-b bg-background p-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-semibold">Quick Consult</h1>
+            <h1 className="text-xl font-semibold">Attorney Research Assistant</h1>
             <div className="flex items-center gap-2">
               <Button 
                 variant="outline" 
@@ -162,8 +163,11 @@ const QuickConsultChat = ({
               </div>
             ) : messages.length === 0 ? (
               <div className="text-center text-muted-foreground py-12">
-                <h3 className="text-lg font-medium mb-2">Welcome to Quick Consult</h3>
-                <p>Start a conversation by typing your legal question below.</p>
+                <h3 className="text-lg font-medium mb-2">Welcome to Attorney Research Assistant</h3>
+                <p>Start a conversation by typing your legal research question below.</p>
+                <div className="mt-4 max-w-2xl mx-auto">
+                  <LegalDisclaimer variant="prominent" />
+                </div>
               </div>
             ) : (
               messages.map((message, index) => (
@@ -219,7 +223,7 @@ const QuickConsultChat = ({
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask a legal question..."
+                placeholder="Ask a legal research question..."
                 className={`flex-1 min-h-[48px] max-h-32 resize-none border-2 focus:border-emerald-500 rounded-xl ${
                   isRecording ? 'border-red-500 border-2' : ''
                 }`}
@@ -262,7 +266,7 @@ const QuickConsultChat = ({
             </form>
             <div className="text-xs text-muted-foreground mt-2 text-center">
               {isSupported && "Click the microphone to use voice input • "}
-              Shift + Enter for new line
+              Shift + Enter for new line • Attorney review required for all AI output
             </div>
           </div>
         </div>

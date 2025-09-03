@@ -44,7 +44,10 @@ const HeroSection: React.FC = () => {
             </h2>
             
             <p className="text-gray-300 text-lg animate-fade-in" style={{ animationDelay: "0.2s" }}>
-              Turn fact patterns into cases — gives Texas attorneys AI-powered tools for case analysis, document automation, and precedent discovery, all focused on Texas law.
+              Turn fact patterns into cases — gives Texas attorneys AI-powered research and analysis tools for case analysis, document automation, and precedent discovery, all focused on Texas law.
+            </p>
+            <p className="text-gray-400 text-sm italic animate-fade-in" style={{ animationDelay: "0.3s" }}>
+              Attorney research assistance tool - Not a substitute for attorney advice
             </p>
             
             <div className="flex flex-wrap gap-4 pt-4 animate-fade-in" style={{ animationDelay: "0.4s" }}>
@@ -130,8 +133,8 @@ const HeroSection: React.FC = () => {
                 
                 <div className="animate-fade-in" style={{ animationDelay: "0.7s" }}>
                   <FeatureCard
-                    title="Real-Time Chat Analysis"
-                    description="Instant answers during client consultations"
+                    title="Real-Time Research Assistance"
+                    description="Instant research support for attorney use"
                     icon={<div className="flex items-center justify-center w-8 h-8 rounded-md bg-orange-700 bg-opacity-80">
                       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
