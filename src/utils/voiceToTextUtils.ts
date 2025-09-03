@@ -51,20 +51,24 @@ export const useSpeechRecognition = () => {
       };
       
       recognition.onresult = (event: any) => {
+        // Rebuild the complete transcript from all results
+        let newFinalTranscript = '';
         let interimTranscript = '';
         
-        for (let i = event.resultIndex; i < event.results.length; i++) {
+        for (let i = 0; i < event.results.length; i++) {
           const transcript = event.results[i][0].transcript;
           
           if (event.results[i].isFinal) {
-            finalTranscript += transcript;
-            onResultCallback(finalTranscript);
+            newFinalTranscript += transcript;
           } else {
             interimTranscript += transcript;
-            // For real-time feedback
-            onResultCallback(finalTranscript + interimTranscript);
           }
         }
+        
+        // Update final transcript and call callback with complete text
+        finalTranscript = newFinalTranscript;
+        const completeTranscript = finalTranscript + interimTranscript;
+        onResultCallback(completeTranscript);
       };
       
       recognition.onerror = (event: any) => {
