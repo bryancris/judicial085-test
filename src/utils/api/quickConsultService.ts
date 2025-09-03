@@ -53,7 +53,9 @@ export const sendQuickConsultMessage = async (
     const startTime = Date.now();
     
     const { data, error } = await invokeFunction<{
-      text: string;
+      text?: string;
+      synthesizedContent?: string;
+      content?: string;
       citations?: any[];
       hasKnowledgeBase?: boolean;
       documentsFound?: number;
@@ -114,9 +116,13 @@ export const sendQuickConsultMessage = async (
       return { text: "", error: data.text || "Failed to coordinate AI agents" };
     }
 
-    if (!data.text || data.text.trim().length === 0) {
-      console.error('3-Agent Quick Consult: Empty response text');
-      return { text: "", error: "AI service returned empty response" };
+    // Map synthesizedContent to text for compatibility
+    const finalText = data.text || data.synthesizedContent || data.content || '';
+    console.log(`🔄 Response mapping - text: ${data.text ? 'present' : 'missing'}, synthesizedContent: ${data.synthesizedContent ? `present (${data.synthesizedContent.length} chars)` : 'missing'}`);
+    
+    if (!finalText || finalText.trim().length === 0) {
+      console.error('3-Agent Quick Consult: Empty response text after mapping');
+      return { text: "", error: "NO_RESULTS" };
     }
 
     // Handle CourtListener verification status gracefully
@@ -144,12 +150,12 @@ export const sendQuickConsultMessage = async (
       verifiedCases: data.verifiedCases || 0,
       documentsFound: data.documentsFound || 0,
       courtListenerStatus: data.courtListenerStatus || 'unknown',
-      responseLength: data.text.length,
+      responseLength: finalText.length,
       elapsed: `${elapsed}ms`
     });
 
     return { 
-      text: data.text,
+      text: finalText,
       citations: data.citations || [],
       hasKnowledgeBase: data.hasKnowledgeBase || false,
       documentsFound: data.documentsFound || 0,

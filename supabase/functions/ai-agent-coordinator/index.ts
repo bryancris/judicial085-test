@@ -132,10 +132,14 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        synthesizedContent: verifiedResult.content,
+        text: verifiedResult.content, // Primary field for frontend compatibility
+        synthesizedContent: verifiedResult.content, // Legacy field
         researchSources: extractResearchSources(researchResults),
         verifiedCases: verifiedResult.verifiedCases,
         citations: extractCitations(verifiedResult.content),
+        hasKnowledgeBase: researchResults.length > 0,
+        documentsFound: researchResults.filter(r => !r.error).length,
+        courtListenerCitations: verifiedResult.verifiedCases || 0,
         metadata: {
           queryAnalysis,
           researchAgentsUsed: researchResults.map(r => r.source),

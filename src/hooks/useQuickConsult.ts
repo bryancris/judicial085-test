@@ -151,10 +151,54 @@ export const useQuickConsult = (clientId?: string, sessionId?: string, createNew
         });
 
         if (response.error) {
+          // Handle NO_RESULTS as a special case
+          if (response.error === "NO_RESULTS") {
+            const noResultsMessage = "I couldn't find any relevant information for your query. Please try rephrasing your question or being more specific.";
+            
+            const assistantMessage: QuickConsultMessage = {
+              role: "assistant",
+              content: noResultsMessage,
+              timestamp: new Date().toLocaleTimeString(),
+            };
+
+            setMessages(prev => [...prev, assistantMessage]);
+            
+            // Save the "found nothing" message to database
+            try {
+              const savePromise = supabase
+                .from('quick_consult_messages' as any)
+                .insert({
+                  session_id: currentSessionId,
+                  role: 'assistant',
+                  content: noResultsMessage,
+                } as any);
+              
+              const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Database save timeout')), 5000)
+              );
+              
+              await Promise.race([savePromise, timeoutPromise]);
+            } catch (saveError) {
+              console.error('Quick Consult: Error saving no-results message:', saveError);
+            }
+            
+            setLastResponse({
+              text: noResultsMessage,
+              citations: [],
+              hasKnowledgeBase: false,
+              documentsFound: 0,
+              verifiedCases: 0,
+              courtListenerCitations: 0
+            });
+            
+            setIsLoading(false);
+            return; // Exit early, don't throw error
+          }
+          
           throw new Error(response.error);
         }
 
-        if (!response.text) {
+        if (!response.text?.trim()) {
           throw new Error("AI service returned empty response");
         }
 
