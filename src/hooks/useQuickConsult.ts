@@ -55,7 +55,13 @@ export const useQuickConsult = (clientId?: string, sessionId?: string, createNew
       console.log("Quick Consult: No session ID, creating new session");
       setIsLoading(true);
       try {
-        currentSessionId = await createNewSession();
+        // Add timeout for session creation
+        const sessionPromise = createNewSession();
+        const timeoutPromise = new Promise<string | null>((_, reject) => 
+          setTimeout(() => reject(new Error('Session creation timeout')), 10000)
+        );
+        
+        currentSessionId = await Promise.race([sessionPromise, timeoutPromise]);
         console.log("Quick Consult: New session created", { sessionId: currentSessionId });
         if (!currentSessionId) {
           console.error("Quick Consult: Failed to create new session");
@@ -98,103 +104,166 @@ export const useQuickConsult = (clientId?: string, sessionId?: string, createNew
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
 
-    // Save user message to database
+    // Save user message to database with timeout
     try {
       console.log("Quick Consult: Saving user message to database", { sessionId: currentSessionId });
-      await supabase
+      
+      const savePromise = supabase
         .from('quick_consult_messages' as any)
         .insert({
           session_id: currentSessionId,
           role: 'user',
           content: content.trim(),
         } as any);
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database save timeout')), 5000)
+      );
+      
+      await Promise.race([savePromise, timeoutPromise]);
       console.log("Quick Consult: User message saved successfully");
     } catch (error) {
       console.error('Quick Consult: Error saving user message:', error);
+      // Continue anyway - user can retry if needed
     }
 
-    try {
-      console.log("Quick Consult: Sending message to AI service");
-      const currentMessages = [...messages, userMessage];
-      const response = await sendQuickConsultMessage(currentMessages);
-      console.log("Quick Consult: Received AI response", { hasResponse: !!response, hasError: !!response?.error });
-
-      if (response.error) {
-        toast({
-          title: "Error",
-          description: response.error,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Store the full response for potential citation display
-      setLastResponse(response);
-
-      const assistantMessage: QuickConsultMessage = {
-        role: "assistant",
-        content: response.text,
-        timestamp: new Date().toLocaleTimeString(),
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
-
-      // Save assistant message to database
+    // Add retry logic for AI service call
+    let retryCount = 0;
+    const maxRetries = 2;
+    
+    while (retryCount <= maxRetries) {
       try {
-        console.log("Quick Consult: Saving assistant message to database");
-        await supabase
-          .from('quick_consult_messages' as any)
-          .insert({
-            session_id: currentSessionId,
-            role: 'assistant',
-            content: response.text,
-          } as any);
-        console.log("Quick Consult: Assistant message saved successfully");
-      } catch (error) {
-        console.error('Quick Consult: Error saving assistant message:', error);
-      }
+        console.log(`Quick Consult: Sending message to AI service (attempt ${retryCount + 1}/${maxRetries + 1})`);
+        const currentMessages = [...messages, userMessage];
+        
+        // Add timeout for AI service call
+        const aiPromise = sendQuickConsultMessage(currentMessages, clientId);
+        const timeoutPromise = new Promise<any>((_, reject) => 
+          setTimeout(() => reject(new Error('AI service timeout - please try again')), 30000)
+        );
+        
+        const response = await Promise.race([aiPromise, timeoutPromise]);
+        console.log("Quick Consult: Received AI response", { 
+          hasResponse: !!response, 
+          hasError: !!response?.error,
+          hasText: !!response?.text,
+          textLength: response?.text?.length || 0
+        });
 
-      // Show knowledge base usage toast (if metadata is available)
-      if ((response as any).hasKnowledgeBase && (response as any).documentsFound && (response as any).documentsFound > 0) {
-        toast({
-          title: "Knowledge Base Used",
-          description: `Referenced ${(response as any).documentsFound} document(s) from the knowledge base`,
-          variant: "default",
-        });
-      }
+        if (response.error) {
+          throw new Error(response.error);
+        }
 
-      // Show verification status for CourtListener cases (if metadata is available)
-      if ((response as any).verifiedCases && (response as any).verifiedCases > 0) {
-        toast({
-          title: "Cases Verified",
-          description: `Verified ${(response as any).verifiedCases} case citations with CourtListener for legal accuracy`,
-          variant: "default",
-        });
-      }
+        if (!response.text) {
+          throw new Error("AI service returned empty response");
+        }
 
-      if ((response as any).courtListenerCitations && (response as any).courtListenerCitations > 0) {
-        toast({
-          title: "CourtListener Citations Added",
-          description: `Added ${(response as any).courtListenerCitations} verified citations with direct links`,
-          variant: "default",
-        });
-      } else if ((response as any).verifiedCases === 0) {
-        toast({
-          title: "⚠️ Citation Verification Needed",
-          description: "CourtListener API requires setup for case verification",
-          variant: "destructive",
-        });
+        // Store the full response for potential citation display
+        setLastResponse(response);
+
+        const assistantMessage: QuickConsultMessage = {
+          role: "assistant",
+          content: response.text,
+          timestamp: new Date().toLocaleTimeString(),
+        };
+
+        setMessages(prev => [...prev, assistantMessage]);
+
+        // Save assistant message to database with timeout
+        try {
+          console.log("Quick Consult: Saving assistant message to database");
+          
+          const savePromise = supabase
+            .from('quick_consult_messages' as any)
+            .insert({
+              session_id: currentSessionId,
+              role: 'assistant',
+              content: response.text,
+            } as any);
+          
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Database save timeout')), 5000)
+          );
+          
+          await Promise.race([savePromise, timeoutPromise]);
+          console.log("Quick Consult: Assistant message saved successfully");
+        } catch (error) {
+          console.error('Quick Consult: Error saving assistant message:', error);
+          // Continue anyway - message is already displayed
+        }
+
+        // Show knowledge base usage toast (if metadata is available)
+        if ((response as any).hasKnowledgeBase && (response as any).documentsFound && (response as any).documentsFound > 0) {
+          toast({
+            title: "Knowledge Base Used",
+            description: `Referenced ${(response as any).documentsFound} document(s) from the knowledge base`,
+            variant: "default",
+          });
+        }
+
+        // Show verification status for CourtListener cases (if metadata is available)
+        if ((response as any).verifiedCases && (response as any).verifiedCases > 0) {
+          toast({
+            title: "Cases Verified",
+            description: `Verified ${(response as any).verifiedCases} case citations with CourtListener for legal accuracy`,
+            variant: "default",
+          });
+        }
+
+        if ((response as any).courtListenerCitations && (response as any).courtListenerCitations > 0) {
+          toast({
+            title: "CourtListener Citations Added",
+            description: `Added ${(response as any).courtListenerCitations} verified citations with direct links`,
+            variant: "default",
+          });
+        } else if ((response as any).verifiedCases === 0) {
+          toast({
+            title: "⚠️ Citation Verification Needed",
+            description: "CourtListener API requires setup for case verification",
+            variant: "destructive",
+          });
+        }
+
+        // Success - break out of retry loop
+        break;
+
+      } catch (error: any) {
+        console.error(`Quick Consult: Attempt ${retryCount + 1} failed:`, error);
+        retryCount++;
+        
+        if (retryCount <= maxRetries) {
+          console.log(`Quick Consult: Retrying in ${retryCount * 2} seconds...`);
+          await new Promise(resolve => setTimeout(resolve, retryCount * 2000));
+        } else {
+          // All retries exhausted
+          console.error("Quick Consult: All retry attempts failed");
+          
+          let errorMessage = "Failed to send message. Please try again.";
+          if (error.message.includes('timeout')) {
+            errorMessage = "Request timed out. Please check your connection and try again.";
+          } else if (error.message.includes('AI service')) {
+            errorMessage = "AI service is temporarily unavailable. Please try again in a moment.";
+          }
+          
+          toast({
+            title: "Error",
+            description: errorMessage,
+            variant: "destructive",
+          });
+          
+          // Add a fallback message to help the user
+          const fallbackMessage: QuickConsultMessage = {
+            role: "assistant",
+            content: "I'm having trouble responding right now. This could be due to:\n\n• Network connectivity issues\n• AI service temporarily unavailable\n• API configuration problems\n\nPlease try again in a moment. If the problem persists, please refresh the page.",
+            timestamp: new Date().toLocaleTimeString(),
+          };
+          
+          setMessages(prev => [...prev, fallbackMessage]);
+        }
       }
-    } catch (error) {
-      console.error("Error sending message:", error);
-      toast({
-        title: "Error",
-        description: "Failed to send message. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
     }
+    
+    setIsLoading(false);
   }, [messages, toast, clientId, sessionId, createNewSession]);
 
   const clearMessages = useCallback(() => {
