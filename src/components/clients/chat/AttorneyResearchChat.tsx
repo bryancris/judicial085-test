@@ -112,7 +112,7 @@ const AttorneyResearchChat = ({
 
   const handleVoiceToggle = () => {
     toggleRecording((text) => {
-      setInput(prev => prev + text);
+      setInput(text);
     });
   };
 
