@@ -9,6 +9,9 @@ export const parseIracAnalysis = (content: string): IracAnalysis | null => {
     const sections = content.split(/\*\*(.*?):\*\*/g).filter(Boolean);
     const sectionMap: Record<string, string> = {};
     
+    // Debug logging - log raw sections
+    console.log('Raw sections from split:', sections);
+    
     // Build section map with normalized keys
     for (let i = 0; i < sections.length - 1; i += 2) {
       const sectionName = sections[i].trim().toUpperCase();
@@ -18,11 +21,21 @@ export const parseIracAnalysis = (content: string): IracAnalysis | null => {
 
     // Debug logging
     console.log('Parsed sections:', Object.keys(sectionMap));
+    console.log('Section map:', sectionMap);
 
-    // Extract case summary with fallback patterns
-    const caseSummary = sectionMap['CASE SUMMARY'] || 
-                       sectionMap['SUMMARY'] || 
-                       sectionMap['CASE OVERVIEW'] || '';
+    // Extract case summary with fallback patterns and direct regex extraction
+    let caseSummary = sectionMap['CASE SUMMARY'] || 
+                     sectionMap['SUMMARY'] || 
+                     sectionMap['CASE OVERVIEW'] || '';
+    
+    // If still empty, try direct regex extraction
+    if (!caseSummary) {
+      const caseSummaryMatch = content.match(/\*\*CASE SUMMARY:\*\*\s*(.*?)(?=\*\*\w+:|$)/is);
+      if (caseSummaryMatch) {
+        caseSummary = caseSummaryMatch[1].trim();
+        console.log('Case summary extracted via regex:', caseSummary);
+      }
+    }
 
     // Parse IRAC issues from the content
     const legalIssues = parseIracIssues(content);
