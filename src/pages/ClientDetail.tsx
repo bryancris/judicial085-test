@@ -16,6 +16,7 @@ import { CaseProvider } from "@/contexts/CaseContext";
 import CasesSection from "@/components/clients/cases/CasesSection";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import ClientDetailSidebar from "@/components/clients/ClientDetailSidebar";
+import { Tabs } from "@/components/ui/tabs";
 
 const ClientDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -122,10 +123,16 @@ const ClientDetail = () => {
               <CasesSection clientId={client.id} />
 
               <div className="mt-8">
-                <ClientDetailTabContent 
-                  client={client} 
-                  activeTab={activeTab}
-                />
+                <Tabs 
+                  value={activeTab}
+                  onValueChange={handleTabChange}
+                  className="w-full"
+                >
+                  <ClientDetailTabContent 
+                    client={client} 
+                    activeTab={activeTab}
+                  />
+                </Tabs>
               </div>
             </main>
           </SidebarInset>
