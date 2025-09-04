@@ -8,7 +8,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { MessageSquare, BarChart3, Users, Upload, FileText, Scale, Plus, Layout } from "lucide-react";
-import { tabColors } from "./ClientDetailTabs/tabStyles";
+import { tabColors, tabHoverColors } from "./ClientDetailTabs/tabStyles";
 
 interface ClientDetailSidebarProps {
   activeTab: string;
@@ -33,15 +33,12 @@ const ClientDetailSidebar: React.FC<ClientDetailSidebarProps> = ({ activeTab, on
   const getItemClasses = (itemId: string) => {
     const isActive = activeTab === itemId;
     const baseColor = tabColors[itemId as keyof typeof tabColors] || "bg-gray-500 text-white";
-    
-    if (isActive) {
-      return `${baseColor} hover:opacity-90`;
-    }
-    return "hover:bg-accent hover:text-accent-foreground";
+    const hoverColor = tabHoverColors[itemId as keyof typeof tabHoverColors] || "hover:bg-accent hover:text-accent-foreground";
+    return `${baseColor} ${hoverColor} ${isActive ? "ring-1 ring-primary/40" : "opacity-90"}`;
   };
 
   return (
-    <Sidebar style={{ top: '5rem' }}>
+    <Sidebar style={{ top: '6.5rem' }}>
       <SidebarContent>
         <SidebarMenu>
           {sidebarItems.map((item) => (
