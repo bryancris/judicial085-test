@@ -185,6 +185,13 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
   }, []);
   
   const renderTabContent = () => {
+    console.log("=== RENDERING TAB CONTENT DEBUG ===");
+    console.log("Active tab:", activeTab);
+    console.log("Is analysis loading:", isAnalysisLoading);
+    console.log("Analysis error:", analysisError);
+    console.log("Has analysis data:", !!analysisData);
+    console.log("Analysis data:", analysisData);
+    
     switch (activeTab) {
       case "client-intake":
         return (
@@ -195,9 +202,13 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
         );
 
       case "case-analysis":
+        console.log("✅ Entering case-analysis case");
+        
         if (isAnalysisLoading) {
+          console.log("📊 Showing loading skeleton");
           return <CaseAnalysisLoadingSkeleton />;
         } else if (analysisError) {
+          console.log("❌ Showing error state:", analysisError);
           return (
             <CaseAnalysisErrorState 
               error={analysisError} 
@@ -205,6 +216,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
             />
           );
         } else if (!analysisData) {
+          console.log("📝 Showing empty analysis state");
           return (
             <EmptyAnalysisState 
               clientName={`${client.first_name} ${client.last_name}`}
@@ -217,6 +229,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
             />
           );
         } else {
+          console.log("🎯 Showing full analysis content");
           return (
             <div className="container mx-auto py-8">
               <CaseAnalysisHeader
