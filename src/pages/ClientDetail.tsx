@@ -95,45 +95,47 @@ const ClientDetail = () => {
     <CaseProvider>
       <div className="min-h-screen flex flex-col">
         <NavBar />
-        <SidebarProvider>
-          <div className="flex flex-1 w-full">
-            <ClientDetailSidebar 
-              activeTab={activeTab}
-              onTabChange={handleTabChange}
-            />
-            <SidebarInset className="flex flex-col">
-              <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-                <SidebarTrigger className="-ml-1" />
-              </header>
-              <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-                <main className="flex-1 container mx-auto px-4 py-8 overflow-auto">
-                  <ClientDetailHeader 
-                    client={client} 
-                    onDeleteClick={handleDeleteClick}
-                    isDeleting={isDeleting}
-                  />
-
-                  <div className="mb-8">
-                    <ClientInformationAccordion 
+        <div className="flex flex-1">
+          <SidebarProvider>
+            <div className="flex w-full">
+              <ClientDetailSidebar 
+                activeTab={activeTab}
+                onTabChange={handleTabChange}
+              />
+              <SidebarInset className="flex flex-col flex-1">
+                <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+                  <SidebarTrigger className="-ml-1" />
+                </header>
+                <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex-1">
+                  <main className="flex-1 container mx-auto px-4 py-8 overflow-auto">
+                    <ClientDetailHeader 
                       client={client} 
-                      onEditClick={handleEditClick}
-                      refreshClient={refreshClient}
+                      onDeleteClick={handleDeleteClick}
+                      isDeleting={isDeleting}
                     />
-                  </div>
 
-                  <CasesSection clientId={client.id} />
+                    <div className="mb-8">
+                      <ClientInformationAccordion 
+                        client={client} 
+                        onEditClick={handleEditClick}
+                        refreshClient={refreshClient}
+                      />
+                    </div>
 
-                  <div className="mt-8">
-                    <ClientDetailTabContent 
-                      client={client} 
-                      activeTab={activeTab}
-                    />
-                  </div>
-                </main>
-              </Tabs>
-            </SidebarInset>
-          </div>
-        </SidebarProvider>
+                    <CasesSection clientId={client.id} />
+
+                    <div className="mt-8">
+                      <ClientDetailTabContent 
+                        client={client} 
+                        activeTab={activeTab}
+                      />
+                    </div>
+                  </main>
+                </Tabs>
+              </SidebarInset>
+            </div>
+          </SidebarProvider>
+        </div>
 
         <DeleteClientDialog
           client={client}
