@@ -39,9 +39,9 @@ const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
 
   return (
     <div className="mb-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="text-3xl font-bold text-gray-900 whitespace-nowrap">{title}</h1>
+      <div className="flex flex-col md:flex-row md:flex-nowrap justify-between items-start md:items-center gap-4 mb-6">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <h1 className="text-3xl font-bold text-gray-900 truncate">{title}</h1>
           {caseType && (
             <span className="text-sm text-muted-foreground whitespace-nowrap">
               Case Type: {caseType.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
@@ -50,7 +50,7 @@ const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
         </div>
         
         {selectedTab === "analysis" && (
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-row gap-2 flex-shrink-0">
             {/* Analysis Format Toggle */}
             
             <div className="flex gap-2">

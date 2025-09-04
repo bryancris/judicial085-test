@@ -70,12 +70,12 @@ const NavBar: React.FC = () => {
   return (
     <header className="sticky top-0 z-50 w-full bg-gray-200 dark:bg-gray-800 py-4">
       <div className="container mx-auto px-4 flex justify-between items-center">
-        <div className="flex items-center">
+        <div className="flex items-center flex-shrink-0">
           <Gavel className="h-6 w-6 text-brand-burgundy dark:text-brand-gold mr-2" />
-          <Link to="/" className="text-xl font-bold dark:text-white">Judicial Junction</Link>
+          <Link to="/" className="text-xl font-bold dark:text-white whitespace-nowrap">Judicial Junction</Link>
         </div>
         
-        <nav className="hidden md:flex items-center space-x-8">
+        <nav className="hidden md:flex items-center space-x-4 flex-1 justify-center">
           <Link to="/features" className="font-medium hover:text-brand-burgundy dark:text-gray-200 dark:hover:text-brand-gold transition-colors">Features</Link>
           <Link to="/about-us" className="font-medium hover:text-brand-burgundy dark:text-gray-200 dark:hover:text-brand-gold transition-colors">About Us</Link>
           <Link to="/pricing" className="font-medium hover:text-brand-burgundy dark:text-gray-200 dark:hover:text-brand-gold transition-colors">Pricing</Link>
@@ -95,7 +95,7 @@ const NavBar: React.FC = () => {
           )}
         </nav>
         
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2 flex-shrink-0">
           <Button 
             variant="ghost" 
             size="icon"
