@@ -8,10 +8,10 @@ import ClientInformationAccordion from "@/components/clients/ClientInformationAc
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import ClientDetailHeader from "@/components/clients/ClientDetailHeader";
+import { ArrowLeft, Trash2, Loader2 } from "lucide-react";
 import ClientDetailTabContent from "@/components/clients/ClientDetailTabs/ClientDetailTabContent";
 import DeleteClientDialog from "@/components/clients/DeleteClientDialog";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { CaseProvider } from "@/contexts/CaseContext";
 import CasesSection from "@/components/clients/cases/CasesSection";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
@@ -103,20 +103,42 @@ const ClientDetail = () => {
                 onTabChange={handleTabChange}
               />
               <SidebarInset className="flex flex-col flex-1">
-                <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-                  <SidebarTrigger className="-ml-1" />
-                  <h1 className="text-2xl font-bold ml-4">
-                    {client.first_name} {client.last_name}
-                  </h1>
+                <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4">
+                  <div className="flex items-center gap-2">
+                    <SidebarTrigger className="-ml-1" />
+                    <h1 className="text-2xl font-bold ml-4">
+                      {client.first_name} {client.last_name}
+                    </h1>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      className="flex items-center gap-2"
+                      onClick={handleDeleteClick}
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin text-red-500" />
+                          Deleting...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                          Delete Client
+                        </>
+                      )}
+                    </Button>
+                    <Link to="/clients">
+                      <Button variant="outline" className="flex items-center gap-2">
+                        <ArrowLeft className="h-4 w-4" />
+                        Back to Clients
+                      </Button>
+                    </Link>
+                  </div>
                 </header>
                 <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex-1">
                   <main className="flex-1 container mx-auto px-4 py-8 overflow-auto">
-                    <ClientDetailHeader 
-                      client={client} 
-                      onDeleteClick={handleDeleteClick}
-                      isDeleting={isDeleting}
-                    />
-
                     <div className="mb-8">
                       <ClientInformationAccordion 
                         client={client} 
