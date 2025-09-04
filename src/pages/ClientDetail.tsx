@@ -2,7 +2,6 @@
 import React, { useState } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import NavBar from "@/components/NavBar";
-import { Tabs } from "@/components/ui/tabs";
 import { useClientDetail } from "@/hooks/useClientDetail";
 import ClientDetailSkeleton from "@/components/clients/ClientDetailSkeleton";
 import ClientInformationAccordion from "@/components/clients/ClientInformationAccordion";
@@ -10,12 +9,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import ClientDetailHeader from "@/components/clients/ClientDetailHeader";
-import ClientDetailTabsList from "@/components/clients/ClientDetailTabs/ClientDetailTabsList";
 import ClientDetailTabContent from "@/components/clients/ClientDetailTabs/ClientDetailTabContent";
 import DeleteClientDialog from "@/components/clients/DeleteClientDialog";
 import { useToast } from "@/components/ui/use-toast";
 import { CaseProvider } from "@/contexts/CaseContext";
 import CasesSection from "@/components/clients/cases/CasesSection";
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import ClientDetailSidebar from "@/components/clients/ClientDetailSidebar";
 
 const ClientDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -91,49 +91,54 @@ const ClientDetail = () => {
 
   return (
     <CaseProvider>
-      <div className="min-h-screen flex flex-col">
-        <NavBar />
-        <main className="flex-grow container mx-auto px-4 py-8">
-          <ClientDetailHeader 
-            client={client} 
-            onDeleteClick={handleDeleteClick}
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full">
+          <ClientDetailSidebar 
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+          />
+          <SidebarInset className="flex flex-col">
+            <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+              <SidebarTrigger className="-ml-1" />
+              <div className="ml-auto">
+                <NavBar />
+              </div>
+            </header>
+            <main className="flex-1 container mx-auto px-4 py-8 overflow-auto">
+              <ClientDetailHeader 
+                client={client} 
+                onDeleteClick={handleDeleteClick}
+                isDeleting={isDeleting}
+              />
+
+              <div className="mb-8">
+                <ClientInformationAccordion 
+                  client={client} 
+                  onEditClick={handleEditClick}
+                  refreshClient={refreshClient}
+                />
+              </div>
+
+              <CasesSection clientId={client.id} />
+
+              <div className="mt-8">
+                <ClientDetailTabContent 
+                  client={client} 
+                  activeTab={activeTab}
+                />
+              </div>
+            </main>
+          </SidebarInset>
+
+          <DeleteClientDialog
+            client={client}
+            isOpen={deleteDialogOpen}
+            setIsOpen={setDeleteDialogOpen}
+            onConfirm={handleDeleteConfirm}
             isDeleting={isDeleting}
           />
-
-          <div className="mb-8">
-            <ClientInformationAccordion 
-              client={client} 
-              onEditClick={handleEditClick}
-              refreshClient={refreshClient}
-            />
-          </div>
-
-          <CasesSection clientId={client.id} />
-
-          <div className="mt-8">
-            <Tabs 
-              defaultValue="client-intake" 
-              className="w-full"
-              value={activeTab}
-              onValueChange={handleTabChange}
-            >
-              <ClientDetailTabsList />
-              <ClientDetailTabContent 
-                client={client} 
-                activeTab={activeTab}
-              />
-            </Tabs>
-          </div>
-        </main>
-
-        <DeleteClientDialog
-          client={client}
-          isOpen={deleteDialogOpen}
-          setIsOpen={setDeleteDialogOpen}
-          onConfirm={handleDeleteConfirm}
-          isDeleting={isDeleting}
-        />
-      </div>
+        </div>
+      </SidebarProvider>
     </CaseProvider>
   );
 };
