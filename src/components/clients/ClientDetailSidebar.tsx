@@ -2,9 +2,6 @@ import React from "react";
 import {
   Sidebar,
   SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
@@ -19,29 +16,14 @@ interface ClientDetailSidebarProps {
 }
 
 const sidebarItems = [
-  {
-    group: "Case Management",
-    items: [
-      { id: "client-intake", label: "Client Intake", icon: MessageSquare },
-      { id: "case-analysis", label: "Case Analysis", icon: BarChart3 },
-      { id: "case-discussion", label: "Case Discussion", icon: Users },
-      { id: "discovery", label: "Discovery", icon: FileText },
-    ]
-  },
-  {
-    group: "Documents & Contracts",
-    items: [
-      { id: "documents", label: "Document Hub", icon: Upload },
-      { id: "contracts", label: "Contracts", icon: Scale },
-    ]
-  },
-  {
-    group: "Tools",
-    items: [
-      { id: "knowledge", label: "Create Document", icon: Plus },
-      { id: "templates", label: "Placeholder", icon: Layout },
-    ]
-  }
+  { id: "client-intake", label: "Client Intake", icon: MessageSquare },
+  { id: "analysis", label: "Case Analysis", icon: BarChart3 },
+  { id: "discussion", label: "Case Discussion", icon: Users },
+  { id: "discovery", label: "Discovery", icon: FileText },
+  { id: "documents", label: "Document Hub", icon: Upload },
+  { id: "contracts", label: "Contracts", icon: Scale },
+  { id: "knowledge", label: "Create Document", icon: Plus },
+  { id: "templates", label: "Placeholder", icon: Layout },
 ];
 
 const ClientDetailSidebar: React.FC<ClientDetailSidebarProps> = ({ activeTab, onTabChange }) => {
@@ -61,29 +43,20 @@ const ClientDetailSidebar: React.FC<ClientDetailSidebarProps> = ({ activeTab, on
   return (
     <Sidebar style={{ top: '5rem' }}>
       <SidebarContent>
-        {sidebarItems.map((group) => (
-          <SidebarGroup key={group.group}>
-            <SidebarGroupLabel className="text-sm font-medium text-muted-foreground">
-              {!isCollapsed && group.group}
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {group.items.map((item) => (
-                  <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton
-                      onClick={() => onTabChange(item.id)}
-                      className={getItemClasses(item.id)}
-                      tooltip={isCollapsed ? item.label : undefined}
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {!isCollapsed && <span>{item.label}</span>}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
+        <SidebarMenu>
+          {sidebarItems.map((item) => (
+            <SidebarMenuItem key={item.id}>
+              <SidebarMenuButton
+                onClick={() => onTabChange(item.id)}
+                className={getItemClasses(item.id)}
+                tooltip={isCollapsed ? item.label : undefined}
+              >
+                <item.icon className="h-4 w-4" />
+                {!isCollapsed && <span>{item.label}</span>}
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
       </SidebarContent>
     </Sidebar>
   );
