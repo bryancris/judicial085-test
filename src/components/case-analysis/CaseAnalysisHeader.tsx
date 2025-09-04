@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { FileText, MessageCircle, StickyNote, RefreshCw, Search, Sparkles, Scale } from "lucide-react";
+import { FileText, MessageCircle, StickyNote, RefreshCw, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ExportButton } from "./export/ExportButton";
 
@@ -14,9 +14,6 @@ interface CaseAnalysisHeaderProps {
   onGenerate: () => void;
   caseType?: string;
   hasUnincorporatedFindings?: boolean;
-  viewMode?: 'irac' | 'traditional';
-  onViewModeChange?: (mode: 'irac' | 'traditional') => void;
-  supportsIrac?: boolean;
 }
 
 const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
@@ -27,10 +24,7 @@ const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
   isGenerating,
   onGenerate,
   caseType,
-  hasUnincorporatedFindings = false,
-  viewMode = 'irac',
-  onViewModeChange,
-  supportsIrac = false
+  hasUnincorporatedFindings = false
 }) => {
   const handleRegenerateClick = () => {
     console.log("Regenerating real-time analysis...");
@@ -58,28 +52,6 @@ const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
         {selectedTab === "analysis" && (
           <div className="flex flex-col sm:flex-row gap-2">
             {/* Analysis Format Toggle */}
-            {supportsIrac && onViewModeChange && (
-              <div className="flex gap-2 mr-4">
-                <Button
-                  variant={viewMode === 'irac' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => onViewModeChange('irac')}
-                  className="text-xs"
-                >
-                  <Scale className="h-3 w-3 mr-1" />
-                  IRAC Method
-                </Button>
-                <Button
-                  variant={viewMode === 'traditional' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => onViewModeChange('traditional')}
-                  className="text-xs"
-                >
-                  <FileText className="h-3 w-3 mr-1" />
-                  Traditional
-                </Button>
-              </div>
-            )}
             
             <div className="flex gap-2">
               <ExportButton

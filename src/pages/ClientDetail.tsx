@@ -8,7 +8,7 @@ import ClientInformationAccordion from "@/components/clients/ClientInformationAc
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Trash2, Loader2 } from "lucide-react";
+import { ArrowLeft, Trash2, Loader2, Scale, FileText } from "lucide-react";
 import ClientDetailTabContent from "@/components/clients/ClientDetailTabs/ClientDetailTabContent";
 import DeleteClientDialog from "@/components/clients/DeleteClientDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +24,7 @@ const ClientDetail = () => {
   const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("client-intake");
+  const [viewMode, setViewMode] = useState<'irac' | 'traditional'>("irac");
   console.log("ClientDetail render", { id, loading, hasSession: !!session, hasClient: !!client, error });
 
   // If not authenticated, redirect to auth page
@@ -110,7 +111,30 @@ const ClientDetail = () => {
                       {client.first_name} {client.last_name}
                     </h1>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
+                    {(activeTab === "analysis" || activeTab === "case-analysis") && (
+                      <div className="flex gap-2 mr-2">
+                        <Button
+                          variant={viewMode === 'irac' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setViewMode('irac')}
+                          className="text-xs"
+                        >
+                          <Scale className="h-3 w-3 mr-1" />
+                          IRAC Method
+                        </Button>
+                        <Button
+                          variant={viewMode === 'traditional' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setViewMode('traditional')}
+                          className="text-xs"
+                        >
+                          <FileText className="h-3 w-3 mr-1" />
+                          Traditional
+                        </Button>
+                      </div>
+                    )}
+
                     <Button 
                       variant="outline" 
                       className="flex items-center gap-2"
@@ -156,6 +180,8 @@ const ClientDetail = () => {
                       <ClientDetailTabContent 
                         client={client} 
                         activeTab={activeTab}
+                        viewMode={viewMode}
+                        onViewModeChange={setViewMode}
                       />
                     </div>
                   </main>

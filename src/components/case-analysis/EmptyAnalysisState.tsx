@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import CaseAnalysisHeader from "./CaseAnalysisHeader";
+
 
 interface EmptyAnalysisStateProps {
   clientName: string;
@@ -91,14 +91,6 @@ const EmptyAnalysisState: React.FC<EmptyAnalysisStateProps> = ({
 
   return (
     <div className="container mx-auto py-8">
-      <CaseAnalysisHeader
-        title={`${clientName} - Case Analysis`}
-        clientId={clientId}
-        selectedTab={selectedTab}
-        setSelectedTab={setSelectedTab}
-        isGenerating={isGenerating}
-        onGenerate={onGenerate}
-      />
 
       <div className="bg-white rounded-lg shadow-sm p-8 text-center">
         <h2 className="text-2xl font-semibold mb-4">No Analysis Available</h2>

@@ -28,18 +28,23 @@ import { parseIracAnalysis, isIracStructured } from "@/utils/iracParser";
 interface ClientDetailTabContentProps {
   client: Client;
   activeTab: string;
+  viewMode?: 'irac' | 'traditional';
+  onViewModeChange?: (mode: 'irac' | 'traditional') => void;
 }
 
-const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({ 
-  client, 
-  activeTab 
+const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
+  client,
+  activeTab,
+  viewMode: viewModeProp,
+  onViewModeChange: onViewModeChangeProp,
 }) => {
   const { currentCase } = useCase();
   const [analysisRefreshTrigger, setAnalysisRefreshTrigger] = useState(0);
   const [analysisTab, setAnalysisTab] = useState("analysis");
   
-  // Analysis format state
-  const [viewMode, setViewMode] = useState<'irac' | 'traditional'>('irac');
+  // Analysis format state (can be controlled from parent)
+  const [internalViewMode, setInternalViewMode] = useState<'irac' | 'traditional'>('irac');
+  const viewMode = viewModeProp ?? internalViewMode;
   
   // Use case analysis hook
   const {
@@ -195,8 +200,12 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
 
   // Handle view mode change
   const handleViewModeChange = useCallback((mode: 'irac' | 'traditional') => {
-    setViewMode(mode);
-  }, []);
+    if (onViewModeChangeProp) {
+      onViewModeChangeProp(mode);
+    } else {
+      setInternalViewMode(mode);
+    }
+  }, [onViewModeChangeProp]);
   
   const renderTabContent = () => {
     console.log("=== RENDERING TAB CONTENT DEBUG ===");
@@ -248,16 +257,13 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
           return (
             <div className="container mx-auto py-8">
               <CaseAnalysisHeader
-                title={`${client.first_name} ${client.last_name} - Case Analysis`}
+                title="Case Analysis"
                 clientId={client.id}
                 selectedTab={analysisTab}
                 setSelectedTab={setAnalysisTab}
                 isGenerating={isAnalysisLoading}
                 onGenerate={generateNewAnalysis}
                 caseType={analysisData?.caseType}
-                viewMode={viewMode}
-                onViewModeChange={handleViewModeChange}
-                supportsIrac={supportsIrac}
               />
               
               <TabsContainer
