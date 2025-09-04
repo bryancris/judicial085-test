@@ -59,7 +59,7 @@ const ClientDetailSidebar: React.FC<ClientDetailSidebarProps> = ({ activeTab, on
   };
 
   return (
-    <Sidebar>
+    <Sidebar className="top-16">
       <SidebarContent>
         {sidebarItems.map((group) => (
           <SidebarGroup key={group.group}>

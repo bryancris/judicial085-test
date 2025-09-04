@@ -68,7 +68,7 @@ const NavBar: React.FC = () => {
   };
 
   return (
-    <header className="w-full bg-gray-200 dark:bg-gray-800 py-4">
+    <header className="sticky top-0 z-50 w-full bg-gray-200 dark:bg-gray-800 py-4">
       <div className="container mx-auto px-4 flex justify-between items-center">
         <div className="flex items-center">
           <Gavel className="h-6 w-6 text-brand-burgundy dark:text-brand-gold mr-2" />
