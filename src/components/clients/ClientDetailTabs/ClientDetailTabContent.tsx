@@ -201,6 +201,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
           />
         );
 
+      case "analysis":
       case "case-analysis":
         console.log("✅ Entering case-analysis case");
         
@@ -267,6 +268,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
           );
         }
 
+      case "discussion":
       case "case-discussion":
         return (
           <CaseDiscussionContainer 
