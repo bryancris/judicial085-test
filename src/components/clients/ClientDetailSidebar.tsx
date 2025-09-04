@@ -45,11 +45,11 @@ const ClientDetailSidebar: React.FC<ClientDetailSidebarProps> = ({ activeTab, on
             <SidebarMenuItem key={item.id}>
               <SidebarMenuButton
                 onClick={() => onTabChange(item.id)}
-                className={getItemClasses(item.id)}
+                className={`${getItemClasses(item.id)} relative justify-center`}
                 tooltip={isCollapsed ? item.label : undefined}
               >
-                <item.icon className="h-4 w-4" />
-                {!isCollapsed && <span>{item.label}</span>}
+                <item.icon className={isCollapsed ? "h-4 w-4" : "h-4 w-4 absolute left-3"} />
+                {!isCollapsed && <span className="mx-auto">{item.label}</span>}
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
