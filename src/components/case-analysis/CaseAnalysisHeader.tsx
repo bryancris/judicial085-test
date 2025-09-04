@@ -40,12 +40,12 @@ const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
   return (
     <div className="mb-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
+        <div className="flex items-center gap-3 flex-wrap">
+          <h1 className="text-3xl font-bold text-gray-900 whitespace-nowrap">{title}</h1>
           {caseType && (
-            <p className="text-sm text-muted-foreground mt-1">
+            <span className="text-sm text-muted-foreground whitespace-nowrap">
               Case Type: {caseType.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-            </p>
+            </span>
           )}
         </div>
         
