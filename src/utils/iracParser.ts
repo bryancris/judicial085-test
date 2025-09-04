@@ -9,23 +9,37 @@ export const parseIracAnalysis = (content: string): IracAnalysis | null => {
     const sections = content.split(/\*\*(.*?):\*\*/g).filter(Boolean);
     const sectionMap: Record<string, string> = {};
     
-    // Build section map
+    // Build section map with normalized keys
     for (let i = 0; i < sections.length - 1; i += 2) {
-      const sectionName = sections[i].trim();
+      const sectionName = sections[i].trim().toUpperCase();
       const sectionContent = sections[i + 1]?.trim() || '';
       sectionMap[sectionName] = sectionContent;
     }
 
-    // Extract case summary
-    const caseSummary = sectionMap['CASE SUMMARY'] || '';
+    // Debug logging
+    console.log('Parsed sections:', Object.keys(sectionMap));
+
+    // Extract case summary with fallback patterns
+    const caseSummary = sectionMap['CASE SUMMARY'] || 
+                       sectionMap['SUMMARY'] || 
+                       sectionMap['CASE OVERVIEW'] || '';
 
     // Parse IRAC issues from the content
     const legalIssues = parseIracIssues(content);
 
-    // Extract other sections
-    const overallConclusion = sectionMap['OVERALL CONCLUSION'] || '';
-    const followUpQuestions = parseFollowUpQuestions(sectionMap['RECOMMENDED FOLLOW-UP QUESTIONS'] || '');
-    const nextSteps = parseNextSteps(sectionMap['NEXT STEPS'] || '');
+    // Extract other sections with fallback patterns
+    const overallConclusion = sectionMap['OVERALL CONCLUSION'] || 
+                             sectionMap['CONCLUSION'] || 
+                             sectionMap['FINAL CONCLUSION'] || '';
+    const followUpQuestions = parseFollowUpQuestions(
+      sectionMap['RECOMMENDED FOLLOW-UP QUESTIONS'] || 
+      sectionMap['FOLLOW-UP QUESTIONS'] || 
+      sectionMap['QUESTIONS'] || ''
+    );
+    const nextSteps = parseNextSteps(
+      sectionMap['NEXT STEPS'] || 
+      sectionMap['RECOMMENDED NEXT STEPS'] || ''
+    );
 
     return {
       caseSummary,
