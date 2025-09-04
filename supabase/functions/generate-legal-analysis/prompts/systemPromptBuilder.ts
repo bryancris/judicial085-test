@@ -40,49 +40,63 @@ COMPREHENSIVE LEGAL ANALYSIS APPROACH:
     systemPrompt += `\n\nRESEARCH INTEGRATION: You have ${researchUpdates.length} research update(s) to integrate. These should be seamlessly woven into the appropriate sections of your analysis.`;
   }
 
-  // Enhanced analysis structure requirements
-  systemPrompt += `\n\nREQUIRED COMPREHENSIVE ANALYSIS STRUCTURE:
+  // IRAC-based analysis structure requirements
+  systemPrompt += `\n\nREQUIRED IRAC ANALYSIS STRUCTURE:
 
 **CASE SUMMARY:**
-Complete summary of the legal matter, parties, timeline, and ALL identified legal issues.
+Brief overview of the legal matter, parties, key facts, and procedural posture.
 
-**RELEVANT TEXAS LAW:**
-Exhaustive analysis of ALL applicable Texas statutes, regulations, and case law including:
-- Primary controlling authorities with complete citations
-- Secondary supporting authorities
-- Procedural rules and requirements
-- Recent developments or changes in applicable law
-- Federal law implications where relevant
+**IRAC LEGAL ANALYSIS:**
+For EACH distinct legal issue identified, provide a complete IRAC analysis:
 
-**PRELIMINARY ANALYSIS:**
-- ALL potential legal theories and causes of action
-- Complete elements analysis for each potential claim
-- Available defenses and counterclaims  
-- Procedural considerations and deadlines
-- Damages, remedies, and available relief
-- Evidence requirements and burden of proof
-- Strategic considerations and case theory development
+**ISSUE [#]:** [Category - e.g., Contract Law, Tort Law, etc.]
+State the precise legal question that must be resolved.
+
+**RULE:**
+- Applicable Texas statutes with complete citations
+- Controlling case law with proper citations
+- Elements of the legal theory or cause of action
+- Relevant procedural rules and requirements
+- Burden of proof standards
+
+**APPLICATION:**
+- Apply the legal rule to the specific facts presented
+- Analyze each element of the claim or defense
+- Compare and distinguish relevant case precedents
+- Address counterarguments and potential defenses
+- Evaluate strength of evidence for each element
+
+**CONCLUSION:**
+- Clear determination on the legal issue
+- Likelihood of success assessment
+- Potential damages or remedies available
+- Strategic implications for the case
+
+[Repeat IRAC analysis for each additional legal issue]
+
+**OVERALL CONCLUSION:**
+Synthesis of all IRAC analyses with comprehensive case assessment.
 
 **CASE STRENGTHS:**
-Comprehensive analysis of favorable factors, strong legal arguments, and strategic advantages.
+Favorable factors and strong legal arguments from IRAC analysis.
 
 **CASE WEAKNESSES:**
-Detailed assessment of potential challenges, opposing arguments, and areas of vulnerability.
-
-**POTENTIAL LEGAL ISSUES:**
-All legal questions, complications, and areas requiring further development.
+Potential challenges and vulnerabilities identified in IRAC analysis.
 
 **RECOMMENDED FOLLOW-UP QUESTIONS:**
-Strategic questions organized by category to advance case development (numbered list).
+Strategic questions organized by legal issue to advance case development (numbered list).
 
 **NEXT STEPS:**
-Comprehensive action plan including immediate steps, discovery needs, and long-term strategy.`;
+Comprehensive action plan including immediate steps, discovery needs, and strategic priorities.`;
 
-  // Enhanced formatting and quality requirements
-  systemPrompt += `\n\nCOMPREHENSIVE ANALYSIS REQUIREMENTS:
+  // Enhanced IRAC formatting and quality requirements
+  systemPrompt += `\n\nIRAC ANALYSIS REQUIREMENTS:
 - Use proper markdown formatting with ** for section headers
-- Include complete Texas statute citations (Code and Section number)
-- Reference controlling case law with proper citations
+- For each ISSUE section, use format: **ISSUE [#]:** [Category] followed by the legal question
+- For RULE sections, include complete Texas statute citations (Code and Section number)
+- Reference controlling case law with proper citations in RULE sections
+- In APPLICATION sections, directly apply rules to the specific facts presented
+- CONCLUSION sections must provide clear determinations and likelihood assessments
 - Consider ALL applicable areas of Texas law (not just obvious ones)
 - Analyze multiple legal theories that may apply to the same facts
 - Provide specific, actionable recommendations based on Texas law
@@ -90,8 +104,21 @@ Comprehensive action plan including immediate steps, discovery needs, and long-t
 - Include procedural and strategic considerations
 - Keep analysis factual while identifying all reasonable legal inferences
 
-TEXAS LAW CODES TO CONSIDER:
-Analyze potential applicability of ALL relevant Texas codes including: Penal Code, Civil Practice & Remedies Code, Business & Commerce Code, Property Code, Family Code, Government Code, Occupations Code, Labor Code, Insurance Code, Transportation Code, Health & Safety Code, Finance Code, Utilities Code, Water Code, Natural Resources Code, and all applicable administrative regulations.`;
+TEXAS LAW CODES TO CONSIDER IN IRAC ANALYSIS:
+When identifying legal issues and rules, analyze potential applicability of ALL relevant Texas codes including: Penal Code, Civil Practice & Remedies Code, Business & Commerce Code, Property Code, Family Code, Government Code, Occupations Code, Labor Code, Insurance Code, Transportation Code, Health & Safety Code, Finance Code, Utilities Code, Water Code, Natural Resources Code, and all applicable administrative regulations.
+
+IRAC STRUCTURE EXAMPLE:
+**ISSUE [1]:** [Contract Law]
+Whether [specific legal question based on facts]
+
+**RULE:**
+[Applicable statute/case law with citations]
+
+**APPLICATION:**
+[Apply rule to facts]
+
+**CONCLUSION:**
+[Clear determination with likelihood assessment]`;
 
   // Enhanced fact-based analysis reminder
   systemPrompt += `\n\nFACT-DRIVEN COMPREHENSIVE ANALYSIS: Base your analysis on the specific facts presented and identify ALL areas of law that may apply. Do not limit yourself to a single legal theory or area of law. If facts suggest applicability of multiple codes or legal areas, analyze each thoroughly. Your goal is to provide the comprehensive legal analysis an experienced Texas attorney would deliver when given unlimited time to research all applicable law.`;

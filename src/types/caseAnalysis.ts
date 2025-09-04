@@ -8,6 +8,24 @@ export interface LawReference {
   content?: string | null;
 }
 
+// IRAC Analysis Structure
+export interface IracIssue {
+  id: string;
+  issueStatement: string;
+  rule: string;
+  application: string;
+  conclusion: string;
+  category?: string; // e.g., "Contract Law", "Tort Law", etc.
+}
+
+export interface IracAnalysis {
+  caseSummary: string;
+  legalIssues: IracIssue[];
+  overallConclusion: string;
+  followUpQuestions: string[];
+  nextSteps: string[];
+}
+
 export interface CaseAnalysisData {
   outcome: {
     defense: number;
@@ -19,6 +37,10 @@ export interface CaseAnalysisData {
     potentialIssues: string;
     followUpQuestions: string[];
   };
+  // New IRAC structure (optional for backward compatibility)
+  iracAnalysis?: IracAnalysis;
+  // Analysis methodology used
+  methodology?: 'traditional' | 'irac';
   strengths: string[];
   weaknesses: string[];
   conversationSummary: string;

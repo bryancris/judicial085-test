@@ -1,10 +1,12 @@
-
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollText } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ScrollText, Scale, FileText } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import AnalysisItem from "@/components/clients/chat/AnalysisItem";
 import RemediesSection from "./RemediesSection";
+import IracAnalysisSection from "./IracAnalysisSection";
+import { parseIracAnalysis, isIracStructured } from "@/utils/iracParser";
 
 interface DetailedLegalAnalysisProps {
   relevantLaw: string;
@@ -14,7 +16,7 @@ interface DetailedLegalAnalysisProps {
   isLoading?: boolean;
   remedies?: string;
   caseType?: string;
-  rawContent?: string; // Add raw content prop
+  rawContent?: string;
   validationStatus?: string;
 }
 
@@ -29,81 +31,133 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
   rawContent,
   validationStatus
 }) => {
-  // If we have raw content, use it directly like Client Intake does
-  if (rawContent) {
-    return (
-      <div className="space-y-6">
-        {/* Render the remedies section if it exists */}
-        {remedies && remedies.trim() !== "" && (
-          <RemediesSection 
-            remedies={remedies}
-            isLoading={isLoading}
-            caseType={caseType}
-          />
-        )}
-        
-        <Card className="mb-6 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xl font-semibold flex items-center">
-              <ScrollText className="h-5 w-5 mr-2 text-blue-500" />
+  const [viewMode, setViewMode] = useState<'irac' | 'traditional'>('irac');
+
+  // Parse IRAC analysis from raw content
+  const iracAnalysis = useMemo(() => {
+    if (!rawContent) return null;
+    return parseIracAnalysis(rawContent);
+  }, [rawContent]);
+
+  // Determine if content supports IRAC structure
+  const supportsIrac = useMemo(() => {
+    return rawContent ? isIracStructured(rawContent) : false;
+  }, [rawContent]);
+
+  // Default to traditional view if IRAC is not supported
+  const effectiveViewMode = supportsIrac ? viewMode : 'traditional';
+
+  return (
+    <div className="space-y-6">
+      {/* Analysis Mode Toggle */}
+      {supportsIrac && (
+        <Card className="border-primary/20">
+          <CardContent className="pt-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-sm">Analysis Format</h3>
+                <p className="text-xs text-muted-foreground">
+                  Choose how to view the legal analysis
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant={effectiveViewMode === 'irac' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('irac')}
+                  className="text-xs"
+                >
+                  <Scale className="h-3 w-3 mr-1" />
+                  IRAC Method
+                </Button>
+                <Button
+                  variant={effectiveViewMode === 'traditional' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('traditional')}
+                  className="text-xs"
+                >
+                  <FileText className="h-3 w-3 mr-1" />
+                  Traditional
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* IRAC Analysis View */}
+      {effectiveViewMode === 'irac' && iracAnalysis && (
+        <IracAnalysisSection analysis={iracAnalysis} isLoading={isLoading} />
+      )}
+
+      {/* Traditional Analysis View */}
+      {effectiveViewMode === 'traditional' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ScrollText className="h-5 w-5" />
               Detailed Legal Analysis
-              {isLoading && (
-                <span className="ml-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
-              )}
-              {caseType && caseType !== "general" && (
-                <span className="ml-2 text-xs font-medium bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full dark:bg-blue-900/30 dark:text-blue-200">
-                  {caseType === "consumer-protection" ? "Consumer Protection" : caseType}
-                </span>
-              )}
-              {validationStatus === 'pending_review' && (
-                <span className="ml-2 text-xs font-medium bg-yellow-100 text-yellow-800 px-2.5 py-0.5 rounded-full dark:bg-yellow-900/30 dark:text-yellow-200">
-                  Pending review
+              {validationStatus && (
+                <span className={`text-xs px-2 py-1 rounded-full ${
+                  validationStatus === 'validated' 
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                    : validationStatus === 'pending_review'
+                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                    : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                }`}>
+                  {validationStatus.replace('_', ' ')}
                 </span>
               )}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {/* Use the same AnalysisItem component that Client Intake uses */}
-            <AnalysisItem 
-              content={rawContent}
-              timestamp={new Date().toISOString()} // TODO: pass real timestamp
-
-            />
+            {rawContent ? (
+              <div className="prose dark:prose-invert max-w-none">
+                {rawContent.split('\n\n').map((paragraph, idx) => (
+                  <p key={idx} className="mb-4 leading-relaxed">{paragraph}</p>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="font-semibold text-lg mb-3">Relevant Texas Law</h3>
+                  <div className="prose dark:prose-invert max-w-none text-sm">
+                    <p>{relevantLaw}</p>
+                  </div>
+                </div>
+                <Separator />
+                <div>
+                  <h3 className="font-semibold text-lg mb-3">Preliminary Analysis</h3>
+                  <div className="prose dark:prose-invert max-w-none text-sm">
+                    <p>{preliminaryAnalysis}</p>
+                  </div>
+                </div>
+                <Separator />
+                <div>
+                  <h3 className="font-semibold text-lg mb-3">Potential Legal Issues</h3>
+                  <div className="prose dark:prose-invert max-w-none text-sm">
+                    <p>{potentialIssues}</p>
+                  </div>
+                </div>
+                <Separator />
+                <div>
+                  <h3 className="font-semibold text-lg mb-3">Recommended Follow-up Questions</h3>
+                  <ol className="list-decimal list-inside space-y-1 text-sm">
+                    {followUpQuestions.map((question, idx) => (
+                      <li key={idx} className="text-muted-foreground">{question}</li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
-      </div>
-    );
-  }
+      )}
 
-  // Fallback to legacy parsed content if no raw content (shouldn't happen now)
-  const hasContent = relevantLaw || preliminaryAnalysis || potentialIssues || followUpQuestions?.length > 0;
-  
-  if (!hasContent && !isLoading) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">No detailed analysis available. Please generate an analysis first.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <Card className="mb-6 shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-xl font-semibold flex items-center">
-            <ScrollText className="h-5 w-5 mr-2 text-blue-500" />
-            Detailed Legal Analysis (Legacy View)
-            {isLoading && (
-              <span className="ml-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">Raw content not available. This is the legacy parsed view.</p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Remedies Section */}
+      {remedies && (
+        <RemediesSection remedies={remedies} caseType={caseType} />
+      )}
     </div>
   );
 };
