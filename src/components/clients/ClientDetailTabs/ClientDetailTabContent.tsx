@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Layout } from "lucide-react";
 import ClientIntakeChat from "@/components/clients/chat/ClientIntakeChat";
@@ -23,6 +23,7 @@ import CaseAnalysisHeader from "@/components/case-analysis/CaseAnalysisHeader";
 import TabsContainer from "@/components/case-analysis/tabs/TabsContainer";
 import { SimilarCase } from "@/components/case-analysis/SimilarCasesSection";
 import { supabase } from "@/integrations/supabase/client";
+import { parseIracAnalysis, isIracStructured } from "@/utils/iracParser";
 
 interface ClientDetailTabContentProps {
   client: Client;
@@ -36,6 +37,9 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
   const { currentCase } = useCase();
   const [analysisRefreshTrigger, setAnalysisRefreshTrigger] = useState(0);
   const [analysisTab, setAnalysisTab] = useState("analysis");
+  
+  // Analysis format state
+  const [viewMode, setViewMode] = useState<'irac' | 'traditional'>('irac');
   
   // Use case analysis hook
   const {
@@ -183,6 +187,16 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
     setAnalysisRefreshTrigger(prev => prev + 1);
     console.log("Analysis refresh triggered from case discussion");
   }, []);
+
+  // Determine if content supports IRAC structure
+  const supportsIrac = useMemo(() => {
+    return analysisData?.rawContent ? isIracStructured(analysisData.rawContent) : false;
+  }, [analysisData?.rawContent]);
+
+  // Handle view mode change
+  const handleViewModeChange = useCallback((mode: 'irac' | 'traditional') => {
+    setViewMode(mode);
+  }, []);
   
   const renderTabContent = () => {
     console.log("=== RENDERING TAB CONTENT DEBUG ===");
@@ -241,6 +255,9 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
                 isGenerating={isAnalysisLoading}
                 onGenerate={generateNewAnalysis}
                 caseType={analysisData?.caseType}
+                viewMode={viewMode}
+                onViewModeChange={handleViewModeChange}
+                supportsIrac={supportsIrac}
               />
               
               <TabsContainer
@@ -263,6 +280,9 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
                 analysisFound={analysisFound}
                 fallbackUsed={fallbackUsed}
                 onSimilarCasesRefresh={loadSimilarCasesData}
+                viewMode={viewMode}
+                onViewModeChange={handleViewModeChange}
+                supportsIrac={supportsIrac}
               />
             </div>
           );

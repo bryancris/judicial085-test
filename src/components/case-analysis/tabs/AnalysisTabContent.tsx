@@ -22,6 +22,9 @@ interface AnalysisTabContentProps {
   analysisFound: boolean;
   fallbackUsed: boolean;
   onSimilarCasesRefresh?: () => void;
+  viewMode?: 'irac' | 'traditional';
+  onViewModeChange?: (mode: 'irac' | 'traditional') => void;
+  supportsIrac?: boolean;
 }
 
 const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
@@ -36,7 +39,10 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
   isSimilarCasesLoading,
   analysisFound,
   fallbackUsed,
-  onSimilarCasesRefresh
+  onSimilarCasesRefresh,
+  viewMode = 'irac',
+  onViewModeChange,
+  supportsIrac
 }) => {
   return (
     <div className="space-y-8">
@@ -51,6 +57,7 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
         caseType={analysisData.caseType}
         rawContent={analysisData.rawContent}
         validationStatus={analysisData.validationStatus}
+        viewMode={viewMode}
       />
 
       {/* Law References Section */}

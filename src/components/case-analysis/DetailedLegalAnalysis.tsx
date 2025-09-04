@@ -18,6 +18,7 @@ interface DetailedLegalAnalysisProps {
   caseType?: string;
   rawContent?: string;
   validationStatus?: string;
+  viewMode?: 'irac' | 'traditional';
 }
 
 const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
@@ -29,9 +30,9 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
   remedies,
   caseType,
   rawContent,
-  validationStatus
+  validationStatus,
+  viewMode = 'irac'
 }) => {
-  const [viewMode, setViewMode] = useState<'irac' | 'traditional'>('irac');
 
   // Parse IRAC analysis from raw content
   const iracAnalysis = useMemo(() => {
@@ -49,41 +50,6 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Analysis Mode Toggle */}
-      {supportsIrac && (
-        <Card className="border-primary/20">
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-sm">Analysis Format</h3>
-                <p className="text-xs text-muted-foreground">
-                  Choose how to view the legal analysis
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant={effectiveViewMode === 'irac' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('irac')}
-                  className="text-xs"
-                >
-                  <Scale className="h-3 w-3 mr-1" />
-                  IRAC Method
-                </Button>
-                <Button
-                  variant={effectiveViewMode === 'traditional' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('traditional')}
-                  className="text-xs"
-                >
-                  <FileText className="h-3 w-3 mr-1" />
-                  Traditional
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* IRAC Analysis View */}
       {effectiveViewMode === 'irac' && iracAnalysis && (
