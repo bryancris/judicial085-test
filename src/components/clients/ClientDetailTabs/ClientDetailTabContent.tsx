@@ -1,6 +1,5 @@
 
 import React, { useState, useCallback } from "react";
-import { TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Layout } from "lucide-react";
 import ClientIntakeChat from "@/components/clients/chat/ClientIntakeChat";
@@ -185,110 +184,123 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
     console.log("Analysis refresh triggered from case discussion");
   }, []);
   
-  return (
-    <>
-      <TabsContent value="client-intake" className="mt-6">
-        <ClientIntakeChat 
-          clientId={client.id} 
-          clientName={`${client.first_name} ${client.last_name}`}
-        />
-      </TabsContent>
-
-      <TabsContent value="case-analysis" className="mt-6">
-        {isAnalysisLoading ? (
-          <CaseAnalysisLoadingSkeleton />
-        ) : analysisError ? (
-          <CaseAnalysisErrorState 
-            error={analysisError} 
-            onRefresh={generateNewAnalysis}
-          />
-        ) : !analysisData ? (
-          <EmptyAnalysisState 
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "client-intake":
+        return (
+          <ClientIntakeChat 
+            clientId={client.id} 
             clientName={`${client.first_name} ${client.last_name}`}
-            clientId={client.id}
-            caseId={currentCase?.id}
-            selectedTab={analysisTab}
-            setSelectedTab={setAnalysisTab}
-            isGenerating={isAnalysisLoading}
-            onGenerate={generateNewAnalysis}
           />
-        ) : (
-          <div className="container mx-auto py-8">
-            <CaseAnalysisHeader
-              title={`${client.first_name} ${client.last_name} - Case Analysis`}
+        );
+
+      case "case-analysis":
+        if (isAnalysisLoading) {
+          return <CaseAnalysisLoadingSkeleton />;
+        } else if (analysisError) {
+          return (
+            <CaseAnalysisErrorState 
+              error={analysisError} 
+              onRefresh={generateNewAnalysis}
+            />
+          );
+        } else if (!analysisData) {
+          return (
+            <EmptyAnalysisState 
+              clientName={`${client.first_name} ${client.last_name}`}
               clientId={client.id}
+              caseId={currentCase?.id}
               selectedTab={analysisTab}
               setSelectedTab={setAnalysisTab}
               isGenerating={isAnalysisLoading}
               onGenerate={generateNewAnalysis}
-              caseType={analysisData?.caseType}
             />
-            
-            <TabsContainer
-              selectedTab={analysisTab}
-              analysisData={analysisData}
-              isLoading={isAnalysisLoading}
-              clientId={client.id}
-              caseId={currentCase?.id}
-              currentAnalysisId={currentAnalysisId}
-              conversation={conversation}
-              conversationLoading={conversationLoading}
-              notes={notes}
-              notesLoading={notesLoading}
-              scholarlyReferences={scholarlyReferences}
-              isScholarlyReferencesLoading={isScholarlyReferencesLoading}
-              onScholarSearch={onScholarSearch}
-              onScholarRefresh={onScholarRefresh}
-              similarCases={similarCases}
-              isSimilarCasesLoading={isSimilarCasesLoading}
-              analysisFound={analysisFound}
-              fallbackUsed={fallbackUsed}
-              onSimilarCasesRefresh={loadSimilarCasesData}
-            />
+          );
+        } else {
+          return (
+            <div className="container mx-auto py-8">
+              <CaseAnalysisHeader
+                title={`${client.first_name} ${client.last_name} - Case Analysis`}
+                clientId={client.id}
+                selectedTab={analysisTab}
+                setSelectedTab={setAnalysisTab}
+                isGenerating={isAnalysisLoading}
+                onGenerate={generateNewAnalysis}
+                caseType={analysisData?.caseType}
+              />
+              
+              <TabsContainer
+                selectedTab={analysisTab}
+                analysisData={analysisData}
+                isLoading={isAnalysisLoading}
+                clientId={client.id}
+                caseId={currentCase?.id}
+                currentAnalysisId={currentAnalysisId}
+                conversation={conversation}
+                conversationLoading={conversationLoading}
+                notes={notes}
+                notesLoading={notesLoading}
+                scholarlyReferences={scholarlyReferences}
+                isScholarlyReferencesLoading={isScholarlyReferencesLoading}
+                onScholarSearch={onScholarSearch}
+                onScholarRefresh={onScholarRefresh}
+                similarCases={similarCases}
+                isSimilarCasesLoading={isSimilarCasesLoading}
+                analysisFound={analysisFound}
+                fallbackUsed={fallbackUsed}
+                onSimilarCasesRefresh={loadSimilarCasesData}
+              />
+            </div>
+          );
+        }
+
+      case "case-discussion":
+        return (
+          <CaseDiscussionContainer 
+            clientId={client.id}
+            clientName={`${client.first_name} ${client.last_name}`}
+            onFindingsAdded={handleAnalysisRefresh}
+          />
+        );
+
+      case "contracts":
+        return <ContractsTabContent clientId={client.id} />;
+
+      case "discovery":
+        return <DiscoveryTabContent clientId={client.id} />;
+
+      case "documents":
+        return <DocumentsTabContent clientId={client.id} />;
+
+      case "knowledge":
+        return <KnowledgeTabContent clientId={client.id} />;
+
+      case "templates":
+        return (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <Layout className="h-16 w-16 text-muted-foreground mb-4" />
+            <h3 className="text-xl font-medium mb-2">Placeholder Tab</h3>
+            <p className="text-muted-foreground mb-4">
+              This tab is currently a placeholder. Templates have been moved to the Document Library for better organization.
+            </p>
+            <Button 
+              onClick={() => window.location.href = '/document-library'}
+              variant="outline"
+            >
+              Go to Document Library
+            </Button>
           </div>
-        )}
-      </TabsContent>
+        );
 
-      <TabsContent value="case-discussion" className="mt-6">
-        <CaseDiscussionContainer 
-          clientId={client.id}
-          clientName={`${client.first_name} ${client.last_name}`}
-          onFindingsAdded={handleAnalysisRefresh}
-        />
-      </TabsContent>
+      default:
+        return <div>Content not found</div>;
+    }
+  };
 
-      <TabsContent value="contracts" className="mt-6">
-        <ContractsTabContent clientId={client.id} />
-      </TabsContent>
-
-      <TabsContent value="discovery" className="mt-6">
-        <DiscoveryTabContent clientId={client.id} />
-      </TabsContent>
-
-      <TabsContent value="documents" className="mt-6">
-        <DocumentsTabContent clientId={client.id} />
-      </TabsContent>
-
-      <TabsContent value="knowledge" className="mt-6">
-        <KnowledgeTabContent clientId={client.id} />
-      </TabsContent>
-
-      <TabsContent value="templates" className="mt-6">
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <Layout className="h-16 w-16 text-muted-foreground mb-4" />
-          <h3 className="text-xl font-medium mb-2">Placeholder Tab</h3>
-          <p className="text-muted-foreground mb-4">
-            This tab is currently a placeholder. Templates have been moved to the Document Library for better organization.
-          </p>
-          <Button 
-            onClick={() => window.location.href = '/document-library'}
-            variant="outline"
-          >
-            Go to Document Library
-          </Button>
-        </div>
-      </TabsContent>
-    </>
+  return (
+    <div className="mt-6">
+      {renderTabContent()}
+    </div>
   );
 };
 
