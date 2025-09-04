@@ -20,15 +20,17 @@ interface IracIssueCardProps {
 
 const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
   const [isExpanded, setIsExpanded] = useState(index === 0); // First issue expanded by default
-  const citationProcessor = useCitationProcessor();
+  const { processText, citationMatches, enhancedCitations } = useCitationProcessor();
 
   useEffect(() => {
-    // Process citations in rule, application, and conclusion
-    const allText = `${issue.rule} ${issue.application} ${issue.conclusion}`;
-    if (allText.trim()) {
-      citationProcessor.processText(allText);
+    if (isExpanded) {
+      // Process citations in rule, application, and conclusion only when expanded
+      const allText = `${issue.rule} ${issue.application} ${issue.conclusion}`;
+      if (allText.trim()) {
+        processText(allText);
+      }
     }
-  }, [issue.rule, issue.application, issue.conclusion, citationProcessor]);
+  }, [isExpanded, issue.rule, issue.application, issue.conclusion, processText]);
 
   return (
     <Card className="border-l-4 border-l-primary/30">
@@ -74,10 +76,10 @@ const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
                 <p key={idx} className="mb-2 last:mb-0">
                   <EnhancedText 
                     text={paragraph}
-                    citationMatches={citationProcessor.citationMatches.filter(match => 
+                    citationMatches={citationMatches.filter(match => 
                       paragraph.includes(match.citation)
                     )}
-                    enhancedCitations={citationProcessor.enhancedCitations}
+                    enhancedCitations={enhancedCitations}
                   />
                 </p>
               ))}
@@ -96,10 +98,10 @@ const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
                 <p key={idx} className="mb-2 last:mb-0">
                   <EnhancedText 
                     text={paragraph}
-                    citationMatches={citationProcessor.citationMatches.filter(match => 
+                    citationMatches={citationMatches.filter(match => 
                       paragraph.includes(match.citation)
                     )}
-                    enhancedCitations={citationProcessor.enhancedCitations}
+                    enhancedCitations={enhancedCitations}
                   />
                 </p>
               ))}
@@ -117,10 +119,10 @@ const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
                 <p key={idx} className="mb-2 last:mb-0">
                   <EnhancedText 
                     text={paragraph}
-                    citationMatches={citationProcessor.citationMatches.filter(match => 
+                    citationMatches={citationMatches.filter(match => 
                       paragraph.includes(match.citation)
                     )}
-                    enhancedCitations={citationProcessor.enhancedCitations}
+                    enhancedCitations={enhancedCitations}
                   />
                 </p>
               ))}
