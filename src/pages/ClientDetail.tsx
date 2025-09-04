@@ -105,6 +105,9 @@ const ClientDetail = () => {
               <SidebarInset className="flex flex-col flex-1">
                 <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
                   <SidebarTrigger className="-ml-1" />
+                  <h1 className="text-2xl font-bold ml-4">
+                    {client.first_name} {client.last_name}
+                  </h1>
                 </header>
                 <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex-1">
                   <main className="flex-1 container mx-auto px-4 py-8 overflow-auto">
