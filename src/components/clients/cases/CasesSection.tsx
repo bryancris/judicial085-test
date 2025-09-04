@@ -44,7 +44,7 @@ const CasesSection = ({ clientId }: CasesSectionProps) => {
   };
 
   return (
-    <div className="mt-6">
+    <div>
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value="cases">
           <div className="flex justify-between items-center">

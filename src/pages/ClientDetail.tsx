@@ -139,15 +139,18 @@ const ClientDetail = () => {
                 </header>
                 <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex-1">
                   <main className="flex-1 container mx-auto px-4 py-8 overflow-auto">
-                    <div className="mb-8">
-                      <ClientInformationAccordion 
-                        client={client} 
-                        onEditClick={handleEditClick}
-                        refreshClient={refreshClient}
-                      />
+                    <div className="flex flex-col lg:flex-row gap-6 mb-8">
+                      <div className="flex-1">
+                        <ClientInformationAccordion 
+                          client={client} 
+                          onEditClick={handleEditClick}
+                          refreshClient={refreshClient}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <CasesSection clientId={client.id} />
+                      </div>
                     </div>
-
-                    <CasesSection clientId={client.id} />
 
                     <div className="mt-8">
                       <ClientDetailTabContent 
