@@ -29,6 +29,15 @@ export const CITATION_PATTERNS = [
   /Wal-Mart\s+Stores,\s+Inc\.\s+v\.\s+Gonzalez/gi,
   // Citations with § symbol followed by numbers (like § 101.021)
   /§\s+\d+\.\d+/gi,
+  // Case law citations: "Plaintiff v. Defendant" 
+  /\b([A-Z][a-zA-Z\s&,.''-]+)\s+v\.\s+([A-Z][a-zA-Z\s&,.''-]+)\b/g,
+  // Case citations with full reference: "Case v. Case, 123 F.3d 456 (5th Cir. 2000)"
+  /\b([A-Z][a-zA-Z\s&,.''-]+)\s+v\.\s+([A-Z][a-zA-Z\s&,.''-]+),?\s*\d+\s+[A-Za-z\.]+\d*\s+\d+\s*\([^)]+\)/g,
+  // Citation only: "123 S.W.2d 456 (Tex. 1985)"
+  /\b\d+\s+[A-Za-z\.]+\d*\s+\d+\s*\([^)]+\)/g,
+  // Specific Texas Supreme Court citations
+  /Logan\s+v\.\s+Mullis/gi,
+  /Fless\s+v\.\s+Fless/gi,
 ];
 
 // A mapping of known case citations to their direct URLs

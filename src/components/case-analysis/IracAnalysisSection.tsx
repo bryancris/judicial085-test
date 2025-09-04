@@ -1,10 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ChevronDown, ChevronRight, Scale, BookOpen } from "lucide-react";
 import { IracIssue, IracAnalysis } from "@/types/caseAnalysis";
+import { useCitationProcessor } from "@/hooks/useCitationProcessor";
+import { EnhancedText } from "@/components/ui/EnhancedText";
 
 interface IracAnalysisSectionProps {
   analysis: IracAnalysis;
@@ -18,6 +20,15 @@ interface IracIssueCardProps {
 
 const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
   const [isExpanded, setIsExpanded] = useState(index === 0); // First issue expanded by default
+  const citationProcessor = useCitationProcessor();
+
+  useEffect(() => {
+    // Process citations in rule, application, and conclusion
+    const allText = `${issue.rule} ${issue.application} ${issue.conclusion}`;
+    if (allText.trim()) {
+      citationProcessor.processText(allText);
+    }
+  }, [issue.rule, issue.application, issue.conclusion, citationProcessor]);
 
   return (
     <Card className="border-l-4 border-l-primary/30">
@@ -60,7 +71,15 @@ const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
             </h4>
             <div className="prose dark:prose-invert text-sm max-w-none">
               {issue.rule.split('\n\n').map((paragraph, idx) => (
-                <p key={idx} className="mb-2 last:mb-0">{paragraph}</p>
+                <p key={idx} className="mb-2 last:mb-0">
+                  <EnhancedText 
+                    text={paragraph}
+                    citationMatches={citationProcessor.citationMatches.filter(match => 
+                      paragraph.includes(match.citation)
+                    )}
+                    enhancedCitations={citationProcessor.enhancedCitations}
+                  />
+                </p>
               ))}
             </div>
           </div>
@@ -74,7 +93,15 @@ const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
             </h4>
             <div className="prose dark:prose-invert text-sm max-w-none">
               {issue.application.split('\n\n').map((paragraph, idx) => (
-                <p key={idx} className="mb-2 last:mb-0">{paragraph}</p>
+                <p key={idx} className="mb-2 last:mb-0">
+                  <EnhancedText 
+                    text={paragraph}
+                    citationMatches={citationProcessor.citationMatches.filter(match => 
+                      paragraph.includes(match.citation)
+                    )}
+                    enhancedCitations={citationProcessor.enhancedCitations}
+                  />
+                </p>
               ))}
             </div>
           </div>
@@ -87,7 +114,15 @@ const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
             </h4>
             <div className="prose dark:prose-invert text-sm max-w-none">
               {issue.conclusion.split('\n\n').map((paragraph, idx) => (
-                <p key={idx} className="mb-2 last:mb-0">{paragraph}</p>
+                <p key={idx} className="mb-2 last:mb-0">
+                  <EnhancedText 
+                    text={paragraph}
+                    citationMatches={citationProcessor.citationMatches.filter(match => 
+                      paragraph.includes(match.citation)
+                    )}
+                    enhancedCitations={citationProcessor.enhancedCitations}
+                  />
+                </p>
               ))}
             </div>
           </div>

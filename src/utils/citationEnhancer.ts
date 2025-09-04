@@ -1,0 +1,162 @@
+/**
+ * Service for enhancing text with clickable citation links using Perplexity
+ */
+
+import { supabase } from "@/integrations/supabase/client";
+
+export interface CitationMatch {
+  citation: string;
+  startIndex: number;
+  endIndex: number;
+  url?: string;
+}
+
+export interface EnhancedCitation {
+  citation: string;
+  url: string | null;
+  confidence: number;
+}
+
+/**
+ * Enhanced case law citation patterns
+ */
+const CASE_CITATION_PATTERNS = [
+  // Standard case citations: "Plaintiff v. Defendant"
+  /\b([A-Z][a-zA-Z\s&,.'-]+)\s+v\.\s+([A-Z][a-zA-Z\s&,.'-]+)\b/g,
+  // With court and year: "Case v. Case, 123 F.3d 456 (5th Cir. 2000)"
+  /\b([A-Z][a-zA-Z\s&,.'-]+)\s+v\.\s+([A-Z][a-zA-Z\s&,.'-]+),?\s*\d+\s+[A-Za-z.]+\d*\s+\d+\s*\([^)]+\)/g,
+  // With just citation: "123 S.W.2d 456 (Tex. 1985)"
+  /\b\d+\s+[A-Za-z.]+\d*\s+\d+\s*\([^)]+\)/g,
+];
+
+/**
+ * Extract case citations from text
+ */
+export const extractCitations = (text: string): CitationMatch[] => {
+  const citations: CitationMatch[] = [];
+  
+  CASE_CITATION_PATTERNS.forEach(pattern => {
+    const matches = text.matchAll(new RegExp(pattern.source, pattern.flags));
+    for (const match of matches) {
+      if (match.index !== undefined) {
+        citations.push({
+          citation: match[0].trim(),
+          startIndex: match.index,
+          endIndex: match.index + match[0].length,
+        });
+      }
+    }
+  });
+  
+  // Remove duplicates and overlapping matches
+  return citations
+    .filter((citation, index, array) => {
+      // Remove duplicates
+      const isDuplicate = array.findIndex(c => c.citation === citation.citation) !== index;
+      if (isDuplicate) return false;
+      
+      // Remove overlapping matches (keep the longer one)
+      const hasOverlap = array.some((other, otherIndex) => {
+        if (index === otherIndex) return false;
+        return (
+          (citation.startIndex >= other.startIndex && citation.startIndex < other.endIndex) ||
+          (citation.endIndex > other.startIndex && citation.endIndex <= other.endIndex)
+        );
+      });
+      
+      if (hasOverlap) {
+        const overlapping = array.filter((other, otherIndex) => {
+          if (index === otherIndex) return false;
+          return (
+            (citation.startIndex >= other.startIndex && citation.startIndex < other.endIndex) ||
+            (citation.endIndex > other.startIndex && citation.endIndex <= other.endIndex)
+          );
+        });
+        
+        // Keep the longest citation
+        return overlapping.every(other => citation.citation.length >= other.citation.length);
+      }
+      
+      return true;
+    })
+    .sort((a, b) => a.startIndex - b.startIndex);
+};
+
+/**
+ * Use Perplexity to find URLs for citations
+ */
+export const enhanceCitationsWithUrls = async (citations: string[]): Promise<EnhancedCitation[]> => {
+  if (citations.length === 0) return [];
+  
+  try {
+    const query = `Find official legal URLs for these case citations: ${citations.join(', ')}. 
+    Return results as JSON with format: {\"citations\": [{\\\"citation\\\": \\\"case name\\\", \\\"url\\\": \\\"official_url\\\", \\\"confidence\\\": 0.9}]}`;
+    
+    const { data, error } = await supabase.functions.invoke('perplexity-research', {
+      body: {
+        query,
+        searchType: 'legal-research',
+        context: 'case_citation_lookup',
+        quickMode: true,
+        limit: 5
+      }
+    });
+    
+    if (error) {
+      console.error('Error enhancing citations:', error);
+      return citations.map(citation => ({ citation, url: null, confidence: 0 }));
+    }
+    
+    // Try to parse structured response
+    if (data?.structuredCases?.citations) {
+      return data.structuredCases.citations.map((item: any) => ({
+        citation: item.citation || item.case_name || '',
+        url: item.url || null,
+        confidence: item.confidence || 0.5
+      }));
+    }
+    
+    // Fallback: parse from content
+    const enhancedCitations: EnhancedCitation[] = [];
+    for (const citation of citations) {
+      const urlMatch = data?.content?.match(new RegExp(`${citation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^\n]*https?://[^\s)]+`, 'i'));
+      if (urlMatch) {
+        const url = urlMatch[0].match(/https?:\/\/[^\s)]+/)?.[0];
+        enhancedCitations.push({
+          citation,
+          url: url || null,
+          confidence: url ? 0.7 : 0
+        });
+      } else {
+        enhancedCitations.push({
+          citation,
+          url: null,
+          confidence: 0
+        });
+      }
+    }
+    
+    return enhancedCitations;
+    
+  } catch (error) {
+    console.error('Error in citation enhancement:', error);
+    return citations.map(citation => ({ citation, url: null, confidence: 0 }));
+  }
+};
+
+/**
+ * Process text and enhance with citation links
+ */
+export const enhanceTextWithCitations = async (text: string): Promise<{
+  enhancedCitations: EnhancedCitation[];
+  citationMatches: CitationMatch[];
+}> => {
+  const citationMatches = extractCitations(text);
+  const citations = citationMatches.map(match => match.citation);
+  const enhancedCitations = await enhanceCitationsWithUrls(citations);
+  
+  return {
+    enhancedCitations,
+    citationMatches
+  };
+};
