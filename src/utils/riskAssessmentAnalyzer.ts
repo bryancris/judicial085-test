@@ -160,18 +160,15 @@ export function analyzeRiskAssessment(analysis: IracAnalysis, realAnalysisConten
     return analyzeIssueRisk(issue, issueSpecificContent);
   });
   
-  // Extract real vulnerabilities and strengths from the 3-agent analysis content
-  const realRiskData = realAnalysisContent ? extractRealRiskData(realAnalysisContent) : null;
-  
   console.log('📊 Risk assessment completed');
   
   return {
     issueRisks,
-    overallCaseRisk: realRiskData?.overallRisk || calculateOverallRisk(issueRisks),
-    criticalVulnerabilities: realRiskData?.criticalVulnerabilities || identifyCriticalVulnerabilities(issueRisks),
-    strengthsByCategory: realRiskData?.categoryStrengths || calculateCategoryStrengths(issueRisks),
-    recommendedActions: realRiskData?.recommendedActions || generateRecommendedActions(issueRisks),
-    riskMitigationPlan: realRiskData?.mitigationPlan || generateMitigationPlan(issueRisks)
+    overallCaseRisk: calculateOverallRisk(issueRisks),
+    criticalVulnerabilities: identifyCriticalVulnerabilities(issueRisks),
+    strengthsByCategory: calculateCategoryStrengths(issueRisks),
+    recommendedActions: generateRecommendedActions(issueRisks),
+    riskMitigationPlan: generateMitigationPlan(issueRisks)
   };
 }
 
@@ -464,10 +461,20 @@ function identifyEvidenceGaps(element: string, issue: IracIssue, realAnalysisCon
 }
 
 function identifyCriticalVulnerabilities(issueRisks: IssueRiskAssessment[]): string[] {
-  return issueRisks
-    .filter(risk => risk.overallRisk === 'high')
-    .flatMap(risk => risk.challenges.filter(c => c.riskLevel === 'high').map(c => c.title))
-    .slice(0, 5);
+  // Get all high and medium risk challenges from all issues
+  const criticalChallenges = issueRisks
+    .flatMap(risk => risk.challenges.filter(c => c.riskLevel === 'high' || c.riskLevel === 'medium'))
+    .map(c => c.title);
+    
+  // If no critical challenges, get evidence adequacy issues
+  if (criticalChallenges.length === 0) {
+    const evidenceIssues = issueRisks
+      .filter(risk => risk.evidenceAdequacy < 60)
+      .map(risk => `Evidence gaps in ${risk.challenges[0]?.category || 'legal'} elements`);
+    return evidenceIssues.slice(0, 3);
+  }
+  
+  return [...new Set(criticalChallenges)].slice(0, 5); // Remove duplicates and limit
 }
 
 function calculateCategoryStrengths(issueRisks: IssueRiskAssessment[]): Record<RiskCategory, number> {
@@ -495,22 +502,77 @@ function calculateCategoryStrengths(issueRisks: IssueRiskAssessment[]): Record<R
 }
 
 function generateRecommendedActions(issueRisks: IssueRiskAssessment[]): string[] {
-  const actions = [
-    'Prioritize evidence gathering for high-risk issues',
-    'Prepare comprehensive responses to likely opposing arguments',
-    'Consider settlement discussions for vulnerable claims',
-    'Develop alternative legal theories as backup strategies'
-  ];
-  return actions;
+  const actions: string[] = [];
+  
+  // Extract specific mitigation suggestions from challenges
+  const mitigationSuggestions = issueRisks
+    .flatMap(risk => risk.challenges)
+    .flatMap(challenge => challenge.mitigationSuggestions)
+    .filter(suggestion => suggestion && suggestion.length > 0);
+    
+  // Add the most relevant suggestions (remove duplicates)
+  const uniqueSuggestions = [...new Set(mitigationSuggestions)];
+  actions.push(...uniqueSuggestions.slice(0, 3));
+  
+  // Add priority actions based on risk levels
+  const highRiskIssues = issueRisks.filter(risk => risk.overallRisk === 'high');
+  if (highRiskIssues.length > 0) {
+    actions.push('Immediate attention needed for high-risk issues');
+  }
+  
+  const lowEvidenceIssues = issueRisks.filter(risk => risk.evidenceAdequacy < 60);
+  if (lowEvidenceIssues.length > 0) {
+    actions.push('Strengthen evidence for inadequately supported elements');
+  }
+  
+  // Fallback to generic actions if no specific ones found
+  if (actions.length === 0) {
+    actions.push(
+      'Prioritize evidence gathering for identified issues',
+      'Prepare responses to likely opposing arguments',
+      'Consider case strategy alternatives'
+    );
+  }
+  
+  return actions.slice(0, 4); // Limit to 4 actions
 }
 
 function generateMitigationPlan(issueRisks: IssueRiskAssessment[]): string[] {
-  return [
-    'Immediate: Address critical vulnerabilities identified',
-    'Short-term: Strengthen evidence for medium-risk issues',
-    'Long-term: Develop comprehensive litigation strategy',
-    'Ongoing: Monitor case developments and adjust approach'
-  ];
+  const plan: string[] = [];
+  
+  // Categorize issues by priority
+  const criticalIssues = issueRisks.filter(risk => risk.mitigationPriority === 'critical');
+  const importantIssues = issueRisks.filter(risk => risk.mitigationPriority === 'important');
+  const moderateIssues = issueRisks.filter(risk => risk.mitigationPriority === 'moderate');
+  
+  // Add priority-based mitigation steps
+  if (criticalIssues.length > 0) {
+    plan.push(`Immediate: Address ${criticalIssues.length} critical vulnerability${criticalIssues.length > 1 ? 'ies' : 'y'} identified`);
+  }
+  
+  if (importantIssues.length > 0) {
+    plan.push(`Short-term: Strengthen evidence for ${importantIssues.length} important issue${importantIssues.length > 1 ? 's' : ''}`);
+  }
+  
+  if (moderateIssues.length > 0) {
+    plan.push(`Medium-term: Address ${moderateIssues.length} moderate risk factor${moderateIssues.length > 1 ? 's' : ''}`);
+  }
+  
+  // Add specific actions from high-priority challenges
+  const topMitigationActions = issueRisks
+    .filter(risk => risk.mitigationPriority === 'critical' || risk.mitigationPriority === 'important')
+    .flatMap(risk => risk.challenges.filter(c => c.riskLevel === 'high'))
+    .flatMap(challenge => challenge.mitigationSuggestions.slice(0, 1)) // Take first suggestion from each challenge
+    .filter(action => action && action.length > 0);
+    
+  if (topMitigationActions.length > 0) {
+    plan.push(`Priority actions: ${topMitigationActions[0]}`);
+  }
+  
+  // Always end with ongoing monitoring
+  plan.push('Ongoing: Monitor case developments and adjust strategy as needed');
+  
+  return plan.slice(0, 4); // Limit to 4 items
 }
 
 function extractRiskFactors(issue: IracIssue, challenges: Challenge[]): string[] {
