@@ -81,3 +81,25 @@ export type ProcessDocumentContentFunction = (title: string, content: string, me
 
 // Create a union type that combines both function types
 export type ProcessDocumentFunction = ProcessDocumentFileFunction | ProcessDocumentContentFunction;
+
+// Smart Connections Types
+export type ConnectionType = 'supporting' | 'shared_facts' | 'alternative' | 'conflicting' | 'dependent';
+
+export interface IssueConnection {
+  id: string;
+  fromIssueId: string;
+  toIssueId: string;
+  type: ConnectionType;
+  strength: number; // 0-1 scale
+  description: string;
+  sharedElements: string[]; // Shared citations, facts, or legal concepts
+  strategicImplication: string;
+}
+
+export interface SmartConnectionsAnalysis {
+  connections: IssueConnection[];
+  keystoneIssues: string[]; // Issue IDs that strengthen multiple other issues
+  vulnerableIssues: string[]; // Issue IDs that could undermine the case
+  strategicRecommendations: string[];
+  overallCohesion: number; // 0-1 scale of how well issues work together
+}

@@ -8,6 +8,7 @@ import { IracIssue, IracAnalysis } from "@/types/caseAnalysis";
 import { useCitationProcessor } from "@/hooks/useCitationProcessor";
 import { EnhancedText } from "@/components/ui/EnhancedText";
 import { assessIssueStrength, getStrengthBadgeClasses } from "@/utils/iracAssessment";
+import SmartConnectionsSection from "./SmartConnectionsSection";
 
 interface IracAnalysisSectionProps {
   analysis: IracAnalysis;
@@ -37,7 +38,10 @@ const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
   }, [isExpanded, issue.rule, issue.application, issue.conclusion, processText]);
 
   return (
-    <Card className="border-l-4 border-l-primary/20 hover:border-l-primary/40 transition-colors">
+    <Card 
+      id={`irac-issue-${issue.id}`}
+      className="border-l-4 border-l-primary/20 hover:border-l-primary/40 transition-colors"
+    >
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -250,6 +254,13 @@ const IracAnalysisSection: React.FC<IracAnalysisSectionProps> = ({
             </div>
           </>
         )}
+
+        {/* Smart Connections Section */}
+        <Separator />
+        <SmartConnectionsSection 
+          issues={analysis.legalIssues} 
+          isLoading={isLoading}
+        />
       </CardContent>
     </Card>
   );
