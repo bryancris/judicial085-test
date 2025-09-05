@@ -13,6 +13,7 @@ interface PerplexityRequest {
   context?: string;
   limit?: number;
   quickMode?: boolean;
+  requestContext?: string; // New: to identify additional-case-law requests
 }
 
 interface PerplexityResponse {
@@ -82,7 +83,7 @@ serve(async (req) => {
       );
     }
 
-    const { query, model = 'sonar', searchType = 'general', context, limit, quickMode = false }: PerplexityRequest = requestBody;
+    const { query, model = 'sonar', searchType = 'general', context, limit, quickMode = false, requestContext }: PerplexityRequest = requestBody;
 
     if (!query) {
       console.error('Query is missing from request');
@@ -120,14 +121,47 @@ Find 3-5 relevant Texas legal cases with:
       
 Focus on Texas jurisdiction and precedential cases.`;
     } else if (normalizedSearchType === 'legal-research') {
-      // Check if this is a contract/construction case based on query content
-      const isContractCase = query.toLowerCase().includes('contract') || 
-                           query.toLowerCase().includes('construction') ||
-                           query.toLowerCase().includes('warranty') ||
-                           query.toLowerCase().includes('breach');
-      
-      if (isContractCase) {
+      // Special handling for additional case law requests - focus on Justia URLs
+      if (requestContext === 'additional-case-law') {
         enhancedQuery = `Find 3-5 verified Texas legal cases related to: ${query}
+
+Return ONLY a JSON array of cases in this exact format:
+[
+  {
+    "caseName": "Exact case name v. Defendant",
+    "court": "Specific Texas court name", 
+    "citation": "Legal citation",
+    "date": "Decision date",
+    "relevantFacts": "Key facts that make this case relevant",
+    "outcome": "Actual court decision/outcome",
+    "url": "Direct law.justia.com case page URL (must be a case opinion page with PDF access)"
+  }
+]
+
+CRITICAL URL Requirements:
+- url MUST be a direct law.justia.com case page (e.g., https://law.justia.com/cases/texas/supreme-court/2023/21-0123/)
+- NOT search results pages or general directory pages
+- Must link directly to the case opinion where a PDF download is available
+- If no Justia URL is available, set url to null
+- Only include URLs you are confident lead to the actual case opinion
+
+Other Requirements:
+- Return exactly 3-5 cases from Texas jurisdiction only
+- Focus on Texas civil cases (exclude criminal unless specifically requested)
+- Only Texas Supreme Court, Texas Court of Appeals, or Texas District Courts
+- Only real, verified legal cases from Texas
+- No analysis, reasoning, or thinking process
+- No introductory text or explanations
+- Must be valid JSON format`;
+      } else {
+        // Check if this is a contract/construction case based on query content
+        const isContractCase = query.toLowerCase().includes('contract') || 
+                             query.toLowerCase().includes('construction') ||
+                             query.toLowerCase().includes('warranty') ||
+                             query.toLowerCase().includes('breach');
+        
+        if (isContractCase) {
+          enhancedQuery = `Find 3-5 verified Texas legal cases related to: ${query}
 
 Return ONLY a JSON array of cases in this exact format:
 [
@@ -151,8 +185,8 @@ Requirements:
 - No introductory text or explanations
 - Must be valid JSON format
 - Filter for construction, warranty, or contract issues`;
-      } else {
-        enhancedQuery = `Find 3-5 verified Texas legal cases related to: ${query}
+        } else {
+          enhancedQuery = `Find 3-5 verified Texas legal cases related to: ${query}
 
 Return ONLY a JSON array of cases in this exact format:
 [
@@ -176,6 +210,7 @@ Requirements:
 - No introductory text or explanations
 - Must be valid JSON format
 - Filter for cases relevant to the legal issues mentioned`;
+        }
       }
     }
 
@@ -234,7 +269,9 @@ Requirements:
           top_p: 0.9,
           return_citations: true,
           return_images: false,
-          search_domain_filter: ['casetext.com', 'law.justia.com', 'courtlistener.com', 'scholar.google.com', 'law.cornell.edu', 'txcourts.gov'],
+          search_domain_filter: requestContext === 'additional-case-law' 
+            ? ['law.justia.com'] // Only Justia for additional case law
+            : ['casetext.com', 'law.justia.com', 'courtlistener.com', 'scholar.google.com', 'law.cornell.edu', 'txcourts.gov'],
           search_recency_filter: 'year'
         }),
         signal: controller.signal
@@ -321,6 +358,27 @@ Requirements:
           }
         }
         structuredCases = JSON.parse(jsonBlock);
+        
+        // Filter for valid Justia URLs for additional-case-law requests
+        if (requestContext === 'additional-case-law' && Array.isArray(structuredCases)) {
+          const filteredCases = structuredCases.map((caseItem: any) => {
+            // Only keep URLs that are valid Justia case pages
+            if (caseItem.url && typeof caseItem.url === 'string') {
+              const url = caseItem.url.toLowerCase();
+              if (!url.includes('law.justia.com/cases/') || 
+                  url.includes('/search/') || 
+                  url.includes('/results/') ||
+                  url.includes('?')) {
+                // Invalid Justia URL - remove it
+                console.log(`Filtered invalid Justia URL: ${caseItem.url}`);
+                caseItem.url = null;
+              }
+            }
+            return caseItem;
+          });
+          structuredCases = filteredCases;
+        }
+        
         console.log('Successfully parsed', Array.isArray(structuredCases) ? structuredCases.length : 0, 'structured cases');
       } catch (parseError) {
         console.log('JSON parse failed, using prose content:', parseError.message);

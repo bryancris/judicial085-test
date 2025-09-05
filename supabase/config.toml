@@ -1,1 +1,4 @@
 project_id = "ghpljdgecjmhkwkfctgy"
+
+[functions.resolve-justia-url]
+verify_jwt = false

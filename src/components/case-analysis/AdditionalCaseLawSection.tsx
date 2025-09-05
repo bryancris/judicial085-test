@@ -538,6 +538,12 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
         newCases = filterCasesByRelevance(newCases, analysisData?.content || '', analysisMetadata);
       }
 
+      // Resolve missing Justia URLs for cases that don't have them
+      if (newCases.length > 0) {
+        console.log('Resolving missing Justia URLs...');
+        newCases = await resolveJustiaUrls(newCases);
+      }
+
       if (clientId) {
         await saveNewCasesToDatabase(newCases, clientId, analysisData?.id, query);
       }
@@ -825,6 +831,65 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
     return "Texas Court";
   };
 
+  // Auto-resolve missing Justia URLs for cases
+  const resolveJustiaUrls = async (cases: PerplexityCase[]): Promise<PerplexityCase[]> => {
+    const casesToResolve = cases.filter(caseItem => 
+      !caseItem.url || !caseItem.url.includes('law.justia.com')
+    );
+    
+    if (casesToResolve.length === 0) {
+      console.log('All cases already have Justia URLs');
+      return cases;
+    }
+
+    console.log(`Resolving Justia URLs for ${casesToResolve.length} cases...`);
+    
+    // Process cases in parallel with concurrency limit
+    const concurrency = 3;
+    const resolvedCases = [...cases]; // Start with original cases
+    
+    for (let i = 0; i < casesToResolve.length; i += concurrency) {
+      const batch = casesToResolve.slice(i, i + concurrency);
+      
+      const batchPromises = batch.map(async (caseItem) => {
+        try {
+          const { data: resolverResp, error } = await supabase.functions.invoke('resolve-justia-url', {
+            body: {
+              caseName: caseItem.caseName,
+              citation: caseItem.citation
+            }
+          });
+
+          if (!error && resolverResp?.url) {
+            // Find the case in resolvedCases and update its URL
+            const caseIndex = resolvedCases.findIndex(c => c.caseName === caseItem.caseName);
+            if (caseIndex !== -1) {
+              resolvedCases[caseIndex].url = resolverResp.url;
+              console.log(`✅ Resolved Justia URL for: ${caseItem.caseName}`);
+            }
+          } else {
+            console.log(`❌ Could not resolve Justia URL for: ${caseItem.caseName}`);
+          }
+        } catch (error) {
+          console.error(`Error resolving URL for ${caseItem.caseName}:`, error);
+        }
+      });
+
+      // Wait for this batch to complete
+      await Promise.all(batchPromises);
+      
+      // Small delay between batches to avoid overwhelming the service
+      if (i + concurrency < casesToResolve.length) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    
+    const resolvedCount = resolvedCases.filter(c => c.url?.includes('law.justia.com')).length;
+    console.log(`URL resolution complete: ${resolvedCount}/${cases.length} cases have Justia URLs`);
+    
+    return resolvedCases;
+  };
+
   const findCitationUrl = (citations: string[], caseName: string): string | undefined => {
     // Try to find URL in citations that might relate to this case
     for (const citation of citations) {
@@ -1015,7 +1080,12 @@ export const AdditionalCaseLawSection: React.FC<AdditionalCaseLawProps> = ({
                         <span className="font-medium">Court:</span> {caseItem.court}
                       </div>
                       <div>
-                        <span className="font-medium">Citation:</span> <LawReferenceLink citation={caseItem.citation} url={caseItem.url} />
+                        <span className="font-medium">Citation:</span> 
+                        {caseItem.url && caseItem.url.includes('law.justia.com') ? (
+                          <LawReferenceLink citation={caseItem.citation} url={caseItem.url} />
+                        ) : (
+                          <span className="text-muted-foreground">{caseItem.citation}</span>
+                        )}
                       </div>
                       {caseItem.date && (
                         <div>
