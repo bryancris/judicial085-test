@@ -14,6 +14,7 @@ import { RiskAssessmentSection } from "./RiskAssessmentSection";
 interface IracAnalysisSectionProps {
   analysis: IracAnalysis;
   isLoading?: boolean;
+  analysisData?: any; // Add analysisData to access rawContent for risk assessment
 }
 
 interface IracIssueCardProps {
@@ -152,7 +153,8 @@ const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
 
 const IracAnalysisSection: React.FC<IracAnalysisSectionProps> = ({
   analysis,
-  isLoading = false
+  isLoading = false,
+  analysisData
 }) => {
   if (isLoading) {
     return (
@@ -268,6 +270,7 @@ const IracAnalysisSection: React.FC<IracAnalysisSectionProps> = ({
         <RiskAssessmentSection 
           analysis={analysis}
           isLoading={isLoading}
+          analysisData={analysisData}
         />
       </CardContent>
     </Card>

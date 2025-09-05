@@ -53,7 +53,11 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
 
       {/* IRAC Analysis View */}
       {effectiveViewMode === 'irac' && iracAnalysis && (
-        <IracAnalysisSection analysis={iracAnalysis} isLoading={isLoading} />
+        <IracAnalysisSection 
+          analysis={iracAnalysis} 
+          isLoading={isLoading}
+          analysisData={{ rawContent }}
+        />
       )}
 
       {/* Traditional Analysis View */}

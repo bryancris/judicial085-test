@@ -29,16 +29,21 @@ import { analyzeRiskAssessment } from '@/utils/riskAssessmentAnalyzer';
 interface RiskAssessmentSectionProps {
   analysis: IracAnalysis;
   isLoading?: boolean;
+  analysisData?: any; // Add analysisData prop to access rawContent
 }
 
-export function RiskAssessmentSection({ analysis, isLoading }: RiskAssessmentSectionProps) {
+export function RiskAssessmentSection({ analysis, isLoading, analysisData }: RiskAssessmentSectionProps) {
   const [expandedIssues, setExpandedIssues] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<'overview' | 'details'>('overview');
 
-  const riskAssessment = useMemo(() => 
-    analyzeRiskAssessment(analysis), 
-    [analysis]
-  );
+  // Analyze the risk assessment using real 3-agent analysis content
+  const riskAssessment = useMemo(() => {
+    // Pass the real analysis content from the 3-agent system
+    const realAnalysisContent = analysisData?.rawContent;
+    console.log('Using real analysis content for risk assessment:', !!realAnalysisContent);
+    
+    return analyzeRiskAssessment(analysis, realAnalysisContent);
+  }, [analysis, analysisData?.rawContent]);
 
   const toggleIssueExpanded = (issueId: string) => {
     const newExpanded = new Set(expandedIssues);
