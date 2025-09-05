@@ -3,10 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ChevronDown, ChevronRight, Scale, BookOpen } from "lucide-react";
+import { ChevronDown, ChevronRight, Scale, BookOpen, Search, CheckCircle } from "lucide-react";
 import { IracIssue, IracAnalysis } from "@/types/caseAnalysis";
 import { useCitationProcessor } from "@/hooks/useCitationProcessor";
 import { EnhancedText } from "@/components/ui/EnhancedText";
+import { assessIssueStrength, getStrengthBadgeClasses } from "@/utils/iracAssessment";
 
 interface IracAnalysisSectionProps {
   analysis: IracAnalysis;
@@ -21,6 +22,9 @@ interface IracIssueCardProps {
 const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
   const [isExpanded, setIsExpanded] = useState(index === 0); // First issue expanded by default
   const { processText, citationMatches, enhancedCitations } = useCitationProcessor();
+  
+  // Assess issue strength and confidence
+  const assessment = assessIssueStrength(issue);
 
   useEffect(() => {
     if (isExpanded) {
@@ -33,18 +37,22 @@ const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
   }, [isExpanded, issue.rule, issue.application, issue.conclusion, processText]);
 
   return (
-    <Card className="border-l-4 border-l-primary/30">
+    <Card className="border-l-4 border-l-primary/20 hover:border-l-primary/40 transition-colors">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Badge variant="outline" className="font-mono text-xs">
-              Issue {index + 1}
-            </Badge>
-            {issue.category && (
-              <Badge variant="secondary" className="text-xs">
-                {issue.category}
+            <Scale className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">
+              Issue {index + 1}: {issue.issueStatement}
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Badge className={getStrengthBadgeClasses(assessment.strength)}>
+                {assessment.strength.toUpperCase()}
               </Badge>
-            )}
+              <span className="text-sm font-medium text-muted-foreground">
+                {assessment.confidence}% confidence
+              </span>
+            </div>
           </div>
           <Button
             variant="ghost"
@@ -52,80 +60,88 @@ const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
             onClick={() => setIsExpanded(!isExpanded)}
             className="h-8 w-8 p-0"
           >
-            {isExpanded ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )}
+            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </Button>
         </div>
-        <CardTitle className="text-sm font-medium leading-relaxed">
-          <strong>Issue:</strong> {issue.issueStatement}
-        </CardTitle>
+        {issue.category && (
+          <Badge variant="secondary" className="w-fit mt-2">
+            {issue.category}
+          </Badge>
+        )}
       </CardHeader>
       
       {isExpanded && (
-        <CardContent className="pt-0 space-y-4">
-          <div>
-            <h4 className="flex items-center gap-2 font-semibold text-sm mb-2 text-primary">
-              <BookOpen className="h-4 w-4" />
-              Rule
-            </h4>
-            <div className="prose dark:prose-invert text-sm max-w-none">
-              {issue.rule.split('\n\n').map((paragraph, idx) => (
-                <p key={idx} className="mb-2 last:mb-0">
+        <CardContent className="pt-0 space-y-6">
+          {/* Rule Section */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Scale className="h-4 w-4 text-blue-600" />
+              <h4 className="text-base font-semibold text-foreground">⚖️ Rule</h4>
+            </div>
+            <div className="pl-6 bg-blue-50/50 dark:bg-blue-950/20 rounded-lg p-4 border-l-2 border-blue-200 dark:border-blue-800">
+              <div className="prose dark:prose-invert max-w-none legal-analysis-content">
+                {issue.rule.split('\n\n').map((paragraph, idx) => (
                   <EnhancedText 
-                    text={paragraph}
+                    key={idx} 
+                    text={paragraph} 
+                    className="mb-3"
                     citationMatches={citationMatches.filter(match => 
                       paragraph.includes(match.citation)
                     )}
                     enhancedCitations={enhancedCitations}
                   />
-                </p>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
 
-          <Separator />
+          <Separator className="my-4" />
 
-          <div>
-            <h4 className="flex items-center gap-2 font-semibold text-sm mb-2 text-primary">
-              <Scale className="h-4 w-4" />
-              Application
-            </h4>
-            <div className="prose dark:prose-invert text-sm max-w-none">
-              {issue.application.split('\n\n').map((paragraph, idx) => (
-                <p key={idx} className="mb-2 last:mb-0">
+          {/* Application Section */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Search className="h-4 w-4 text-amber-600" />
+              <h4 className="text-base font-semibold text-foreground">🔍 Application</h4>
+            </div>
+            <div className="pl-6 bg-amber-50/50 dark:bg-amber-950/20 rounded-lg p-4 border-l-2 border-amber-200 dark:border-amber-800">
+              <div className="prose dark:prose-invert max-w-none legal-analysis-content">
+                {issue.application.split('\n\n').map((paragraph, idx) => (
                   <EnhancedText 
-                    text={paragraph}
+                    key={idx} 
+                    text={paragraph} 
+                    className="mb-3"
                     citationMatches={citationMatches.filter(match => 
                       paragraph.includes(match.citation)
                     )}
                     enhancedCitations={enhancedCitations}
                   />
-                </p>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
 
-          <Separator />
+          <Separator className="my-4" />
 
-          <div>
-            <h4 className="font-semibold text-sm mb-2 text-primary">
-              Conclusion
-            </h4>
-            <div className="prose dark:prose-invert text-sm max-w-none">
-              {issue.conclusion.split('\n\n').map((paragraph, idx) => (
-                <p key={idx} className="mb-2 last:mb-0">
+          {/* Conclusion Section */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <h4 className="text-base font-semibold text-foreground">✅ Conclusion</h4>
+            </div>
+            <div className="pl-6 bg-green-50/50 dark:bg-green-950/20 rounded-lg p-4 border-l-2 border-green-200 dark:border-green-800">
+              <div className="prose dark:prose-invert max-w-none legal-analysis-content">
+                {issue.conclusion.split('\n\n').map((paragraph, idx) => (
                   <EnhancedText 
-                    text={paragraph}
+                    key={idx} 
+                    text={paragraph} 
+                    className="mb-3"
                     citationMatches={citationMatches.filter(match => 
                       paragraph.includes(match.citation)
                     )}
                     enhancedCitations={enhancedCitations}
                   />
-                </p>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </CardContent>

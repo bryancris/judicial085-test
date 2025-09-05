@@ -16,6 +16,8 @@ export interface IracIssue {
   application: string;
   conclusion: string;
   category?: string; // e.g., "Contract Law", "Tort Law", etc.
+  confidence?: number; // 0-100 percentage confidence
+  strength?: 'strong' | 'moderate' | 'weak'; // Overall strength assessment
 }
 
 export interface IracAnalysis {
