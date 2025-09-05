@@ -45,14 +45,9 @@ const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
             <CardTitle className="text-lg">
               Issue {index + 1}: {issue.issueStatement}
             </CardTitle>
-            <div className="flex items-center gap-2">
-              <Badge className={getStrengthBadgeClasses(assessment.strength)}>
-                {assessment.strength.toUpperCase()}
-              </Badge>
-              <span className="text-sm font-medium text-muted-foreground">
-                {assessment.confidence}% confidence
-              </span>
-            </div>
+            <Badge className={getStrengthBadgeClasses(assessment.strength)}>
+              {assessment.strength.toUpperCase()}
+            </Badge>
           </div>
           <Button
             variant="ghost"
