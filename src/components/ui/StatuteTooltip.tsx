@@ -32,7 +32,7 @@ export const StatuteTooltip: React.FC<StatuteTooltipProps> = ({
       window.open(pdfUrl, '_blank');
     } else {
       // Fallback to knowledge base search
-      const searchUrl = `/knowledge-base?search=${encodeURIComponent(citation)}`;
+      const searchUrl = `/knowledge?search=${encodeURIComponent(citation)}`;
       window.open(searchUrl, '_blank');
     }
   };

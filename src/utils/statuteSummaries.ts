@@ -2,6 +2,8 @@
  * Comprehensive Texas statute summaries for interactive citations
  */
 
+import { generateDirectPdfUrl } from '@/utils/lawReferences/knowledgeBaseMapping';
+
 export interface StatuteSummary {
   citation: string;
   title: string;
@@ -134,19 +136,25 @@ export const isStatuteCitation = (citation: string): boolean => {
 };
 
 /**
- * Generate knowledge base URL for statute
+ * Generate PDF URL for a statute based on its citation
  */
 export const getStatutePdfUrl = (citation: string): string | null => {
-  const section = citation.match(/(\d{1,4}\.\d{1,4})/)?.[1];
-  if (!section) return null;
+  // Extract section number to determine which code
+  const sectionMatch = citation.match(/(\d{1,4}\.\d{1,4})/);
+  if (!sectionMatch) return null;
   
-  // Map sections to PDF documents
+  const section = sectionMatch[1];
+  
+  // Map section ranges to actual PDF filenames in Supabase storage
   if (section.startsWith('17.')) {
-    return '/knowledge-base/texas-business-commerce-code.pdf';
+    return generateDirectPdfUrl('BUSINESSANDCOMMERCECODE.pdf');
   } else if (section.startsWith('2301.')) {
-    return '/knowledge-base/texas-occupations-code-motor-vehicles.pdf';
+    // Motor vehicle laws are in Business & Commerce Code
+    return generateDirectPdfUrl('BUSINESSANDCOMMERCECODE.pdf');
   } else if (section.startsWith('16.') || section.startsWith('41.') || section.startsWith('101.')) {
-    return '/knowledge-base/texas-civil-practice-remedies-code.pdf';
+    return generateDirectPdfUrl('CIVILPRACTICEANDREMEDIESCODE.pdf');
+  } else if (section.startsWith('311.')) {
+    return generateDirectPdfUrl('GOVERNMENTCODE.pdf');
   }
   
   return null;
