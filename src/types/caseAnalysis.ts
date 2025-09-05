@@ -103,3 +103,56 @@ export interface SmartConnectionsAnalysis {
   strategicRecommendations: string[];
   overallCohesion: number; // 0-1 scale of how well issues work together
 }
+
+// Risk Assessment Types
+export type RiskLevel = 'high' | 'medium' | 'low';
+export type RiskCategory = 'factual' | 'legal' | 'procedural' | 'evidentiary' | 'damages';
+
+export interface Challenge {
+  id: string;
+  title: string;
+  description: string;
+  category: RiskCategory;
+  riskLevel: RiskLevel;
+  impact: string; // How this challenge could affect the case
+  mitigationSuggestions: string[];
+}
+
+export interface OpposingArgument {
+  id: string;
+  argument: string;
+  strength: RiskLevel;
+  potentialEvidence: string[];
+  counterStrategy: string;
+}
+
+export interface BurdenOfProofElement {
+  id: string;
+  element: string;
+  description: string;
+  difficultyLevel: RiskLevel;
+  evidenceStrength: number; // 0-100 percentage
+  requiredEvidence: string[];
+  currentEvidence: string[];
+  evidenceGaps: string[];
+}
+
+export interface IssueRiskAssessment {
+  issueId: string;
+  overallRisk: RiskLevel;
+  challenges: Challenge[];
+  opposingArguments: OpposingArgument[];
+  burdenOfProof: BurdenOfProofElement[];
+  evidenceAdequacy: number; // 0-100 percentage
+  riskFactors: string[];
+  mitigationPriority: 'critical' | 'important' | 'moderate' | 'low';
+}
+
+export interface RiskAssessmentAnalysis {
+  issueRisks: IssueRiskAssessment[];
+  overallCaseRisk: RiskLevel;
+  criticalVulnerabilities: string[];
+  strengthsByCategory: Record<RiskCategory, number>; // 0-100 percentage
+  recommendedActions: string[];
+  riskMitigationPlan: string[];
+}
