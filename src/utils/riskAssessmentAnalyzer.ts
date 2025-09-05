@@ -64,13 +64,106 @@ const BURDEN_ELEMENTS_BY_CATEGORY = {
 };
 
 /**
+ * Parse real analysis content by issues to provide issue-specific content
+ */
+function parseRealAnalysisByIssues(realAnalysisContent: string, issues: IracIssue[]): Map<string, string> {
+  console.log('🔍 Parsing real analysis by issues...');
+  const issueContentMap = new Map<string, string>();
+  
+  if (!realAnalysisContent) {
+    console.log('❌ No real analysis content provided');
+    return issueContentMap;
+  }
+
+  // Split the analysis into sections by issue markers
+  const sections = realAnalysisContent.split(/\*\*ISSUE\s*\[\d+\]\:\*\*|\*\*Issue\s*\d+\:\*\*/i);
+  
+  console.log(`📋 Found ${sections.length} potential issue sections`);
+  
+  issues.forEach((issue, index) => {
+    // Try to find the section that corresponds to this issue
+    let issueContent = '';
+    
+    if (sections.length > index + 1) {
+      // Use the section that corresponds to this issue index
+      issueContent = sections[index + 1];
+    } else {
+      // Fallback: search for content that matches issue keywords
+      const issueKeywords = extractIssueKeywords(issue);
+      console.log(`🔑 Issue keywords for "${issue.issueStatement}":`, issueKeywords);
+      
+      const matchingSection = sections.find(section => {
+        const sectionLower = section.toLowerCase();
+        return issueKeywords.some(keyword => 
+          sectionLower.includes(keyword.toLowerCase())
+        );
+      });
+      
+      issueContent = matchingSection || realAnalysisContent.slice(0, 1000); // Fallback to first 1000 chars
+    }
+    
+    // Clean up the content
+    issueContent = issueContent
+      .split(/\*\*ISSUE\s*\[\d+\]\:\*\*|\*\*Issue\s*\d+\:\*\*/i)[0] // Stop at next issue
+      .split(/\*\*OVERALL CONCLUSION\*\*|overall conclusion/i)[0] // Stop at conclusion
+      .trim();
+    
+    issueContentMap.set(issue.id, issueContent);
+    console.log(`📝 Issue "${issue.issueStatement.slice(0, 50)}..." mapped to ${issueContent.length} chars`);
+  });
+  
+  return issueContentMap;
+}
+
+/**
+ * Extract keywords from an issue to help match it with analysis content
+ */
+function extractIssueKeywords(issue: IracIssue): string[] {
+  const keywords: string[] = [];
+  
+  // Extract key terms from issue statement
+  const issueWords = issue.issueStatement.toLowerCase()
+    .split(/\s+/)
+    .filter(word => word.length > 3)
+    .filter(word => !['does', 'have', 'valid', 'claim', 'under', 'will', 'this', 'that', 'from', 'with'].includes(word));
+  
+  keywords.push(...issueWords);
+  
+  // Add category if available
+  if (issue.category) {
+    keywords.push(issue.category.toLowerCase());
+  }
+  
+  // Add specific legal terms from the rule
+  const ruleWords = issue.rule.toLowerCase().match(/\b\w{4,}\b/g) || [];
+  keywords.push(...ruleWords.slice(0, 5)); // Limit to first 5 meaningful words
+  
+  return [...new Set(keywords)]; // Remove duplicates
+}
+
+/**
  * Analyzes IRAC issues for potential risks and vulnerabilities using real 3-agent analysis
  */
 export function analyzeRiskAssessment(analysis: IracAnalysis, realAnalysisContent?: string): RiskAssessmentAnalysis {
-  const issueRisks = analysis.legalIssues.map(issue => analyzeIssueRisk(issue, realAnalysisContent));
+  console.log('🎯 Starting risk assessment analysis...');
+  
+  // Parse real analysis content by issues to provide issue-specific content
+  const issueContentMap = realAnalysisContent ? 
+    parseRealAnalysisByIssues(realAnalysisContent, analysis.legalIssues) : 
+    new Map<string, string>();
+  
+  const issueRisks = analysis.legalIssues.map((issue, index) => {
+    const issueSpecificContent = issueContentMap.get(issue.id);
+    console.log(`⚖️ Analyzing risk for Issue ${index + 1}: "${issue.issueStatement.slice(0, 50)}..."`);
+    console.log(`📄 Issue-specific content: ${issueSpecificContent?.length || 0} characters`);
+    
+    return analyzeIssueRisk(issue, issueSpecificContent);
+  });
   
   // Extract real vulnerabilities and strengths from the 3-agent analysis content
   const realRiskData = realAnalysisContent ? extractRealRiskData(realAnalysisContent) : null;
+  
+  console.log('📊 Risk assessment completed');
   
   return {
     issueRisks,
@@ -502,82 +595,246 @@ function extractRealRiskData(analysisContent: string): {
 }
 
 /**
- * Extracts real challenges from the 3-agent analysis
+ * Extracts real challenges from the 3-agent analysis using issue-specific content
  */
 function extractRealChallenges(analysisContent: string, issue: IracIssue): Challenge[] {
   const challenges: Challenge[] = [];
   const content = analysisContent.toLowerCase();
+  const issueKeywords = extractIssueKeywords(issue);
   
-  // Look for specific challenges mentioned in the analysis
-  if (content.includes('notice requirement') || content.includes('written notice')) {
+  console.log(`🎯 Extracting challenges for issue with keywords:`, issueKeywords);
+  console.log(`📄 Content snippet: "${content.slice(0, 200)}..."`);
+  
+  // Issue-aware challenge detection based on issue keywords
+  if (issueKeywords.some(keyword => ['lemon', 'law', 'motor', 'vehicle'].includes(keyword))) {
+    // Lemon law specific challenges
+    if (content.includes('notice') || content.includes('formal')) {
+      challenges.push({
+        id: `${issue.id}-lemon-notice`,
+        title: 'Lemon Law Notice Requirement',
+        description: 'Must provide formal written notice to manufacturer before remedy',
+        category: 'procedural',
+        riskLevel: content.includes('not provided') || content.includes('missing') ? 'high' : 'medium',
+        impact: 'Could bar lemon law remedy if proper notice not given',
+        mitigationSuggestions: ['Send formal notice to manufacturer immediately', 'Use certified mail', 'Include all required elements']
+      });
+    }
+    
+    if (content.includes('repair') || content.includes('attempts')) {
+      challenges.push({
+        id: `${issue.id}-lemon-attempts`,
+        title: 'Repair Attempt Documentation',
+        description: 'Must prove reasonable number of repair attempts',
+        category: 'evidentiary',
+        riskLevel: content.includes('documented') ? 'low' : 'medium',
+        impact: 'Insufficient documentation could weaken lemon law claim',
+        mitigationSuggestions: ['Gather all repair orders', 'Document days out of service', 'Obtain service manager statements']
+      });
+    }
+  }
+  
+  if (issueKeywords.some(keyword => ['warranty', 'merchantability'].includes(keyword))) {
+    // Warranty-specific challenges
+    if (content.includes('disclaimer') || content.includes('waived')) {
+      challenges.push({
+        id: `${issue.id}-warranty-disclaimer`,
+        title: 'Warranty Disclaimer Defense',
+        description: 'Seller may claim warranty was disclaimed',
+        category: 'legal',
+        riskLevel: content.includes('valid disclaimer') ? 'high' : 'medium',
+        impact: 'Could defeat warranty claim if disclaimer was valid',
+        mitigationSuggestions: ['Review sales contract for disclaimers', 'Challenge validity of disclaimers', 'Argue conspicuousness requirements']
+      });
+    }
+  }
+  
+  if (issueKeywords.some(keyword => ['dtpa', 'deceptive', 'trade'].includes(keyword))) {
+    // DTPA-specific challenges  
+    if (content.includes('reliance') || content.includes('misrepresentation')) {
+      challenges.push({
+        id: `${issue.id}-dtpa-reliance`,
+        title: 'DTPA Reliance Requirement',
+        description: 'Must prove reasonable reliance on deceptive practice',
+        category: 'factual',
+        riskLevel: content.includes('difficult') ? 'high' : 'medium',
+        impact: 'Cannot recover under DTPA without proving reliance',
+        mitigationSuggestions: ['Document pre-sale representations', 'Show reliance on statements', 'Prove materiality of misrepresentations']
+      });
+    }
+  }
+  
+  // General procedural challenges
+  if (content.includes('statute of limitations') || content.includes('time') && content.includes('bar')) {
     challenges.push({
-      id: `${issue.id}-real-notice`,
-      title: 'Statutory Notice Requirement',
-      description: 'Analysis indicates potential issues with statutory notice compliance',
+      id: `${issue.id}-statute-limitations`,
+      title: 'Statute of Limitations',
+      description: 'Potential statute of limitations defense',
       category: 'procedural',
-      riskLevel: content.includes('crucial') || content.includes('critical') ? 'high' : 'medium',
-      impact: 'Could result in dismissal if notice requirement not met',
-      mitigationSuggestions: ['Verify notice was properly sent', 'Obtain proof of delivery', 'Review statutory requirements']
+      riskLevel: content.includes('expired') ? 'high' : 'low',
+      impact: 'Could completely bar the claim if limitations period expired',
+      mitigationSuggestions: ['Verify filing deadline', 'Research discovery rule', 'Consider tolling doctrines']
     });
   }
   
-  if (content.includes('burden of proof') || content.includes('difficult to prove')) {
-    challenges.push({
-      id: `${issue.id}-real-burden`,
-      title: 'Burden of Proof Challenge',
-      description: 'Analysis identifies difficulties in meeting burden of proof requirements',
-      category: 'legal',
-      riskLevel: 'medium',
-      impact: 'May require additional evidence to succeed',
-      mitigationSuggestions: ['Gather additional evidence', 'Consider expert testimony', 'Review case precedents']
-    });
-  }
-  
+  console.log(`✅ Extracted ${challenges.length} issue-specific challenges`);
   return challenges;
 }
 
 /**
- * Extracts real opposing arguments from the 3-agent analysis
+ * Extracts real opposing arguments from the 3-agent analysis using issue-specific content
  */
 function extractRealOpposingArguments(analysisContent: string, issue: IracIssue): OpposingArgument[] {
   const opposingArgs: OpposingArgument[] = [];
   const content = analysisContent.toLowerCase();
+  const issueKeywords = extractIssueKeywords(issue);
   
-  // Look for potential opposing arguments mentioned in the analysis
-  if (content.includes('manufacturer') && content.includes('defense')) {
+  console.log(`🎯 Extracting opposing arguments for issue with keywords:`, issueKeywords);
+  
+  // Issue-aware opposing argument detection
+  if (issueKeywords.some(keyword => ['lemon', 'law', 'motor'].includes(keyword))) {
+    // Lemon law specific opposing arguments
+    if (content.includes('notice') || content.includes('manufacturer')) {
+      opposingArgs.push({
+        id: `${issue.id}-lemon-notice-defense`,
+        argument: 'Manufacturer will argue proper written notice was not provided under lemon law requirements',
+        strength: content.includes('not provided') || content.includes('missing') ? 'high' : 'medium',
+        potentialEvidence: ['Lemon law notice requirements', 'Correspondence records', 'Delivery receipts'],
+        counterStrategy: 'Provide certified mail receipts and properly formatted notice letter per statute'
+      });
+    }
+    
+    if (content.includes('repair') || content.includes('reasonable')) {
+      opposingArgs.push({
+        id: `${issue.id}-lemon-repair-defense`,
+        argument: 'Dealer will claim they were not given reasonable opportunity to repair defects',
+        strength: content.includes('insufficient attempts') ? 'high' : 'medium',
+        potentialEvidence: ['Repair attempt records', 'Service policies', 'Customer communications'],
+        counterStrategy: 'Document all repair attempts and show manufacturer had adequate opportunity'
+      });
+    }
+  }
+  
+  if (issueKeywords.some(keyword => ['warranty', 'merchantability'].includes(keyword))) {
     opposingArgs.push({
-      id: `${issue.id}-real-defense-1`,
-      argument: 'Manufacturer will argue proper notice was not provided',
-      strength: content.includes('strong') ? 'high' : 'medium',
-      potentialEvidence: ['Notice documentation', 'Delivery records', 'Communication logs'],
-      counterStrategy: 'Provide clear evidence of proper notice and delivery'
+      id: `${issue.id}-warranty-defense`,
+      argument: 'Seller will claim implied warranties were validly disclaimed in sales contract',
+      strength: content.includes('disclaimer') || content.includes('waived') ? 'high' : 'medium',
+      potentialEvidence: ['Sales contract language', 'Disclaimer clauses', 'Contract formation evidence'],
+      counterStrategy: 'Challenge validity and conspicuousness of warranty disclaimers'
     });
   }
   
+  if (issueKeywords.some(keyword => ['dtpa', 'deceptive'].includes(keyword))) {
+    opposingArgs.push({
+      id: `${issue.id}-dtpa-defense`,
+      argument: 'Defendant will claim no reasonable reliance on alleged misrepresentations',
+      strength: content.includes('no reliance') || content.includes('obvious') ? 'high' : 'medium',
+      potentialEvidence: ['Pre-sale communications', 'Product documentation', 'Buyer knowledge'],
+      counterStrategy: 'Show specific reliance on material representations that induced purchase'
+    });
+  }
+  
+  if (issueKeywords.some(keyword => ['contract', 'breach'].includes(keyword))) {
+    opposingArgs.push({
+      id: `${issue.id}-contract-defense`,
+      argument: 'Defendant will argue contract terms were fulfilled or excused',
+      strength: content.includes('performance') || content.includes('excuse') ? 'medium' : 'low',
+      potentialEvidence: ['Contract performance records', 'Excuse doctrines', 'Impossibility claims'],
+      counterStrategy: 'Document material breach and lack of valid excuse for non-performance'
+    });
+  }
+  
+  console.log(`✅ Extracted ${opposingArgs.length} issue-specific opposing arguments`);
   return opposingArgs;
 }
 
 /**
- * Extracts real burden of proof elements from the 3-agent analysis
+ * Extracts real burden of proof elements from the 3-agent analysis using issue-specific content
  */
 function extractRealBurdenElements(analysisContent: string, issue: IracIssue): BurdenOfProofElement[] {
   const elements: BurdenOfProofElement[] = [];
   const content = analysisContent.toLowerCase();
+  const issueKeywords = extractIssueKeywords(issue);
   
-  // Extract specific burden elements mentioned in lemon law analysis
-  if (content.includes('lemon') || content.includes('motor vehicle')) {
+  console.log(`🎯 Extracting burden elements for issue with keywords:`, issueKeywords);
+  
+  // Issue-aware burden element detection
+  if (issueKeywords.some(keyword => ['lemon', 'law', 'motor'].includes(keyword))) {
+    // Lemon law specific burden elements
     elements.push({
-      id: `${issue.id}-real-burden-vehicle`,
-      element: 'Vehicle Qualification',
-      description: 'Prove vehicle qualifies as "lemon" under applicable law',
-      difficultyLevel: content.includes('clear') ? 'low' : 'medium',
-      evidenceStrength: content.includes('well-documented') ? 85 : 70,
-      requiredEvidence: ['Repair records', 'Service documentation', 'Days out of service records'],
-      currentEvidence: ['Multiple repair attempts documented', 'Service records available'],
-      evidenceGaps: ['Complete repair history', 'Manufacturer communications']
+      id: `${issue.id}-lemon-defect`,
+      element: 'Covered Defect',
+      description: 'Prove defect is covered by manufacturer warranty and substantially impairs use/value',
+      difficultyLevel: content.includes('acknowledged') ? 'low' : content.includes('disputed') ? 'high' : 'medium',
+      evidenceStrength: content.includes('service manager') ? 90 : content.includes('documented') ? 75 : 60,
+      requiredEvidence: ['Warranty coverage proof', 'Defect impact documentation', 'Repair records'],
+      currentEvidence: extractCurrentEvidence('defect', issue, analysisContent),
+      evidenceGaps: ['Warranty terms analysis', 'Impact assessment']
+    });
+    
+    elements.push({
+      id: `${issue.id}-lemon-attempts`,
+      element: 'Repair Attempts',
+      description: 'Prove reasonable number of repair attempts (4+ attempts or 30+ days out of service)',
+      difficultyLevel: content.includes('45 days') || content.includes('four attempts') ? 'low' : 'medium',
+      evidenceStrength: content.includes('repair orders') ? 85 : 65,
+      requiredEvidence: ['All repair orders', 'Service invoices', 'Loaner car records'],
+      currentEvidence: extractCurrentEvidence('repair', issue, analysisContent),
+      evidenceGaps: ['Complete repair timeline', 'Days calculation']
+    });
+    
+    if (content.includes('notice')) {
+      elements.push({
+        id: `${issue.id}-lemon-notice`,
+        element: 'Manufacturer Notice',
+        description: 'Prove proper written notice provided to manufacturer with final repair opportunity',
+        difficultyLevel: content.includes('formal notice') ? 'medium' : content.includes('not provided') ? 'high' : 'low',
+        evidenceStrength: content.includes('certified mail') ? 90 : content.includes('notice') ? 50 : 25,
+        requiredEvidence: ['Written notice copy', 'Certified mail receipt', 'Manufacturer response'],
+        currentEvidence: extractCurrentEvidence('notice', issue, analysisContent),
+        evidenceGaps: ['Formal notice documentation', 'Delivery proof']
+      });
+    }
+  }
+  
+  if (issueKeywords.some(keyword => ['warranty', 'merchantability'].includes(keyword))) {
+    elements.push({
+      id: `${issue.id}-warranty-fitness`,
+      element: 'Fitness for Purpose',
+      description: 'Prove vehicle was not fit for ordinary purpose when sold',
+      difficultyLevel: content.includes('clear defects') ? 'low' : 'medium',
+      evidenceStrength: content.includes('repeated failures') ? 80 : 65,
+      requiredEvidence: ['Defect documentation', 'Industry standards', 'Expert testimony'],
+      currentEvidence: extractCurrentEvidence('fitness', issue, analysisContent),
+      evidenceGaps: ['Expert analysis', 'Comparative standards']
     });
   }
   
+  if (issueKeywords.some(keyword => ['dtpa', 'deceptive'].includes(keyword))) {
+    elements.push({
+      id: `${issue.id}-dtpa-misrepresentation`,
+      element: 'Misrepresentation',
+      description: 'Prove false, misleading, or deceptive act or practice occurred',
+      difficultyLevel: content.includes('acknowledged') ? 'low' : 'medium',
+      evidenceStrength: content.includes('representations') ? 70 : 50,
+      requiredEvidence: ['Sales communications', 'Marketing materials', 'Witness testimony'],
+      currentEvidence: extractCurrentEvidence('misrepresentation', issue, analysisContent),
+      evidenceGaps: ['Pre-sale statements', 'Reliance evidence']
+    });
+    
+    elements.push({
+      id: `${issue.id}-dtpa-reliance`,
+      element: 'Consumer Reliance',
+      description: 'Prove reasonable reliance on the deceptive practice',
+      difficultyLevel: 'medium',
+      evidenceStrength: content.includes('reliance') ? 65 : 50,
+      requiredEvidence: ['Purchase decision factors', 'Communication timeline', 'Consumer testimony'],
+      currentEvidence: extractCurrentEvidence('reliance', issue, analysisContent),
+      evidenceGaps: ['Decision-making process', 'Causation proof']
+    });
+  }
+  
+  console.log(`✅ Extracted ${elements.length} issue-specific burden elements`);
   return elements;
 }
 
