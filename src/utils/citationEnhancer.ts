@@ -3,12 +3,14 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { isStatuteCitation } from "@/utils/statuteSummaries";
 
 export interface CitationMatch {
   citation: string;
   startIndex: number;
   endIndex: number;
   url?: string;
+  type?: 'case' | 'statute';
 }
 
 export interface EnhancedCitation {
@@ -30,11 +32,26 @@ const CASE_CITATION_PATTERNS = [
 ];
 
 /**
- * Extract case citations from text
+ * Texas statute citation patterns
+ */
+const STATUTE_CITATION_PATTERNS = [
+  // Texas codes: "Tex. Occ. Code § 2301.003", "Texas Occupations Code Section 2301.003"
+  /\b(?:Tex\.|Texas)\s+(?:Occ\.|Occupations?)\s+Code\s+(?:§|[Ss]ec(?:tion)?\.?)\s*\d+\.\d+(?:\.\d+)?(?:\([a-z]\)(?:\(\d+\))?)?/gi,
+  /\b(?:Tex\.|Texas)\s+(?:Bus\.|Business)\s+(?:&|and)\s+(?:Com\.|Commerce)\s+Code\s+(?:§|[Ss]ec(?:tion)?\.?)\s*\d+\.\d+(?:\.\d+)?(?:\([a-z]\)(?:\(\d+\))?)?/gi,
+  /\b(?:Tex\.|Texas)\s+(?:Civ\.|Civil)\s+(?:Prac\.|Practice)\s+(?:&|and)\s+(?:Rem\.|Remedies)\s+Code\s+(?:§|[Ss]ec(?:tion)?\.?)\s*\d+\.\d+(?:\.\d+)?(?:\([a-z]\)(?:\(\d+\))?)?/gi,
+  /\b(?:Tex\.|Texas)\s+(?:Gov't|Government)\s+Code\s+(?:§|[Ss]ec(?:tion)?\.?)\s*\d+\.\d+(?:\.\d+)?(?:\([a-z]\)(?:\(\d+\))?)?/gi,
+  /\b(?:Tex\.|Texas)\s+(?:Penal|Pen\.)\s+Code\s+(?:§|[Ss]ec(?:tion)?\.?)\s*\d+\.\d+(?:\.\d+)?(?:\([a-z]\)(?:\(\d+\))?)?/gi,
+  // Short form: "§ 17.50", "Section 2301.003"
+  /\b(?:§|[Ss]ec(?:tion)?\.?)\s*\d{1,4}\.\d{1,4}(?:\.\d+)?(?:\([a-z]\)(?:\(\d+\))?)?/g,
+];
+
+/**
+ * Extract both case and statute citations from text
  */
 export const extractCitations = (text: string): CitationMatch[] => {
   const citations: CitationMatch[] = [];
   
+  // Extract case citations
   CASE_CITATION_PATTERNS.forEach(pattern => {
     const matches = text.matchAll(new RegExp(pattern.source, pattern.flags));
     for (const match of matches) {
@@ -43,6 +60,22 @@ export const extractCitations = (text: string): CitationMatch[] => {
           citation: match[0].trim(),
           startIndex: match.index,
           endIndex: match.index + match[0].length,
+          type: 'case'
+        });
+      }
+    }
+  });
+  
+  // Extract statute citations
+  STATUTE_CITATION_PATTERNS.forEach(pattern => {
+    const matches = text.matchAll(new RegExp(pattern.source, pattern.flags));
+    for (const match of matches) {
+      if (match.index !== undefined) {
+        citations.push({
+          citation: match[0].trim(),
+          startIndex: match.index,
+          endIndex: match.index + match[0].length,
+          type: 'statute'
         });
       }
     }
@@ -83,13 +116,21 @@ export const extractCitations = (text: string): CitationMatch[] => {
 };
 
 /**
- * Use Perplexity to find URLs for citations
+ * Use Perplexity to find URLs for case citations only
+ * Statutes are handled separately with direct PDF links
  */
 export const enhanceCitationsWithUrls = async (citations: string[]): Promise<EnhancedCitation[]> => {
   if (citations.length === 0) return [];
   
+  // Filter to only case citations (not statutes)
+  const caseCitations = citations.filter(citation => !isStatuteCitation(citation));
+  
+  if (caseCitations.length === 0) {
+    return citations.map(citation => ({ citation, url: null, confidence: 0 }));
+  }
+  
   try {
-    const query = `Find official legal URLs for these case citations: ${citations.join(', ')}. 
+    const query = `Find official legal URLs for these case citations: ${caseCitations.join(', ')}. 
     Return results as JSON with format: {\"citations\": [{\\\"citation\\\": \\\"case name\\\", \\\"url\\\": \\\"official_url\\\", \\\"confidence\\\": 0.9}]}`;
     
     const { data, error } = await supabase.functions.invoke('perplexity-research', {
@@ -109,16 +150,30 @@ export const enhanceCitationsWithUrls = async (citations: string[]): Promise<Enh
     
     // Try to parse structured response
     if (data?.structuredCases?.citations) {
-      return data.structuredCases.citations.map((item: any) => ({
+      const enhancedCases = data.structuredCases.citations.map((item: any) => ({
         citation: item.citation || item.case_name || '',
         url: item.url || null,
         confidence: item.confidence || 0.5
       }));
+      
+      // Combine case citations with statute citations (no URLs needed for statutes)
+      return citations.map(citation => {
+        if (isStatuteCitation(citation)) {
+          return { citation, url: null, confidence: 1 }; // High confidence, but no URL needed
+        }
+        const found = enhancedCases.find(c => c.citation === citation);
+        return found || { citation, url: null, confidence: 0 };
+      });
     }
     
     // Fallback: parse from content
     const enhancedCitations: EnhancedCitation[] = [];
     for (const citation of citations) {
+      if (isStatuteCitation(citation)) {
+        enhancedCitations.push({ citation, url: null, confidence: 1 });
+        continue;
+      }
+      
       const urlMatch = data?.content?.match(new RegExp(`${citation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^\n]*https?://[^\s)]+`, 'i'));
       if (urlMatch) {
         const url = urlMatch[0].match(/https?:\/\/[^\s)]+/)?.[0];

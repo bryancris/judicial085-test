@@ -4,7 +4,9 @@
 
 import React from 'react';
 import LawReferenceLink from '@/components/knowledge/LawReferenceLink';
+import { StatuteTooltip } from '@/components/ui/StatuteTooltip';
 import { CitationMatch, EnhancedCitation } from '@/utils/citationEnhancer';
+import { isStatuteCitation } from '@/utils/statuteSummaries';
 
 interface EnhancedTextProps {
   text: string;
@@ -46,15 +48,26 @@ export const EnhancedText: React.FC<EnhancedTextProps> = ({
       );
     }
 
-    // Add the citation as a link
-    const url = getCitationUrl(match.citation);
-    elements.push(
-      <LawReferenceLink
-        key={`citation-${index}`}
-        citation={match.citation}
-        url={url}
-      />
-    );
+    // Add the citation as a link - different handling for statutes vs cases
+    if (match.type === 'statute' || isStatuteCitation(match.citation)) {
+      elements.push(
+        <StatuteTooltip
+          key={`statute-${index}`}
+          citation={match.citation}
+        >
+          {match.citation}
+        </StatuteTooltip>
+      );
+    } else {
+      const url = getCitationUrl(match.citation);
+      elements.push(
+        <LawReferenceLink
+          key={`citation-${index}`}
+          citation={match.citation}
+          url={url}
+        />
+      );
+    }
 
     lastIndex = match.endIndex;
   });

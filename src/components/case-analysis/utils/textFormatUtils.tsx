@@ -1,5 +1,7 @@
 import React from "react";
 import { enhanceConsumerProtectionAnalysis } from "@/utils/lawReferences/consumerProtectionUtils";
+import { extractCitations } from "@/utils/citationEnhancer";
+import { isStatuteCitation } from "@/utils/statuteSummaries";
 
 /**
  * Highlights search terms in text
@@ -28,11 +30,11 @@ export const highlightSearchTerm = (text: string, searchTerm: string): React.Rea
 export const highlightLawLinksWithSearch = (htmlContent: string, term: string): string => {
   if (!term) {
     // Even without a search term, enhance the content with better citation formatting
-    return enhanceConsumerProtectionAnalysis(htmlContent);
+    return enhanceCitationFormatting(enhanceConsumerProtectionAnalysis(htmlContent));
   }
   
   // First enhance the content with better citation formatting
-  let enhancedContent = enhanceConsumerProtectionAnalysis(htmlContent);
+  let enhancedContent = enhanceCitationFormatting(enhanceConsumerProtectionAnalysis(htmlContent));
   
   // Split the content at HTML tags and then only highlight text content
   const tagSplit = enhancedContent.split(/(<[^>]*>)/g);
@@ -47,4 +49,33 @@ export const highlightLawLinksWithSearch = (htmlContent: string, term: string): 
     const regex = new RegExp(`(${term})`, 'gi');
     return part.replace(regex, '<mark class="bg-yellow-200">$1</mark>');
   }).join('');
+};
+
+/**
+ * Enhance citation formatting in HTML content
+ */
+const enhanceCitationFormatting = (htmlContent: string): string => {
+  // Extract citations to understand what we're working with
+  const citationMatches = extractCitations(htmlContent);
+  
+  let enhanced = htmlContent;
+  
+  // Process each citation match
+  citationMatches.forEach(match => {
+    const { citation } = match;
+    const isStatute = isStatuteCitation(citation);
+    
+    // Create appropriate styling for different citation types
+    if (isStatute) {
+      // Blue styling for statutes
+      const styledCitation = `<span class="statute-citation text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 px-1 py-0.5 rounded border border-blue-200 dark:border-blue-700">${citation}</span>`;
+      enhanced = enhanced.replace(citation, styledCitation);
+    } else {
+      // Green styling for case law
+      const styledCitation = `<span class="case-citation text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20 px-1 py-0.5 rounded border border-green-200 dark:border-green-700">${citation}</span>`;
+      enhanced = enhanced.replace(citation, styledCitation);
+    }
+  });
+  
+  return enhanced;
 };
