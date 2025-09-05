@@ -47,14 +47,21 @@ serve(async (req) => {
 
     console.log(`Resolving Justia URL for: ${caseName}`);
 
-    // Construct a targeted search query for Justia
-    const searchQuery = `Find the direct Justia case page URL for "${caseName}"${citation ? ` (${citation})` : ''} on law.justia.com.
+    // Try multiple approaches to find Justia URL
+    let justiaUrl: string | null = null;
 
-Return ONLY the direct law.justia.com URL to the case opinion page, not a search results page.
-Example format: https://law.justia.com/cases/texas/supreme-court/2023/21-0123/
+    // Approach 1: Search for multiple candidate URLs
+    const searchQuery = `Find all possible Justia case page URLs for "${caseName}"${citation ? ` (${citation})` : ''} on law.justia.com.
 
-If no direct case page URL is found, return "NOT_FOUND".`;
+Look for URLs in these formats:
+- https://law.justia.com/cases/texas/supreme-court/YEAR/CASE-NUMBER/
+- https://law.justia.com/cases/texas/supreme-court/YEAR/NUMERIC-ID.html
+- https://law.justia.com/cases/texas/supreme-court/YEAR/NUMERIC-ID/
 
+Return all possible URLs you find, one per line. If none found, return "NOT_FOUND".`;
+
+    console.log('Searching for candidate URLs...');
+    
     // Create timeout for the API call
     const timeoutMs = 15000; // 15 second timeout
     const controller = new AbortController();
@@ -75,14 +82,14 @@ If no direct case page URL is found, return "NOT_FOUND".`;
           messages: [
             {
               role: 'system',
-              content: 'You are a URL resolver for legal cases. Return only the exact Justia case page URL or "NOT_FOUND". Do not include any other text or explanation.'
+              content: 'You are a URL resolver for legal cases. Return all possible Justia case page URLs you find, one per line. Do not include explanatory text.'
             },
             {
               role: 'user',
               content: searchQuery
             }
           ],
-          max_tokens: 200,
+          max_tokens: 300,
           temperature: 0.1,
           return_citations: false,
           return_images: false,
@@ -127,42 +134,93 @@ If no direct case page URL is found, return "NOT_FOUND".`;
     
     console.log('Perplexity response:', content);
 
-    // Extract and validate Justia URL
-    let justiaUrl: string | null = null;
+    // Extract candidate URLs from response
+    const candidateUrls: string[] = [];
     
     if (content && content !== 'NOT_FOUND') {
-      // Extract URL from the response
-      const urlPattern = /https:\/\/law\.justia\.com\/cases\/[^\s]+/g;
+      // Extract all URLs from the response
+      const urlPattern = /https:\/\/law\.justia\.com\/cases\/[^\s\n]+/g;
       const matches = content.match(urlPattern);
       
-      if (matches && matches.length > 0) {
-        const candidateUrl = matches[0].replace(/[,.)]+$/, ''); // Remove trailing punctuation
-        
-        // Validate that it's a proper case page URL (not search results)
-        if (candidateUrl.includes('/cases/') && 
-            !candidateUrl.includes('/search/') && 
-            !candidateUrl.includes('/results/') &&
-            !candidateUrl.includes('?')) {
+      if (matches) {
+        for (const match of matches) {
+          const cleanUrl = match.replace(/[,.)]+$/, ''); // Remove trailing punctuation
           
-          console.log(`Found potential Justia URL: ${candidateUrl}`);
-          
-          // Optional: Verify the URL exists and contains expected content
-          try {
-            const verifyResponse = await fetch(candidateUrl, { 
-              method: 'HEAD',
-              signal: AbortSignal.timeout(5000) 
-            });
-            
-            if (verifyResponse.ok) {
-              justiaUrl = candidateUrl;
-              console.log(`Verified Justia URL: ${justiaUrl}`);
-            } else {
-              console.log(`Justia URL verification failed: ${verifyResponse.status}`);
-            }
-          } catch (verifyError) {
-            console.log('Justia URL verification timeout or error, accepting URL anyway');
-            justiaUrl = candidateUrl; // Accept it anyway if we can't verify quickly
+          // Validate that it's a proper case page URL (not search results)
+          if (cleanUrl.includes('/cases/') && 
+              !cleanUrl.includes('/search/') && 
+              !cleanUrl.includes('/results/') &&
+              !cleanUrl.includes('?')) {
+            candidateUrls.push(cleanUrl);
           }
+        }
+      }
+    }
+
+    console.log(`Found ${candidateUrls.length} candidate URLs:`, candidateUrls);
+
+    // Approach 2: Test each candidate URL with content verification
+    for (const candidateUrl of candidateUrls) {
+      console.log(`Testing URL: ${candidateUrl}`);
+      
+      try {
+        const verifyResponse = await fetch(candidateUrl, { 
+          method: 'GET',
+          signal: AbortSignal.timeout(8000),
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          }
+        });
+        
+        if (verifyResponse.ok) {
+          // Get the page content to verify it contains the case
+          const pageContent = await verifyResponse.text();
+          
+          // Check if the page contains case name or citation
+          const caseNameWords = caseName.toLowerCase().split(' ').filter(word => word.length > 3);
+          const hasMatchingContent = caseNameWords.some(word => 
+            pageContent.toLowerCase().includes(word)
+          );
+          
+          // Also check for citation if provided
+          const hasCitation = citation ? 
+            pageContent.toLowerCase().includes(citation.toLowerCase()) : 
+            true;
+          
+          if (hasMatchingContent || hasCitation) {
+            console.log(`Verified URL with content match: ${candidateUrl}`);
+            justiaUrl = candidateUrl;
+            break; // Use the first verified URL
+          } else {
+            console.log(`URL exists but content doesn't match case: ${candidateUrl}`);
+          }
+        } else {
+          console.log(`URL returned ${verifyResponse.status}: ${candidateUrl}`);
+        }
+      } catch (verifyError) {
+        console.log(`Error verifying URL ${candidateUrl}:`, verifyError.message);
+        continue;
+      }
+    }
+
+    // Approach 3: Fallback URL construction patterns
+    if (!justiaUrl && citation) {
+      console.log('Attempting fallback URL construction...');
+      
+      // Extract year and potential case number from citation
+      const yearMatch = citation.match(/(\d{4})/);
+      const year = yearMatch ? yearMatch[1] : null;
+      
+      if (year) {
+        // Try common URL patterns
+        const fallbackPatterns = [
+          `https://law.justia.com/cases/texas/supreme-court/${year}/`,
+          `https://law.justia.com/cases/us/supreme-court/${year}/`,
+        ];
+        
+        for (const basePattern of fallbackPatterns) {
+          // This is a basic attempt - in practice, you'd need the specific case number
+          console.log(`Would try pattern: ${basePattern}`);
         }
       }
     }
