@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react";
 import CaseDiscussionMessageItem from "./CaseDiscussionMessageItem";
 import ResearchLoading from "./ResearchLoading";
 import { CaseDiscussionMessage } from "@/utils/caseDiscussionService";
+import { useDocumentsData } from "@/components/case-analysis/hooks/useDocumentsData";
 
 interface CaseDiscussionChatViewProps {
   messages: CaseDiscussionMessage[];
@@ -23,6 +24,13 @@ const CaseDiscussionChatView: React.FC<CaseDiscussionChatViewProps> = ({
   researchType = 'general'
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { clientDocuments, fetchClientDocuments } = useDocumentsData(clientId);
+
+  useEffect(() => {
+    if (clientId) {
+      fetchClientDocuments();
+    }
+  }, [clientId, fetchClientDocuments]);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -43,6 +51,7 @@ const CaseDiscussionChatView: React.FC<CaseDiscussionChatViewProps> = ({
               key={index} 
               message={message}
               clientId={clientId}
+              clientDocuments={clientDocuments}
               onFindingsAdded={onFindingsAdded}
             />
           ))}
