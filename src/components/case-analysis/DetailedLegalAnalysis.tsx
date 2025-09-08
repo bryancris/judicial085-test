@@ -45,11 +45,63 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
     return rawContent ? isIracStructured(rawContent) : false;
   }, [rawContent]);
 
+  // Extract case summary from raw content
+  const caseSummaryText = useMemo(() => {
+    if (!rawContent) return iracAnalysis?.caseSummary || '';
+    const match = rawContent.match(/\*\*CASE SUMMARY:\*\*\s*([\s\S]*?)(?=\*\*[A-Z][A-Z\s\-]+:\*\*|$)/i);
+    return match ? match[1].trim() : iracAnalysis?.caseSummary || '';
+  }, [rawContent, iracAnalysis]);
+
+  // Extract relevant Texas law from raw content
+  const relevantTexasLawText = useMemo(() => {
+    if (!rawContent) return '';
+    const match = rawContent.match(/\*\*RELEVANT TEXAS LAW\w*:\*\*\s*([\s\S]*?)(?=\*\*[A-Z][A-Z\s\-]+:\*\*|$)/i);
+    return match ? match[1].trim() : '';
+  }, [rawContent]);
+
   // Default to traditional view if IRAC is not supported
   const effectiveViewMode = supportsIrac ? viewMode : 'traditional';
 
   return (
     <div className="space-y-6">
+
+      {/* Case Summary - Above IRAC Analysis */}
+      {effectiveViewMode === 'irac' && caseSummaryText && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Case Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="prose dark:prose-invert max-w-none text-sm">
+              {caseSummaryText.split('\n\n').map((paragraph, idx) => (
+                <p key={idx} className="mb-2 last:mb-0">{paragraph}</p>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Relevant Texas Laws - Above IRAC Analysis */}
+      {effectiveViewMode === 'irac' && relevantTexasLawText && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Scale className="h-5 w-5" />
+              Relevant Texas Laws
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="prose dark:prose-invert max-w-none text-sm">
+              {relevantTexasLawText.split('\n\n').map((paragraph, idx) => (
+                <p key={idx} className="mb-2 last:mb-0">{paragraph}</p>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* IRAC Analysis View */}
       {effectiveViewMode === 'irac' && iracAnalysis && (
