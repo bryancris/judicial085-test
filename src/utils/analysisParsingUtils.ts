@@ -305,6 +305,16 @@ export const extractAnalysisSections = (content: string) => {
     /(?:^|\n)\s*LEGAL FRAMEWORK:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
     /(?:^|\n)\s*LAW[S]? APPLICABLE:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
   ];
+
+  const caseSummaryPatterns = [
+    /\*\*CASE SUMMARY:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
+    /\*\*SUMMARY:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
+    /\*\*CASE OVERVIEW:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
+    // Plaintext uppercase headings
+    /(?:^|\n)\s*CASE SUMMARY:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
+    /(?:^|\n)\s*SUMMARY:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
+    /(?:^|\n)\s*CASE OVERVIEW:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
+  ];
   
   const preliminaryAnalysisPatterns = [
     /\*\*PRELIMINARY ANALYSIS:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
@@ -342,6 +352,15 @@ export const extractAnalysisSections = (content: string) => {
     relevantLawMatch = content.match(pattern);
     if (relevantLawMatch) {
       console.log("Found relevant law match with pattern:", pattern);
+      break;
+    }
+  }
+
+  let caseSummaryMatch = null;
+  for (const pattern of caseSummaryPatterns) {
+    caseSummaryMatch = content.match(pattern);
+    if (caseSummaryMatch) {
+      console.log("Found case summary match with pattern:", pattern);
       break;
     }
   }
@@ -393,9 +412,13 @@ export const extractAnalysisSections = (content: string) => {
   
   const extractedLaw = relevantLawMatch ? relevantLawMatch[1].trim() : "";
   console.log("Extracted relevant law:", extractedLaw ? extractedLaw.substring(0, 200) + "..." : "NONE FOUND");
+
+  const extractedCaseSummary = caseSummaryMatch ? caseSummaryMatch[1].trim() : "";
+  console.log("Extracted case summary:", extractedCaseSummary ? extractedCaseSummary.substring(0, 200) + "..." : "NONE FOUND");
   
   return {
     relevantLaw: extractedLaw || "No relevant law analysis available.",
+    caseSummary: extractedCaseSummary || "No case summary available.",
     preliminaryAnalysis: preliminaryAnalysisMatch ? preliminaryAnalysisMatch[1].trim() : "No preliminary analysis available.",
     potentialIssues: potentialIssuesMatch ? potentialIssuesMatch[1].trim() : "No potential issues identified.",
     followUpQuestions,

@@ -67,12 +67,12 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           console.log(`Found ${analyses?.length || 0} client-level analysis records (fallback)`);
         }
         
-        // 🎯 Filter and prioritize legitimate analyses
+        // 🎯 Filter and prioritize legitimate analyses - PREFER CLIENT-INTAKE for better formatting
         if (analyses && analyses.length > 1) {
-          // First, prefer case-analysis and client-intake types
+          // First, prefer client-intake over case-analysis for better law summaries and case summaries
           const legitimateAnalyses = analyses.filter(a => 
-            a.analysis_type === 'case-analysis' || 
-            a.analysis_type === 'client-intake' ||
+            a.analysis_type === 'client-intake' || 
+            a.analysis_type === 'case-analysis' ||
             a.analysis_type === 'direct-analysis'
           );
           
@@ -80,11 +80,18 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
             console.log(`📋 Using legitimate analysis types, found ${legitimateAnalyses.length} options`);
             analyses = legitimateAnalyses;
             
-            // Then prefer consumer-protection within legitimate analyses
-            const consumerAnalyses = legitimateAnalyses.filter(a => a.case_type === 'consumer-protection');
-            if (consumerAnalyses.length > 0) {
-              console.log(`📋 Preferring consumer-protection analysis over other types`);
-              analyses = [consumerAnalyses[0]];
+            // Prefer client-intake first for better formatted sections
+            const intakeAnalyses = legitimateAnalyses.filter(a => a.analysis_type === 'client-intake');
+            if (intakeAnalyses.length > 0) {
+              console.log(`📋 Preferring client-intake analysis for better formatting`);
+              analyses = [intakeAnalyses[0]];
+            } else {
+              // Then prefer consumer-protection within remaining analyses
+              const consumerAnalyses = legitimateAnalyses.filter(a => a.case_type === 'consumer-protection');
+              if (consumerAnalyses.length > 0) {
+                console.log(`📋 Preferring consumer-protection analysis over other types`);
+                analyses = [consumerAnalyses[0]];
+              }
             }
           }
         }
@@ -107,12 +114,12 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
         analyses = clientAnalyses;
         console.log(`Found ${analyses?.length || 0} client-level analysis records`);
         
-        // 🎯 Filter and prioritize legitimate analyses for client-level too
+        // 🎯 Filter and prioritize legitimate analyses for client-level too - PREFER CLIENT-INTAKE
         if (analyses && analyses.length > 1) {
-          // First, prefer case-analysis and client-intake types
+          // First, prefer client-intake over case-analysis for better law summaries and case summaries
           const legitimateAnalyses = analyses.filter(a => 
-            a.analysis_type === 'case-analysis' || 
-            a.analysis_type === 'client-intake' ||
+            a.analysis_type === 'client-intake' || 
+            a.analysis_type === 'case-analysis' ||
             a.analysis_type === 'direct-analysis'
           );
           
@@ -120,11 +127,18 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
             console.log(`📋 Using legitimate analysis types, found ${legitimateAnalyses.length} options`);
             analyses = legitimateAnalyses;
             
-            // Then prefer consumer-protection within legitimate analyses
-            const consumerAnalyses = legitimateAnalyses.filter(a => a.case_type === 'consumer-protection');
-            if (consumerAnalyses.length > 0) {
-              console.log(`📋 Preferring consumer-protection analysis over other types`);
-              analyses = [consumerAnalyses[0]];
+            // Prefer client-intake first for better formatted sections
+            const intakeAnalyses = legitimateAnalyses.filter(a => a.analysis_type === 'client-intake');
+            if (intakeAnalyses.length > 0) {
+              console.log(`📋 Preferring client-intake analysis for better formatting`);
+              analyses = [intakeAnalyses[0]];
+            } else {
+              // Then prefer consumer-protection within remaining analyses
+              const consumerAnalyses = legitimateAnalyses.filter(a => a.case_type === 'consumer-protection');
+              if (consumerAnalyses.length > 0) {
+                console.log(`📋 Preferring consumer-protection analysis over other types`);
+                analyses = [consumerAnalyses[0]];
+              }
             }
           }
         }
@@ -152,11 +166,21 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
         // Transform the analysis into the expected format
         const sections = extractAnalysisSections(analysis.content || "");
 
-        // Fallback: If Relevant Texas Law is missing, pull it from latest client-intake content
+        // 🎯 ALWAYS try to get Case Summary and Relevant Texas Law from client-intake first for better formatting
         let relevantLaw = sections.relevantLaw || "";
-        try {
-          if (!relevantLaw || /No relevant law analysis available\./i.test(relevantLaw)) {
-            console.log("Relevant law missing; attempting client-intake fallback...");
+        let caseSummary = sections.caseSummary || "";
+        
+        console.log(`Current analysis type: ${analysis.analysis_type}`);
+        console.log(`Current relevantLaw length: ${relevantLaw.length}`);
+        console.log(`Current caseSummary length: ${caseSummary.length}`);
+        
+        // If this isn't already client-intake, or if sections are missing/poor quality, try client-intake
+        if (analysis.analysis_type !== 'client-intake' || !relevantLaw || !caseSummary || 
+            /No relevant law analysis available\./i.test(relevantLaw) || 
+            /No case summary available\./i.test(caseSummary)) {
+          
+          console.log("🔍 Fetching Case Summary and Relevant Texas Law from client-intake...");
+          try {
             let intakeQuery = supabase
               .from("legal_analyses")
               .select("content")
@@ -174,14 +198,22 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
             const { data: intakeData, error: intakeError } = await intakeQuery;
             if (!intakeError && intakeData && intakeData.length > 0) {
               const intakeSections = extractAnalysisSections(intakeData[0].content || "");
+              
+              // Use client-intake Case Summary if available and better
+              if (intakeSections.caseSummary && !/No case summary/i.test(intakeSections.caseSummary)) {
+                caseSummary = intakeSections.caseSummary;
+                console.log("✅ Using Case Summary from client-intake");
+              }
+              
+              // Use client-intake Relevant Texas Law if available and better
               if (intakeSections.relevantLaw && !/No relevant law/i.test(intakeSections.relevantLaw)) {
                 relevantLaw = intakeSections.relevantLaw;
-                console.log("✅ Using Relevant Texas Law from client-intake fallback");
+                console.log("✅ Using Relevant Texas Law from client-intake");
               }
             }
+          } catch (e) {
+            console.warn("Client-intake lookup for Case Summary/Relevant Texas Law failed:", e);
           }
-        } catch (e) {
-          console.warn("Client-intake fallback for Relevant Texas Law failed:", e);
         }
 
         const transformedData: AnalysisData = {
@@ -194,7 +226,7 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           },
           strengths: [],
           weaknesses: [],
-          conversationSummary: "",
+          conversationSummary: caseSummary, // Use the Case Summary we extracted
           outcome: {
             defense: 65,
             prosecution: 35
