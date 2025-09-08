@@ -5,6 +5,7 @@ import { AnalysisData } from "@/hooks/useAnalysisData";
 import { extractLegalCitations, mapCitationsToKnowledgeBase, generateDirectPdfUrl } from "@/utils/lawReferences/knowledgeBaseMapping";
 import { cleanupDuplicateAnalyses } from "@/utils/duplicateCleanupService";
 import { extractAnalysisSections, extractStrengthsWeaknesses } from "@/utils/analysisParsingUtils";
+import { parseIracAnalysis } from "@/utils/iracParser";
 
 export const useAnalysisData = (clientId: string, caseId?: string) => {
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
@@ -142,6 +143,39 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
         const strengthsWeaknesses = extractStrengthsWeaknesses(analysis.content || "", analysis.case_type);
         console.log("📊 Extracted strengths:", strengthsWeaknesses.strengths.length, "weaknesses:", strengthsWeaknesses.weaknesses.length);
 
+        // Add IRAC-based fallbacks for missing sections
+        let finalPreliminaryAnalysis = sections.preliminaryAnalysis || "";
+        let finalPotentialIssues = sections.potentialIssues || "";
+        
+        if (!finalPreliminaryAnalysis || finalPreliminaryAnalysis === "No preliminary analysis available") {
+          console.log("🔧 Preliminary Analysis missing, attempting IRAC fallback...");
+          const iracAnalysis = parseIracAnalysis(analysis.content || "");
+          if (iracAnalysis && iracAnalysis.legalIssues.length > 0) {
+            const applicationTexts = iracAnalysis.legalIssues.map(issue => issue.application).filter(Boolean);
+            const conclusionTexts = iracAnalysis.legalIssues.map(issue => issue.conclusion).filter(Boolean);
+            
+            if (applicationTexts.length > 0 || conclusionTexts.length > 0) {
+              finalPreliminaryAnalysis = [
+                ...applicationTexts.slice(0, 2), // Limit to first 2 applications for brevity
+                ...conclusionTexts.slice(0, 1)   // Add one conclusion
+              ].join("\n\n");
+              console.log("✅ Generated preliminary analysis from IRAC sections");
+            }
+          }
+        }
+        
+        if (!finalPotentialIssues || finalPotentialIssues === "No potential issues identified") {
+          console.log("🔧 Potential Issues missing, attempting IRAC fallback...");
+          const iracAnalysis = parseIracAnalysis(analysis.content || "");
+          if (iracAnalysis && iracAnalysis.legalIssues.length > 0) {
+            const issueStatements = iracAnalysis.legalIssues.map(issue => `• ${issue.issueStatement}`);
+            if (issueStatements.length > 0) {
+              finalPotentialIssues = issueStatements.join("\n");
+              console.log("✅ Generated potential issues from IRAC issue statements");
+            }
+          }
+        }
+
         // 🎯 ALWAYS try to get Case Summary and Relevant Texas Law from client-intake first for better formatting
         let relevantLaw = sections.relevantLaw || "";
         let caseSummary = sections.caseSummary || "";
@@ -217,8 +251,8 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           id: analysis.id,
           legalAnalysis: {
             relevantLaw: relevantLaw,
-            preliminaryAnalysis: sections.preliminaryAnalysis || "",
-            potentialIssues: sections.potentialIssues || "",
+            preliminaryAnalysis: finalPreliminaryAnalysis,
+            potentialIssues: finalPotentialIssues,
             followUpQuestions: sections.followUpQuestions || []
           },
           strengths: strengthsWeaknesses.strengths,
