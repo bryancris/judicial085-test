@@ -4,6 +4,8 @@ import { ScrollText, Scale, FileText } from "lucide-react";
 import RemediesSection from "./RemediesSection";
 import IracAnalysisSection from "./IracAnalysisSection";
 import { parseIracAnalysis } from "@/utils/iracParser";
+import { marked } from "marked";
+import DOMPurify from "dompurify";
 
 interface DetailedLegalAnalysisProps {
   relevantLaw: string;
@@ -50,7 +52,16 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
   }, [caseSummary, rawContent, iracAnalysis]);
 
   // Relevant Texas law comes directly from client intake props
-  const relevantTexasLawText = useMemo(() => (relevantLaw || '').trim(), [relevantLaw]);
+  const relevantTexasLawText = useMemo(() => (relevantLaw || "").trim(), [relevantLaw]);
+  const relevantLawHtml = useMemo(() => {
+    const md = relevantTexasLawText || "No relevant law analysis available.";
+    try {
+      const html = marked.parse(md, { breaks: true });
+      return DOMPurify.sanitize(typeof html === "string" ? html : String(html));
+    } catch (e) {
+      return DOMPurify.sanitize(`<p>${md.replace(/\n/g, "<br/>")}</p>`);
+    }
+  }, [relevantTexasLawText]);
 
 
   return (
@@ -84,11 +95,7 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="prose dark:prose-invert max-w-none text-sm">
-            {(relevantTexasLawText ? relevantTexasLawText.split('\n\n') : ['No relevant law analysis available.']).map((paragraph, idx) => (
-              <p key={idx} className="mb-2 last:mb-0 whitespace-pre-line">{paragraph}</p>
-            ))}
-          </div>
+          <div className="prose dark:prose-invert max-w-none text-sm" dangerouslySetInnerHTML={{ __html: relevantLawHtml }} />
         </CardContent>
       </Card>
 
