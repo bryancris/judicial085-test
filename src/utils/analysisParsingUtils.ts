@@ -358,9 +358,9 @@ export const extractAnalysisSections = (content: string) => {
   // Fallback: HTML heading patterns like <strong>RELEVANT TEXAS LAW:</strong>
   if (!relevantLawMatch) {
     const relevantLawHtmlPatterns = [
-      /<strong>\s*RELEVANT TEXAS LAW[S]?:\s*<\/strong>[\s\S]*?<\/p>\s*([\s\S]*?)(?=<p><strong>[A-Z][^<]*:<\/strong>|$)/i,
-      /<strong>\s*APPLICABLE TEXAS LAW[S]?:\s*<\/strong>[\s\S]*?<\/p>\s*([\s\S]*?)(?=<p><strong>[A-Z][^<]*:<\/strong>|$)/i,
-      /<strong>\s*LEGAL FRAMEWORK:\s*<\/strong>[\s\S]*?<\/p>\s*([\s\S]*?)(?=<p><strong>[A-Z][^<]*:<\/strong>|$)/i,
+      /<strong[^>]*>\s*RELEVANT TEXAS LAW[S]?\s*:?[\s\S]*?<\/strong>\s*(?:<\/p>)?\s*([\s\S]*?)(?=<(?:p[^>]*>\s*)?<strong[^>]*>|\*\*|$)/i,
+      /<strong[^>]*>\s*APPLICABLE TEXAS LAW[S]?\s*:?[\s\S]*?<\/strong>\s*(?:<\/p>)?\s*([\s\S]*?)(?=<(?:p[^>]*>\s*)?<strong[^>]*>|\*\*|$)/i,
+      /<strong[^>]*>\s*LEGAL FRAMEWORK\s*:?[\s\S]*?<\/strong>\s*(?:<\/p>)?\s*([\s\S]*?)(?=<(?:p[^>]*>\s*)?<strong[^>]*>|\*\*|$)/i,
     ];
     for (const pattern of relevantLawHtmlPatterns) {
       const htmlMatch = content.match(pattern);
@@ -368,6 +368,23 @@ export const extractAnalysisSections = (content: string) => {
         relevantLawMatch = htmlMatch;
         console.log("Found relevant law HTML match with pattern:", pattern);
         break;
+      }
+    }
+
+    // Last-resort fallback: strip HTML and slice between headings
+    if (!relevantLawMatch) {
+      const textOnly = content.replace(/<[^>]+>/g, '\n');
+      const startIdx = textOnly.search(/RELEVANT TEXAS LAW[S]?\s*:?/i) >= 0
+        ? textOnly.search(/RELEVANT TEXAS LAW[S]?\s*:?/i)
+        : textOnly.search(/APPLICABLE TEXAS LAW[S]?\s*:?/i);
+      if (startIdx >= 0) {
+        const rest = textOnly.slice(startIdx);
+        const endMatch = rest.match(/\n\s*(CASE SUMMARY|CASE OVERVIEW|SUMMARY|PRELIMINARY ANALYSIS|LEGAL FRAMEWORK|POTENTIAL LEGAL ISSUES|RECOMMENDED FOLLOW[- ]?UP QUESTIONS|FOLLOW[- ]?UP QUESTIONS)\b/i);
+        const captured = endMatch ? rest.slice(rest.indexOf('\n'), endMatch.index).trim() : rest.slice(rest.indexOf('\n')).trim();
+        if (captured) {
+          relevantLawMatch = [captured, captured] as unknown as RegExpMatchArray;
+          console.log("Used plain-text fallback for relevant law section");
+        }
       }
     }
   }
@@ -383,9 +400,9 @@ export const extractAnalysisSections = (content: string) => {
   // Fallback: HTML heading patterns like <strong>CASE SUMMARY:</strong>
   if (!caseSummaryMatch) {
     const caseSummaryHtmlPatterns = [
-      /<strong>\s*CASE SUMMARY:\s*<\/strong>[\s\S]*?<\/p>\s*([\s\S]*?)(?=<p><strong>[A-Z][^<]*:<\/strong>|$)/i,
-      /<strong>\s*CASE OVERVIEW:\s*<\/strong>[\s\S]*?<\/p>\s*([\s\S]*?)(?=<p><strong>[A-Z][^<]*:<\/strong>|$)/i,
-      /<strong>\s*SUMMARY:\s*<\/strong>[\s\S]*?<\/p>\s*([\s\S]*?)(?=<p><strong>[A-Z][^<]*:<\/strong>|$)/i,
+      /<strong[^>]*>\s*CASE SUMMARY\s*:?[\s\S]*?<\/strong>\s*(?:<\/p>)?\s*([\s\S]*?)(?=<(?:p[^>]*>\s*)?<strong[^>]*>|\*\*|$)/i,
+      /<strong[^>]*>\s*CASE OVERVIEW\s*:?[\s\S]*?<\/strong>\s*(?:<\/p>)?\s*([\s\S]*?)(?=<(?:p[^>]*>\s*)?<strong[^>]*>|\*\*|$)/i,
+      /<strong[^>]*>\s*SUMMARY\s*:?[\s\S]*?<\/strong>\s*(?:<\/p>)?\s*([\s\S]*?)(?=<(?:p[^>]*>\s*)?<strong[^>]*>|\*\*|$)/i,
     ];
     for (const pattern of caseSummaryHtmlPatterns) {
       const htmlMatch = content.match(pattern);
@@ -393,6 +410,21 @@ export const extractAnalysisSections = (content: string) => {
         caseSummaryMatch = htmlMatch;
         console.log("Found case summary HTML match with pattern:", pattern);
         break;
+      }
+    }
+
+    // Last-resort fallback: strip HTML and slice between headings
+    if (!caseSummaryMatch) {
+      const textOnly = content.replace(/<[^>]+>/g, '\n');
+      const startIdx = textOnly.search(/CASE SUMMARY|CASE OVERVIEW|SUMMARY/i);
+      if (startIdx >= 0) {
+        const rest = textOnly.slice(startIdx);
+        const endMatch = rest.match(/\n\s*(RELEVANT TEXAS LAW[S]?|APPLICABLE TEXAS LAW[S]?|LEGAL FRAMEWORK|PRELIMINARY ANALYSIS|POTENTIAL LEGAL ISSUES|RECOMMENDED FOLLOW[- ]?UP QUESTIONS|FOLLOW[- ]?UP QUESTIONS)\b/i);
+        const captured = endMatch ? rest.slice(rest.indexOf('\n'), endMatch.index).trim() : rest.slice(rest.indexOf('\n')).trim();
+        if (captured) {
+          caseSummaryMatch = [captured, captured] as unknown as RegExpMatchArray;
+          console.log("Used plain-text fallback for case summary section");
+        }
       }
     }
   }
