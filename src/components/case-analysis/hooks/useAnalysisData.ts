@@ -36,7 +36,7 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           .select("*")
           .eq("client_id", clientId)
           .eq("case_id", caseId)
-          .in("validation_status", ["validated", "pending_review"])  // Include validated and pending review
+          .in("validation_status", ["validated", "pending_review", "pending"])  // Include validated, pending review, and pending
           .not("analysis_type", "in", "(3-agent-coordination,coordinator-research)")
           .order("created_at", { ascending: false });
 
@@ -55,7 +55,7 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
             .select("*")
             .eq("client_id", clientId)
             .is("case_id", null)
-            .in("validation_status", ["validated", "pending_review"])  // Include validated and pending review
+            .in("validation_status", ["validated", "pending_review", "pending"])  // Include validated, pending review, and pending
             .not("analysis_type", "in", "(3-agent-coordination,coordinator-research)")
             .order("created_at", { ascending: false });
 
@@ -67,32 +67,16 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           console.log(`Found ${analyses?.length || 0} client-level analysis records (fallback)`);
         }
         
-        // 🎯 Filter and prioritize legitimate analyses - PREFER CLIENT-INTAKE for better formatting
+        // 🎯 Prioritize base analysis for IRAC: prefer case-analysis or direct-analysis
         if (analyses && analyses.length > 1) {
-          // First, prefer client-intake over case-analysis for better law summaries and case summaries
-          const legitimateAnalyses = analyses.filter(a => 
-            a.analysis_type === 'client-intake' || 
-            a.analysis_type === 'case-analysis' ||
-            a.analysis_type === 'direct-analysis'
+          const iracPreferred = analyses.filter(a =>
+            a.analysis_type === 'case-analysis' || a.analysis_type === 'direct-analysis'
           );
-          
-          if (legitimateAnalyses.length > 0) {
-            console.log(`📋 Using legitimate analysis types, found ${legitimateAnalyses.length} options`);
-            analyses = legitimateAnalyses;
-            
-            // Prefer client-intake first for better formatted sections
-            const intakeAnalyses = legitimateAnalyses.filter(a => a.analysis_type === 'client-intake');
-            if (intakeAnalyses.length > 0) {
-              console.log(`📋 Preferring client-intake analysis for better formatting`);
-              analyses = [intakeAnalyses[0]];
-            } else {
-              // Then prefer consumer-protection within remaining analyses
-              const consumerAnalyses = legitimateAnalyses.filter(a => a.case_type === 'consumer-protection');
-              if (consumerAnalyses.length > 0) {
-                console.log(`📋 Preferring consumer-protection analysis over other types`);
-                analyses = [consumerAnalyses[0]];
-              }
-            }
+          if (iracPreferred.length > 0) {
+            console.log(`📋 Preferring ${iracPreferred[0].analysis_type} as base for IRAC`);
+            analyses = [iracPreferred[0]];
+          } else {
+            analyses = [analyses[0]]; // most recent
           }
         }
       } else {
@@ -103,7 +87,7 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           .select("*")
           .eq("client_id", clientId)
           .is("case_id", null)
-          .in("validation_status", ["validated", "pending_review"])  // Include validated and pending review
+          .in("validation_status", ["validated", "pending_review", "pending"])  // Include validated, pending review, and pending
           .not("analysis_type", "in", "(3-agent-coordination,coordinator-research)")
           .order("created_at", { ascending: false });
 
@@ -114,32 +98,16 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
         analyses = clientAnalyses;
         console.log(`Found ${analyses?.length || 0} client-level analysis records`);
         
-        // 🎯 Filter and prioritize legitimate analyses for client-level too - PREFER CLIENT-INTAKE
+        // 🎯 Prioritize base analysis for IRAC at client-level: prefer case-analysis or direct-analysis
         if (analyses && analyses.length > 1) {
-          // First, prefer client-intake over case-analysis for better law summaries and case summaries
-          const legitimateAnalyses = analyses.filter(a => 
-            a.analysis_type === 'client-intake' || 
-            a.analysis_type === 'case-analysis' ||
-            a.analysis_type === 'direct-analysis'
+          const iracPreferred = analyses.filter(a =>
+            a.analysis_type === 'case-analysis' || a.analysis_type === 'direct-analysis'
           );
-          
-          if (legitimateAnalyses.length > 0) {
-            console.log(`📋 Using legitimate analysis types, found ${legitimateAnalyses.length} options`);
-            analyses = legitimateAnalyses;
-            
-            // Prefer client-intake first for better formatted sections
-            const intakeAnalyses = legitimateAnalyses.filter(a => a.analysis_type === 'client-intake');
-            if (intakeAnalyses.length > 0) {
-              console.log(`📋 Preferring client-intake analysis for better formatting`);
-              analyses = [intakeAnalyses[0]];
-            } else {
-              // Then prefer consumer-protection within remaining analyses
-              const consumerAnalyses = legitimateAnalyses.filter(a => a.case_type === 'consumer-protection');
-              if (consumerAnalyses.length > 0) {
-                console.log(`📋 Preferring consumer-protection analysis over other types`);
-                analyses = [consumerAnalyses[0]];
-              }
-            }
+          if (iracPreferred.length > 0) {
+            console.log(`📋 Preferring ${iracPreferred[0].analysis_type} as base for IRAC (client-level)`);
+            analyses = [iracPreferred[0]];
+          } else {
+            analyses = [analyses[0]]; // most recent
           }
         }
       }
@@ -181,22 +149,41 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           
           console.log("🔍 Fetching Case Summary and Relevant Texas Law from client-intake...");
           try {
-            let intakeQuery = supabase
-              .from("legal_analyses")
-              .select("content")
-              .eq("client_id", clientId)
-              .eq("analysis_type", "client-intake")
-              .order("created_at", { ascending: false })
-              .limit(1);
+            let intakeData: { content: string }[] | null = null;
 
+            // Try case-specific client-intake first when caseId is provided
             if (caseId) {
-              intakeQuery = intakeQuery.eq("case_id", caseId);
-            } else {
-              intakeQuery = intakeQuery.is("case_id", null);
+              const { data: intakeCaseSpecific, error: intakeCaseErr } = await supabase
+                .from("legal_analyses")
+                .select("content")
+                .eq("client_id", clientId)
+                .eq("analysis_type", "client-intake")
+                .eq("case_id", caseId)
+                .order("created_at", { ascending: false })
+                .limit(1);
+              if (intakeCaseErr) {
+                console.warn("Client-intake case-specific lookup failed:", intakeCaseErr.message);
+              }
+              intakeData = intakeCaseSpecific;
             }
 
-            const { data: intakeData, error: intakeError } = await intakeQuery;
-            if (!intakeError && intakeData && intakeData.length > 0) {
+            // Fallback: client-level client-intake (case_id IS NULL)
+            if (!intakeData || intakeData.length === 0) {
+              const { data: intakeClientLevel, error: intakeClientErr } = await supabase
+                .from("legal_analyses")
+                .select("content")
+                .eq("client_id", clientId)
+                .eq("analysis_type", "client-intake")
+                .is("case_id", null)
+                .order("created_at", { ascending: false })
+                .limit(1);
+              if (intakeClientErr) {
+                console.warn("Client-intake client-level lookup failed:", intakeClientErr.message);
+              }
+              intakeData = intakeClientLevel;
+            }
+
+            if (intakeData && intakeData.length > 0) {
               const intakeSections = extractAnalysisSections(intakeData[0].content || "");
               
               // Use client-intake Case Summary if available and better
