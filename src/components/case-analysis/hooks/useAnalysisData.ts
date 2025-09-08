@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AnalysisData } from "@/hooks/useAnalysisData";
 import { extractLegalCitations, mapCitationsToKnowledgeBase, generateDirectPdfUrl } from "@/utils/lawReferences/knowledgeBaseMapping";
 import { cleanupDuplicateAnalyses } from "@/utils/duplicateCleanupService";
+import { extractAnalysisSections } from "@/utils/analysisParsingUtils";
 
 export const useAnalysisData = (clientId: string, caseId?: string) => {
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
@@ -149,13 +150,14 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
         }));
         
         // Transform the analysis into the expected format
+        const sections = extractAnalysisSections(analysis.content || "");
         const transformedData: AnalysisData = {
           id: analysis.id,
           legalAnalysis: {
-            relevantLaw: "",
-            preliminaryAnalysis: "",
-            potentialIssues: "",
-            followUpQuestions: []
+            relevantLaw: sections.relevantLaw || "",
+            preliminaryAnalysis: sections.preliminaryAnalysis || "",
+            potentialIssues: sections.potentialIssues || "",
+            followUpQuestions: sections.followUpQuestions || []
           },
           strengths: [],
           weaknesses: [],
@@ -167,7 +169,7 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           timestamp: analysis.timestamp || analysis.created_at || new Date().toISOString(),
           lawReferences: lawReferences,
           caseType: analysis.case_type || "general",
-          remedies: "",
+          remedies: sections.remedies || "",
           rawContent: analysis.content,
           validationStatus: analysis.validation_status
         };

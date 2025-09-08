@@ -81,7 +81,7 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
       )}
 
       {/* Relevant Texas Laws - Above IRAC Analysis */}
-      {effectiveViewMode === 'irac' && relevantTexasLawText && (
+      {effectiveViewMode === 'irac' && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -91,7 +91,7 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
           </CardHeader>
           <CardContent>
             <div className="prose dark:prose-invert max-w-none text-sm">
-              {relevantTexasLawText.split('\n\n').map((paragraph, idx) => (
+              {(relevantTexasLawText ? relevantTexasLawText.split('\n\n') : ['No relevant law analysis available.']).map((paragraph, idx) => (
                 <p key={idx} className="mb-2 last:mb-0">{paragraph}</p>
               ))}
             </div>
