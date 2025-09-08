@@ -320,10 +320,13 @@ export const extractAnalysisSections = (content: string) => {
     /\*\*PRELIMINARY ANALYSIS:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
     /\*\*INITIAL ANALYSIS:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
     /\*\*ANALYSIS:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
+    // NEW: Extract from IRAC APPLICATION sections
+    /\*\*APPLICATION:\*\*([\s\S]*?)(?=\*\*(?:CONCLUSION|ISSUE):|$)/i,
     // Plaintext uppercase headings
     /(?:^|\n)\s*PRELIMINARY ANALYSIS:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
     /(?:^|\n)\s*INITIAL ANALYSIS:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
     /(?:^|\n)\s*ANALYSIS:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
+    /(?:^|\n)\s*APPLICATION:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
   ];
   
   const potentialIssuesPatterns = [
@@ -331,6 +334,8 @@ export const extractAnalysisSections = (content: string) => {
     /\*\*POTENTIAL ISSUES:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
     /\*\*LEGAL ISSUES:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
     /\*\*ISSUES IDENTIFIED:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
+    // NEW: Extract from IRAC ISSUE sections - match all ISSUE statements
+    /\*\*ISSUE\s*\[\d+\]:\*\*([\s\S]*?)(?=\*\*RULE:|$)/gi,
     // Plaintext uppercase headings
     /(?:^|\n)\s*POTENTIAL LEGAL ISSUES:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
     /(?:^|\n)\s*POTENTIAL ISSUES:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
@@ -437,10 +442,37 @@ export const extractAnalysisSections = (content: string) => {
     if (preliminaryAnalysisMatch) break;
   }
   
+  // Special handling for IRAC format - combine multiple APPLICATION sections
+  if (!preliminaryAnalysisMatch) {
+    const applicationMatches = content.match(/\*\*APPLICATION:\*\*([\s\S]*?)(?=\*\*(?:CONCLUSION|ISSUE):|$)/gi);
+    if (applicationMatches && applicationMatches.length > 0) {
+      const combinedApplications = applicationMatches
+        .map(match => match.replace(/\*\*APPLICATION:\*\*/i, '').trim())
+        .join('\n\n');
+      preliminaryAnalysisMatch = [combinedApplications, combinedApplications] as unknown as RegExpMatchArray;
+      console.log("Combined IRAC APPLICATION sections for preliminary analysis");
+    }
+  }
+  
   let potentialIssuesMatch = null;
   for (const pattern of potentialIssuesPatterns) {
     potentialIssuesMatch = content.match(pattern);
     if (potentialIssuesMatch) break;
+  }
+
+  // Special handling for IRAC format - extract ISSUE statements
+  if (!potentialIssuesMatch) {
+    const issueMatches = content.match(/\*\*ISSUE\s*\[\d+\]:\*\*([\s\S]*?)(?=\*\*RULE:|$)/gi);
+    if (issueMatches && issueMatches.length > 0) {
+      const combinedIssues = issueMatches
+        .map((match, index) => {
+          const issueText = match.replace(/\*\*ISSUE\s*\[\d+\]:\*\*/i, '').trim();
+          return `${index + 1}. ${issueText}`;
+        })
+        .join('\n\n');
+      potentialIssuesMatch = [combinedIssues, combinedIssues] as unknown as RegExpMatchArray;
+      console.log("Extracted IRAC ISSUE statements for potential issues");
+    }
   }
   
   let followUpQuestionsMatch = null;
