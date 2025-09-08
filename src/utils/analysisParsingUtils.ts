@@ -298,25 +298,42 @@ export const extractAnalysisSections = (content: string) => {
     /\*\*RELEVANT TEXAS LAW[S]?:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
     /\*\*APPLICABLE TEXAS LAW[S]?:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
     /\*\*LEGAL FRAMEWORK:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
-    /\*\*LAW[S]? APPLICABLE:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i
+    /\*\*LAW[S]? APPLICABLE:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
+    // Plaintext uppercase headings (no bold)
+    /(?:^|\n)\s*RELEVANT TEXAS LAW[S]?:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
+    /(?:^|\n)\s*APPLICABLE TEXAS LAW[S]?:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
+    /(?:^|\n)\s*LEGAL FRAMEWORK:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
+    /(?:^|\n)\s*LAW[S]? APPLICABLE:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
   ];
   
   const preliminaryAnalysisPatterns = [
     /\*\*PRELIMINARY ANALYSIS:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
     /\*\*INITIAL ANALYSIS:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
-    /\*\*ANALYSIS:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i
+    /\*\*ANALYSIS:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
+    // Plaintext uppercase headings
+    /(?:^|\n)\s*PRELIMINARY ANALYSIS:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
+    /(?:^|\n)\s*INITIAL ANALYSIS:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
+    /(?:^|\n)\s*ANALYSIS:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
   ];
   
   const potentialIssuesPatterns = [
     /\*\*POTENTIAL LEGAL ISSUES:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
     /\*\*LEGAL ISSUES:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
-    /\*\*ISSUES IDENTIFIED:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i
+    /\*\*ISSUES IDENTIFIED:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
+    // Plaintext uppercase headings
+    /(?:^|\n)\s*POTENTIAL LEGAL ISSUES:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
+    /(?:^|\n)\s*LEGAL ISSUES:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
+    /(?:^|\n)\s*ISSUES IDENTIFIED:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
   ];
   
   const followUpPatternsQuestions = [
     /\*\*RECOMMENDED FOLLOW[-\s]?UP QUESTIONS:\*\*([\s\S]*?)$/i,
     /\*\*FOLLOW[-\s]?UP QUESTIONS:\*\*([\s\S]*?)$/i,
-    /\*\*QUESTIONS FOR CLIENT:\*\*([\s\S]*?)$/i
+    /\*\*QUESTIONS FOR CLIENT:\*\*([\s\S]*?)$/i,
+    // Plaintext uppercase headings
+    /(?:^|\n)\s*RECOMMENDED FOLLOW[-\s]?UP QUESTIONS:\s*([\s\S]*?)$/i,
+    /(?:^|\n)\s*FOLLOW[-\s]?UP QUESTIONS:\s*([\s\S]*?)$/i,
+    /(?:^|\n)\s*QUESTIONS FOR CLIENT:\s*([\s\S]*?)$/i,
   ];
   
   // Try each pattern until we find a match

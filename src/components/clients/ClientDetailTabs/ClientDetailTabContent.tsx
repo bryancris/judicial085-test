@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Layout } from "lucide-react";
 import ClientIntakeChat from "@/components/clients/chat/ClientIntakeChat";
@@ -23,28 +23,21 @@ import CaseAnalysisHeader from "@/components/case-analysis/CaseAnalysisHeader";
 import TabsContainer from "@/components/case-analysis/tabs/TabsContainer";
 import { SimilarCase } from "@/components/case-analysis/SimilarCasesSection";
 import { supabase } from "@/integrations/supabase/client";
-import { parseIracAnalysis, isIracStructured } from "@/utils/iracParser";
+
 
 interface ClientDetailTabContentProps {
   client: Client;
   activeTab: string;
-  viewMode?: 'irac' | 'traditional';
-  onViewModeChange?: (mode: 'irac' | 'traditional') => void;
 }
 
 const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
   client,
   activeTab,
-  viewMode: viewModeProp,
-  onViewModeChange: onViewModeChangeProp,
 }) => {
   const { currentCase } = useCase();
   const [analysisRefreshTrigger, setAnalysisRefreshTrigger] = useState(0);
   const [analysisTab, setAnalysisTab] = useState("analysis");
   
-  // Analysis format state (can be controlled from parent)
-  const [internalViewMode, setInternalViewMode] = useState<'irac' | 'traditional'>('irac');
-  const viewMode = viewModeProp ?? internalViewMode;
   
   // Use case analysis hook
   const {
@@ -193,19 +186,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
     console.log("Analysis refresh triggered from case discussion");
   }, []);
 
-  // Determine if content supports IRAC structure
-  const supportsIrac = useMemo(() => {
-    return analysisData?.rawContent ? isIracStructured(analysisData.rawContent) : false;
-  }, [analysisData?.rawContent]);
 
-  // Handle view mode change
-  const handleViewModeChange = useCallback((mode: 'irac' | 'traditional') => {
-    if (onViewModeChangeProp) {
-      onViewModeChangeProp(mode);
-    } else {
-      setInternalViewMode(mode);
-    }
-  }, [onViewModeChangeProp]);
   
   const renderTabContent = () => {
     console.log("=== RENDERING TAB CONTENT DEBUG ===");
@@ -285,10 +266,6 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
                 isSimilarCasesLoading={isSimilarCasesLoading}
                 analysisFound={analysisFound}
                 fallbackUsed={fallbackUsed}
-                onSimilarCasesRefresh={loadSimilarCasesData}
-                viewMode={viewMode}
-                onViewModeChange={handleViewModeChange}
-                supportsIrac={supportsIrac}
               />
             </div>
           );

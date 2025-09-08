@@ -29,8 +29,6 @@ interface TabsContainerProps {
   analysisFound: boolean;
   fallbackUsed: boolean;
   onSimilarCasesRefresh?: () => void;
-  viewMode?: 'irac' | 'traditional';
-  onViewModeChange?: (mode: 'irac' | 'traditional') => void;
   supportsIrac?: boolean;
 }
 
@@ -54,9 +52,6 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
   analysisFound,
   fallbackUsed,
   onSimilarCasesRefresh,
-  viewMode,
-  onViewModeChange,
-  supportsIrac
 }) => {
   return (
     <div className="mt-6">
@@ -74,10 +69,6 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
             isSimilarCasesLoading={isSimilarCasesLoading}
             analysisFound={analysisFound}
             fallbackUsed={fallbackUsed}
-            onSimilarCasesRefresh={onSimilarCasesRefresh}
-            viewMode={viewMode}
-            onViewModeChange={onViewModeChange}
-            supportsIrac={supportsIrac}
           />
         </div>
       )}

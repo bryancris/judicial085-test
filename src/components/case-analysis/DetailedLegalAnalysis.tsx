@@ -1,12 +1,9 @@
-import React, { useState, useMemo } from "react";
+import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { ScrollText, Scale, FileText } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
-import AnalysisItem from "@/components/clients/chat/AnalysisItem";
 import RemediesSection from "./RemediesSection";
 import IracAnalysisSection from "./IracAnalysisSection";
-import { parseIracAnalysis, isIracStructured } from "@/utils/iracParser";
+import { parseIracAnalysis } from "@/utils/iracParser";
 
 interface DetailedLegalAnalysisProps {
   relevantLaw: string;
@@ -18,7 +15,7 @@ interface DetailedLegalAnalysisProps {
   caseType?: string;
   rawContent?: string;
   validationStatus?: string;
-  viewMode?: 'irac' | 'traditional';
+  
 }
 
 const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
@@ -30,8 +27,7 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
   remedies,
   caseType,
   rawContent,
-  validationStatus,
-  viewMode = 'irac'
+  validationStatus
 }) => {
 
   // Parse IRAC analysis from raw content
@@ -40,29 +36,25 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
     return parseIracAnalysis(rawContent);
   }, [rawContent]);
 
-  // Determine if content supports IRAC structure
-  const supportsIrac = useMemo(() => {
-    return rawContent ? isIracStructured(rawContent) : false;
-  }, [rawContent]);
 
   // Extract case summary from raw content
   const caseSummaryText = useMemo(() => {
     if (!rawContent) return iracAnalysis?.caseSummary || '';
-    const match = rawContent.match(/\*\*CASE SUMMARY:\*\*\s*([\s\S]*?)(?=\*\*[A-Z][A-Z\s\-]+:\*\*|$)/i);
-    return match ? match[1].trim() : iracAnalysis?.caseSummary || '';
+    const bold = rawContent.match(/\*\*CASE SUMMARY:\*\*\s*([\s\S]*?)(?=\*\*[A-Z][A-Z\s\-]+:\*\*|$)/i);
+    if (bold) return bold[1].trim();
+    const plain = rawContent.match(/(?:^|\n)\s*CASE SUMMARY:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i);
+    return plain ? plain[1].trim() : iracAnalysis?.caseSummary || '';
   }, [rawContent, iracAnalysis]);
 
   // Relevant Texas law comes directly from client intake props
   const relevantTexasLawText = useMemo(() => (relevantLaw || '').trim(), [relevantLaw]);
 
-  // Default to traditional view if IRAC is not supported
-  const effectiveViewMode = supportsIrac ? viewMode : 'traditional';
 
   return (
     <div className="space-y-6">
 
-      {/* Case Summary - Above IRAC Analysis */}
-      {effectiveViewMode === 'irac' && caseSummaryText && (
+      {/* Case Summary */}
+      {caseSummaryText && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -80,27 +72,25 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
         </Card>
       )}
 
-      {/* Relevant Texas Laws - Above IRAC Analysis */}
-      {effectiveViewMode === 'irac' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Scale className="h-5 w-5" />
-              Relevant Texas Laws
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="prose dark:prose-invert max-w-none text-sm">
-              {(relevantTexasLawText ? relevantTexasLawText.split('\n\n') : ['No relevant law analysis available.']).map((paragraph, idx) => (
-                <p key={idx} className="mb-2 last:mb-0">{paragraph}</p>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Relevant Texas Laws */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Scale className="h-5 w-5" />
+            Relevant Texas Laws
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="prose dark:prose-invert max-w-none text-sm">
+            {(relevantTexasLawText ? relevantTexasLawText.split('\n\n') : ['No relevant law analysis available.']).map((paragraph, idx) => (
+              <p key={idx} className="mb-2 last:mb-0 whitespace-pre-line">{paragraph}</p>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* IRAC Analysis View */}
-      {effectiveViewMode === 'irac' && iracAnalysis && (
+      {/* IRAC Analysis (if present) */}
+      {iracAnalysis && (
         <IracAnalysisSection 
           analysis={iracAnalysis} 
           isLoading={isLoading}
@@ -108,66 +98,59 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
         />
       )}
 
-      {/* Traditional Analysis View */}
-      {effectiveViewMode === 'traditional' && (
+      {/* Preliminary Analysis */}
+      {preliminaryAnalysis && preliminaryAnalysis.trim() && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ScrollText className="h-5 w-5" />
-              Detailed Legal Analysis
-              {validationStatus && (
-                <span className={`text-xs px-2 py-1 rounded-full ${
-                  validationStatus === 'validated' 
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                    : validationStatus === 'pending_review'
-                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                    : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                }`}>
-                  {validationStatus.replace('_', ' ')}
-                </span>
-              )}
+              Preliminary Analysis
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {rawContent ? (
-              <div className="prose dark:prose-invert max-w-none">
-                {rawContent.split('\n\n').map((paragraph, idx) => (
-                  <p key={idx} className="mb-4 leading-relaxed">{paragraph}</p>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="font-semibold text-lg mb-3">Relevant Texas Law</h3>
-                  <div className="prose dark:prose-invert max-w-none text-sm">
-                    <p>{relevantLaw}</p>
-                  </div>
-                </div>
-                <Separator />
-                <div>
-                  <h3 className="font-semibold text-lg mb-3">Preliminary Analysis</h3>
-                  <div className="prose dark:prose-invert max-w-none text-sm">
-                    <p>{preliminaryAnalysis}</p>
-                  </div>
-                </div>
-                <Separator />
-                <div>
-                  <h3 className="font-semibold text-lg mb-3">Potential Legal Issues</h3>
-                  <div className="prose dark:prose-invert max-w-none text-sm">
-                    <p>{potentialIssues}</p>
-                  </div>
-                </div>
-                <Separator />
-                <div>
-                  <h3 className="font-semibold text-lg mb-3">Recommended Follow-up Questions</h3>
-                  <ol className="list-decimal list-inside space-y-1 text-sm">
-                    {followUpQuestions.map((question, idx) => (
-                      <li key={idx} className="text-muted-foreground">{question}</li>
-                    ))}
-                  </ol>
-                </div>
-              </div>
-            )}
+            <div className="prose dark:prose-invert max-w-none text-sm">
+              {preliminaryAnalysis.split('\n\n').map((paragraph, idx) => (
+                <p key={idx} className="mb-2 last:mb-0 whitespace-pre-line">{paragraph}</p>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Potential Legal Issues */}
+      {potentialIssues && potentialIssues.trim() && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ScrollText className="h-5 w-5" />
+              Potential Legal Issues
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="prose dark:prose-invert max-w-none text-sm">
+              {potentialIssues.split('\n\n').map((paragraph, idx) => (
+                <p key={idx} className="mb-2 last:mb-0 whitespace-pre-line">{paragraph}</p>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recommended Follow-up Questions */}
+      {followUpQuestions && followUpQuestions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ScrollText className="h-5 w-5" />
+              Recommended Follow-up Questions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ol className="list-decimal list-inside space-y-1 text-sm">
+              {followUpQuestions.map((question, idx) => (
+                <li key={idx} className="text-muted-foreground">{question}</li>
+              ))}
+            </ol>
           </CardContent>
         </Card>
       )}

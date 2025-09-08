@@ -151,10 +151,43 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
         
         // Transform the analysis into the expected format
         const sections = extractAnalysisSections(analysis.content || "");
+
+        // Fallback: If Relevant Texas Law is missing, pull it from latest client-intake content
+        let relevantLaw = sections.relevantLaw || "";
+        try {
+          if (!relevantLaw || /No relevant law analysis available\./i.test(relevantLaw)) {
+            console.log("Relevant law missing; attempting client-intake fallback...");
+            let intakeQuery = supabase
+              .from("legal_analyses")
+              .select("content")
+              .eq("client_id", clientId)
+              .eq("analysis_type", "client-intake")
+              .order("created_at", { ascending: false })
+              .limit(1);
+
+            if (caseId) {
+              intakeQuery = intakeQuery.eq("case_id", caseId);
+            } else {
+              intakeQuery = intakeQuery.is("case_id", null);
+            }
+
+            const { data: intakeData, error: intakeError } = await intakeQuery;
+            if (!intakeError && intakeData && intakeData.length > 0) {
+              const intakeSections = extractAnalysisSections(intakeData[0].content || "");
+              if (intakeSections.relevantLaw && !/No relevant law/i.test(intakeSections.relevantLaw)) {
+                relevantLaw = intakeSections.relevantLaw;
+                console.log("✅ Using Relevant Texas Law from client-intake fallback");
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("Client-intake fallback for Relevant Texas Law failed:", e);
+        }
+
         const transformedData: AnalysisData = {
           id: analysis.id,
           legalAnalysis: {
-            relevantLaw: sections.relevantLaw || "",
+            relevantLaw: relevantLaw,
             preliminaryAnalysis: sections.preliminaryAnalysis || "",
             potentialIssues: sections.potentialIssues || "",
             followUpQuestions: sections.followUpQuestions || []
