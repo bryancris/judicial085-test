@@ -291,10 +291,61 @@ export const calculatePredictionPercentages = (
 
 // Extract sections from analysis content
 export const extractAnalysisSections = (content: string) => {
-  const relevantLawMatch = content.match(/\*\*RELEVANT TEXAS LAW:\*\*([\s\S]*?)(?=\*\*PRELIMINARY ANALYSIS|\*\*POTENTIAL LEGAL ISSUES|\*\*RECOMMENDED FOLLOW-UP|$)/);
-  const preliminaryAnalysisMatch = content.match(/\*\*PRELIMINARY ANALYSIS:\*\*([\s\S]*?)(?=\*\*POTENTIAL LEGAL ISSUES|\*\*RECOMMENDED FOLLOW-UP|$)/);
-  const potentialIssuesMatch = content.match(/\*\*POTENTIAL LEGAL ISSUES:\*\*([\s\S]*?)(?=\*\*RECOMMENDED FOLLOW-UP|$)/);
-  const followUpQuestionsMatch = content.match(/\*\*RECOMMENDED FOLLOW-UP QUESTIONS:\*\*([\s\S]*?)$/);
+  console.log("Extracting sections from content:", content.substring(0, 500) + "...");
+  
+  // More flexible patterns to handle variations in section headers
+  const relevantLawPatterns = [
+    /\*\*RELEVANT TEXAS LAW[S]?:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
+    /\*\*APPLICABLE TEXAS LAW[S]?:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
+    /\*\*LEGAL FRAMEWORK:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
+    /\*\*LAW[S]? APPLICABLE:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i
+  ];
+  
+  const preliminaryAnalysisPatterns = [
+    /\*\*PRELIMINARY ANALYSIS:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
+    /\*\*INITIAL ANALYSIS:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
+    /\*\*ANALYSIS:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i
+  ];
+  
+  const potentialIssuesPatterns = [
+    /\*\*POTENTIAL LEGAL ISSUES:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
+    /\*\*LEGAL ISSUES:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
+    /\*\*ISSUES IDENTIFIED:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i
+  ];
+  
+  const followUpPatternsQuestions = [
+    /\*\*RECOMMENDED FOLLOW[-\s]?UP QUESTIONS:\*\*([\s\S]*?)$/i,
+    /\*\*FOLLOW[-\s]?UP QUESTIONS:\*\*([\s\S]*?)$/i,
+    /\*\*QUESTIONS FOR CLIENT:\*\*([\s\S]*?)$/i
+  ];
+  
+  // Try each pattern until we find a match
+  let relevantLawMatch = null;
+  for (const pattern of relevantLawPatterns) {
+    relevantLawMatch = content.match(pattern);
+    if (relevantLawMatch) {
+      console.log("Found relevant law match with pattern:", pattern);
+      break;
+    }
+  }
+  
+  let preliminaryAnalysisMatch = null;
+  for (const pattern of preliminaryAnalysisPatterns) {
+    preliminaryAnalysisMatch = content.match(pattern);
+    if (preliminaryAnalysisMatch) break;
+  }
+  
+  let potentialIssuesMatch = null;
+  for (const pattern of potentialIssuesPatterns) {
+    potentialIssuesMatch = content.match(pattern);
+    if (potentialIssuesMatch) break;
+  }
+  
+  let followUpQuestionsMatch = null;
+  for (const pattern of followUpPatternsQuestions) {
+    followUpQuestionsMatch = content.match(pattern);
+    if (followUpQuestionsMatch) break;
+  }
   
   // Extract follow-up questions
   const followUpQuestions = followUpQuestionsMatch 
@@ -323,8 +374,11 @@ export const extractAnalysisSections = (content: string) => {
     }
   }
   
+  const extractedLaw = relevantLawMatch ? relevantLawMatch[1].trim() : "";
+  console.log("Extracted relevant law:", extractedLaw ? extractedLaw.substring(0, 200) + "..." : "NONE FOUND");
+  
   return {
-    relevantLaw: relevantLawMatch ? relevantLawMatch[1].trim() : "No relevant law analysis available.",
+    relevantLaw: extractedLaw || "No relevant law analysis available.",
     preliminaryAnalysis: preliminaryAnalysisMatch ? preliminaryAnalysisMatch[1].trim() : "No preliminary analysis available.",
     potentialIssues: potentialIssuesMatch ? potentialIssuesMatch[1].trim() : "No potential issues identified.",
     followUpQuestions,
