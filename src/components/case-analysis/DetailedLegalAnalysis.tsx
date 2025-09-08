@@ -99,15 +99,6 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
         </CardContent>
       </Card>
 
-      {/* IRAC Analysis (if present) */}
-      {iracAnalysis && (
-        <IracAnalysisSection 
-          analysis={iracAnalysis} 
-          isLoading={isLoading}
-          analysisData={{ rawContent }}
-        />
-      )}
-
       {/* Preliminary Analysis */}
       {preliminaryAnalysis && preliminaryAnalysis.trim() && (
         <Card>
@@ -163,6 +154,15 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
             </ol>
           </CardContent>
         </Card>
+      )}
+
+      {/* IRAC Analysis (if present) */}
+      {iracAnalysis && (
+        <IracAnalysisSection 
+          analysis={iracAnalysis} 
+          isLoading={isLoading}
+          analysisData={{ rawContent }}
+        />
       )}
 
       {/* Remedies Section */}
