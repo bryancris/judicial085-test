@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AnalysisData } from "@/hooks/useAnalysisData";
 import { extractLegalCitations, mapCitationsToKnowledgeBase, generateDirectPdfUrl } from "@/utils/lawReferences/knowledgeBaseMapping";
 import { cleanupDuplicateAnalyses } from "@/utils/duplicateCleanupService";
-import { extractAnalysisSections } from "@/utils/analysisParsingUtils";
+import { extractAnalysisSections, extractStrengthsWeaknesses } from "@/utils/analysisParsingUtils";
 
 export const useAnalysisData = (clientId: string, caseId?: string) => {
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
@@ -136,6 +136,11 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
         
         // Transform the analysis into the expected format
         const sections = extractAnalysisSections(analysis.content || "");
+        
+        // Extract strengths and weaknesses using the utility function
+        console.log("🔍 Extracting strengths and weaknesses from content...");
+        const strengthsWeaknesses = extractStrengthsWeaknesses(analysis.content || "", analysis.case_type);
+        console.log("📊 Extracted strengths:", strengthsWeaknesses.strengths.length, "weaknesses:", strengthsWeaknesses.weaknesses.length);
 
         // 🎯 ALWAYS try to get Case Summary and Relevant Texas Law from client-intake first for better formatting
         let relevantLaw = sections.relevantLaw || "";
@@ -216,8 +221,8 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
             potentialIssues: sections.potentialIssues || "",
             followUpQuestions: sections.followUpQuestions || []
           },
-          strengths: [],
-          weaknesses: [],
+          strengths: strengthsWeaknesses.strengths,
+          weaknesses: strengthsWeaknesses.weaknesses,
           conversationSummary: caseSummary, // Use the Case Summary we extracted
           outcome: {
             defense: 65,

@@ -328,10 +328,12 @@ export const extractAnalysisSections = (content: string) => {
   
   const potentialIssuesPatterns = [
     /\*\*POTENTIAL LEGAL ISSUES:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
+    /\*\*POTENTIAL ISSUES:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
     /\*\*LEGAL ISSUES:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
     /\*\*ISSUES IDENTIFIED:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
     // Plaintext uppercase headings
     /(?:^|\n)\s*POTENTIAL LEGAL ISSUES:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
+    /(?:^|\n)\s*POTENTIAL ISSUES:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
     /(?:^|\n)\s*LEGAL ISSUES:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
     /(?:^|\n)\s*ISSUES IDENTIFIED:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
   ];
