@@ -157,7 +157,7 @@ const IracAnalysisSection: React.FC<IracAnalysisSectionProps> = ({
   isLoading = false,
   analysisData
 }) => {
-  // Extract referenced statutes from the entire IRAC analysis
+  // Extract referenced statutes from the entire IRAC analysis (used as fallback)
   const referencedStatutes = useMemo(() => {
     const allText = [
       analysis.caseSummary,
@@ -169,12 +169,17 @@ const IracAnalysisSection: React.FC<IracAnalysisSectionProps> = ({
         issue.conclusion
       ])
     ].join(' ');
-    
     const statutes = extractLawReferences(allText);
-    
-    // Remove duplicates and sort alphabetically
     return [...new Set(statutes)].sort();
   }, [analysis]);
+
+  // Extract "Relevant Texas Law(s)" section from raw content if available
+  const relevantTexasLawText = useMemo(() => {
+    const raw = analysisData?.rawContent as string | undefined;
+    if (!raw) return '';
+    const match = raw.match(/\*\*RELEVANT TEXAS LAW\w*:\*\*\s*([\s\S]*?)(?=\*\*[A-Z][A-Z\s\-]+:\*\*|$)/i);
+    return match ? match[1].trim() : '';
+  }, [analysisData]);
 
   if (isLoading) {
     return (
@@ -208,33 +213,54 @@ const IracAnalysisSection: React.FC<IracAnalysisSectionProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Referenced Statutes */}
-        <div>
-          <h3 className="font-semibold text-base mb-3 flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Referenced Statutes
-          </h3>
-          {referencedStatutes.length > 0 ? (
+        {/* Case Summary */}
+        {analysis.caseSummary && (
+          <div>
+            <h3 className="font-semibold text-base mb-3 flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Case Summary
+            </h3>
             <div className="bg-slate-50/50 dark:bg-slate-950/20 rounded-lg p-4 border">
-              <ul className="space-y-2">
-                {referencedStatutes.map((statute, idx) => (
-                  <li key={idx} className="flex items-start gap-2">
-                    <Scale className="h-3 w-3 text-primary mt-1 flex-shrink-0" />
-                    <span className="text-sm font-medium text-foreground hover:text-primary transition-colors">
-                      {statute}
-                    </span>
-                  </li>
+              <div className="prose dark:prose-invert max-w-none text-sm">
+                {analysis.caseSummary.split('\n\n').map((paragraph, idx) => (
+                  <p key={idx} className="mb-2 last:mb-0">{paragraph}</p>
                 ))}
-              </ul>
+              </div>
             </div>
-          ) : (
-            <p className="text-sm text-muted-foreground italic">
-              No specific statute references found in this analysis.
-            </p>
-          )}
-        </div>
+          </div>
+        )}
 
-        <Separator />
+        {(relevantTexasLawText || referencedStatutes.length > 0) && (
+          <>
+            <div>
+              <h3 className="font-semibold text-base mb-3 flex items-center gap-2">
+                <BookOpen className="h-4 w-4" />
+                Relevant Texas Laws
+              </h3>
+              <div className="bg-blue-50/50 dark:bg-blue-950/20 rounded-lg p-4 border-l-2 border-blue-200 dark:border-blue-800">
+                {relevantTexasLawText ? (
+                  <div className="prose dark:prose-invert max-w-none text-sm">
+                    {relevantTexasLawText.split('\n\n').map((paragraph, idx) => (
+                      <p key={idx} className="mb-2 last:mb-0">{paragraph}</p>
+                    ))}
+                  </div>
+                ) : (
+                  <ul className="space-y-2">
+                    {referencedStatutes.map((statute, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <Scale className="h-3 w-3 text-primary mt-1 flex-shrink-0" />
+                        <span className="text-sm font-medium text-foreground hover:text-primary transition-colors">
+                          {statute}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+            <Separator />
+          </>
+        )}
 
         {/* IRAC Issues */}
         <div>
