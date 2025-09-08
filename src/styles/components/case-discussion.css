@@ -50,6 +50,16 @@
   line-height: 1.5;
 }
 
+/* Hide empty list items to prevent orphaned bullet points */
+.prose li:empty {
+  display: none;
+}
+
+/* Reduce spacing for paragraphs within list items */
+.prose li p {
+  margin: 0.25rem 0;
+}
+
 .prose p {
   margin: 0.75rem 0;
   word-break: break-word;
