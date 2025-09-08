@@ -37,7 +37,8 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           .eq("client_id", clientId)
           .eq("case_id", caseId)
           .in("validation_status", ["validated", "pending_review", "pending"])  // Include validated, pending review, and pending
-          .not("analysis_type", "in", "(3-agent-coordination,coordinator-research)")
+          .neq("analysis_type", "3-agent-coordination")
+          .neq("analysis_type", "coordinator-research")
           .order("created_at", { ascending: false });
 
         if (caseError) {
@@ -56,7 +57,8 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
             .eq("client_id", clientId)
             .is("case_id", null)
             .in("validation_status", ["validated", "pending_review", "pending"])  // Include validated, pending review, and pending
-            .not("analysis_type", "in", "(3-agent-coordination,coordinator-research)")
+            .neq("analysis_type", "3-agent-coordination")
+            .neq("analysis_type", "coordinator-research")
             .order("created_at", { ascending: false });
 
           if (clientFallbackError) {
@@ -88,7 +90,8 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           .eq("client_id", clientId)
           .is("case_id", null)
           .in("validation_status", ["validated", "pending_review", "pending"])  // Include validated, pending review, and pending
-          .not("analysis_type", "in", "(3-agent-coordination,coordinator-research)")
+          .neq("analysis_type", "3-agent-coordination")
+          .neq("analysis_type", "coordinator-research")
           .order("created_at", { ascending: false });
 
         if (clientError) {

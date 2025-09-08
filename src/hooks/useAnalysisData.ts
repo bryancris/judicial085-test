@@ -93,7 +93,8 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
           .eq("client_id", clientId)
           .eq("case_id", caseId)
           .in("validation_status", ["validated", "pending_review"]) 
-          .not("analysis_type", "in", "(3-agent-coordination,coordinator-research)")
+          .neq("analysis_type", "3-agent-coordination")
+          .neq("analysis_type", "coordinator-research")
           .order("created_at", { ascending: false })
           .limit(1);
 
@@ -122,7 +123,8 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
           .eq("client_id", clientId)
           .is("case_id", null)
           .in("validation_status", ["validated", "pending_review"]) 
-          .not("analysis_type", "in", "(3-agent-coordination,coordinator-research)")
+          .neq("analysis_type", "3-agent-coordination")
+          .neq("analysis_type", "coordinator-research")
           .order("created_at", { ascending: false })
           .limit(1);
 
@@ -196,7 +198,7 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
             .eq("client_id", clientId)
             .eq("analysis_type", "client-intake")
             .eq("case_id", caseId)
-            .in("validation_status", ["validated", "pending_review"]) 
+            .in("validation_status", ["validated", "pending_review", "pending"]) 
             .order("created_at", { ascending: false })
             .limit(1);
           if (intakeCaseErr) {
@@ -213,7 +215,7 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
             .eq("client_id", clientId)
             .eq("analysis_type", "client-intake")
             .is("case_id", null)
-            .in("validation_status", ["validated", "pending_review"]) 
+            .in("validation_status", ["validated", "pending_review", "pending"]) 
             .order("created_at", { ascending: false })
             .limit(1);
           if (intakeClientErr) {
