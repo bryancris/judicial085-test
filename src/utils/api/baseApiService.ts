@@ -7,8 +7,13 @@ export const invokeFunction = async <T>(
   body: any
 ): Promise<{ data: T | null; error?: string }> => {
   try {
+    // Attach JWT if available to ensure edge functions can access user context
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+
     const { data, error } = await supabase.functions.invoke(functionName, {
       body,
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {}
     });
 
     if (error) {
@@ -32,6 +37,10 @@ export const deleteClientDocument = async (
   try {
     console.log(`Calling delete-client-document function for document ${documentId}`);
     
+    // Attach JWT for auth
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+    
     // Use POST method instead of DELETE to avoid CORS issues
     const { data, error } = await supabase.functions.invoke('delete-client-document', {
       method: 'POST',
@@ -39,7 +48,8 @@ export const deleteClientDocument = async (
         operation: 'delete',
         documentId, 
         clientId 
-      }
+      },
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {}
     });
     
     if (error) {

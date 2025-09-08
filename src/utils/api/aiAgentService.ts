@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { invokeFunction } from "@/utils/api/baseApiService";
 
 export interface AIAgentRequest {
   query: string;
@@ -35,18 +35,16 @@ export const coordinateAIAgents = async (request: AIAgentRequest): Promise<AIAge
   try {
     console.log('🎯 Coordinating AI agents for query:', request.query);
     
-    const { data, error } = await supabase.functions.invoke('ai-agent-coordinator', {
-      body: request
-    });
+    const { data, error } = await invokeFunction<AIAgentResponse>('ai-agent-coordinator', request);
 
-    if (error) {
-      console.error('AI Agent coordination error:', error);
+    if (error || !data) {
+      console.error('AI Agent coordination error:', error || 'No data returned');
       return {
         success: false,
         synthesizedContent: '',
         citations: [],
         researchSources: [],
-        error: error.message || 'Failed to coordinate AI agents'
+        error: error || 'Failed to coordinate AI agents'
       };
     }
 
