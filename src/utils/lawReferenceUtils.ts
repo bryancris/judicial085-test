@@ -168,7 +168,7 @@ export const extractLawReferences = (text: string): string[] => {
   const references: string[] = [];
   
   // Texas statutes pattern (e.g., Texas Family Code § 154.001)
-  const texasStatutePattern = /(Texas\s+[A-Za-z]+(?:\s+[&]?\s*[A-Za-z]+)*\s+Code\s+§\s+\d+\.\d+(?:\(\w+\))?)/g;
+  const texasStatutePattern = /((?:Texas|Tex\.)\s+[A-Za-z&\.]+(?:\s+[A-Za-z&\.]+)*\s+Code\s+§\s+\d+(?:\.\d+)+(?:\([a-zA-Z0-9]+\))*)/g;
   
   // Texas case law pattern (e.g., Smith v. Jones, 123 S.W.3d 456 (Tex. 2005))
   const texasCasePattern = /([A-Za-z]+\s+v\.\s+[A-Za-z]+,\s+\d+\s+S\.W\.\d+\s+\d+\s+\(Tex\.\s+\d{4}\))/g;
