@@ -10,6 +10,7 @@ import {
   fetchClientMessages,
   saveCaseDiscussion 
 } from "./clientDataService.ts";
+import { fetchClientDocuments } from "./services/clientDocumentsService.ts";
 import { buildCompleteContext } from "./contextBuilders/index.ts";
 import { generateGeminiCaseDiscussion } from "./geminiService.ts";
 import { detectResearchNeed, formatResearchQuery } from "./researchDetection.ts";
@@ -66,6 +67,10 @@ serve(async (req) => {
     const analysisData = await fetchLegalAnalysis(supabaseAdmin, clientId);
     const notesData = await fetchAttorneyNotes(supabaseAdmin, clientId);
     const messagesData = await fetchClientMessages(supabaseAdmin, clientId);
+    
+    // Fetch client documents for context
+    const documentsData = await fetchClientDocuments(clientId);
+    console.log(`Fetched ${documentsData.length} documents for client context`);
 
     // Build context for AI
     const contextText = buildCompleteContext(
@@ -73,7 +78,8 @@ serve(async (req) => {
       clientError, 
       analysisData, 
       notesData, 
-      messagesData
+      messagesData,
+      documentsData
     );
     
     console.log(`Context text length: ${contextText.length} characters`);

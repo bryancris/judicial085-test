@@ -4,6 +4,7 @@ import { buildClientSection } from "./clientSectionBuilder.ts";
 import { buildLegalAnalysisSection } from "./legalAnalysisBuilder.ts";
 import { buildAttorneyNotesSection } from "./notesBuilder.ts";
 import { buildClientConversationSection } from "./conversationBuilder.ts";
+import { buildClientDocumentsSection } from "./documentsBuilder.ts";
 import { buildInstructionsSection } from "./instructionsBuilder.ts";
 
 // Assemble the complete context
@@ -13,6 +14,7 @@ export const buildCompleteContext = (
   analysisData: any, 
   notesData: any, 
   messagesData: any,
+  documentsData?: any[],
   existingAnalysisContext?: string
 ) => {
   // Client identification is the most critical context - place it at the very beginning
@@ -67,6 +69,11 @@ export const buildCompleteContext = (
     contextText += conversationSection;
   }
   
+  // Add client documents section
+  if (documentsData && documentsData.length > 0) {
+    contextText += buildClientDocumentsSection(documentsData);
+  }
+  
   // Add specific instructions for the AI
   contextText += buildInstructionsSection();
   
@@ -88,5 +95,6 @@ export {
   buildLegalAnalysisSection,
   buildAttorneyNotesSection,
   buildClientConversationSection,
+  buildClientDocumentsSection,
   buildInstructionsSection
 };
