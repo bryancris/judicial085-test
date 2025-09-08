@@ -3,7 +3,7 @@ import { useToast } from "@/hooks/use-toast";
 import { generateLegalAnalysis } from "@/utils/api/analysisApiService";
 import { supabase } from "@/integrations/supabase/client";
 import { AnalysisData } from "@/hooks/useAnalysisData";
-import { extractAnalysisSections } from "@/utils/analysisParsingUtils";
+import { extractAnalysisSections, extractStrengthsWeaknesses } from "@/utils/analysisParsingUtils";
 
 export const useRealTimeAnalysis = (clientId?: string, caseId?: string) => {
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
@@ -145,6 +145,9 @@ export const useRealTimeAnalysis = (clientId?: string, caseId?: string) => {
 const parseAnalysisContent = (content: string) => {
   // Use the robust extraction function that handles various formatting patterns
   const extractedSections = extractAnalysisSections(content);
+  
+  // Extract strengths and weaknesses using the utility function
+  const strengthsWeaknesses = extractStrengthsWeaknesses(content);
 
   return {
     legalAnalysis: {
@@ -153,8 +156,8 @@ const parseAnalysisContent = (content: string) => {
       potentialIssues: extractedSections.potentialIssues || "",
       followUpQuestions: extractedSections.followUpQuestions || [],
     },
-    strengths: [],
-    weaknesses: [],
+    strengths: strengthsWeaknesses.strengths,
+    weaknesses: strengthsWeaknesses.weaknesses,
     conversationSummary: extractedSections.caseSummary || "",
     outcome: {
       defense: 0.5,

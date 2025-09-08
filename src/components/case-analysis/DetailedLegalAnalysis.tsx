@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollText, Scale, FileText } from "lucide-react";
 import RemediesSection from "./RemediesSection";
 import IracAnalysisSection from "./IracAnalysisSection";
+import CaseStrengthsWeaknesses from "./CaseStrengthsWeaknesses";
 import { parseIracAnalysis } from "@/utils/iracParser";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
@@ -18,7 +19,8 @@ interface DetailedLegalAnalysisProps {
   rawContent?: string;
   validationStatus?: string;
   caseSummary?: string;
-  
+  strengths?: string[];
+  weaknesses?: string[];
 }
 
 const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
@@ -31,7 +33,9 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
   caseType,
   rawContent,
   validationStatus,
-  caseSummary
+  caseSummary,
+  strengths = [],
+  weaknesses = []
 }) => {
 
   // Parse IRAC analysis from raw content
@@ -116,6 +120,16 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Case Strengths and Weaknesses */}
+      {(strengths.length > 0 || weaknesses.length > 0) && (
+        <CaseStrengthsWeaknesses
+          strengths={strengths}
+          weaknesses={weaknesses}
+          isLoading={isLoading}
+          caseType={caseType}
+        />
       )}
 
       {/* Potential Legal Issues */}
