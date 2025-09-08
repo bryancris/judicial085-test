@@ -39,32 +39,36 @@ const CaseDiscussionChatView: React.FC<CaseDiscussionChatViewProps> = ({
   }, [messages]);
 
   return (
-    <div className="flex-grow overflow-y-auto p-4 bg-card h-full">
-      {messages.length === 0 ? (
-        <div className="flex items-center justify-center h-full text-muted-foreground">
-          Start a discussion about this case by asking questions or requesting specific legal research.
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {messages.map((message, index) => (
-            <CaseDiscussionMessageItem 
-              key={index} 
-              message={message}
-              clientId={clientId}
-              clientDocuments={clientDocuments}
-              onFindingsAdded={onFindingsAdded}
+    <div className="h-full flex flex-col">
+      <div className="flex-grow min-h-0 overflow-hidden">
+        <div className="h-full overflow-y-auto p-4">
+          {messages.length === 0 ? (
+            <div className="flex items-center justify-center h-full text-muted-foreground">
+              Start a discussion about this case by asking questions or requesting specific legal research.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {messages.map((message, index) => (
+                <CaseDiscussionMessageItem 
+                  key={index} 
+                  message={message}
+                  clientId={clientId}
+                  clientDocuments={clientDocuments}
+                  onFindingsAdded={onFindingsAdded}
+                />
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+          {isLoading && (
+            <ResearchLoading 
+              isVisible={isLoading}
+              stage={researchStage}
+              researchType={researchType}
             />
-          ))}
-          <div ref={messagesEndRef} />
+          )}
         </div>
-      )}
-      {isLoading && (
-        <ResearchLoading 
-          isVisible={isLoading}
-          stage={researchStage}
-          researchType={researchType}
-        />
-      )}
+      </div>
     </div>
   );
 };

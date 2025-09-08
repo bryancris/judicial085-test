@@ -41,7 +41,7 @@ const CaseDiscussionContainer: React.FC<CaseDiscussionContainerProps> = ({
 
   if (isLoadingHistory) {
     return (
-      <Card className="h-[600px]">
+      <Card className="h-[calc(100vh-200px)] min-h-[500px]">
         <CardHeader>
           <CardTitle className="flex items-center">
             <MessageSquare className="h-5 w-5 mr-2" />
@@ -60,8 +60,8 @@ const CaseDiscussionContainer: React.FC<CaseDiscussionContainerProps> = ({
   }
 
   return (
-    <Card className="h-[600px] flex flex-col">
-      <CardHeader className="pb-2">
+    <Card className="h-[calc(100vh-200px)] min-h-[500px] flex flex-col">
+      <CardHeader className="pb-2 shrink-0">
         <CardTitle className="flex items-center">
           <MessageSquare className="h-5 w-5 mr-2" />
           Case Discussion - {clientName}
@@ -71,9 +71,9 @@ const CaseDiscussionContainer: React.FC<CaseDiscussionContainerProps> = ({
         </CardTitle>
       </CardHeader>
       
-      <CardContent className="flex-grow flex flex-col p-0">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-grow flex flex-col">
-          <TabsList className="grid w-full grid-cols-3 mx-4 mt-2">
+      <CardContent className="flex-grow flex flex-col p-0 min-h-0">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-grow flex flex-col min-h-0">
+          <TabsList className="grid w-full grid-cols-3 mx-4 mt-2 shrink-0">
             <TabsTrigger value="text-chat" className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
               Text Chat
@@ -88,17 +88,21 @@ const CaseDiscussionContainer: React.FC<CaseDiscussionContainerProps> = ({
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="text-chat" className="flex-grow flex flex-col mt-0">
-            <CaseDiscussionChatView 
-              messages={messages}
-              isLoading={isLoading}
-              clientId={clientId}
-              onFindingsAdded={handleFindingsAdded}
-            />
-            <CaseDiscussionInput
-              onSendMessage={handleSendMessage}
-              isLoading={isLoading}
-            />
+          <TabsContent value="text-chat" className="flex-grow flex flex-col mt-0 min-h-0">
+            <div className="flex-grow min-h-0">
+              <CaseDiscussionChatView 
+                messages={messages}
+                isLoading={isLoading}
+                clientId={clientId}
+                onFindingsAdded={handleFindingsAdded}
+              />
+            </div>
+            <div className="shrink-0 border-t bg-card">
+              <CaseDiscussionInput
+                onSendMessage={handleSendMessage}
+                isLoading={isLoading}
+              />
+            </div>
           </TabsContent>
           
           <TabsContent value="voice-chat" className="flex-grow flex flex-col mt-0">
