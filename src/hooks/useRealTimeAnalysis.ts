@@ -3,6 +3,7 @@ import { useToast } from "@/hooks/use-toast";
 import { generateLegalAnalysis } from "@/utils/api/analysisApiService";
 import { supabase } from "@/integrations/supabase/client";
 import { AnalysisData } from "@/hooks/useAnalysisData";
+import { extractAnalysisSections } from "@/utils/analysisParsingUtils";
 
 export const useRealTimeAnalysis = (clientId?: string, caseId?: string) => {
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
@@ -140,43 +141,26 @@ export const useRealTimeAnalysis = (clientId?: string, caseId?: string) => {
   };
 };
 
-// Helper function to parse analysis content (same as in useAnalysisData)
+// Helper function to parse analysis content using robust extraction
 const parseAnalysisContent = (content: string) => {
-  const sections = content.split(/(\*\*.*?:\*\*)/).filter(Boolean);
-  
-  const data: any = {};
-  let currentSection = null;
-
-  for (const section of sections) {
-    if (section.startsWith("**") && section.endsWith("**")) {
-      currentSection = section.slice(2, -2).replace(/:$/, '').trim();
-      data[currentSection] = "";
-    } else if (currentSection) {
-      data[currentSection] = section.trim();
-      currentSection = null;
-    }
-  }
-
-  const parseFollowUpQuestions = (questions: string): string[] => {
-    const questionList = questions.split(/\n\d+\.\s/).filter(Boolean);
-    return questionList.map(q => q.trim());
-  };
+  // Use the robust extraction function that handles various formatting patterns
+  const extractedSections = extractAnalysisSections(content);
 
   return {
     legalAnalysis: {
-      relevantLaw: data["RELEVANT TEXAS LAW"] || "",
-      preliminaryAnalysis: data["PRELIMINARY ANALYSIS"] || "",
-      potentialIssues: data["POTENTIAL LEGAL ISSUES"] || "",
-      followUpQuestions: parseFollowUpQuestions(data["RECOMMENDED FOLLOW-UP QUESTIONS"] || []),
+      relevantLaw: extractedSections.relevantLaw || "",
+      preliminaryAnalysis: extractedSections.preliminaryAnalysis || "",
+      potentialIssues: extractedSections.potentialIssues || "",
+      followUpQuestions: extractedSections.followUpQuestions || [],
     },
     strengths: [],
     weaknesses: [],
-    conversationSummary: "",
+    conversationSummary: extractedSections.caseSummary || "",
     outcome: {
       defense: 0.5,
       prosecution: 0.5,
     },
-    remedies: data["REMEDIES"] || ""
+    remedies: extractedSections.remedies || ""
   };
 };
 
