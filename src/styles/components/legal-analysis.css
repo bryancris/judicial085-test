@@ -171,22 +171,22 @@ html body div.legal-analysis-content strong[data-forced-size="true"] {
 /* Lists */
 .legal-analysis-content ol {
   list-style-type: decimal;
-  list-style-position: inside;
-  padding-left: 1rem;
-  margin: 1.25rem 0;
+  list-style-position: outside;
+  padding-left: 1.25rem;
+  margin: 0.5rem 0;
 }
 
 .legal-analysis-content ul {
   list-style-type: disc;
-  list-style-position: inside;
-  padding-left: 1rem;
-  margin: 1.25rem 0;
+  list-style-position: outside;
+  padding-left: 1.25rem;
+  margin: 0.5rem 0;
 }
 
 .legal-analysis-content li {
-  margin: 0.5rem 0;
-  padding-left: 0.5rem;
-  line-height: 1.7;
+  margin: 0.25rem 0;
+  padding-left: 0;
+  line-height: 1.6;
 }
 
 .legal-analysis-content ol > li::marker,
