@@ -334,8 +334,6 @@ export const extractAnalysisSections = (content: string) => {
     /\*\*POTENTIAL ISSUES:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
     /\*\*LEGAL ISSUES:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
     /\*\*ISSUES IDENTIFIED:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
-    // NEW: Extract from IRAC ISSUE sections - match all ISSUE statements
-    /\*\*ISSUE\s*\[\d+\]:\*\*([\s\S]*?)(?=\*\*RULE:|$)/gi,
     // Plaintext uppercase headings
     /(?:^|\n)\s*POTENTIAL LEGAL ISSUES:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
     /(?:^|\n)\s*POTENTIAL ISSUES:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
@@ -460,18 +458,26 @@ export const extractAnalysisSections = (content: string) => {
     if (potentialIssuesMatch) break;
   }
 
-  // Special handling for IRAC format - extract ISSUE statements
+  // Special handling for IRAC format - derive concise Potential Legal Issues from ISSUE titles
   if (!potentialIssuesMatch) {
-    const issueMatches = content.match(/\*\*ISSUE\s*\[\d+\]:\*\*([\s\S]*?)(?=\*\*RULE:|$)/gi);
-    if (issueMatches && issueMatches.length > 0) {
-      const combinedIssues = issueMatches
-        .map((match, index) => {
-          const issueText = match.replace(/\*\*ISSUE\s*\[\d+\]:\*\*/i, '').trim();
-          return `${index + 1}. ${issueText}`;
-        })
-        .join('\n\n');
-      potentialIssuesMatch = [combinedIssues, combinedIssues] as unknown as RegExpMatchArray;
-      console.log("Extracted IRAC ISSUE statements for potential issues");
+    const issueRegex = /\*\*ISSUE\s*\[\d+\]:\*\*\s*([\s\S]*?)(?=\*\*(?:RULE|APPLICATION|ANALYSIS|CONCLUSION):|$)/gi;
+    const titles: string[] = [];
+    for (const m of content.matchAll(issueRegex) as any) {
+      let text = (m[1] || '').trim();
+      // Prefer bracketed title if present: [Damages - Breach of Contract]
+      const bracket = text.match(/^\[([^\]]+)\]\s*(.*)/);
+      let title = bracket ? bracket[1].trim() : text.split(/\?|\.|!/)[0]?.trim() || text;
+      title = title.replace(/^[-•*]\s*/, '').replace(/\*\*/g, '');
+      if (title.length > 140) title = title.slice(0, 137) + '...';
+      if (title) {
+        const key = title.toLowerCase();
+        if (!titles.some(t => t.toLowerCase() === key)) titles.push(title);
+      }
+    }
+    if (titles.length > 0) {
+      const combined = titles.map(t => `- ${t}`).join('\n');
+      potentialIssuesMatch = [combined, combined] as unknown as RegExpMatchArray;
+      console.log('Derived Potential Legal Issues from IRAC ISSUE titles:', titles);
     }
   }
   
