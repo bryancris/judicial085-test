@@ -52,25 +52,8 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
     return match ? match[1].trim() : iracAnalysis?.caseSummary || '';
   }, [rawContent, iracAnalysis]);
 
-  // Extract relevant Texas law from raw content (robust heading handling)
-  const relevantTexasLawText = useMemo(() => {
-    if (!rawContent) return (relevantLaw || '').trim();
-
-    const patterns: RegExp[] = [
-      // Bold heading with optional colon: **RELEVANT TEXAS LAW(S):**
-      /\*\*\s*RELEVANT\s+TEXAS\s+LAWS?\s*:?-?\s*\*\*\s*([\s\S]*?)(?=\n{1,2}\s*(?:\*\*|[A-Z][A-Z \-()]+:|IRAC|ISSUE|RULE|APPLICATION|CONCLUSION|Case Summary|Overall Conclusion)|$)/i,
-      // Unbold heading with optional colon on its own line
-      /(?:^|\n)\s*RELEVANT\s+TEXAS\s+LAWS?\s*:?-?\s*\n+([\s\S]*?)(?=\n{1,2}\s*(?:\*\*|[A-Z][A-Z \-()]+:|IRAC|ISSUE|RULE|APPLICATION|CONCLUSION|Case Summary|Overall Conclusion)|$)/i,
-    ];
-
-    for (const re of patterns) {
-      const match = rawContent.match(re);
-      if (match && match[1]) return match[1].trim();
-    }
-
-    // Fallback to provided prop if extraction fails
-    return (relevantLaw || '').trim();
-  }, [rawContent, relevantLaw]);
+  // Relevant Texas law comes directly from client intake props
+  const relevantTexasLawText = useMemo(() => (relevantLaw || '').trim(), [relevantLaw]);
 
   // Default to traditional view if IRAC is not supported
   const effectiveViewMode = supportsIrac ? viewMode : 'traditional';
