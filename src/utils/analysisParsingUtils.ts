@@ -355,6 +355,22 @@ export const extractAnalysisSections = (content: string) => {
       break;
     }
   }
+  // Fallback: HTML heading patterns like <strong>RELEVANT TEXAS LAW:</strong>
+  if (!relevantLawMatch) {
+    const relevantLawHtmlPatterns = [
+      /<strong>\s*RELEVANT TEXAS LAW[S]?:\s*<\/strong>[\s\S]*?<\/p>\s*([\s\S]*?)(?=<p><strong>[A-Z][^<]*:<\/strong>|$)/i,
+      /<strong>\s*APPLICABLE TEXAS LAW[S]?:\s*<\/strong>[\s\S]*?<\/p>\s*([\s\S]*?)(?=<p><strong>[A-Z][^<]*:<\/strong>|$)/i,
+      /<strong>\s*LEGAL FRAMEWORK:\s*<\/strong>[\s\S]*?<\/p>\s*([\s\S]*?)(?=<p><strong>[A-Z][^<]*:<\/strong>|$)/i,
+    ];
+    for (const pattern of relevantLawHtmlPatterns) {
+      const htmlMatch = content.match(pattern);
+      if (htmlMatch) {
+        relevantLawMatch = htmlMatch;
+        console.log("Found relevant law HTML match with pattern:", pattern);
+        break;
+      }
+    }
+  }
 
   let caseSummaryMatch = null;
   for (const pattern of caseSummaryPatterns) {
@@ -362,6 +378,22 @@ export const extractAnalysisSections = (content: string) => {
     if (caseSummaryMatch) {
       console.log("Found case summary match with pattern:", pattern);
       break;
+    }
+  }
+  // Fallback: HTML heading patterns like <strong>CASE SUMMARY:</strong>
+  if (!caseSummaryMatch) {
+    const caseSummaryHtmlPatterns = [
+      /<strong>\s*CASE SUMMARY:\s*<\/strong>[\s\S]*?<\/p>\s*([\s\S]*?)(?=<p><strong>[A-Z][^<]*:<\/strong>|$)/i,
+      /<strong>\s*CASE OVERVIEW:\s*<\/strong>[\s\S]*?<\/p>\s*([\s\S]*?)(?=<p><strong>[A-Z][^<]*:<\/strong>|$)/i,
+      /<strong>\s*SUMMARY:\s*<\/strong>[\s\S]*?<\/p>\s*([\s\S]*?)(?=<p><strong>[A-Z][^<]*:<\/strong>|$)/i,
+    ];
+    for (const pattern of caseSummaryHtmlPatterns) {
+      const htmlMatch = content.match(pattern);
+      if (htmlMatch) {
+        caseSummaryMatch = htmlMatch;
+        console.log("Found case summary HTML match with pattern:", pattern);
+        break;
+      }
     }
   }
   
@@ -410,10 +442,25 @@ export const extractAnalysisSections = (content: string) => {
     }
   }
   
-  const extractedLaw = relevantLawMatch ? relevantLawMatch[1].trim() : "";
+  // Normalize HTML content to readable text if needed
+  const toPlainText = (fragment: string) => {
+    if (!fragment) return "";
+    let t = fragment;
+    t = t.replace(/<li[^>]*>/gi, '- ');
+    t = t.replace(/<\/li>/gi, '\n');
+    t = t.replace(/<br\s*\/?>(\s*)/gi, '\n');
+    t = t.replace(/<\/p>\s*<p>/gi, '\n\n');
+    t = t.replace(/<[^>]+>/g, '');
+    t = t.replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>');
+    return t.trim();
+  };
+
+  const rawRelevantLaw = relevantLawMatch ? relevantLawMatch[1].trim() : "";
+  const extractedLaw = rawRelevantLaw.includes('<') ? toPlainText(rawRelevantLaw) : rawRelevantLaw;
   console.log("Extracted relevant law:", extractedLaw ? extractedLaw.substring(0, 200) + "..." : "NONE FOUND");
 
-  const extractedCaseSummary = caseSummaryMatch ? caseSummaryMatch[1].trim() : "";
+  const rawCaseSummary = caseSummaryMatch ? caseSummaryMatch[1].trim() : "";
+  const extractedCaseSummary = rawCaseSummary.includes('<') ? toPlainText(rawCaseSummary) : rawCaseSummary;
   console.log("Extracted case summary:", extractedCaseSummary ? extractedCaseSummary.substring(0, 200) + "..." : "NONE FOUND");
   
   return {

@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Json } from "@/integrations/supabase/types";
+import { extractAnalysisSections } from "@/utils/analysisParsingUtils";
 
 export interface AnalysisData {
   id?: string; // Add analysis ID for database operations
@@ -173,15 +174,77 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
       const lawReferences = safeLawReferences(analysis.law_references);
       console.log("Final processed law references:", lawReferences);
       
-      // Create analysis data with raw content for direct rendering
+      // Parse sections from the selected analysis content
+      const mainSections = extractAnalysisSections(analysis.content || "");
+      let relevantLaw = mainSections.relevantLaw || "";
+      let caseSummary = mainSections.caseSummary || "";
+
+      console.log("Initial extracted sections from selected analysis:", {
+        relevantLawLength: relevantLaw.length,
+        caseSummaryLength: caseSummary.length,
+      });
+
+      // Try to enrich Case Summary and Relevant Law from client-intake (better formatting)
+      try {
+        let intakeData: { content: string }[] | null = null;
+
+        // First try case-specific client-intake when caseId is provided
+        if (caseId) {
+          const { data: intakeCaseSpecific, error: intakeCaseErr } = await supabase
+            .from("legal_analyses")
+            .select("content")
+            .eq("client_id", clientId)
+            .eq("analysis_type", "client-intake")
+            .eq("case_id", caseId)
+            .in("validation_status", ["validated", "pending_review"]) 
+            .order("created_at", { ascending: false })
+            .limit(1);
+          if (intakeCaseErr) {
+            console.warn("Client-intake case-specific lookup failed:", intakeCaseErr.message);
+          }
+          intakeData = intakeCaseSpecific;
+        }
+
+        // If none, try client-level intake (case_id IS NULL)
+        if (!intakeData || intakeData.length === 0) {
+          const { data: intakeClientLevel, error: intakeClientErr } = await supabase
+            .from("legal_analyses")
+            .select("content")
+            .eq("client_id", clientId)
+            .eq("analysis_type", "client-intake")
+            .is("case_id", null)
+            .in("validation_status", ["validated", "pending_review"]) 
+            .order("created_at", { ascending: false })
+            .limit(1);
+          if (intakeClientErr) {
+            console.warn("Client-intake client-level lookup failed:", intakeClientErr.message);
+          }
+          intakeData = intakeClientLevel;
+        }
+
+        if (intakeData && intakeData.length > 0) {
+          const intakeSections = extractAnalysisSections(intakeData[0].content || "");
+          if (intakeSections.caseSummary && !/No case summary/i.test(intakeSections.caseSummary)) {
+            caseSummary = intakeSections.caseSummary;
+            console.log("✅ Using Case Summary from client-intake (preferred)");
+          }
+          if (intakeSections.relevantLaw && !/No relevant law/i.test(intakeSections.relevantLaw)) {
+            relevantLaw = intakeSections.relevantLaw;
+            console.log("✅ Using Relevant Texas Law from client-intake (preferred)");
+          }
+        }
+      } catch (e) {
+        console.warn("Client-intake enrichment failed:", e);
+      }
+
+      // Create analysis data with parsed sections and raw content for rendering
       const completeAnalysisData: AnalysisData = {
-        id: analysis.id, // Include analysis ID for database operations
-        // Keep minimal parsed data for backward compatibility
+        id: analysis.id,
         legalAnalysis: {
-          relevantLaw: "",
-          preliminaryAnalysis: "",
-          potentialIssues: "",
-          followUpQuestions: [],
+          relevantLaw,
+          preliminaryAnalysis: mainSections.preliminaryAnalysis || "",
+          potentialIssues: mainSections.potentialIssues || "",
+          followUpQuestions: mainSections.followUpQuestions || [],
         },
         strengths: [
           "Documentary evidence supports client's position",
@@ -193,7 +256,7 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
           "Opposing counsel likely to dispute key facts",
           "Damages calculation requires further documentation"
         ],
-        conversationSummary: "",
+        conversationSummary: caseSummary,
         outcome: {
           defense: 65,
           prosecution: 35,
@@ -202,10 +265,13 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
         lawReferences: lawReferences,
         caseType: analysis.case_type || extractCaseType(analysis.content),
         validationStatus: analysis.validation_status,
-        rawContent: analysis.content // Store raw content for direct rendering
+        rawContent: analysis.content
       };
 
-      console.log("Setting analysis data with raw content for direct rendering");
+      console.log("Setting analysis data with enriched Case Summary and Relevant Law", {
+        relevantLawLength: completeAnalysisData.legalAnalysis.relevantLaw.length,
+        caseSummaryLength: completeAnalysisData.conversationSummary.length,
+      });
       setAnalysisData(completeAnalysisData);
     } catch (err: any) {
       console.error("Error fetching analysis data:", err);

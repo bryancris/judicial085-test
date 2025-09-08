@@ -51,6 +51,7 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
         caseType={analysisData.caseType}
         rawContent={analysisData.rawContent}
         validationStatus={analysisData.validationStatus}
+        caseSummary={analysisData.conversationSummary}
       />
 
       {/* Law References Section */}

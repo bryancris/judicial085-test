@@ -15,6 +15,7 @@ interface DetailedLegalAnalysisProps {
   caseType?: string;
   rawContent?: string;
   validationStatus?: string;
+  caseSummary?: string;
   
 }
 
@@ -27,7 +28,8 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
   remedies,
   caseType,
   rawContent,
-  validationStatus
+  validationStatus,
+  caseSummary
 }) => {
 
   // Parse IRAC analysis from raw content
@@ -37,14 +39,15 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
   }, [rawContent]);
 
 
-  // Extract case summary from raw content
+  // Extract case summary from prop first, then raw content
   const caseSummaryText = useMemo(() => {
+    if (caseSummary && caseSummary.trim()) return caseSummary.trim();
     if (!rawContent) return iracAnalysis?.caseSummary || '';
     const bold = rawContent.match(/\*\*CASE SUMMARY:\*\*\s*([\s\S]*?)(?=\*\*[A-Z][A-Z\s\-]+:\*\*|$)/i);
     if (bold) return bold[1].trim();
     const plain = rawContent.match(/(?:^|\n)\s*CASE SUMMARY:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i);
     return plain ? plain[1].trim() : iracAnalysis?.caseSummary || '';
-  }, [rawContent, iracAnalysis]);
+  }, [caseSummary, rawContent, iracAnalysis]);
 
   // Relevant Texas law comes directly from client intake props
   const relevantTexasLawText = useMemo(() => (relevantLaw || '').trim(), [relevantLaw]);
