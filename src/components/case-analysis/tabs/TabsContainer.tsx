@@ -29,7 +29,6 @@ interface TabsContainerProps {
   analysisFound: boolean;
   fallbackUsed: boolean;
   onSimilarCasesRefresh?: () => void;
-  supportsIrac?: boolean;
 }
 
 const TabsContainer: React.FC<TabsContainerProps> = ({
