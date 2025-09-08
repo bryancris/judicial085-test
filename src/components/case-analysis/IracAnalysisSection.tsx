@@ -186,9 +186,6 @@ const IracAnalysisSection: React.FC<IracAnalysisSectionProps> = ({
           <Scale className="h-5 w-5" />
           IRAC Legal Analysis
         </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Issue • Rule • Application • Conclusion methodology for structured legal analysis
-        </p>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Case Summary */}
