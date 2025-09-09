@@ -20,11 +20,12 @@ interface WorkflowState {
   };
 }
 
-// Step validation interface
+// Enhanced step validation interface
 interface StepValidation {
   isValid: boolean;
   errors: string[];
   warnings: string[];
+  score: number; // 0-1 quality score
 }
 
 serve(async (req) => {
@@ -131,58 +132,149 @@ async function executeSequentialWorkflow(
 
   console.log('🧠 GEMINI ORCHESTRATOR: Beginning 9-step sequential workflow...');
 
+  // Enhanced step execution with quality control and blocking mechanism
+  const stepTypes = ['CASE_SUMMARY', 'PRELIMINARY_ANALYSIS', 'TEXAS_LAWS', 'CASE_LAW', 'IRAC_ANALYSIS', 'RISK_ASSESSMENT', 'STRENGTHS_WEAKNESSES', 'REFINED_ANALYSIS', 'FOLLOW_UP'];
+  
   // Step 1: CASE SUMMARY (Organized Fact Pattern)
   console.log('📝 Step 1: CASE SUMMARY - Gemini organizing fact pattern...');
   workflowState.stepResults.step1 = await executeStep1CaseSummary(workflowState, existingContext, geminiApiKey);
-  await validateStepCompletion(1, workflowState.stepResults.step1);
+  workflowState.stepResults.step1.stepType = 'CASE_SUMMARY';
+  const validation1 = await validateStepCompletion(1, workflowState.stepResults.step1, 'CASE_SUMMARY', { CASE_SUMMARY: workflowState.stepResults.step1 });
+  if (!validation1.isValid) {
+    throw new Error(`Step 1 validation failed: ${validation1.errors.join('; ')}`);
+  }
   workflowState.completedSteps.add(1);
 
   // Step 2: PRELIMINARY ANALYSIS (AI-assisted broad issue spotting)
   console.log('🔍 Step 2: PRELIMINARY ANALYSIS - Gemini coordinating with OpenAI...');
   workflowState.stepResults.step2 = await executeStep2PreliminaryAnalysis(workflowState, authHeader, geminiApiKey);
-  await validateStepCompletion(2, workflowState.stepResults.step2);
+  workflowState.stepResults.step2.stepType = 'PRELIMINARY_ANALYSIS';
+  const validation2 = await validateStepCompletion(2, workflowState.stepResults.step2, 'PRELIMINARY_ANALYSIS', { 
+    CASE_SUMMARY: workflowState.stepResults.step1, 
+    PRELIMINARY_ANALYSIS: workflowState.stepResults.step2 
+  });
+  if (!validation2.isValid) {
+    throw new Error(`Step 2 validation failed: ${validation2.errors.join('; ')}`);
+  }
   workflowState.completedSteps.add(2);
 
   // Step 3: RELEVANT TEXAS LAWS (Targeted legal research)
   console.log('⚖️ Step 3: RELEVANT TEXAS LAWS - Perplexity researching statutes...');
   workflowState.stepResults.step3 = await executeStep3TexasLaws(workflowState, authHeader, geminiApiKey);
-  await validateStepCompletion(3, workflowState.stepResults.step3);
+  workflowState.stepResults.step3.stepType = 'TEXAS_LAWS';
+  const validation3 = await validateStepCompletion(3, workflowState.stepResults.step3, 'TEXAS_LAWS', {
+    CASE_SUMMARY: workflowState.stepResults.step1,
+    PRELIMINARY_ANALYSIS: workflowState.stepResults.step2,
+    TEXAS_LAWS: workflowState.stepResults.step3
+  });
+  if (!validation3.isValid) {
+    throw new Error(`Step 3 validation failed: ${validation3.errors.join('; ')}`);
+  }
   workflowState.completedSteps.add(3);
 
   // Step 4: ADDITIONAL CASE LAW (Precedent research)
   console.log('📚 Step 4: ADDITIONAL CASE LAW - Perplexity researching precedents...');
   workflowState.stepResults.step4 = await executeStep4CaseLaw(workflowState, authHeader, geminiApiKey);
-  await validateStepCompletion(4, workflowState.stepResults.step4);
+  workflowState.stepResults.step4.stepType = 'CASE_LAW';
+  const validation4 = await validateStepCompletion(4, workflowState.stepResults.step4, 'CASE_LAW', {
+    CASE_SUMMARY: workflowState.stepResults.step1,
+    PRELIMINARY_ANALYSIS: workflowState.stepResults.step2,
+    TEXAS_LAWS: workflowState.stepResults.step3,
+    CASE_LAW: workflowState.stepResults.step4
+  });
+  if (!validation4.isValid) {
+    throw new Error(`Step 4 validation failed: ${validation4.errors.join('; ')}`);
+  }
   workflowState.completedSteps.add(4);
 
   // Step 5: IRAC LEGAL ANALYSIS (Comprehensive deep analysis)
   console.log('🧮 Step 5: IRAC LEGAL ANALYSIS - OpenAI conducting systematic analysis...');
   workflowState.stepResults.step5 = await executeStep5IracAnalysis(workflowState, authHeader, geminiApiKey);
-  await validateStepCompletion(5, workflowState.stepResults.step5);
+  workflowState.stepResults.step5.stepType = 'IRAC_ANALYSIS';
+  const validation5 = await validateStepCompletion(5, workflowState.stepResults.step5, 'IRAC_ANALYSIS', {
+    CASE_SUMMARY: workflowState.stepResults.step1,
+    PRELIMINARY_ANALYSIS: workflowState.stepResults.step2,
+    TEXAS_LAWS: workflowState.stepResults.step3,
+    CASE_LAW: workflowState.stepResults.step4,
+    IRAC_ANALYSIS: workflowState.stepResults.step5
+  });
+  if (!validation5.isValid) {
+    throw new Error(`Step 5 validation failed: ${validation5.errors.join('; ')}`);
+  }
   workflowState.completedSteps.add(5);
 
   // Step 6: LEGAL ISSUES ASSESSMENT (Issues validated through analysis)
   console.log('📊 Step 6: LEGAL ISSUES ASSESSMENT - Gemini evaluating issue viability...');
   workflowState.stepResults.step6 = await executeStep6IssuesAssessment(workflowState, authHeader, geminiApiKey);
-  await validateStepCompletion(6, workflowState.stepResults.step6);
+  workflowState.stepResults.step6.stepType = 'RISK_ASSESSMENT';
+  const validation6 = await validateStepCompletion(6, workflowState.stepResults.step6, 'RISK_ASSESSMENT', {
+    CASE_SUMMARY: workflowState.stepResults.step1,
+    PRELIMINARY_ANALYSIS: workflowState.stepResults.step2,
+    TEXAS_LAWS: workflowState.stepResults.step3,
+    CASE_LAW: workflowState.stepResults.step4,
+    IRAC_ANALYSIS: workflowState.stepResults.step5,
+    RISK_ASSESSMENT: workflowState.stepResults.step6
+  });
+  if (!validation6.isValid) {
+    throw new Error(`Step 6 validation failed: ${validation6.errors.join('; ')}`);
+  }
   workflowState.completedSteps.add(6);
 
   // Step 7: CASE STRENGTHS & WEAKNESSES
   console.log('⚡ Step 7: CASE STRENGTHS & WEAKNESSES - OpenAI analyzing case strength...');
   workflowState.stepResults.step7 = await executeStep7StrengthsWeaknesses(workflowState, authHeader, geminiApiKey);
-  await validateStepCompletion(7, workflowState.stepResults.step7);
+  workflowState.stepResults.step7.stepType = 'STRENGTHS_WEAKNESSES';
+  const validation7 = await validateStepCompletion(7, workflowState.stepResults.step7, 'STRENGTHS_WEAKNESSES', {
+    CASE_SUMMARY: workflowState.stepResults.step1,
+    PRELIMINARY_ANALYSIS: workflowState.stepResults.step2,
+    TEXAS_LAWS: workflowState.stepResults.step3,
+    CASE_LAW: workflowState.stepResults.step4,
+    IRAC_ANALYSIS: workflowState.stepResults.step5,
+    RISK_ASSESSMENT: workflowState.stepResults.step6,
+    STRENGTHS_WEAKNESSES: workflowState.stepResults.step7
+  });
+  if (!validation7.isValid) {
+    throw new Error(`Step 7 validation failed: ${validation7.errors.join('; ')}`);
+  }
   workflowState.completedSteps.add(7);
 
   // Step 8: REFINED ANALYSIS (Comprehensive synthesis + Risk Assessment)
   console.log('🎯 Step 8: REFINED ANALYSIS - Gemini synthesizing comprehensive overview...');
   workflowState.stepResults.step8 = await executeStep8RefinedAnalysis(workflowState, authHeader, geminiApiKey);
-  await validateStepCompletion(8, workflowState.stepResults.step8);
+  workflowState.stepResults.step8.stepType = 'REFINED_ANALYSIS';
+  const validation8 = await validateStepCompletion(8, workflowState.stepResults.step8, 'REFINED_ANALYSIS', {
+    CASE_SUMMARY: workflowState.stepResults.step1,
+    PRELIMINARY_ANALYSIS: workflowState.stepResults.step2,
+    TEXAS_LAWS: workflowState.stepResults.step3,
+    CASE_LAW: workflowState.stepResults.step4,
+    IRAC_ANALYSIS: workflowState.stepResults.step5,
+    RISK_ASSESSMENT: workflowState.stepResults.step6,
+    STRENGTHS_WEAKNESSES: workflowState.stepResults.step7,
+    REFINED_ANALYSIS: workflowState.stepResults.step8
+  });
+  if (!validation8.isValid) {
+    throw new Error(`Step 8 validation failed: ${validation8.errors.join('; ')}`);
+  }
   workflowState.completedSteps.add(8);
 
   // Step 9: RECOMMENDED FOLLOW-UP QUESTIONS
   console.log('❓ Step 9: FOLLOW-UP QUESTIONS - Gemini identifying information gaps...');
   workflowState.stepResults.step9 = await executeStep9FollowUpQuestions(workflowState, geminiApiKey);
-  await validateStepCompletion(9, workflowState.stepResults.step9);
+  workflowState.stepResults.step9.stepType = 'FOLLOW_UP';
+  const validation9 = await validateStepCompletion(9, workflowState.stepResults.step9, 'FOLLOW_UP', {
+    CASE_SUMMARY: workflowState.stepResults.step1,
+    PRELIMINARY_ANALYSIS: workflowState.stepResults.step2,
+    TEXAS_LAWS: workflowState.stepResults.step3,
+    CASE_LAW: workflowState.stepResults.step4,
+    IRAC_ANALYSIS: workflowState.stepResults.step5,
+    RISK_ASSESSMENT: workflowState.stepResults.step6,
+    STRENGTHS_WEAKNESSES: workflowState.stepResults.step7,
+    REFINED_ANALYSIS: workflowState.stepResults.step8,
+    FOLLOW_UP: workflowState.stepResults.step9
+  });
+  if (!validation9.isValid) {
+    throw new Error(`Step 9 validation failed: ${validation9.errors.join('; ')}`);
+  }
   workflowState.completedSteps.add(9);
 
   // Final synthesis by Gemini orchestrator
@@ -192,11 +284,20 @@ async function executeSequentialWorkflow(
   const executionTime = Date.now() - startTime;
   console.log(`✅ 9-Step Sequential Workflow COMPLETED in ${executionTime}ms`);
 
+  // Final quality control assessment
+  const allValidations = [validation1, validation2, validation3, validation4, validation5, validation6, validation7, validation8, validation9];
+  const averageScore = allValidations.reduce((sum, v) => sum + v.score, 0) / allValidations.length;
+  const qualityControlPassed = averageScore >= 0.7 && allValidations.every(v => v.isValid);
+
+  console.log(`🎯 Quality Control Assessment: Score ${averageScore.toFixed(2)}/1.0, Passed: ${qualityControlPassed}`);
+
   return {
     stepResults: workflowState.stepResults,
     completedSteps: workflowState.completedSteps,
     finalSynthesis,
     executionTime,
+    qualityControlPassed,
+    overallQualityScore: averageScore,
     qualityControlPassed: true,
     researchSources: extractResearchSources(workflowState)
   };
@@ -740,29 +841,119 @@ async function coordinateWithPerplexity(
   }
 }
 
-async function validateStepCompletion(stepNumber: number, stepResult: any): Promise<StepValidation> {
+async function validateStepCompletion(stepNumber: number, stepResult: any, stepType: string = 'GENERAL', allStepResults: Record<string, any> = {}): Promise<StepValidation> {
+  // Enhanced validation with quality control and blocking mechanism
   const errors: string[] = [];
   const warnings: string[] = [];
-  
+  let score = 1.0;
+
+  // Basic content validation
   if (!stepResult || !stepResult.content) {
     errors.push(`Step ${stepNumber} produced no content`);
+    return { isValid: false, errors, warnings, score: 0 };
   }
-  
-  if (stepResult.content && stepResult.content.length < 100) {
-    warnings.push(`Step ${stepNumber} content appears short (${stepResult.content.length} chars)`);
+
+  const content = stepResult.content;
+
+  // Minimum content length based on step type
+  const minLengths = {
+    'CASE_SUMMARY': 300,
+    'PRELIMINARY_ANALYSIS': 400,
+    'TEXAS_LAWS': 200,
+    'CASE_LAW': 200,
+    'IRAC_ANALYSIS': 600,
+    'RISK_ASSESSMENT': 300,
+    'FOLLOW_UP': 150,
+    'REMEDIES': 200,
+    'SYNTHESIS': 500
+  };
+
+  const minLength = minLengths[stepType as keyof typeof minLengths] || 150;
+  if (content.length < minLength) {
+    errors.push(`Step ${stepNumber} content too short (${content.length} chars, minimum ${minLength})`);
+    score -= 0.3;
   }
-  
-  console.log(`✅ Step ${stepNumber} validation:`, { 
-    isValid: errors.length === 0,
+
+  // Professional legal writing standards
+  const emotionalWords = /\b(obviously|ridiculous|absurd|shocking|outrageous|terrible|amazing|incredible)\b/gi;
+  if (emotionalWords.test(content)) {
+    errors.push(`Step ${stepNumber} contains emotional or unprofessional language`);
+    score -= 0.2;
+  }
+
+  const subjectivePatterns = /\b(I think|I believe|in my opinion|clearly|definitely should)\b/gi;
+  if (subjectivePatterns.test(content)) {
+    warnings.push(`Step ${stepNumber} may contain subjective language`);
+    score -= 0.1;
+  }
+
+  // Structural validation based on step type
+  const requiredStructures = {
+    'CASE_SUMMARY': /## Parties|## Timeline|## Key Facts/i,
+    'PRELIMINARY_ANALYSIS': /## Potential Legal Areas|## Preliminary Issues/i,
+    'IRAC_ANALYSIS': /## Issue|## Rule|## Analysis|## Conclusion/i
+  };
+
+  const requiredStructure = requiredStructures[stepType as keyof typeof requiredStructures];
+  if (requiredStructure && !requiredStructure.test(content)) {
+    errors.push(`Step ${stepNumber} lacks required structural elements for ${stepType}`);
+    score -= 0.3;
+  }
+
+  // Citation validation for legal content
+  if (['TEXAS_LAWS', 'CASE_LAW', 'IRAC_ANALYSIS'].includes(stepType)) {
+    const texasCitations = content.match(/Tex\.\s+(Code|Civ\.|Crim\.|Penal|Bus\.|Prop\.)\s+Ann\.\s+§\s*\d+/gi) || [];
+    const caseCitations = content.match(/\b\d+\s+S\.W\.\d+d\s+\d+/gi) || [];
+    
+    if (content.length > 300 && texasCitations.length === 0 && caseCitations.length === 0) {
+      warnings.push(`Step ${stepNumber} may need more legal citations`);
+      score -= 0.1;
+    }
+
+    // Validate citation format
+    texasCitations.forEach(citation => {
+      if (!/^Tex\.\s+(Code|Civ\.|Crim\.|Penal|Bus\.|Prop\.)\s+Ann\.\s+§\s*\d+(\.\d+)*$/i.test(citation.trim())) {
+        errors.push(`Improper Texas citation format: "${citation}"`);
+        score -= 0.1;
+      }
+    });
+  }
+
+  // Cross-step consistency validation (for later steps)
+  if (stepNumber >= 3 && Object.keys(allStepResults).length >= 2) {
+    // Check party consistency
+    const caseSummary = allStepResults['CASE_SUMMARY']?.content || '';
+    const partyMatches = caseSummary.match(/(?:plaintiff|defendant|petitioner|respondent)[\s:]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/gi) || [];
+    const parties = partyMatches.map(match => match.split(/[:]/)[1]?.trim()).filter(Boolean);
+    
+    parties.forEach(party => {
+      if (party && !new RegExp(party.replace(/\s+/g, '\\s+'), 'i').test(content)) {
+        warnings.push(`Party "${party}" from case summary not referenced in step ${stepNumber}`);
+        score -= 0.05;
+      }
+    });
+  }
+
+  // Quality scoring
+  score = Math.max(0, Math.min(1, score));
+
+  // Hard validation failure threshold
+  const isValid = errors.length === 0 && score >= 0.6;
+
+  console.log(`${isValid ? '✅' : '❌'} Step ${stepNumber} validation:`, { 
+    isValid,
+    errors: errors.length,
+    warnings: warnings.length,
+    score: score.toFixed(2),
+    contentLength: content.length,
+    stepType
+  });
+
+  return {
+    isValid,
     errors,
     warnings,
-    contentLength: stepResult?.content?.length || 0
-  });
-  
-  return {
-    isValid: errors.length === 0,
-    errors,
-    warnings
+    score
   };
 }
 
