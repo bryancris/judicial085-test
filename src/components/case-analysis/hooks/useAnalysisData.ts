@@ -176,20 +176,22 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           }
         }
 
-        // 🎯 ALWAYS try to get Case Summary and Relevant Texas Law from client-intake first for better formatting
+        // 🎯 ALWAYS try to get Case Summary, Relevant Texas Law, and Preliminary Analysis from client-intake first for better formatting
         let relevantLaw = sections.relevantLaw || "";
         let caseSummary = sections.caseSummary || "";
         
         console.log(`Current analysis type: ${analysis.analysis_type}`);
         console.log(`Current relevantLaw length: ${relevantLaw.length}`);
         console.log(`Current caseSummary length: ${caseSummary.length}`);
+        console.log(`Current preliminaryAnalysis length: ${finalPreliminaryAnalysis.length}`);
         
         // If this isn't already client-intake, or if sections are missing/poor quality, try client-intake
         if (analysis.analysis_type !== 'client-intake' || !relevantLaw || !caseSummary || 
             /No relevant law analysis available\./i.test(relevantLaw) || 
-            /No case summary available\./i.test(caseSummary)) {
+            /No case summary available\./i.test(caseSummary) ||
+            !finalPreliminaryAnalysis || finalPreliminaryAnalysis === "No preliminary analysis available") {
           
-          console.log("🔍 Fetching Case Summary and Relevant Texas Law from client-intake...");
+          console.log("🔍 Fetching sections from client-intake...");
           try {
             let intakeData: { content: string }[] | null = null;
 
@@ -230,6 +232,14 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
             if (intakeData && intakeData.length > 0) {
               const intakeSections = extractAnalysisSections(intakeData[0].content || "");
               
+              // 🎯 PRIORITIZE client-intake Preliminary Analysis if available and not a placeholder
+              if (intakeSections.preliminaryAnalysis && 
+                  !/No preliminary analysis/i.test(intakeSections.preliminaryAnalysis) &&
+                  intakeSections.preliminaryAnalysis.trim().length > 50) { // Ensure it's substantial
+                finalPreliminaryAnalysis = intakeSections.preliminaryAnalysis;
+                console.log("✅ Using Preliminary Analysis from client-intake");
+              }
+              
               // Use client-intake Case Summary if available and better
               if (intakeSections.caseSummary && !/No case summary/i.test(intakeSections.caseSummary)) {
                 caseSummary = intakeSections.caseSummary;
@@ -243,7 +253,7 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
               }
             }
           } catch (e) {
-            console.warn("Client-intake lookup for Case Summary/Relevant Texas Law failed:", e);
+            console.warn("Client-intake lookup failed:", e);
           }
         }
 
