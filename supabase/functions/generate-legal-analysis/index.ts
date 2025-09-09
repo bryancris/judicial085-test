@@ -360,8 +360,8 @@ console.log('📋 Fact-based analysis mode enabled');
     console.log(`Case identified as consumer protection case: ${isConsumerCase}`);
     
     // Determine step type for prompt building
-    const effectiveStepType = requestContext?.includes('preliminary-analysis') ? 'preliminary-analysis' : 'detailed-analysis';
-    console.log(`Building ${effectiveStepType} prompt for ${requestContext || 'analysis'}`);
+    const effectiveStepType = stepType === 'preliminary-analysis' ? 'preliminary-analysis' : 'detailed-analysis';
+    console.log(`Building ${effectiveStepType} prompt for ${stepType || requestContext || 'analysis'}`);
     
     // Create step-aware system prompt
     const systemPrompt = buildSystemPrompt(
@@ -390,8 +390,8 @@ console.log('📋 Fact-based analysis mode enabled');
       }));
       userContent = "ATTORNEY-CLIENT CONVERSATION FOR ANALYSIS:\n\n" + formattedConversation.map(msg => msg.content).join("\n\n");
       
-      // If we have both conversation AND documents, include both (leveraging 2M context)
-      if (clientDocuments.length > 0) {
+      // If we have both conversation AND documents, include both only for non-preliminary steps
+      if (clientDocuments.length > 0 && effectiveStepType !== 'preliminary-analysis') {
         userContent += "\n\nRELATED CLIENT DOCUMENTS:\n\n";
         userContent += clientDocuments.map((doc, index) => 
           `DOCUMENT ${index + 1}: ${doc.title}\n${doc.content}`

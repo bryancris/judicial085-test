@@ -74,15 +74,8 @@ PRELIMINARY ANALYSIS APPROACH:
     });
   }
 
-  // Add document context
-  if (clientDocuments && clientDocuments.length > 0) {
-    systemPrompt += `\n\nDOCUMENT CONTEXT: You have access to ${clientDocuments.length} client document(s) for preliminary review and issue identification.`;
-  }
-
-  // Add research updates context
-  if (researchUpdates && researchUpdates.length > 0) {
-    systemPrompt += `\n\nRESEARCH INTEGRATION: You have ${researchUpdates.length} research update(s) to consider in your preliminary analysis.`;
-  }
+  // Step 2 restriction: ignore external docs and research at this step
+  systemPrompt += `\n\nSTRICT SOURCE LIMITATION FOR STEP 2:\n- Use ONLY the client intake/conversation and the Step 1 Case Summary.\n- Ignore uploaded documents and any external research updates at this step.\n- Do NOT cite statutes or case law in Step 2.`;
 
   // Preliminary analysis structure requirements
   systemPrompt += `\n\nREQUIRED PRELIMINARY ANALYSIS STRUCTURE:

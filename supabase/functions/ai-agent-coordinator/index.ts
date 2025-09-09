@@ -347,32 +347,47 @@ async function executeStep2PreliminaryAnalysis(workflowState: WorkflowState, aut
     authHeader
   );
 
+  // Sanitize OpenAI output to ensure no IRAC content leaks into Step 2
+  const cleanedOpenAI = (openAIResult.content || '')
+    .replace(/\*\*IRAC[^\n]*\n?/gi, '')
+    .replace(/\*\*ISSUE:?\*\*/gi, '')
+    .replace(/\*\*RULE:?\*\*/gi, '')
+    .replace(/\*\*APPLICATION:?\*\*/gi, '')
+    .replace(/\*\*CONCLUSION:?\*\*/gi, '');
+
   // Then have Gemini organize and structure the results
   const prompt = `You are GEMINI, the orchestrator. You are executing STEP 2: PRELIMINARY ANALYSIS.
 
-CRITICAL: This is Step 2 of 9. Build upon Step 1 but do not include content from later steps.
+CRITICAL: This is Step 2 of 9. Build strictly on Step 1 and client intake facts. Do NOT include content from later steps.
+
+HARD RULES FOR STEP 2:
+- Absolutely NO IRAC format, headings, or structure
+- Do NOT use the words Issue, Rule, Application, or Conclusion as headings
+- No statutes, case citations, or legal elements; this is broad issue spotting only
+- Use ONLY: (a) the client intake/query and (b) Step 1 CASE SUMMARY
+- Do NOT use external research, documents, or vectorized data at this step
 
 STEP 1 RESULTS:
 ${workflowState.stepResults.step1?.content || ''}
 
-OPENAI PRELIMINARY ANALYSIS:
-${openAIResult.content}
+OPENAI PRELIMINARY ANALYSIS (sanitized):
+${cleanedOpenAI}
 
 STEP 2 TASKS - GEMINI:
-- Coordinate with OPENAI to conduct initial legal issue identification  
-- Use vectorized documents to spot potential legal problems
+- Coordinate with OPENAI to conduct initial legal issue identification using ONLY intake facts and Step 1
 - Create preliminary strategic roadmap
-- Identify areas requiring focused research
+- Identify areas requiring focused research (priorities)
+- Maintain professional legal tone without detailed analysis
 
-REQUIRED OUTPUT FORMAT:
+REQUIRED OUTPUT FORMAT (Markdown headers with **):
 PRELIMINARY ANALYSIS
 
-- Potential Legal Areas: [Contract, Tort, Criminal, etc.]
-- Preliminary Issues Identified: [List 5-8 potential issues]
-- Research Priorities: [Which issues need immediate focus]
-- Strategic Notes: [Early tactical observations]
+- **POTENTIAL LEGAL AREAS:** [Contract, Tort, Consumer Protection, etc.]
+- **PRELIMINARY ISSUES IDENTIFIED:** [List 5-8 fact-driven issues]
+- **RESEARCH PRIORITIES:** [High/Medium/Low with brief rationale]
+- **STRATEGIC NOTES:** [Factual gaps, evidence needs, early tactics]
 
-Organize the OpenAI analysis into the required format above.`;
+Do not include IRAC or detailed legal reasoning. Keep it broad and fact-driven.`;
 
   return await callGeminiOrchestrator(prompt, geminiApiKey, 'PRELIMINARY_ANALYSIS');
 }
