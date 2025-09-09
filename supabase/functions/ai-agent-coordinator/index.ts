@@ -785,7 +785,8 @@ async function coordinateWithOpenAI(
         caseId,
         conversation: [{ role: 'attorney', content: `${analysisType}: ${query}. Context: ${context}` }],
         researchFocus: analysisType,
-        requestContext: '9-step-workflow'
+        requestContext: '9-step-workflow',
+        stepType: analysisType // Pass step type to ensure correct prompt
       },
       headers: authHeader ? { Authorization: authHeader } : {}
     });
@@ -889,15 +890,41 @@ async function validateStepCompletion(stepNumber: number, stepResult: any, stepT
 
   // Structural validation based on step type
   const requiredStructures = {
-    'CASE_SUMMARY': /## Parties|## Timeline|## Key Facts/i,
-    'PRELIMINARY_ANALYSIS': /## Potential Legal Areas|## Preliminary Issues/i,
-    'IRAC_ANALYSIS': /## Issue|## Rule|## Analysis|## Conclusion/i
+    'CASE_SUMMARY': /Parties|Timeline|Key Facts/i,
+    'PRELIMINARY_ANALYSIS': /Potential Legal Areas|Preliminary Issues|Research Priorities|Strategic Notes/i,
+    'IRAC_ANALYSIS': /ISSUE.*:|RULE:|APPLICATION:|CONCLUSION:/i
   };
 
   const requiredStructure = requiredStructures[stepType as keyof typeof requiredStructures];
   if (requiredStructure && !requiredStructure.test(content)) {
     errors.push(`Step ${stepNumber} lacks required structural elements for ${stepType}`);
     score -= 0.3;
+  }
+  
+  // Critical validation: Step 2 must NOT contain IRAC format
+  if (stepType === 'PRELIMINARY_ANALYSIS') {
+    const iracPatterns = /\*\*ISSUE \[\d+\]\*\*:|IRAC ANALYSIS|ISSUE \[\d+\]:|APPLICATION:|detailed legal analysis/i;
+    if (iracPatterns.test(content)) {
+      errors.push(`Step ${stepNumber} illegally contains IRAC format - this is preliminary analysis only`);
+      score -= 0.5;
+    }
+    
+    // Must contain preliminary analysis elements
+    const preliminaryElements = /Potential Legal Areas.*Preliminary Issues.*Research Priorities/s;
+    if (!preliminaryElements.test(content)) {
+      errors.push(`Step ${stepNumber} missing required preliminary analysis sections`);
+      score -= 0.3;
+    }
+  }
+  
+  // Step 5 validation: Must contain IRAC format
+  if (stepType === 'IRAC_ANALYSIS') {
+    const hasIrac = /ISSUE.*RULE.*APPLICATION.*CONCLUSION/s;
+    if (!hasIrac.test(content)) {
+      errors.push(`Step ${stepNumber} missing required IRAC analysis structure`);
+      score -= 0.4;
+    }
+  }
   }
 
   // Citation validation for legal content

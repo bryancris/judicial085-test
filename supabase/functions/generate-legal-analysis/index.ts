@@ -60,7 +60,7 @@ serve(async (req) => {
       );
     }
 
-    const { clientId, conversation, caseId, researchUpdates, researchFocus, requestContext, existingAnalysisContext } = payload || {};
+    const { clientId, conversation, caseId, researchUpdates, researchFocus, requestContext, existingAnalysisContext, stepType } = payload || {};
 
     if (!clientId) {
       return new Response(
@@ -358,14 +358,15 @@ console.log('📋 Fact-based analysis mode enabled');
     const isConsumerCase = detectedCaseType === "consumer-protection";
     console.log(`Case identified as consumer protection case: ${isConsumerCase}`);
     
-    // Create system prompt without domain constraints
+    // Create step-aware system prompt
     const systemPrompt = buildSystemPrompt(
       analysisSource,
       relevantLawReferences,
       hasConversation,
       clientDocuments,
       detectedCaseType,
-      researchUpdates
+      researchUpdates,
+      stepType
     );
 
     // Format the content for Gemini's 2M context window - include ALL available information

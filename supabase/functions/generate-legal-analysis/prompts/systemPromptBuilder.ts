@@ -1,6 +1,39 @@
 
-// Build comprehensive system prompt for legal analysis generation
+// Build step-aware system prompt for legal analysis generation
 export const buildSystemPrompt = (
+  analysisSource: string,
+  relevantLawReferences: any[],
+  hasConversation: boolean,
+  clientDocuments: any[],
+  detectedCaseType: string,
+  researchUpdates?: any[],
+  stepType?: string
+) => {
+  // Route to appropriate prompt builder based on step type
+  if (stepType === 'preliminary-analysis') {
+    return buildPreliminarySystemPrompt(
+      analysisSource,
+      relevantLawReferences,
+      hasConversation,
+      clientDocuments,
+      detectedCaseType,
+      researchUpdates
+    );
+  }
+  
+  // Default to IRAC analysis for backwards compatibility
+  return buildIracSystemPrompt(
+    analysisSource,
+    relevantLawReferences,
+    hasConversation,
+    clientDocuments,
+    detectedCaseType,
+    researchUpdates
+  );
+};
+
+// Build preliminary analysis system prompt (Step 2)
+export const buildPreliminarySystemPrompt = (
   analysisSource: string,
   relevantLawReferences: any[],
   hasConversation: boolean,
@@ -8,13 +41,105 @@ export const buildSystemPrompt = (
   detectedCaseType: string,
   researchUpdates?: any[]
 ) => {
-  console.log(`Building comprehensive system prompt with access to full Texas law database`);
+  console.log(`Building preliminary analysis prompt for Step 2`);
   
-  let systemPrompt = `You are an expert Texas attorney with access to the comprehensive Texas legal database. You will analyze the provided ${analysisSource} and generate a thorough legal assessment based on the facts presented.
+  let systemPrompt = `You are an expert Texas attorney performing STEP 2: PRELIMINARY ANALYSIS. You will review the provided ${analysisSource} and generate a broad legal issue identification based on the facts presented.
 
-CRITICAL INSTRUCTION: Analyze ALL facts presented without limiting yourself to predetermined legal categories. Identify EVERY applicable area of Texas law and potential legal theory. You have access to the complete Texas legal code - use it comprehensively.
+CRITICAL INSTRUCTION: This is Step 2 of a 9-step process. You are performing PRELIMINARY ANALYSIS ONLY - broad issue spotting without detailed legal analysis. Do NOT perform IRAC analysis or detailed rule application.
 
-COMPREHENSIVE LEGAL ANALYSIS APPROACH:
+PRELIMINARY ANALYSIS APPROACH:
+- Facts drive the identification, not preconceived case types
+- Identify potential areas of Texas law that may apply
+- Spot broad legal issues requiring further research
+- Create strategic roadmap for deeper analysis
+- Base identifications on factual patterns and preliminary legal concepts`;
+
+  // Add law references with relevance scoring if available
+  if (relevantLawReferences && relevantLawReferences.length > 0) {
+    systemPrompt += `\n\nRELEVANT TEXAS LAW AUTHORITIES (from comprehensive database search):\n`;
+    relevantLawReferences.forEach(ref => {
+      const relevanceNote = ref.similarity ? ` (Relevance: ${(ref.similarity * 100).toFixed(1)}%)` : '';
+      systemPrompt += `- ${ref.title}: ${ref.content}${relevanceNote}\n`;
+    });
+  }
+
+  // Add document context
+  if (clientDocuments && clientDocuments.length > 0) {
+    systemPrompt += `\n\nDOCUMENT CONTEXT: You have access to ${clientDocuments.length} client document(s) for preliminary review and issue identification.`;
+  }
+
+  // Add research updates context
+  if (researchUpdates && researchUpdates.length > 0) {
+    systemPrompt += `\n\nRESEARCH INTEGRATION: You have ${researchUpdates.length} research update(s) to consider in your preliminary analysis.`;
+  }
+
+  // Preliminary analysis structure requirements
+  systemPrompt += `\n\nREQUIRED PRELIMINARY ANALYSIS STRUCTURE:
+
+**CASE SUMMARY:**
+Brief overview of the legal matter, parties, key facts, and procedural posture.
+
+**PRELIMINARY ANALYSIS:**
+
+**POTENTIAL LEGAL AREAS:**
+Identify broad areas of Texas law that may apply (e.g., Contract Law, Tort Law, Consumer Protection, Criminal Law, Property Law, etc.)
+
+**PRELIMINARY ISSUES IDENTIFIED:**
+List 5-8 potential legal issues based on factual patterns:
+1. [Issue description based on facts]
+2. [Issue description based on facts]
+3. [Issue description based on facts]
+...
+
+**RESEARCH PRIORITIES:**
+Identify which issues require immediate focused research:
+- High Priority: [Issues with strong factual support]
+- Medium Priority: [Issues requiring additional facts]
+- Low Priority: [Speculative issues requiring investigation]
+
+**STRATEGIC NOTES:**
+Early tactical observations about case development:
+- Factual gaps that need investigation
+- Potential evidence requirements
+- Preliminary case theory considerations
+- Procedural considerations`;
+
+  // Enhanced preliminary analysis requirements
+  systemPrompt += `\n\nPRELIMINARY ANALYSIS REQUIREMENTS:
+- Use proper markdown formatting with ** for section headers
+- For POTENTIAL LEGAL AREAS, identify broad categories of Texas law
+- For PRELIMINARY ISSUES, describe issues based on factual patterns (not detailed legal elements)
+- For RESEARCH PRIORITIES, prioritize based on factual strength and case impact
+- For STRATEGIC NOTES, focus on case development and information gathering needs
+- Do NOT include detailed statutory analysis or case law application
+- Do NOT perform IRAC analysis - that comes in Step 5
+- Keep analysis broad and issue-spotting focused
+- Identify multiple potential legal theories without detailed analysis
+- Focus on what needs to be researched rather than detailed conclusions`;
+
+  // Fact-based analysis reminder
+  systemPrompt += `\n\nFACT-DRIVEN ISSUE IDENTIFICATION: Base your preliminary analysis on the specific facts presented and identify ALL potential areas of law that may apply. This is broad issue spotting - save detailed analysis for later steps. Your goal is to provide comprehensive issue identification that an experienced Texas attorney would develop when first reviewing a case.`;
+
+  return systemPrompt;
+};
+
+// Build IRAC analysis system prompt (Step 5)
+export const buildIracSystemPrompt = (
+  analysisSource: string,
+  relevantLawReferences: any[],
+  hasConversation: boolean,
+  clientDocuments: any[],
+  detectedCaseType: string,
+  researchUpdates?: any[]
+) => {
+  console.log(`Building IRAC analysis prompt for Step 5`);
+  
+  let systemPrompt = `You are an expert Texas attorney performing STEP 5: IRAC LEGAL ANALYSIS. You will analyze the provided ${analysisSource} and generate a thorough legal assessment based on the facts presented and previous workflow steps.
+
+CRITICAL INSTRUCTION: This is Step 5 of a 9-step process. You are performing detailed IRAC analysis building upon the preliminary analysis from Step 2. Analyze ALL facts presented without limiting yourself to predetermined legal categories. Identify EVERY applicable area of Texas law and potential legal theory.
+
+COMPREHENSIVE IRAC ANALYSIS APPROACH:
+- Build upon the preliminary analysis from Step 2
 - Facts drive the analysis, not preconceived case types
 - Consider all applicable areas of Texas law simultaneously  
 - Identify multiple overlapping legal theories and claims
