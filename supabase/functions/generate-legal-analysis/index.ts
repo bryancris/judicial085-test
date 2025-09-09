@@ -179,7 +179,7 @@ console.log("Fact sufficiency check:", {
 // 🛡️ Prevent recursion: Skip coordinator if request comes from coordinator
 const skipCoordinator = requestContext?.includes('step') || requestContext === '9-step-workflow';
 
-if (!skipCoordinator && !isInternalLegalResearch && userId) {
+if (!skipCoordinator && userId) {
       console.log('🎯 Starting 3-agent coordination for client:', clientId);
       
       try {
