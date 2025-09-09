@@ -104,14 +104,24 @@ export const parseParties = (caseSummary: string): Array<{name: string; role: st
 export const parseTimeline = (caseSummary: string): Array<{date: string; event: string}> => {
   const timeline: Array<{date: string; event: string}> = [];
   
-  // Exact date patterns
+  // Always try to extract purchase/transaction first
+  const purchaseMatch = caseSummary.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+purchases?\s+([^.]+?)(?:\s+for\s+\$?[\d,]+|\.|\s*$)/i);
+  if (purchaseMatch) {
+    const buyer = purchaseMatch[1];
+    const item = purchaseMatch[2].replace(/\s+for\s+\$?[\d,]+.*$/, '');
+    timeline.push({ 
+      date: 'Initial purchase', 
+      event: `${buyer} purchases ${item}` 
+    });
+  }
+
+  // Extract exact dates (always try these)
   const datePatterns = [
     /(?:on|in)\s+([A-Za-z]+\s+\d{1,2},?\s+\d{4}|\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})\s*[,:]?\s*([^.!?]+)/gi,
     /([A-Za-z]+\s+\d{1,2},?\s+\d{4}|\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})\s*[:\-]\s*([^.!?]+)/gi,
     /(?:^|\n)\s*([A-Za-z]+\s+\d{1,2},?\s+\d{4})\s*[,.]?\s*([^.!?]+)/gm
   ];
   
-  // Extract exact dates first
   for (const pattern of datePatterns) {
     let match;
     while ((match = pattern.exec(caseSummary)) !== null) {
@@ -123,34 +133,79 @@ export const parseTimeline = (caseSummary: string): Array<{date: string; event: 
       }
     }
   }
+
+  // Enhanced relative timeline patterns (always extract these too)
+  const relativePatterns = [
+    // "within first X miles/days/months" 
+    /within\s+(?:the\s+)?first\s+([^,]+?),?\s*(?:the\s+)?([^.!?]+)/gi,
+    // Problem with repair attempts pattern: "Engine stalls (4 repair attempts over 2 months)"
+    /([A-Za-z\s]+?)\s+(?:stalls?|fails?|slips?)[^(]*\((\d+)\s+repair\s+attempts?(?:\s+over\s+([^)]+))?\)/gi,
+    // Total time pattern: "for a total of X days"
+    /(?:for\s+)?(?:a\s+total\s+of\s+)?(\d+\s+days?)[^.]*?attempting\s+repairs?/gi,
+    // "over X months/days" with context
+    /over\s+(\d+\s+(?:days?|weeks?|months?))[^.]*?[,:]?\s*([^.!?]+)/gi,
+    // Manager statements with attempt context
+    /on\s+the\s+(\w+)\s+(?:engine\s+)?repair\s+attempt[^.]*?[,:]?\s*([^.!?]+)/gi,
+    // Service manager quotes
+    /"([^"]+)"/g
+  ];
   
-  // Relative timeline patterns for when no exact dates exist
-  if (timeline.length === 0) {
-    const relativePatterns = [
-      // "within first X miles/days/months"
-      /within\s+(?:the\s+)?first\s+([^,]+?),?\s+([^.!?]+)/gi,
-      // "over X months/days"  
-      /over\s+(\d+\s+(?:days?|weeks?|months?))[^.]*?[,:]?\s*([^.!?]+)/gi,
-      // "for X days"
-      /for\s+(?:a\s+total\s+of\s+)?(\d+\s+days?)[^.]*?[,:]?\s*([^.!?]+)/gi,
-      // "X repair attempts"
-      /(\d+)\s+repair\s+attempts?[^.]*?[,:]?\s*([^.!?]*(?:repair|fix|attempt)[^.!?]*)/gi,
-      // "On the X attempt"
-      /on\s+the\s+(\w+)\s+(?:repair\s+)?attempt[^.]*?[,:]?\s*([^.!?]+)/gi
-    ];
-    
-    for (const pattern of relativePatterns) {
-      let match;
-      while ((match = pattern.exec(caseSummary)) !== null) {
+  for (const pattern of relativePatterns) {
+    let match;
+    while ((match = pattern.exec(caseSummary)) !== null) {
+      if (pattern.source.includes('stalls?|fails?|slips?')) {
+        // Handle specific problem patterns
+        const system = match[1]?.trim();
+        const attempts = match[2];
+        const timeframe = match[3]?.trim();
+        
+        if (system && attempts) {
+          const timeContext = timeframe ? ` over ${timeframe}` : '';
+          timeline.push({ 
+            date: `Problem onset`, 
+            event: `${system} begins experiencing issues` 
+          });
+          timeline.push({ 
+            date: `Repair attempts`, 
+            event: `${attempts} repair attempts for ${system.toLowerCase()}${timeContext}` 
+          });
+        }
+      } else if (pattern.source.includes('total.*days')) {
+        // Handle total repair days
+        const days = match[1]?.trim();
+        if (days) {
+          timeline.push({ 
+            date: 'Extended repair period', 
+            event: `Vehicle in service for ${days} total attempting repairs` 
+          });
+        }
+      } else if (pattern.source.includes('repair\\s+attempt')) {
+        // Handle specific attempt mentions
+        const attemptNumber = match[1]?.trim();
+        const event = match[2]?.trim();
+        if (attemptNumber && event) {
+          timeline.push({ 
+            date: `${attemptNumber} repair attempt`, 
+            event: event 
+          });
+        }
+      } else if (pattern.source.includes('"([^"]+)"')) {
+        // Handle quoted statements
+        const quote = match[1]?.trim();
+        if (quote && quote.length > 20) {
+          timeline.push({ 
+            date: 'Service interaction', 
+            event: `Service manager: "${quote}"` 
+          });
+        }
+      } else {
+        // Handle other relative patterns
         const timeframe = match[1]?.trim();
         const event = match[2]?.trim();
         
         if (timeframe && event && event.length > 5) {
-          // Create logical sequence dates
           if (timeframe.includes('first')) {
-            timeline.push({ date: 'Initial period', event: `${event} (${timeframe})` });
-          } else if (timeframe.includes('repair attempts')) {
-            timeline.push({ date: 'Multiple attempts', event: `${timeframe}: ${event}` });
+            timeline.push({ date: 'Early problems', event: `Within ${timeframe}: ${event}` });
           } else {
             timeline.push({ date: `After ${timeframe}`, event });
           }
@@ -158,24 +213,49 @@ export const parseTimeline = (caseSummary: string): Array<{date: string; event: 
       }
     }
   }
-  
-  // Extract purchase/transaction as first timeline event if no timeline exists
-  if (timeline.length === 0) {
-    const purchaseMatch = caseSummary.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+purchases?\s+([^.]+)/i);
-    if (purchaseMatch) {
-      timeline.push({ 
-        date: 'Initial purchase', 
-        event: `${purchaseMatch[1]} purchases ${purchaseMatch[2]}` 
-      });
-    }
+
+  // Extract trade-in offers and settlement discussions
+  const offerMatch = caseSummary.match(/offers?\s+(?:her\s+)?(?:a\s+)?trade-in\s+value\s+of\s+\$?([\d,]+)/i);
+  if (offerMatch) {
+    timeline.push({ 
+      date: 'Settlement discussion', 
+      event: `Dealership offers trade-in value of $${offerMatch[1]}` 
+    });
   }
-  
-  // Remove duplicates and limit results
+
+  // Remove duplicates while preserving order
   const uniqueTimeline = timeline.filter((item, index, self) => 
-    index === self.findIndex(t => t.date === item.date && t.event === item.event)
+    index === self.findIndex(t => 
+      t.date === item.date && t.event === item.event
+    )
   );
   
-  return uniqueTimeline.slice(0, 5);
+  // Sort timeline logically
+  const sortOrder = [
+    'Initial purchase',
+    'Early problems', 
+    'Problem onset',
+    'Repair attempts',
+    'Extended repair period',
+    'first repair attempt',
+    'second repair attempt', 
+    'third repair attempt',
+    'fourth repair attempt',
+    'Service interaction',
+    'Settlement discussion'
+  ];
+  
+  uniqueTimeline.sort((a, b) => {
+    const aIndex = sortOrder.findIndex(order => a.date.toLowerCase().includes(order.toLowerCase()));
+    const bIndex = sortOrder.findIndex(order => b.date.toLowerCase().includes(order.toLowerCase()));
+    
+    if (aIndex === -1 && bIndex === -1) return 0;
+    if (aIndex === -1) return 1;
+    if (bIndex === -1) return -1;
+    return aIndex - bIndex;
+  });
+  
+  return uniqueTimeline.slice(0, 8);
 };
 
 // Parse core facts from case summary
