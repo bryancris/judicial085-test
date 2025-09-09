@@ -68,6 +68,28 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
   }, [relevantTexasLawText]);
 
 
+  const preliminaryAnalysisHtml = useMemo(() => {
+    const md = (preliminaryAnalysis || "").trim();
+    if (!md) return "";
+    try {
+      const html = marked.parse(md, { breaks: true });
+      return DOMPurify.sanitize(typeof html === "string" ? html : String(html));
+    } catch (e) {
+      return DOMPurify.sanitize(`<p>${md.replace(/\n/g, "<br/>")}</p>`);
+    }
+  }, [preliminaryAnalysis]);
+
+  const potentialIssuesHtml = useMemo(() => {
+    const md = (potentialIssues || "").trim();
+    if (!md) return "";
+    try {
+      const html = marked.parse(md, { breaks: true });
+      return DOMPurify.sanitize(typeof html === "string" ? html : String(html));
+    } catch (e) {
+      return DOMPurify.sanitize(`<p>${md.replace(/\n/g, "<br/>")}</p>`);
+    }
+  }, [potentialIssues]);
+
   return (
     <div className="space-y-6">
 
@@ -113,11 +135,7 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="prose dark:prose-invert max-w-none text-sm">
-              {preliminaryAnalysis.split('\n\n').map((paragraph, idx) => (
-                <p key={idx} className="mb-2 last:mb-0 whitespace-pre-line">{paragraph}</p>
-              ))}
-            </div>
+            <div className="prose dark:prose-invert max-w-none text-sm" dangerouslySetInnerHTML={{ __html: preliminaryAnalysisHtml }} />
           </CardContent>
         </Card>
       )}
@@ -142,11 +160,7 @@ const DetailedLegalAnalysis: React.FC<DetailedLegalAnalysisProps> = ({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="prose dark:prose-invert max-w-none text-sm">
-              {potentialIssues.split('\n\n').map((paragraph, idx) => (
-                <p key={idx} className="mb-2 last:mb-0 whitespace-pre-line">{paragraph}</p>
-              ))}
-            </div>
+            <div className="prose dark:prose-invert max-w-none text-sm" dangerouslySetInnerHTML={{ __html: potentialIssuesHtml }} />
           </CardContent>
         </Card>
       )}
