@@ -419,22 +419,28 @@ STEP 2 TASKS - GEMINI:
 - Identify areas requiring focused research (priorities)
 - Maintain professional legal tone without detailed analysis
 
-REQUIRED OUTPUT FORMAT (USE EXACT HEADERS BELOW; 2–5 concise bullets under each):
+REQUIRED OUTPUT FORMAT (USE EXACT HEADERS BELOW; 2–6 concise bullets under each):
 **PRELIMINARY ANALYSIS:**
 
-**POTENTIAL LEGAL AREAS:**
-- [Contract, Tort, Consumer Protection, etc.]
+**POTENTIAL LEGAL THEORIES:**
+- [Express warranty, implied warranty, DTPA, negligence, fraud, etc.]
 
-**PRELIMINARY ISSUES:**
-- [2–5 fact-driven issues]
+**ELEMENTS ANALYSIS:**
+- [Brief element-level notes for the top 3–6 theories; no citations]
 
-**RESEARCH PRIORITIES:**
-- [2–5 items tagged High/Medium/Low with brief rationale]
+**AVAILABLE DEFENSES:**
+- [Likely defenses based on the facts]
 
-**STRATEGIC NOTES:**
-- [2–5 notes: factual gaps, evidence needs, early tactics]
+**DAMAGES:**
+- [Potential remedies/damages relevant to the fact pattern]
 
-Do not include IRAC or detailed legal reasoning. Keep it broad and fact-driven.`;
+**EVIDENCE:**
+- [Key documents, testimony, and proof needed]
+
+**STRATEGIC CONSIDERATIONS:**
+- [Early tactics, info gaps, and next steps]
+
+Do not include IRAC or detailed legal reasoning. Keep it broad, factual, and strategic.`;
 
   let result = await callGeminiOrchestrator(prompt, geminiApiKey, 'PRELIMINARY_ANALYSIS');
   let enforced = enforcePreliminaryStructure(

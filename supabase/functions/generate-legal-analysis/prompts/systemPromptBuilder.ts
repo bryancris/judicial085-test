@@ -74,55 +74,14 @@ PRELIMINARY ANALYSIS APPROACH:
     });
   }
 
-  // Step 2 restriction: ignore external docs and research at this step
-  systemPrompt += `\n\nSTRICT SOURCE LIMITATION FOR STEP 2:\n- Use ONLY the client intake/conversation and the Step 1 Case Summary.\n- Ignore uploaded documents and any external research updates at this step.\n- Do NOT cite statutes or case law in Step 2.`;
+  // Sources allowed for Step 2
+  systemPrompt += `\n\nSOURCES AND LIMITATIONS FOR STEP 2:\n- Prioritize the Step 1 Case Summary and client intake.\n- You MAY reference uploaded client documents (quote the document title when relying on it) and any provided research notes.\n- Do NOT include statute/case citations or URLs in Step 2.\n- Absolutely no IRAC format or headings.`;
 
-  // Preliminary analysis structure requirements
-  systemPrompt += `\n\nREQUIRED PRELIMINARY ANALYSIS STRUCTURE:
+  // Preliminary analysis structure requirements (match attorney expectations)
+  systemPrompt += `\n\nREQUIRED PRELIMINARY ANALYSIS STRUCTURE:\n\n**PRELIMINARY ANALYSIS:**\n\n**POTENTIAL LEGAL THEORIES:**\n- List likely theories by area (e.g., express warranty, implied warranty of merchantability, implied warranty of fitness, Texas Lemon Law, DTPA, negligence, fraud).\n\n**ELEMENTS ANALYSIS:**\n- Brief element-level notes for the top 3–6 theories (no citations).\n\n**AVAILABLE DEFENSES:**\n- Likely defenses based on the facts.\n\n**DAMAGES:**\n- Potential remedies/damages relevant to the facts.\n\n**EVIDENCE:**\n- Key documents, testimony, or expert proof needed.\n\n**STRATEGIC CONSIDERATIONS:**\n- Early tactics, information gaps, and next steps.`;
 
-**CASE SUMMARY:**
-Brief overview of the legal matter, parties, key facts, and procedural posture.
-
-**PRELIMINARY ANALYSIS:**
-
-**POTENTIAL LEGAL AREAS:**
-Identify broad areas of Texas law that may apply (e.g., Contract Law, Tort Law, Consumer Protection, Criminal Law, Property Law, etc.)
-
-**PRELIMINARY ISSUES IDENTIFIED:**
-List 5-8 potential legal issues based on factual patterns:
-1. [Issue description based on facts]
-2. [Issue description based on facts]
-3. [Issue description based on facts]
-...
-
-**RESEARCH PRIORITIES:**
-Identify which issues require immediate focused research:
-- High Priority: [Issues with strong factual support]
-- Medium Priority: [Issues requiring additional facts]
-- Low Priority: [Speculative issues requiring investigation]
-
-**STRATEGIC NOTES:**
-Early tactical observations about case development:
-- Factual gaps that need investigation
-- Potential evidence requirements
-- Preliminary case theory considerations
-- Procedural considerations`;
-
-  // Enhanced preliminary analysis requirements
-  systemPrompt += `\n\nPRELIMINARY ANALYSIS REQUIREMENTS:
-- Use proper markdown formatting with ** for section headers
-- For POTENTIAL LEGAL AREAS, identify broad categories of Texas law
-- For PRELIMINARY ISSUES, describe issues based on factual patterns (not detailed legal elements)
-- For RESEARCH PRIORITIES, prioritize based on factual strength and case impact
-- For STRATEGIC NOTES, focus on case development and information gathering needs
-- Do NOT include detailed statutory analysis or case law application
-- Do NOT perform IRAC analysis - that comes in Step 5
-- Keep analysis broad and issue-spotting focused
-- Identify multiple potential legal theories without detailed analysis
-- Focus on what needs to be researched rather than detailed conclusions`;
-
-  // Fact-based analysis reminder
-  systemPrompt += `\n\nFACT-DRIVEN ISSUE IDENTIFICATION: Base your preliminary analysis on the specific facts presented and identify ALL potential areas of law that may apply. This is broad issue spotting - save detailed analysis for later steps. Your goal is to provide comprehensive issue identification that an experienced Texas attorney would develop when first reviewing a case.`;
+  // Step 2 guardrails
+  systemPrompt += `\n\nSTEP 2 GUARDRAILS:\n- NO IRAC headings or detailed legal analysis.\n- Keep it concise, factual, and strategic.\n- Use professional Texas legal terminology.`;
 
   return systemPrompt;
 };

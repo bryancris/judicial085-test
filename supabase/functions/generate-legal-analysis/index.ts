@@ -655,17 +655,84 @@ console.log('📋 Fact-based analysis mode enabled');
   }
 });
 
-// 🔧 Transform IRAC format to preliminary analysis format
+// 🔧 Transform IRAC format to preliminary analysis format (robust)
 function transformIracToPreliminary(content: string): string {
-  return content
-    .replace(/\*\*ISSUE:\*\*/g, '**POTENTIAL LEGAL AREAS:**')
-    .replace(/\*\*RULE:\*\*/g, '**RELEVANT STATUTES:**')
-    .replace(/\*\*APPLICATION:\*\*/g, '**KEY FACTS:**')
-    .replace(/\*\*CONCLUSION:\*\*/g, '**STRATEGIC CONSIDERATIONS:**')
-    .replace(/\*\*ANALYSIS:\*\*/g, '**CASE THEORY:**')
-    .replace(/## IRAC Analysis/g, '## PRELIMINARY ANALYSIS')
-    .replace(/## Issue/g, '## Potential Legal Areas')
-    .replace(/## Rule/g, '## Relevant Statutes')
-    .replace(/## Application/g, '## Key Facts')
-    .replace(/## Conclusion/g, '## Strategic Considerations');
+  const text = content || '';
+  const bullets = (arr: string[], max = 6) => arr.filter(Boolean).slice(0, max).map(s => `- ${s.trim()}`).join('\n');
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  // Extract issues → theories
+  const issueMatches = Array.from(text.matchAll(/\*\*ISSUE[^*]*\*\*[:\-]?\s*(.*)/gi));
+  const theories = issueMatches.map(m => (m[1] || '').trim()).filter(Boolean);
+
+  // Extract elements from RULE sections
+  const ruleBlocks = Array.from(text.matchAll(/\*\*RULE\*\*[:\-]?\s*([\s\S]*?)(?=\n\*\*|$)/gi));
+  const elements: string[] = [];
+  for (const r of ruleBlocks) {
+    const block = (r[1] || '').replace(/\n+/g, ' ').trim();
+    const elemLine = block.match(/(?:elements?|requires?|must (?:show|prove)).*?:?\s*(.+?)(?:\.|$)/i);
+    if (elemLine && elemLine[1]) {
+      elements.push(elemLine[1].trim());
+    } else {
+      const firstSentence = (block.match(/[^.]+\./) || [''])[0].trim();
+      if (firstSentence) elements.push(firstSentence);
+    }
+  }
+
+  // Defenses from APPLICATION/RULE sentences
+  const defenseBlocks = Array.from(text.matchAll(/\*\*(?:APPLICATION|RULE)\*\*[:\-]?\s*([\s\S]*?)(?=\n\*\*|$)/gi));
+  const defensesSet = new Set<string>();
+  const defenseSeeds = ['statute of limitations','comparative negligence','assumption of risk','failure to mitigate','adequate repair','misuse','no causation','lack of notice','waiver','disclaimer','no defect'];
+  defenseBlocks.forEach(b => {
+    const blk = (b[1] || '');
+    const lower = blk.toLowerCase();
+    defenseSeeds.forEach(c => { if (lower.includes(c)) defensesSet.add(cap(c)); });
+    blk.split(/(?<=\.)\s+/).forEach(s => { if (/(defen[cs]e|argue|contend)/i.test(s)) defensesSet.add(s.trim()); });
+  });
+  const defenses = Array.from(defensesSet);
+
+  // Damages/remedies sentences
+  const damages = (text.split(/(?<=\.)\s+/) || []).filter(s => /(damages?|remed(?:y|ies)|fees|treble)/i.test(s)).slice(0,6);
+  if (damages.length === 0) {
+    damages.push('Actual damages (e.g., difference in value, cost of repairs), incidental expenses, attorney's fees, and potential treble damages where authorized.');
+  }
+
+  // Evidence sentences
+  const evidence = (text.split(/(?<=\.)\s+/) || []).filter(s => /(evidence|records|documents|testimony|expert|photos|communications|repair orders)/i.test(s)).slice(0,6);
+  if (evidence.length === 0) {
+    evidence.push('Client records (contracts, repair orders, communications), witness statements, and expert evaluation as needed.');
+  }
+
+  // Strategic considerations from CONCLUSION/APPLICATION
+  const stratSet = new Set<string>();
+  const conclBlocks = Array.from(text.matchAll(/\*\*CONCLUSION\*\*[:\-]?\s*([\s\S]*?)(?=\n\*\*|$)/gi));
+  conclBlocks.forEach(b => (b[1] || '').split(/(?<=\.)\s+/).slice(0,3).forEach(s => stratSet.add(s.trim())));
+  if (stratSet.size === 0) {
+    stratSet.add('Send a targeted demand letter; evaluate settlement posture versus litigation; gather missing records; calendar limitations.');
+  }
+  const strategic = Array.from(stratSet);
+
+  const prelim = [
+    '**PRELIMINARY ANALYSIS:**',
+    '',
+    '**POTENTIAL LEGAL THEORIES:**',
+    bullets(theories.length ? theories : ['Identify applicable theories from facts (e.g., warranty, DTPA, fraud, negligence).']),
+    '',
+    '**ELEMENTS ANALYSIS:**',
+    bullets(elements.length ? elements : ['Each claim has specific statutory or common-law elements; confirm elements for top issues; no citations here.']),
+    '',
+    '**AVAILABLE DEFENSES:**',
+    bullets(defenses.length ? defenses : ['Adequate repair; misuse; lack of causation; limitations; waiver/disclaimer (if enforceable).']),
+    '',
+    '**DAMAGES:**',
+    bullets(damages),
+    '',
+    '**EVIDENCE:**',
+    bullets(evidence),
+    '',
+    '**STRATEGIC CONSIDERATIONS:**',
+    bullets(strategic)
+  ].join('\n');
+
+  return prelim.trim();
 }
