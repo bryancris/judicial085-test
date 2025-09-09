@@ -385,13 +385,20 @@ STEP 2 TASKS - GEMINI:
 - Identify areas requiring focused research (priorities)
 - Maintain professional legal tone without detailed analysis
 
-  REQUIRED OUTPUT FORMAT (Markdown headers with **):
-  PRELIMINARY ANALYSIS
+  REQUIRED OUTPUT FORMAT (USE EXACT HEADERS BELOW):
+  **PRELIMINARY ANALYSIS:**
   
-  - **Potential Legal Areas:** [Contract, Tort, Consumer Protection, etc.]
-  - **Preliminary Issues:** [List 5-8 fact-driven issues]
-  - **Research Priorities:** [High/Medium/Low with brief rationale]
-  - **Strategic Notes:** [Factual gaps, evidence needs, early tactics]
+  **POTENTIAL LEGAL AREAS:**
+  - [Contract, Tort, Consumer Protection, etc.]
+  
+  **PRELIMINARY ISSUES:**
+  - [List 5–8 fact-driven issues]
+  
+  **RESEARCH PRIORITIES:**
+  - [High/Medium/Low with brief rationale]
+  
+  **STRATEGIC NOTES:**
+  - [Factual gaps, evidence needs, early tactics]
   
   Do not include IRAC or detailed legal reasoning. Keep it broad and fact-driven.`;
 
@@ -1067,34 +1074,39 @@ function sanitizeIracContent(text: string): string {
 
 function enforcePreliminaryStructure(content: string, step1Summary: string): string {
   let result = content || '';
-  // Ensure top-level heading
-  if (!/PRELIMINARY ANALYSIS/i.test(result)) {
-    result = `PRELIMINARY ANALYSIS\n\n${result}`.trim();
-  }
-  const hasPLA = /Potential Legal Areas/i.test(result);
-  const hasPI = /Preliminary Issues/i.test(result);
-  const hasRP = /Research Priorities/i.test(result);
-  const hasSN = /Strategic Notes/i.test(result);
 
-  let appendix = '';
-  if (!hasPLA) {
-    appendix += `\n\n**Potential Legal Areas:**\n- [Identify broad areas based on Step 1 facts]`;
-  }
-  if (!hasPI) {
-    // Use first few non-empty lines from content as issues, if any
-    const lines = result.split('\n').map(l => l.trim()).filter(l => l.length > 0).slice(0, 5);
-    const issues = lines.map(l => `- ${l}`).join('\n') || '- [Fact-driven issues to be refined]';
-    appendix += `\n\n**Preliminary Issues:**\n${issues}`;
-  }
-  if (!hasRP) {
-    appendix += `\n\n**Research Priorities:**\n- High: [Most impactful issues]\n- Medium: [Issues needing facts]\n- Low: [Speculative leads]`;
-  }
-  if (!hasSN) {
-    const step1Hint = step1Summary ? '\n- Leverage Step 1 case summary to guide next steps' : '';
-    appendix += `\n\n**Strategic Notes:**\n- Identify factual gaps and needed documents${step1Hint}`;
+  // Normalize headings to exact uppercase with colons
+  const normalize = (text: string) => text
+    .replace(/^\s*#{1,6}\s*PRELIMINARY ANALYSIS[^\n]*$/gim, '**PRELIMINARY ANALYSIS:**')
+    .replace(/\*\*\s*PRELIMINARY ANALYSIS\s*\*\*/gi, '**PRELIMINARY ANALYSIS:**')
+    .replace(/\*\*\s*POTENTIAL\s+LEGAL\s+AREAS\s*:?(\*\*)?/gi, '**POTENTIAL LEGAL AREAS:**')
+    .replace(/\*\*\s*PRELIMINARY\s+ISSUES(?:\s+IDENTIFIED)?\s*:?(\*\*)?/gi, '**PRELIMINARY ISSUES:**')
+    .replace(/\*\*\s*RESEARCH\s+PRIORITIES\s*:?(\*\*)?/gi, '**RESEARCH PRIORITIES:**')
+    .replace(/\*\*\s*STRATEGIC\s+NOTES\s*:?(\*\*)?/gi, '**STRATEGIC NOTES:**');
+
+  result = normalize(result);
+
+  // Ensure top header exists at the top once
+  if (!/\*\*PRELIMINARY ANALYSIS:\*\*/.test(result)) {
+    result = `**PRELIMINARY ANALYSIS:**\n\n${result}`.trim();
   }
 
-  return appendix ? `${result}${appendix}` : result;
+  // Ensure required section headers exist (no filler content added)
+  const required = [
+    '**POTENTIAL LEGAL AREAS:**',
+    '**PRELIMINARY ISSUES:**',
+    '**RESEARCH PRIORITIES:**',
+    '**STRATEGIC NOTES:**',
+  ];
+
+  for (const header of required) {
+    const re = new RegExp(header.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    if (!re.test(result)) {
+      result += `\n\n${header}\n`;
+    }
+  }
+
+  return result.trim();
 }
 
 async function saveWorkflowToDatabase(

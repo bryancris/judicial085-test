@@ -15,9 +15,10 @@ export function parsePreliminaryAnalysis(analysisContent: string): PreliminaryAn
     };
   }
 
-  // Detect analysis format
-  const isIracFormat = analysisContent.includes('**ISSUE') || analysisContent.includes('IRAC LEGAL ANALYSIS');
-  const isTraditionalFormat = analysisContent.includes('**PRELIMINARY ANALYSIS:') || analysisContent.includes('**POTENTIAL LEGAL AREAS:');
+  // Detect analysis format (case-insensitive for robustness)
+  const upper = analysisContent.toUpperCase();
+  const isIracFormat = upper.includes('**ISSUE') || upper.includes('IRAC LEGAL ANALYSIS');
+  const isTraditionalFormat = /\*\*PRELIMINARY ANALYSIS:|\*\*POTENTIAL LEGAL AREAS:/i.test(analysisContent);
 
   if (isIracFormat) {
     return parseIracFormat(analysisContent);
@@ -236,61 +237,15 @@ function parseGenericFormat(analysisContent: string): PreliminaryAnalysisData {
 }
 
 function applyQualityControl(
-  data: PreliminaryAnalysisData, 
+  data: PreliminaryAnalysisData,
   originalContent: string
 ): PreliminaryAnalysisData {
-  const content = originalContent.toLowerCase();
-
-  // Ensure minimum quality thresholds
-  if (data.potentialLegalAreas.length === 0) {
-    // Add fallback legal areas based on content analysis
-    if (content.includes('contract') || content.includes('warranty')) {
-      data.potentialLegalAreas.push('Contract Law', 'Warranty Claims');
-    }
-    if (content.includes('negligence') || content.includes('premises')) {
-      data.potentialLegalAreas.push('Negligence', 'Premises Liability');
-    }
-    if (content.includes('lemon') || content.includes('vehicle')) {
-      data.potentialLegalAreas.push('Texas Lemon Law', 'Consumer Protection');
-    }
-    if (data.potentialLegalAreas.length === 0) {
-      data.potentialLegalAreas.push('Civil Liability', 'General Legal Analysis');
-    }
-  }
-
-  if (data.preliminaryIssues.length === 0) {
-    // Extract first meaningful sentences as fallback issues
-    const sentences = originalContent.split(/[.!?]+/).slice(0, 5);
-    sentences.forEach(sentence => {
-      const cleaned = sentence.trim();
-      if (cleaned.length > 25 && cleaned.length < 200) {
-        data.preliminaryIssues.push(cleaned + '.');
-      }
-    });
-  }
-
-  if (data.researchPriorities.length === 0) {
-    data.researchPriorities.push(
-      'Review relevant case law and statutes',
-      'Gather additional factual evidence',
-      'Analyze potential defenses and counterclaims'
-    );
-  }
-
-  if (data.strategicNotes.length === 0) {
-    data.strategicNotes.push(
-      'Conduct thorough case analysis before proceeding',
-      'Consider alternative dispute resolution options',
-      'Evaluate strength of evidence and legal arguments'
-    );
-  }
-
-  // Limit arrays to reasonable sizes and clean content
+  // No fallbacks: preserve exactly what the model produced; only clean and bound sizes
   return {
     potentialLegalAreas: data.potentialLegalAreas.slice(0, 8).map(cleanText),
     preliminaryIssues: data.preliminaryIssues.slice(0, 6).map(cleanText),
     researchPriorities: data.researchPriorities.slice(0, 6).map(cleanText),
-    strategicNotes: data.strategicNotes.slice(0, 6).map(cleanText)
+    strategicNotes: data.strategicNotes.slice(0, 6).map(cleanText),
   };
 }
 
