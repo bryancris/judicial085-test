@@ -180,10 +180,12 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
       const mainSections = extractAnalysisSections(analysis.content || "");
       let relevantLaw = mainSections.relevantLaw || "";
       let caseSummary = mainSections.caseSummary || "";
+      let preliminaryAnalysis = mainSections.preliminaryAnalysis || "";
 
       console.log("Initial extracted sections from selected analysis:", {
         relevantLawLength: relevantLaw.length,
         caseSummaryLength: caseSummary.length,
+        preliminaryAnalysisLength: preliminaryAnalysis.length,
       });
 
       // Try to enrich Case Summary and Relevant Law from client-intake (better formatting)
@@ -226,6 +228,10 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
 
         if (intakeData && intakeData.length > 0) {
           const intakeSections = extractAnalysisSections(intakeData[0].content || "");
+          if (intakeSections.preliminaryAnalysis && !/No preliminary analysis/i.test(intakeSections.preliminaryAnalysis)) {
+            preliminaryAnalysis = intakeSections.preliminaryAnalysis;
+            console.log("✅ Using Preliminary Analysis from client-intake (preferred)");
+          }
           if (intakeSections.caseSummary && !/No case summary/i.test(intakeSections.caseSummary)) {
             caseSummary = intakeSections.caseSummary;
             console.log("✅ Using Case Summary from client-intake (preferred)");
@@ -244,7 +250,7 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
         id: analysis.id,
         legalAnalysis: {
           relevantLaw,
-          preliminaryAnalysis: mainSections.preliminaryAnalysis || "",
+          preliminaryAnalysis: preliminaryAnalysis,
           potentialIssues: mainSections.potentialIssues || "",
           followUpQuestions: mainSections.followUpQuestions || [],
         },
