@@ -184,6 +184,7 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
         relevantLawLength: relevantLaw.length,
         caseSummaryLength: caseSummary.length,
         preliminaryAnalysisLength: preliminaryAnalysis.length,
+        preliminaryAnalysisContent: preliminaryAnalysis.substring(0, 200) + "..."
       });
 
       // Try to enrich Case Summary and Relevant Law from client-intake (better formatting)

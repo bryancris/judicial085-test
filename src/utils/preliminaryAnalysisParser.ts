@@ -252,6 +252,7 @@ function applyQualityControl(
 function cleanText(text: string): string {
   return text
     .replace(/\*\*/g, '') // Remove markdown formatting
+    .replace(/^[-•*]\s*/, '') // Remove bullet markers
     .replace(/\n+/g, ' ') // Replace newlines with spaces
     .replace(/\s+/g, ' ') // Normalize whitespace
     .trim();

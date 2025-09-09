@@ -317,11 +317,14 @@ export const extractAnalysisSections = (content: string) => {
   ];
   
   const preliminaryAnalysisPatterns = [
-    /\*\*PRELIMINARY ANALYSIS:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
-    /\*\*INITIAL ANALYSIS:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
-    // Plaintext uppercase headings
-    /(?:^|\n)\s*PRELIMINARY ANALYSIS:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
-    /(?:^|\n)\s*INITIAL ANALYSIS:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
+    // Match Step 2 content including all subsections, stop only at major step headings (Step 3+) or end
+    /\*\*(?:#### )?Step 2:? PRELIMINARY ANALYSIS:?\*\*([\s\S]*?)(?=\*\*(?:#### )?Step [3-9]:|$)/i,
+    /\*\*PRELIMINARY ANALYSIS:\*\*([\s\S]*?)(?=\*\*(?:#### )?Step [3-9]:|$)/i,
+    /\*\*INITIAL ANALYSIS:\*\*([\s\S]*?)(?=\*\*(?:#### )?Step [3-9]:|$)/i,
+    // Plaintext uppercase headings - capture entire Step 2 block
+    /(?:^|\n)\s*#### Step 2:? PRELIMINARY ANALYSIS:\s*([\s\S]*?)(?=\n#### Step [3-9]:|$)/i,
+    /(?:^|\n)\s*PRELIMINARY ANALYSIS:\s*([\s\S]*?)(?=\n#### Step [3-9]:|$)/i,
+    /(?:^|\n)\s*INITIAL ANALYSIS:\s*([\s\S]*?)(?=\n#### Step [3-9]:|$)/i,
   ];
   
   const potentialIssuesPatterns = [
