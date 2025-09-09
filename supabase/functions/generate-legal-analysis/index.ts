@@ -176,9 +176,10 @@ console.log("Fact sufficiency check:", {
   documentCount: 0 // Will be set later after document fetch
 });
 
-// 🎯 NEW: Orchestrate 3-agent pipeline first, with fallback to direct analysis
-const isInternalLegalResearch = researchFocus === 'legal-analysis';
-if (!isInternalLegalResearch && userId) {
+// 🛡️ Prevent recursion: Skip coordinator if request comes from coordinator
+const skipCoordinator = requestContext?.includes('step') || requestContext === '9-step-workflow';
+
+if (!skipCoordinator && !isInternalLegalResearch && userId) {
       console.log('🎯 Starting 3-agent coordination for client:', clientId);
       
       try {
@@ -257,7 +258,7 @@ if (!isInternalLegalResearch && userId) {
         console.warn('⚠️ 3-agent coordinator failed, falling back to direct analysis:', coordinatorError.message);
       }
     } else {
-      console.log('↪️ Skipping 3-agent coordination (internal legal-research request from coordinator).');
+      console.log('🛡️ Skipping coordinator to prevent recursion - direct analysis mode');
     }
 
     // 🔄 FALLBACK: Direct Gemini analysis (existing logic)
@@ -358,6 +359,10 @@ console.log('📋 Fact-based analysis mode enabled');
     const isConsumerCase = detectedCaseType === "consumer-protection";
     console.log(`Case identified as consumer protection case: ${isConsumerCase}`);
     
+    // Determine step type for prompt building
+    const effectiveStepType = requestContext?.includes('preliminary-analysis') ? 'preliminary-analysis' : 'detailed-analysis';
+    console.log(`Building ${effectiveStepType} prompt for ${requestContext || 'analysis'}`);
+    
     // Create step-aware system prompt
     const systemPrompt = buildSystemPrompt(
       analysisSource,
@@ -366,7 +371,7 @@ console.log('📋 Fact-based analysis mode enabled');
       clientDocuments,
       detectedCaseType,
       researchUpdates,
-      stepType
+      effectiveStepType
     );
 
     // Format the content for Gemini's 2M context window - include ALL available information
@@ -448,6 +453,13 @@ console.log('📋 Fact-based analysis mode enabled');
 
       console.log('✅ Successfully generated analysis from Gemini');
       console.log('💰 Estimated cost: $' + (geminiResponse.usage?.totalTokens * 0.00000125 || 0).toFixed(4));
+      console.log('Starting enhanced citation extraction from analysis...');
+
+      // 🔧 Step 2 Format Enforcement: Transform IRAC to preliminary format
+      if (effectiveStepType === 'preliminary-analysis' && (analysis.includes('**ISSUE:**') || analysis.includes('**RULE:**'))) {
+        console.log('🔧 Transforming Step 2 content from IRAC to preliminary format');
+        analysis = transformIracToPreliminary(analysis);
+      }
       
       // Validate generated content matches input context
       const generatedPreview = analysis.substring(0, 200);
@@ -621,11 +633,34 @@ console.log('📋 Fact-based analysis mode enabled');
     );
   } catch (error: any) {
     console.error('Error in generate-legal-analysis function:', error);
-    const status = error?.status || 500;
-    const details = error?.message || (typeof error === 'string' ? error : JSON.stringify(error));
     return new Response(
-      JSON.stringify({ error: 'Internal server error while generating analysis', status, details }),
-      { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        error: error.message || 'Internal server error',
+        analysis: '',
+        lawReferences: [],
+        documentsUsed: [],
+        factSources: [],
+        citations: []
+      }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     );
   }
 });
+
+// 🔧 Transform IRAC format to preliminary analysis format
+function transformIracToPreliminary(content: string): string {
+  return content
+    .replace(/\*\*ISSUE:\*\*/g, '**POTENTIAL LEGAL AREAS:**')
+    .replace(/\*\*RULE:\*\*/g, '**RELEVANT STATUTES:**')
+    .replace(/\*\*APPLICATION:\*\*/g, '**KEY FACTS:**')
+    .replace(/\*\*CONCLUSION:\*\*/g, '**STRATEGIC CONSIDERATIONS:**')
+    .replace(/\*\*ANALYSIS:\*\*/g, '**CASE THEORY:**')
+    .replace(/## IRAC Analysis/g, '## PRELIMINARY ANALYSIS')
+    .replace(/## Issue/g, '## Potential Legal Areas')
+    .replace(/## Rule/g, '## Relevant Statutes')
+    .replace(/## Application/g, '## Key Facts')
+    .replace(/## Conclusion/g, '## Strategic Considerations');
+}
