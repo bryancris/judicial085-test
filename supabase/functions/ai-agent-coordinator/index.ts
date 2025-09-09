@@ -335,7 +335,7 @@ Focus ONLY on organizing facts. Do not provide legal analysis, opinions, or conc
 
 // Step 2: PRELIMINARY ANALYSIS (AI-assisted broad issue spotting)
 async function executeStep2PreliminaryAnalysis(workflowState: WorkflowState, authHeader: string | null, geminiApiKey: string) {
-  // First, coordinate with OpenAI for legal issue identification
+  // First, coordinate with OpenAI for legal issue identification (from intake + Step 1)
   console.log('🤝 Step 2: Gemini coordinating with OpenAI for preliminary analysis...');
   
   let openAIResult: any = { content: '' };
@@ -361,52 +361,108 @@ async function executeStep2PreliminaryAnalysis(workflowState: WorkflowState, aut
     .replace(/\*\*APPLICATION:?\*\*/gi, '')
     .replace(/\*\*CONCLUSION:?\*\*/gi, '');
 
-  // Then have Gemini organize and structure the results
+  // Try to enrich with vectorized document context (client/case documents)
+  let vectorContextText = '';
+  try {
+    const combinedQuery = `${workflowState.context.query}\n\n${workflowState.stepResults.step1?.content || ''}`;
+    const embedding = await generateEmbeddingForText(combinedQuery);
+    const { topSnippets, totalFound } = await fetchVectorContext(
+      workflowState.context.clientId,
+      workflowState.context.caseId,
+      embedding,
+      0.65,
+      8
+    );
+    vectorContextText = topSnippets;
+    console.log(`📄 Step 2 vector context: using ${totalFound} matches, included ${topSnippets.length} chars`);
+  } catch (e) {
+    console.warn('⚠️ Step 2 vector context unavailable:', (e as Error).message);
+  }
+
+  // Optional: quick current-research pulse via Perplexity (directional only)
+  let perplexityNotes = '';
+  try {
+    const pQuery = `From case summary, outline key real-world angles to watch (no citations):\n${truncate(workflowState.stepResults.step1?.content || '', 900)}`;
+    const p = await coordinateWithPerplexity('legal-research', pQuery, workflowState.context.clientId, workflowState.context.caseId, authHeader);
+    perplexityNotes = truncate(p.content || '', 1500);
+    console.log('🛰️ Perplexity notes length (chars):', perplexityNotes.length);
+  } catch (e) {
+    console.warn('⚠️ Step 2 Perplexity notes unavailable:', (e as Error).message);
+  }
+
+  // Then have Gemini organize and structure the results (now allowed to use vector + research notes)
   const prompt = `You are GEMINI, the orchestrator. You are executing STEP 2: PRELIMINARY ANALYSIS.
 
-CRITICAL: This is Step 2 of 9. Build strictly on Step 1 and client intake facts. Do NOT include content from later steps.
+CRITICAL: This is Step 2 of 9. Build on Step 1 and client intake facts. You MAY use (a) vectorized document snippets and (b) directional external research notes for issue spotting. Do NOT invoke logic of Steps 3–9.
 
 HARD RULES FOR STEP 2:
 - Absolutely NO IRAC format, headings, or structure
 - Do NOT use the words Issue, Rule, Application, or Conclusion as headings
-- No statutes, case citations, or legal elements; this is broad issue spotting only
-- Use ONLY: (a) the client intake/query and (b) Step 1 CASE SUMMARY
-- Do NOT use external research, documents, or vectorized data at this step
+- No case citations, statute section numbers, or URLs; this is broad issue spotting
+- Keep it fact-driven and strategic; no detailed legal analysis
 
 STEP 1 RESULTS:
 ${workflowState.stepResults.step1?.content || ''}
+
+VECTOR DOCUMENT CONTEXT (top snippets):
+${vectorContextText || 'None'}
+
+PERPLEXITY RESEARCH NOTES (directional, not authoritative):
+${perplexityNotes || 'None'}
 
 OPENAI PRELIMINARY ANALYSIS (sanitized):
 ${cleanedOpenAI}
 
 STEP 2 TASKS - GEMINI:
-- Coordinate with OPENAI to conduct initial legal issue identification using ONLY intake facts and Step 1
-- Create preliminary strategic roadmap
+- Perform initial legal problem spotting using intake, Step 1, vector context, and research notes
+- Create preliminary strategic roadmap (no IRAC)
 - Identify areas requiring focused research (priorities)
 - Maintain professional legal tone without detailed analysis
 
-  REQUIRED OUTPUT FORMAT (USE EXACT HEADERS BELOW):
-  **PRELIMINARY ANALYSIS:**
-  
-  **POTENTIAL LEGAL AREAS:**
-  - [Contract, Tort, Consumer Protection, etc.]
-  
-  **PRELIMINARY ISSUES:**
-  - [List 5–8 fact-driven issues]
-  
-  **RESEARCH PRIORITIES:**
-  - [High/Medium/Low with brief rationale]
-  
-  **STRATEGIC NOTES:**
-  - [Factual gaps, evidence needs, early tactics]
-  
-  Do not include IRAC or detailed legal reasoning. Keep it broad and fact-driven.`;
+REQUIRED OUTPUT FORMAT (USE EXACT HEADERS BELOW; 2–5 concise bullets under each):
+**PRELIMINARY ANALYSIS:**
 
-  const result = await callGeminiOrchestrator(prompt, geminiApiKey, 'PRELIMINARY_ANALYSIS');
-  const enforced = enforcePreliminaryStructure(
+**POTENTIAL LEGAL AREAS:**
+- [Contract, Tort, Consumer Protection, etc.]
+
+**PRELIMINARY ISSUES:**
+- [2–5 fact-driven issues]
+
+**RESEARCH PRIORITIES:**
+- [2–5 items tagged High/Medium/Low with brief rationale]
+
+**STRATEGIC NOTES:**
+- [2–5 notes: factual gaps, evidence needs, early tactics]
+
+Do not include IRAC or detailed legal reasoning. Keep it broad and fact-driven.`;
+
+  let result = await callGeminiOrchestrator(prompt, geminiApiKey, 'PRELIMINARY_ANALYSIS');
+  let enforced = enforcePreliminaryStructure(
     sanitizeIracContent(result.content || ''),
     workflowState.stepResults.step1?.content || ''
   );
+
+  // Quick local bullet validation and one retry if needed
+  const counts = getSectionBulletCounts(enforced);
+  console.log('🔢 Step 2 bullet counts:', counts);
+  const needsRetry = ['POTENTIAL LEGAL AREAS', 'PRELIMINARY ISSUES', 'RESEARCH PRIORITIES', 'STRATEGIC NOTES']
+    .some(key => (counts[key] || 0) < 2 || (counts[key] || 0) > 8); // allow up to 8 on first pass
+
+  if (needsRetry) {
+    const fixPrompt = `${prompt}
+
+STRICT REWRITE INSTRUCTIONS:
+- Ensure EACH section has 2–5 non-empty, specific bullets
+- No placeholder text; keep bullets concise and actionable
+- Preserve professional tone; no IRAC, no citations`;
+    const retry = await callGeminiOrchestrator(fixPrompt, geminiApiKey, 'PRELIMINARY_ANALYSIS');
+    enforced = enforcePreliminaryStructure(
+      sanitizeIracContent(retry.content || ''),
+      workflowState.stepResults.step1?.content || ''
+    );
+    console.log('🔁 Step 2 regenerated due to bullet count constraints');
+  }
+
   return { ...result, content: enforced };
 }
 
@@ -852,6 +908,78 @@ async function coordinateWithPerplexity(
     console.error(`Error coordinating with Perplexity for ${searchType}:`, error);
     throw error;
   }
+}
+
+async function generateEmbeddingForText(text: string): Promise<number[]> {
+  const apiKey = Deno.env.get('OPENAI_API_KEY');
+  if (!apiKey) throw new Error('OPENAI_API_KEY not configured');
+  const input = truncate(text || '', 8000);
+  const res = await fetch('https://api.openai.com/v1/embeddings', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ model: 'text-embedding-3-small', input })
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`OpenAI embeddings error: ${res.status} ${err}`);
+  }
+  const data = await res.json();
+  return data.data?.[0]?.embedding || [];
+}
+
+async function fetchVectorContext(
+  clientId: string,
+  caseId: string | undefined,
+  queryEmbedding: number[],
+  match_threshold = 0.65,
+  match_count = 8
+): Promise<{ topSnippets: string; totalFound: number }> {
+  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.38.0');
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!supabaseUrl || !supabaseServiceKey) throw new Error('Supabase config missing');
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  const { data, error } = await supabase.rpc('search_client_and_case_documents_by_similarity', {
+    query_embedding: queryEmbedding,
+    client_id_param: clientId,
+    case_id_param: caseId || null,
+    match_threshold,
+    match_count
+  });
+  if (error) throw new Error(`Vector RPC error: ${error.message}`);
+  const chunks = (data || []) as Array<{ content: string; similarity: number; metadata: any }>; 
+  const snippets = chunks
+    .map((c, i) => `- [sim ${(c.similarity || 0).toFixed(2)}] ${truncate((c.content || '').replace(/\s+/g, ' ').trim(), 280)}`)
+    .join('\n');
+  return { topSnippets: snippets ? `${snippets}` : '', totalFound: chunks.length };
+}
+
+function truncate(s: string, n: number) { return s && s.length > n ? s.slice(0, n) + '…' : (s || ''); }
+
+function sectionSlice(content: string, header: string): string {
+  const startRe = new RegExp(`\\*\\*${header}\\:\\*\\*`, 'i');
+  const idx = content.search(startRe);
+  if (idx === -1) return '';
+  const rest = content.slice(idx + 4 + header.length); // rough skip
+  const nextHeader = rest.search(/\n\s*\*\*[A-Z][A-Z\s]+:\*\*/);
+  return nextHeader === -1 ? rest : rest.slice(0, nextHeader);
+}
+
+function countBullets(block: string): number {
+  return (block.match(/^[\t ]*(?:-|\*|\d+\.)\s+.+$/gm) || []).length;
+}
+
+function getSectionBulletCounts(content: string): Record<string, number> {
+  const sections = ['POTENTIAL LEGAL AREAS', 'PRELIMINARY ISSUES', 'RESEARCH PRIORITIES', 'STRATEGIC NOTES'];
+  const counts: Record<string, number> = {};
+  for (const s of sections) {
+    counts[s] = countBullets(sectionSlice(content, s));
+  }
+  return counts;
 }
 
 async function validateStepCompletion(stepNumber: number, stepResult: any, stepType: string = 'GENERAL', allStepResults: Record<string, any> = {}): Promise<StepValidation> {
