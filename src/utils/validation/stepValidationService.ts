@@ -233,6 +233,29 @@ export const validateStepCompletion = async (stepNumber: number, stepResult: any
         errors.push('Case summary must include Parties and Key Facts sections');
         score -= 0.2;
       }
+      
+      // Timeline quality validation
+      if (content.includes('## Timeline')) {
+        const timelineSection = content.match(/## Timeline([\s\S]*?)(?=##|$)/)?.[1] || '';
+        const timelineEntries = timelineSection.split('\n').filter(line => line.trim().startsWith('-') || line.trim().startsWith('*'));
+        
+        // Check for fragmented timeline entries
+        const fragmentedEntries = timelineEntries.filter(entry => {
+          const text = entry.replace(/^[-*]\s*/, '').trim();
+          return text.length < 20 || text.match(/^(within|after|during|over)\s+[^.]*$/i);
+        });
+        
+        if (fragmentedEntries.length > 0) {
+          warnings.push(`Timeline contains ${fragmentedEntries.length} incomplete or fragmented entries`);
+          score -= 0.1;
+        }
+        
+        // Ensure minimum timeline completeness
+        if (timelineEntries.length < 3) {
+          warnings.push('Timeline should contain at least 3 substantive events');
+          score -= 0.05;
+        }
+      }
       break;
     
     case 'IRAC_ANALYSIS':
