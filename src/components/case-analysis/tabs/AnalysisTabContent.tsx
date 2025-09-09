@@ -36,6 +36,7 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
       <CaseSummarySection
         caseSummary={analysisData.conversationSummary}
         isLoading={isLoading}
+        clientId={clientId}
       />
 
       {/* Step 2: Preliminary Analysis (AI-assisted broad issue spotting) */}
