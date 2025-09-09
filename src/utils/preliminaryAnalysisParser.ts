@@ -15,15 +15,154 @@ export function parsePreliminaryAnalysis(analysisContent: string): PreliminaryAn
     };
   }
 
-  const content = analysisContent.toLowerCase();
-  
-  // Extract potential legal areas from various sections
+  // Detect analysis format
+  const isIracFormat = analysisContent.includes('**ISSUE') || analysisContent.includes('IRAC LEGAL ANALYSIS');
+  const isTraditionalFormat = analysisContent.includes('**PRELIMINARY ANALYSIS:') || analysisContent.includes('**POTENTIAL LEGAL AREAS:');
+
+  if (isIracFormat) {
+    return parseIracFormat(analysisContent);
+  } else if (isTraditionalFormat) {
+    return parseTraditionalFormat(analysisContent);
+  } else {
+    return parseGenericFormat(analysisContent);
+  }
+}
+
+function parseIracFormat(analysisContent: string): PreliminaryAnalysisData {
   const potentialLegalAreas: string[] = [];
-  
-  // Look for legal concepts, areas of law, and case types
+  const preliminaryIssues: string[] = [];
+  const researchPriorities: string[] = [];
+  const strategicNotes: string[] = [];
+
+  // Extract legal areas from ISSUE section titles
+  const issueMatches = analysisContent.match(/\*\*ISSUE\s+\[([^\]]+)\]\*\*/gi) || [];
+  issueMatches.forEach(match => {
+    const bracketContent = match.match(/\[([^\]]+)\]/)?.[1];
+    if (bracketContent) {
+      // Split on " - " to get main legal area
+      const mainArea = bracketContent.split(' - ')[0];
+      if (mainArea && !potentialLegalAreas.includes(mainArea)) {
+        potentialLegalAreas.push(mainArea);
+      }
+      // Also add the full description if it's different
+      if (bracketContent !== mainArea && !potentialLegalAreas.includes(bracketContent)) {
+        potentialLegalAreas.push(bracketContent);
+      }
+    }
+  });
+
+  // Extract preliminary issues from ISSUE content
+  const issueContentMatches = analysisContent.match(/\*\*ISSUE\s+\[[^\]]+\]\*\*\s*(.*?)(?=\*\*RULE|$)/gis) || [];
+  issueContentMatches.forEach(match => {
+    // Clean up the issue text
+    const issueText = match.replace(/\*\*ISSUE\s+\[[^\]]+\]\*\*\s*/i, '').trim();
+    if (issueText.length > 20 && issueText.length < 300) {
+      const cleanIssue = issueText.replace(/\n+/g, ' ').trim();
+      if (!preliminaryIssues.includes(cleanIssue)) {
+        preliminaryIssues.push(cleanIssue);
+      }
+    }
+  });
+
+  // Extract research priorities from APPLICATION sections
+  const applicationMatches = analysisContent.match(/\*\*APPLICATION\*\*\s*(.*?)(?=\*\*CONCLUSION|$)/gis) || [];
+  applicationMatches.forEach(match => {
+    const appText = match.replace(/\*\*APPLICATION\*\*\s*/i, '');
+    
+    // Look for "requires further investigation" or similar phrases
+    const researchPatterns = [
+      /[^.]*(?:requires?\s+(?:further|additional)|need(?:s)?\s+(?:to\s+)?(?:investigate|research|examine|determine))[^.]*/gi,
+      /[^.]*(?:factual\s+investigation|discovery|evidence\s+gathering)[^.]*/gi
+    ];
+    
+    researchPatterns.forEach(pattern => {
+      const matches = appText.match(pattern) || [];
+      matches.forEach(researchMatch => {
+        const cleaned = researchMatch.trim().replace(/\n+/g, ' ');
+        if (cleaned.length > 15 && cleaned.length < 200 && !researchPriorities.includes(cleaned)) {
+          researchPriorities.push(cleaned);
+        }
+      });
+    });
+  });
+
+  // Extract strategic notes from CONCLUSION sections
+  const conclusionMatches = analysisContent.match(/\*\*CONCLUSION\*\*\s*(.*?)(?=\*\*ISSUE|\*\*$|$)/gis) || [];
+  conclusionMatches.forEach(match => {
+    const conclusionText = match.replace(/\*\*CONCLUSION\*\*\s*/i, '').trim();
+    
+    // Split into sentences and take meaningful ones
+    const sentences = conclusionText.split(/[.!?]+/);
+    sentences.forEach(sentence => {
+      const cleaned = sentence.trim().replace(/\n+/g, ' ');
+      if (cleaned.length > 20 && cleaned.length < 200 && !strategicNotes.includes(cleaned)) {
+        strategicNotes.push(cleaned);
+      }
+    });
+  });
+
+  // Apply quality control and fallbacks
+  return applyQualityControl({
+    potentialLegalAreas,
+    preliminaryIssues,
+    researchPriorities,
+    strategicNotes
+  }, analysisContent);
+}
+
+function parseTraditionalFormat(analysisContent: string): PreliminaryAnalysisData {
+  const potentialLegalAreas: string[] = [];
+  const preliminaryIssues: string[] = [];
+  const researchPriorities: string[] = [];
+  const strategicNotes: string[] = [];
+
+  // Extract from traditional sections
+  const areasMatch = analysisContent.match(/\*\*POTENTIAL LEGAL AREAS:\*\*(.*?)(?=\*\*|$)/is);
+  if (areasMatch) {
+    const areas = areasMatch[1].split(/[,\n]/).map(a => a.trim()).filter(a => a.length > 0);
+    potentialLegalAreas.push(...areas);
+  }
+
+  const issuesMatch = analysisContent.match(/\*\*PRELIMINARY ISSUES:\*\*(.*?)(?=\*\*|$)/is);
+  if (issuesMatch) {
+    const issues = issuesMatch[1].split(/[,\n]/).map(i => i.trim()).filter(i => i.length > 10);
+    preliminaryIssues.push(...issues);
+  }
+
+  const researchMatch = analysisContent.match(/\*\*RESEARCH PRIORITIES:\*\*(.*?)(?=\*\*|$)/is);
+  if (researchMatch) {
+    const priorities = researchMatch[1].split(/[,\n]/).map(r => r.trim()).filter(r => r.length > 10);
+    researchPriorities.push(...priorities);
+  }
+
+  const notesMatch = analysisContent.match(/\*\*STRATEGIC NOTES:\*\*(.*?)(?=\*\*|$)/is);
+  if (notesMatch) {
+    const notes = notesMatch[1].split(/[,\n]/).map(n => n.trim()).filter(n => n.length > 10);
+    strategicNotes.push(...notes);
+  }
+
+  return applyQualityControl({
+    potentialLegalAreas,
+    preliminaryIssues,
+    researchPriorities,
+    strategicNotes
+  }, analysisContent);
+}
+
+function parseGenericFormat(analysisContent: string): PreliminaryAnalysisData {
+  const potentialLegalAreas: string[] = [];
+  const preliminaryIssues: string[] = [];
+  const researchPriorities: string[] = [];
+  const strategicNotes: string[] = [];
+
+  const content = analysisContent.toLowerCase();
+
+  // Enhanced legal area detection
   const legalAreaPatterns = [
-    /(?:premises liability|negligence|tort law|contract law|consumer protection|dtpa|personal injury|property damage)/gi,
-    /(?:breach of|duty of care|reasonable care|foreseeability|causation)/gi,
+    /(?:contract law|breach of contract|warranty|express warranty|implied warranty)/gi,
+    /(?:texas lemon law|magnuson-moss|deceptive trade practices|dtpa)/gi,
+    /(?:premises liability|negligence|tort law|personal injury|property damage)/gi,
+    /(?:consumer protection|breach of duty|duty of care|reasonable care)/gi,
     /(?:liability|damages|compensation|restitution|punitive damages)/gi
   ];
   
@@ -37,88 +176,130 @@ export function parsePreliminaryAnalysis(analysisContent: string): PreliminaryAn
     });
   });
 
-  // Extract preliminary issues from IRAC structure
-  const preliminaryIssues: string[] = [];
-  
-  // Look for issue statements and legal questions
+  // Enhanced issue detection
   const issuePatterns = [
-    /issue(?:s)?:\s*([^.]*\.)/gi,
-    /legal question(?:s)?:\s*([^.]*\.)/gi,
-    /(?:whether|can|did|does|is|was)\s+[^.]{20,100}\.?/gi
+    /(?:whether|can|did|does|is|was|will)\s+[^.]{15,150}[.?]/gi,
+    /[^.]*(?:issue|question|problem|concern)[^.]{10,100}[.?]/gi,
+    /[^.]*(?:liable|liability|responsible|breach)[^.]{10,100}[.?]/gi
   ];
   
   issuePatterns.forEach(pattern => {
     const matches = analysisContent.match(pattern) || [];
     matches.forEach(match => {
-      const cleaned = match.replace(/^(issue(?:s)?:|legal question(?:s)?:)/i, '').trim();
-      if (cleaned.length > 10 && !preliminaryIssues.includes(cleaned)) {
+      const cleaned = match.trim();
+      if (cleaned.length > 20 && cleaned.length < 200 && !preliminaryIssues.includes(cleaned)) {
         preliminaryIssues.push(cleaned);
       }
     });
   });
 
-  // Extract research priorities
-  const researchPriorities: string[] = [];
-  
-  // Look for areas needing further investigation
+  // Enhanced research priorities detection
   const researchPatterns = [
-    /need(?:s)?\s+(?:to\s+)?(?:research|investigate|examine|determine)/gi,
-    /(?:further|additional)\s+(?:research|investigation|evidence)/gi,
-    /(?:statute|case law|precedent|regulation)(?:s)?\s+(?:should|must|need)/gi
+    /[^.]*(?:need(?:s)?\s+(?:to\s+)?(?:research|investigate|examine|determine))[^.]*/gi,
+    /[^.]*(?:further|additional)\s+(?:research|investigation|evidence|discovery)[^.]*/gi,
+    /[^.]*(?:factual\s+investigation|missing\s+evidence|unclear)[^.]*/gi
   ];
   
   researchPatterns.forEach(pattern => {
     const matches = analysisContent.match(pattern) || [];
     matches.forEach(match => {
-      const context = extractSentenceContext(analysisContent, match);
-      if (context && !researchPriorities.includes(context)) {
+      const context = match.trim().replace(/\n+/g, ' ');
+      if (context.length > 15 && context.length < 200 && !researchPriorities.includes(context)) {
         researchPriorities.push(context);
       }
     });
   });
 
-  // Extract strategic notes from conclusions and recommendations
-  const strategicNotes: string[] = [];
-  
-  // Look for strategic advice, recommendations, and conclusions
+  // Enhanced strategic notes detection
   const strategicPatterns = [
-    /conclusion:\s*([^.]*\.)/gi,
-    /recommend(?:ation)?(?:s)?:\s*([^.]*\.)/gi,
-    /strategy:\s*([^.]*\.)/gi,
-    /(?:should|must|may|could)\s+(?:consider|pursue|investigate|argue)/gi
+    /[^.]*(?:recommend|suggest|advise|strategy)[^.]*/gi,
+    /[^.]*(?:should|must|may|could)\s+(?:consider|pursue|investigate|argue)[^.]*/gi,
+    /[^.]*(?:strength|weakness|advantage|disadvantage)[^.]*/gi
   ];
   
   strategicPatterns.forEach(pattern => {
     const matches = analysisContent.match(pattern) || [];
     matches.forEach(match => {
-      const cleaned = match.replace(/^(conclusion:|recommend(?:ation)?(?:s)?:|strategy:)/i, '').trim();
-      if (cleaned.length > 10 && !strategicNotes.includes(cleaned)) {
+      const cleaned = match.trim().replace(/\n+/g, ' ');
+      if (cleaned.length > 20 && cleaned.length < 200 && !strategicNotes.includes(cleaned)) {
         strategicNotes.push(cleaned);
       }
     });
   });
 
-  // Add fallback content if sections are too sparse
-  if (potentialLegalAreas.length === 0 && content.includes('negligence')) {
-    potentialLegalAreas.push('Negligence', 'Tort Law');
+  return applyQualityControl({
+    potentialLegalAreas,
+    preliminaryIssues,
+    researchPriorities,
+    strategicNotes
+  }, analysisContent);
+}
+
+function applyQualityControl(
+  data: PreliminaryAnalysisData, 
+  originalContent: string
+): PreliminaryAnalysisData {
+  const content = originalContent.toLowerCase();
+
+  // Ensure minimum quality thresholds
+  if (data.potentialLegalAreas.length === 0) {
+    // Add fallback legal areas based on content analysis
+    if (content.includes('contract') || content.includes('warranty')) {
+      data.potentialLegalAreas.push('Contract Law', 'Warranty Claims');
+    }
+    if (content.includes('negligence') || content.includes('premises')) {
+      data.potentialLegalAreas.push('Negligence', 'Premises Liability');
+    }
+    if (content.includes('lemon') || content.includes('vehicle')) {
+      data.potentialLegalAreas.push('Texas Lemon Law', 'Consumer Protection');
+    }
+    if (data.potentialLegalAreas.length === 0) {
+      data.potentialLegalAreas.push('Civil Liability', 'General Legal Analysis');
+    }
   }
-  
-  if (preliminaryIssues.length === 0) {
-    // Try to extract first few sentences that might be issues
-    const sentences = analysisContent.split(/[.!?]+/).slice(0, 3);
+
+  if (data.preliminaryIssues.length === 0) {
+    // Extract first meaningful sentences as fallback issues
+    const sentences = originalContent.split(/[.!?]+/).slice(0, 5);
     sentences.forEach(sentence => {
-      if (sentence.trim().length > 20 && sentence.trim().length < 150) {
-        preliminaryIssues.push(sentence.trim() + '.');
+      const cleaned = sentence.trim();
+      if (cleaned.length > 25 && cleaned.length < 200) {
+        data.preliminaryIssues.push(cleaned + '.');
       }
     });
   }
 
+  if (data.researchPriorities.length === 0) {
+    data.researchPriorities.push(
+      'Review relevant case law and statutes',
+      'Gather additional factual evidence',
+      'Analyze potential defenses and counterclaims'
+    );
+  }
+
+  if (data.strategicNotes.length === 0) {
+    data.strategicNotes.push(
+      'Conduct thorough case analysis before proceeding',
+      'Consider alternative dispute resolution options',
+      'Evaluate strength of evidence and legal arguments'
+    );
+  }
+
+  // Limit arrays to reasonable sizes and clean content
   return {
-    potentialLegalAreas: potentialLegalAreas.slice(0, 8),
-    preliminaryIssues: preliminaryIssues.slice(0, 5),
-    researchPriorities: researchPriorities.slice(0, 6),
-    strategicNotes: strategicNotes.slice(0, 5)
+    potentialLegalAreas: data.potentialLegalAreas.slice(0, 8).map(cleanText),
+    preliminaryIssues: data.preliminaryIssues.slice(0, 6).map(cleanText),
+    researchPriorities: data.researchPriorities.slice(0, 6).map(cleanText),
+    strategicNotes: data.strategicNotes.slice(0, 6).map(cleanText)
   };
+}
+
+function cleanText(text: string): string {
+  return text
+    .replace(/\*\*/g, '') // Remove markdown formatting
+    .replace(/\n+/g, ' ') // Replace newlines with spaces
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .trim();
 }
 
 function extractSentenceContext(text: string, match: string): string | null {
