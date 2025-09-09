@@ -439,6 +439,39 @@ export const extractAnalysisSections = (content: string) => {
     preliminaryAnalysisMatch = content.match(pattern);
     if (preliminaryAnalysisMatch) break;
   }
+
+  // Fallback: HTML heading patterns like <strong>PRELIMINARY ANALYSIS:</strong>
+  if (!preliminaryAnalysisMatch) {
+    const preliminaryHtmlPatterns = [
+      /<strong[^>]*>\s*PRELIMINARY ANALYSIS\s*:?[\s\S]*?<\/strong>\s*(?:<\/p>)?\s*([\s\S]*?)(?=<(?:p[^>]*>\s*)?<strong[^>]*>|\*\*|$)/i,
+      /<strong[^>]*>\s*INITIAL ANALYSIS\s*:?[\s\S]*?<\/strong>\s*(?:<\/p>)?\s*([\s\S]*?)(?=<(?:p[^>]*>\s*)?<strong[^>]*>|\*\*|$)/i,
+      /<strong[^>]*>\s*ANALYSIS\s*:?[\s\S]*?<\/strong>\s*(?:<\/p>)?\s*([\s\S]*?)(?=<(?:p[^>]*>\s*)?<strong[^>]*>|\*\*|$)/i,
+      /<strong[^>]*>\s*APPLICATION\s*:?[\s\S]*?<\/strong>\s*(?:<\/p>)?\s*([\s\S]*?)(?=<(?:p[^>]*>\s*)?<strong[^>]*>|\*\*|$)/i,
+    ];
+    for (const pattern of preliminaryHtmlPatterns) {
+      const htmlMatch = content.match(pattern);
+      if (htmlMatch) {
+        preliminaryAnalysisMatch = htmlMatch as unknown as RegExpMatchArray;
+        console.log("Found preliminary analysis HTML match with pattern:", pattern);
+        break;
+      }
+    }
+
+    // Last-resort fallback: strip HTML and slice between headings
+    if (!preliminaryAnalysisMatch) {
+      const textOnly = content.replace(/<[^>]+>/g, '\n');
+      const startIdx = textOnly.search(/PRELIMINARY ANALYSIS|INITIAL ANALYSIS|ANALYSIS|APPLICATION/i);
+      if (startIdx >= 0) {
+        const rest = textOnly.slice(startIdx);
+        const endMatch = rest.match(/\n\s*(POTENTIAL LEGAL ISSUES|RECOMMENDED FOLLOW[- ]?UP QUESTIONS|FOLLOW[- ]?UP QUESTIONS|CASE SUMMARY|CASE OVERVIEW|SUMMARY|RELEVANT TEXAS LAW[S]?|APPLICABLE TEXAS LAW[S]?|LEGAL FRAMEWORK)\b/i);
+        const captured = endMatch ? rest.slice(rest.indexOf('\n'), endMatch.index).trim() : rest.slice(rest.indexOf('\n')).trim();
+        if (captured) {
+          preliminaryAnalysisMatch = [captured, captured] as unknown as RegExpMatchArray;
+          console.log("Used plain-text fallback for preliminary analysis section");
+        }
+      }
+    }
+  }
   
   // Special handling for IRAC format - combine multiple APPLICATION sections
   if (!preliminaryAnalysisMatch) {
@@ -535,10 +568,13 @@ export const extractAnalysisSections = (content: string) => {
   const extractedCaseSummary = rawCaseSummary.includes('<') ? toPlainText(rawCaseSummary) : rawCaseSummary;
   console.log("Extracted case summary:", extractedCaseSummary ? extractedCaseSummary.substring(0, 200) + "..." : "NONE FOUND");
   
+  const rawPreliminary = preliminaryAnalysisMatch ? preliminaryAnalysisMatch[1].trim() : "";
+  const extractedPreliminary = rawPreliminary.includes('<') ? toPlainText(rawPreliminary) : rawPreliminary;
+  
   return {
     relevantLaw: extractedLaw || "No relevant law analysis available.",
     caseSummary: extractedCaseSummary || "No case summary available.",
-    preliminaryAnalysis: preliminaryAnalysisMatch ? preliminaryAnalysisMatch[1].trim() : "No preliminary analysis available.",
+    preliminaryAnalysis: extractedPreliminary || "No preliminary analysis available.",
     potentialIssues: potentialIssuesMatch ? potentialIssuesMatch[1].trim() : "No potential issues identified.",
     followUpQuestions,
     remedies
