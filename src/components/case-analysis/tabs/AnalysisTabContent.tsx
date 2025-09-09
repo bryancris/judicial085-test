@@ -1,13 +1,21 @@
 
 import React from "react";
 import { ProcessDocumentContentFunction } from "@/types/caseAnalysis";
-import DetailedLegalAnalysis from "../DetailedLegalAnalysis";
+import CaseSummarySection from "../steps/CaseSummarySection";
+import PreliminaryAnalysisSection from "../steps/PreliminaryAnalysisSection";
+import RelevantTexasLawsSection from "../steps/RelevantTexasLawsSection";
+import AdditionalCaseLawSection from "../steps/AdditionalCaseLawSection";
+import IracAnalysisSection from "../IracAnalysisSection";
+import LegalIssuesAssessmentSection from "../steps/LegalIssuesAssessmentSection";
+import CaseStrengthsWeaknesses from "../CaseStrengthsWeaknesses";
+import RefinedAnalysisSection from "../steps/RefinedAnalysisSection";
+import FollowUpQuestionsSection from "../steps/FollowUpQuestionsSection";
 import LawReferencesSection from "../LawReferencesSection";
-import { AdditionalCaseLawSection } from "../AdditionalCaseLawSection";
-import ScholarlyReferencesSection from "../ScholarlyReferencesSection";
 import SimilarCasesSection, { SimilarCase } from "../SimilarCasesSection";
+import ScholarlyReferencesSection from "../ScholarlyReferencesSection";
 import { ScholarlyArticle } from "@/utils/api/scholarApiService";
 import { AnalysisData } from "@/hooks/useAnalysisData";
+import { parseIracAnalysis } from "@/utils/iracParser";
 
 interface AnalysisTabContentProps {
   analysisData: AnalysisData;
@@ -38,24 +46,75 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
   fallbackUsed,
   onSimilarCasesRefresh,
 }) => {
+  // Parse IRAC analysis from raw content
+  const iracAnalysis = analysisData.rawContent ? parseIracAnalysis(analysisData.rawContent) : null;
+
   return (
     <div className="space-y-8">
-      {/* Detailed Legal Analysis - now using raw content like Client Intake */}
-      <DetailedLegalAnalysis
-        relevantLaw={analysisData.legalAnalysis.relevantLaw}
-        preliminaryAnalysis={analysisData.legalAnalysis.preliminaryAnalysis}
-        potentialIssues={analysisData.legalAnalysis.potentialIssues}
-        followUpQuestions={analysisData.legalAnalysis.followUpQuestions}
-        isLoading={isLoading}
-        remedies={analysisData.remedies}
-        caseType={analysisData.caseType}
-        rawContent={analysisData.rawContent}
-        validationStatus={analysisData.validationStatus}
+      {/* 9-Step Sequential Workflow */}
+      
+      {/* Step 1: Case Summary (Organized Fact Pattern) */}
+      <CaseSummarySection
         caseSummary={analysisData.conversationSummary}
-        strengths={analysisData.strengths}
-        weaknesses={analysisData.weaknesses}
+        isLoading={isLoading}
       />
 
+      {/* Step 2: Preliminary Analysis (AI-assisted broad issue spotting) */}
+      <PreliminaryAnalysisSection
+        preliminaryAnalysis={analysisData.legalAnalysis.preliminaryAnalysis}
+        isLoading={isLoading}
+      />
+
+      {/* Step 3: Relevant Texas Laws (Targeted legal research) */}
+      <RelevantTexasLawsSection
+        relevantLaw={analysisData.legalAnalysis.relevantLaw}
+        isLoading={isLoading}
+      />
+
+      {/* Step 4: Additional Case Law (Precedent research) */}
+      <AdditionalCaseLawSection
+        caseLaw={[]} // TODO: Extract from analysis data when available
+        isLoading={isLoading}
+      />
+
+      {/* Step 5: IRAC Legal Analysis (Comprehensive deep analysis) */}
+      {iracAnalysis && (
+        <IracAnalysisSection 
+          analysis={iracAnalysis} 
+          isLoading={isLoading}
+          analysisData={{ rawContent: analysisData.rawContent }}
+        />
+      )}
+
+      {/* Step 6: Legal Issues Assessment (Issues validated through analysis) */}
+      <LegalIssuesAssessmentSection
+        issues={[]} // TODO: Extract from analysis data when available
+        isLoading={isLoading}
+      />
+
+      {/* Step 7: Case Strengths & Weaknesses */}
+      <CaseStrengthsWeaknesses
+        strengths={analysisData.strengths}
+        weaknesses={analysisData.weaknesses}
+        isLoading={isLoading}
+        caseType={analysisData.caseType}
+      />
+
+      {/* Step 8: Refined Analysis (Comprehensive synthesis + Risk Assessment) */}
+      <RefinedAnalysisSection
+        analysisData={null} // TODO: Extract from analysis data when available
+        isLoading={isLoading}
+      />
+
+      {/* Step 9: Recommended Follow-up Questions */}
+      <FollowUpQuestionsSection
+        questionsData={null} // TODO: Extract from analysis data when available
+        followUpQuestions={analysisData.legalAnalysis.followUpQuestions}
+        isLoading={isLoading}
+      />
+
+      {/* Additional Reference Sections */}
+      
       {/* Law References Section */}
       {analysisData.lawReferences && analysisData.lawReferences.length > 0 && (
         <LawReferencesSection
@@ -77,14 +136,7 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
         onCasesFound={onSimilarCasesRefresh}
       />
 
-      {/* Additional Case Law Section */}
-      <AdditionalCaseLawSection
-        analysisData={analysisData}
-        clientId={clientId}
-        caseType={analysisData.caseType}
-      />
-
-      {/* Scholarly Legal References - ONLY HERE AT THE BOTTOM */}
+      {/* Scholarly Legal References */}
       <ScholarlyReferencesSection
         references={scholarlyReferences}
         isLoading={isScholarlyReferencesLoading}
