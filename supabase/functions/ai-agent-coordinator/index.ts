@@ -445,7 +445,7 @@ Do not include IRAC or detailed legal reasoning. Keep it broad and fact-driven.`
   // Quick local bullet validation and one retry if needed
   const counts = getSectionBulletCounts(enforced);
   console.log('🔢 Step 2 bullet counts:', counts);
-  const needsRetry = ['POTENTIAL LEGAL AREAS', 'PRELIMINARY ISSUES', 'RESEARCH PRIORITIES', 'STRATEGIC NOTES']
+  const needsRetry = ['POTENTIAL LEGAL THEORIES', 'ELEMENTS ANALYSIS', 'AVAILABLE DEFENSES', 'DAMAGES', 'EVIDENCE', 'STRATEGIC CONSIDERATIONS']
     .some(key => (counts[key] || 0) < 2 || (counts[key] || 0) > 8); // allow up to 8 on first pass
 
   if (needsRetry) {
@@ -1031,7 +1031,7 @@ async function validateStepCompletion(stepNumber: number, stepResult: any, stepT
   // Structural validation based on step type
   const requiredStructures = {
     'CASE_SUMMARY': /Parties|Timeline|Key Facts/i,
-    'PRELIMINARY_ANALYSIS': /Potential Legal Areas|Preliminary Issues|Research Priorities|Strategic Notes/i,
+    'PRELIMINARY_ANALYSIS': /(?=.*Potential Legal Theories)(?=.*Elements Analysis)(?=.*Available Defenses)(?=.*Damages)(?=.*Evidence)(?=.*Strategic Considerations)/i,
     'IRAC_ANALYSIS': /ISSUE.*:|RULE:|APPLICATION:|CONCLUSION:/i
   };
 
@@ -1050,8 +1050,8 @@ async function validateStepCompletion(stepNumber: number, stepResult: any, stepT
     }
     
     // Must contain preliminary analysis elements
-    const preliminaryElements = /Potential Legal Areas.*Preliminary Issues.*Research Priorities/s;
-    if (!preliminaryElements.test(content)) {
+    const prelimRequired = /(?=.*Potential Legal Theories)(?=.*Elements Analysis)(?=.*Available Defenses)(?=.*Damages)(?=.*Evidence)(?=.*Strategic Considerations)/i;
+    if (!prelimRequired.test(content)) {
       errors.push(`Step ${stepNumber} missing required preliminary analysis sections`);
       score -= 0.3;
     }
@@ -1104,35 +1104,28 @@ function combineStepsForAnalysis(workflowState: WorkflowState, stepNumbers: numb
 }
 
 function extractResearchPriorities(preliminaryAnalysis: string): string[] {
-  const priorities = [];
-  const lines = preliminaryAnalysis.split('\n');
-  
-  for (const line of lines) {
-    if (line.includes('Research Priorities:') || line.includes('Potential Legal Areas:')) {
-      const match = line.match(/:\s*(.+)/);
-      if (match) {
-        priorities.push(...match[1].split(',').map(p => p.trim()));
-      }
-    }
-  }
-  
-  return priorities.length > 0 ? priorities : ['General legal research'];
+  // Prefer ELEMENTS ANALYSIS bullets; fallback to POTENTIAL LEGAL THEORIES bullets
+  const extractBullets = (section: string) => {
+    const re = new RegExp(`\\*\\*${section}:\\*\\*([\\s\\S]*?)(?=\\*\\*[A-Z][^*]+:\\*\\*|$)`, 'i');
+    const m = preliminaryAnalysis.match(re);
+    if (!m) return [] as string[];
+    const block = m[1] || '';
+    return (block.match(/^-\s+.+$/gmi) || []).map(s => s.replace(/^[-*]\s+/, '').trim());
+  };
+  const fromElements = extractBullets('ELEMENTS ANALYSIS');
+  const fromTheories = extractBullets('POTENTIAL LEGAL THEORIES');
+  const combined = [...fromElements, ...fromTheories].slice(0, 6);
+  return combined.length > 0 ? combined : ['General legal research'];
 }
 
 function extractLegalAreas(preliminaryAnalysis: string): string[] {
-  const areas = [];
-  const lines = preliminaryAnalysis.split('\n');
-  
-  for (const line of lines) {
-    if (line.includes('Potential Legal Areas:') || line.includes('Legal Areas:')) {
-      const match = line.match(/:\s*(.+)/);
-      if (match) {
-        areas.push(...match[1].split(',').map(a => a.trim()));
-      }
-    }
-  }
-  
-  return areas.length > 0 ? areas : ['General case law'];
+  // Extract bullets under POTENTIAL LEGAL THEORIES
+  const re = /\*\*POTENTIAL LEGAL THEORIES:\*\*([\s\S]*?)(?=\*\*[A-Z][^*]+:\*\*|$)/i;
+  const m = preliminaryAnalysis.match(re);
+  if (!m) return ['General case law'];
+  const block = m[1] || '';
+  const bullets = (block.match(/^-\s+.+$/gmi) || []).map(s => s.replace(/^[-*]\s+/, '').trim());
+  return bullets.length > 0 ? bullets.slice(0, 6) : ['General case law'];
 }
 
 async function performFinalSynthesis(workflowState: WorkflowState, geminiApiKey: string): Promise<string> {
