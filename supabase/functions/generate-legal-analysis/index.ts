@@ -712,25 +712,31 @@ function transformIracToPreliminary(content: string): string {
   }
   const strategic = Array.from(stratSet);
 
+  // Build unified 4-section preliminary output
+  const priorities: string[] = [];
+  if (elements.length) priorities.push(...elements.slice(0, 4));
+  if (defenses.length) priorities.push(`Assess defenses: ${defenses.slice(0, 3).join(', ')}.`);
+  if (evidence.length) priorities.push(`Collect evidence: ${evidence.slice(0, 3).join('; ')}.`);
+  if (damages.length) priorities.push(`Clarify remedies/damages exposure.`);
+  if (priorities.length === 0) {
+    priorities.push('Identify governing statutes and confirm elements for top issues.');
+    priorities.push('Gather key documents (contracts, communications, repair orders).');
+    priorities.push('Verify limitations periods and notice requirements.');
+  }
+
   const prelim = [
     '**PRELIMINARY ANALYSIS:**',
     '',
-    '**POTENTIAL LEGAL THEORIES:**',
-    bullets(theories.length ? theories : ['Identify applicable theories from facts (e.g., warranty, DTPA, fraud, negligence).']),
+    '**POTENTIAL LEGAL AREAS:**',
+    bullets(theories.length ? theories : ['Identify applicable areas from facts (e.g., warranties, Lemon Law, DTPA, negligence, fraud, contract).']),
     '',
-    '**ELEMENTS ANALYSIS:**',
-    bullets(elements.length ? elements : ['Each claim has specific statutory or common-law elements; confirm elements for top issues; no citations here.']),
+    '**PRELIMINARY ISSUES:**',
+    bullets(elements.length ? elements : ['State the key issues/elements to confirm for the most likely claims (no citations).']),
     '',
-    '**AVAILABLE DEFENSES:**',
-    bullets(defenses.length ? defenses : ['Adequate repair; misuse; lack of causation; limitations; waiver/disclaimer (if enforceable).']),
+    '**RESEARCH PRIORITIES:**',
+    bullets(priorities),
     '',
-    '**DAMAGES:**',
-    bullets(damages),
-    '',
-    '**EVIDENCE:**',
-    bullets(evidence),
-    '',
-    '**STRATEGIC CONSIDERATIONS:**',
+    '**STRATEGIC NOTES:**',
     bullets(strategic)
   ].join('\n');
 

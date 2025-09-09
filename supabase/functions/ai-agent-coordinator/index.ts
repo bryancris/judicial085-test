@@ -422,23 +422,17 @@ STEP 2 TASKS - GEMINI:
 REQUIRED OUTPUT FORMAT (USE EXACT HEADERS BELOW; 2–6 concise bullets under each):
 **PRELIMINARY ANALYSIS:**
 
-**POTENTIAL LEGAL THEORIES:**
-- [Express warranty, implied warranty, DTPA, negligence, fraud, etc.]
+**POTENTIAL LEGAL AREAS:**
+- [Warranties, Texas Lemon Law, DTPA, negligence, fraud, contract, etc.]
 
-**ELEMENTS ANALYSIS:**
-- [Brief element-level notes for the top 3–6 theories; no citations]
+**PRELIMINARY ISSUES:**
+- [Brief issue statements or element-level notes; no citations]
 
-**AVAILABLE DEFENSES:**
-- [Likely defenses based on the facts]
+**RESEARCH PRIORITIES:**
+- [Targeted questions or topics to confirm next]
 
-**DAMAGES:**
-- [Potential remedies/damages relevant to the fact pattern]
-
-**EVIDENCE:**
-- [Key documents, testimony, and proof needed]
-
-**STRATEGIC CONSIDERATIONS:**
-- [Early tactics, info gaps, and next steps]
+**STRATEGIC NOTES:**
+- [Early tactics, info gaps, evidence to collect, and next steps]
 
 Do not include IRAC or detailed legal reasoning. Keep it broad, factual, and strategic.`;
 
@@ -451,7 +445,7 @@ Do not include IRAC or detailed legal reasoning. Keep it broad, factual, and str
   // Quick local bullet validation and one retry if needed
   const counts = getSectionBulletCounts(enforced);
   console.log('🔢 Step 2 bullet counts:', counts);
-  const needsRetry = ['POTENTIAL LEGAL THEORIES', 'ELEMENTS ANALYSIS', 'AVAILABLE DEFENSES', 'DAMAGES', 'EVIDENCE', 'STRATEGIC CONSIDERATIONS']
+  const needsRetry = ['POTENTIAL LEGAL AREAS', 'PRELIMINARY ISSUES', 'RESEARCH PRIORITIES', 'STRATEGIC NOTES']
     .some(key => (counts[key] || 0) < 2 || (counts[key] || 0) > 8); // allow up to 8 on first pass
 
   if (needsRetry) {
@@ -1036,9 +1030,9 @@ async function validateStepCompletion(stepNumber: number, stepResult: any, stepT
 
   // Structural validation based on step type
   const requiredStructures = {
-    'CASE_SUMMARY': /Parties|Timeline|Key Facts/i,
-    'PRELIMINARY_ANALYSIS': /(?=.*Potential Legal Theories)(?=.*Elements Analysis)(?=.*Available Defenses)(?=.*Damages)(?=.*Evidence)(?=.*Strategic Considerations)/i,
-    'IRAC_ANALYSIS': /ISSUE.*:|RULE:|APPLICATION:|CONCLUSION:/i
+  'CASE_SUMMARY': /Parties|Timeline|Key Facts/i,
+  'PRELIMINARY_ANALYSIS': /(?=.*POTENTIAL LEGAL AREAS)(?=.*PRELIMINARY ISSUES)(?=.*RESEARCH PRIORITIES)(?=.*STRATEGIC NOTES)/i,
+  'IRAC_ANALYSIS': /ISSUE.*:|RULE:|APPLICATION:|CONCLUSION:/i
   };
 
   const requiredStructure = requiredStructures[stepType as keyof typeof requiredStructures];
@@ -1056,7 +1050,7 @@ async function validateStepCompletion(stepNumber: number, stepResult: any, stepT
     }
     
     // Must contain preliminary analysis elements
-    const prelimRequired = /(?=.*Potential Legal Theories)(?=.*Elements Analysis)(?=.*Available Defenses)(?=.*Damages)(?=.*Evidence)(?=.*Strategic Considerations)/i;
+    const prelimRequired = /(?=.*POTENTIAL LEGAL AREAS)(?=.*PRELIMINARY ISSUES)(?=.*RESEARCH PRIORITIES)(?=.*STRATEGIC NOTES)/i;
     if (!prelimRequired.test(content)) {
       errors.push(`Step ${stepNumber} missing required preliminary analysis sections`);
       score -= 0.3;
