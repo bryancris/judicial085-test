@@ -344,15 +344,18 @@ console.log('📋 Fact-based analysis mode enabled');
     
     // Initialize relevant law references - Get ACTUAL law references, not document names
     let relevantLawReferences = [];
-    
-    // Search comprehensive Texas law database using vector search
-    try {
-      const factPattern = legalContext.facts || conversation.map(m => m.message).join(" ");
-      relevantLawReferences = await searchRelevantLaw(factPattern, legalContext?.topics || []);
-      console.log(`📚 Found ${relevantLawReferences.length} relevant Texas law references from comprehensive database`);
-      console.log("Law references found:", relevantLawReferences.map(ref => ref.title));
-    } catch (error) {
-      console.error("❌ Error searching comprehensive Texas law database:", error);
+    if (effectiveStepType !== 'preliminary-analysis') {
+      // Only search law references for detailed analysis steps
+      try {
+        const factPattern = legalContext.facts || conversation.map(m => m.message).join(" ");
+        relevantLawReferences = await searchRelevantLaw(factPattern, legalContext?.topics || []);
+        console.log(`📚 Found ${relevantLawReferences.length} relevant Texas law references from comprehensive database`);
+        console.log("Law references found:", relevantLawReferences.map(ref => ref.title));
+      } catch (error) {
+        console.error("❌ Error searching comprehensive Texas law database:", error);
+      }
+    } else {
+      console.log('⏭️ Skipping law reference search for preliminary analysis');
     }
 
     // Detect if this is a consumer protection case

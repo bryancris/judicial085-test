@@ -389,7 +389,12 @@ PRELIMINARY ANALYSIS
 
 Do not include IRAC or detailed legal reasoning. Keep it broad and fact-driven.`;
 
-  return await callGeminiOrchestrator(prompt, geminiApiKey, 'PRELIMINARY_ANALYSIS');
+  const result = await callGeminiOrchestrator(prompt, geminiApiKey, 'PRELIMINARY_ANALYSIS');
+  const enforced = enforcePreliminaryStructure(
+    sanitizeIracContent(result.content || ''),
+    workflowState.stepResults.step1?.content || ''
+  );
+  return { ...result, content: enforced };
 }
 
 // Step 3: RELEVANT TEXAS LAWS (Targeted legal research)
@@ -1042,6 +1047,48 @@ function extractResearchSources(workflowState: WorkflowState): any[] {
   }
   
   return sources;
+}
+
+// Enforce preliminary analysis structure and sanitize IRAC remnants
+function sanitizeIracContent(text: string): string {
+  return (text || '')
+    .replace(/\*\*IRAC[^\n]*\n?/gi, '')
+    .replace(/(^|\n)\s*(\*{0,2}\s*)?(ISSUE|RULE|APPLICATION|ANALYSIS|CONCLUSION)\s*:\s*.*$/gim, '')
+    .replace(/##\s*IRAC[^\n]*\n?/gi, '')
+    .replace(/\(\s*Tex\.[^\)]*\)/gi, '')
+    .replace(/§\s*[\d\.\-A-Za-z]+/g, '');
+}
+
+function enforcePreliminaryStructure(content: string, step1Summary: string): string {
+  let result = content || '';
+  // Ensure top-level heading
+  if (!/PRELIMINARY ANALYSIS/i.test(result)) {
+    result = `PRELIMINARY ANALYSIS\n\n${result}`.trim();
+  }
+  const hasPLA = /Potential Legal Areas/i.test(result);
+  const hasPI = /Preliminary Issues/i.test(result);
+  const hasRP = /Research Priorities/i.test(result);
+  const hasSN = /Strategic Notes/i.test(result);
+
+  let appendix = '';
+  if (!hasPLA) {
+    appendix += `\n\n**POTENTIAL LEGAL AREAS:**\n- [Identify broad areas based on Step 1 facts]`;
+  }
+  if (!hasPI) {
+    // Use first few non-empty lines from content as issues, if any
+    const lines = result.split('\n').map(l => l.trim()).filter(l => l.length > 0).slice(0, 5);
+    const issues = lines.map(l => `- ${l}`).join('\n') || '- [Fact-driven issues to be refined]';
+    appendix += `\n\n**PRELIMINARY ISSUES IDENTIFIED:**\n${issues}`;
+  }
+  if (!hasRP) {
+    appendix += `\n\n**RESEARCH PRIORITIES:**\n- High: [Most impactful issues]\n- Medium: [Issues needing facts]\n- Low: [Speculative leads]`;
+  }
+  if (!hasSN) {
+    const step1Hint = step1Summary ? '\n- Leverage Step 1 case summary to guide next steps' : '';
+    appendix += `\n\n**STRATEGIC NOTES:**\n- Identify factual gaps and needed documents${step1Hint}`;
+  }
+
+  return appendix ? `${result}${appendix}` : result;
 }
 
 async function saveWorkflowToDatabase(
