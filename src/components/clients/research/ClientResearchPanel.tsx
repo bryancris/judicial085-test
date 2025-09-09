@@ -7,7 +7,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, BookOpen, Lightbulb, FileText, Gavel, Zap } from "lucide-react";
-import { SimilarCase } from "@/components/case-analysis/SimilarCasesSection";
+// Local interface for similar cases
+interface SimilarCase {
+  source: "internal" | "courtlistener" | "perplexity";
+  clientId: string | null;
+  clientName: string;
+  similarity: number;
+  relevantFacts: string;
+  outcome: string;
+  court?: string;
+  citation?: string;
+  dateDecided?: string;
+  url?: string | null;
+}
 import { useEnhancedSimilarCasesSearch } from "@/hooks/useEnhancedSimilarCasesSearch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";

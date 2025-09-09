@@ -1,6 +1,20 @@
 
 import { ChatMessageProps } from "@/components/clients/chat/ChatMessage";
-import { SimilarCase } from "@/components/case-analysis/SimilarCasesDialog";
+// Local interface for similar cases
+interface SimilarCase {
+  source: "internal" | "courtlistener" | "perplexity";
+  clientId: string | null;
+  clientName: string;
+  similarity: number;
+  relevantFacts: string;
+  outcome: string;
+  court?: string;
+  citation?: string;
+  dateDecided?: string;
+  url?: string | null;
+  agentReasoning?: string;
+  citations?: string[];
+}
 import { invokeFunction } from "./baseApiService";
 
 // Generate legal analysis based on conversation or documents

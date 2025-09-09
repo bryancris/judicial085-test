@@ -16,7 +16,19 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useEnhancedSimilarCasesSearch } from "@/hooks/useEnhancedSimilarCasesSearch";
-import { SimilarCase } from "@/components/case-analysis/SimilarCasesSection";
+// Local interface for similar cases
+interface SimilarCase {
+  source: "internal" | "courtlistener" | "perplexity";
+  clientId: string | null;
+  clientName: string;
+  similarity: number;
+  relevantFacts: string;
+  outcome: string;
+  court?: string;
+  citation?: string;
+  dateDecided?: string;
+  url?: string | null;
+}
 
 interface ContextualResearchWidgetProps {
   clientId: string;

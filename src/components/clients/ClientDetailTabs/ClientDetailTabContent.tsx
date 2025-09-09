@@ -13,15 +13,11 @@ import { TemplatesTabContent } from "./TemplatesTabContent";
 import { Client } from "@/types/client";
 import { useCase } from "@/contexts/CaseContext";
 import { useCaseAnalysis } from "@/hooks/useCaseAnalysis";
-import { useScholarlyReferencesData } from "@/components/case-analysis/hooks/useScholarlyReferencesData";
-import { loadSimilarCases } from "@/utils/api/similarCasesApiService";
-import { searchSimilarCases } from "@/utils/api/analysisApiService";
 import EmptyAnalysisState from "@/components/case-analysis/EmptyAnalysisState";
 import CaseAnalysisLoadingSkeleton from "@/components/case-analysis/CaseAnalysisLoadingSkeleton";
 import CaseAnalysisErrorState from "@/components/case-analysis/CaseAnalysisErrorState";
 import CaseAnalysisHeader from "@/components/case-analysis/CaseAnalysisHeader";
 import TabsContainer from "@/components/case-analysis/tabs/TabsContainer";
-import { SimilarCase } from "@/components/case-analysis/SimilarCasesSection";
 import { supabase } from "@/integrations/supabase/client";
 
 
@@ -47,19 +43,6 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
     generateNewAnalysis
   } = useCaseAnalysis(client.id, currentCase?.id);
 
-  // Scholarly references hook with database persistence
-  const {
-    scholarlyReferences,
-    isScholarlyReferencesLoading,
-    handleScholarSearch: onScholarSearch,
-    fetchScholarlyReferences: onScholarRefresh
-  } = useScholarlyReferencesData(client.id);
-
-  // Similar cases state
-  const [similarCases, setSimilarCases] = useState<SimilarCase[]>([]);
-  const [isSimilarCasesLoading, setIsSimilarCasesLoading] = useState(false);
-  const [analysisFound, setAnalysisFound] = useState(true);
-  const [fallbackUsed, setFallbackUsed] = useState(false);
   const [currentAnalysisId, setCurrentAnalysisId] = useState<string | undefined>();
 
   // Conversation and notes state
@@ -98,34 +81,6 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
     getCurrentAnalysisId();
   }, [analysisData, client.id, currentCase?.id]);
 
-  // Load similar cases when analysis ID is available
-  const loadSimilarCasesData = useCallback(async () => {
-    if (!currentAnalysisId) return;
-    
-    setIsSimilarCasesLoading(true);
-    try {
-      const result = await loadSimilarCases(client.id, currentAnalysisId);
-      setSimilarCases(result.similarCases || []);
-      setAnalysisFound(result.metadata?.analysisFound !== false);
-      setFallbackUsed(result.metadata?.fallbackUsed || false);
-    } catch (error) {
-      console.error("Error loading similar cases:", error);
-      setSimilarCases([]);
-    } finally {
-      setIsSimilarCasesLoading(false);
-    }
-  }, [currentAnalysisId, client.id]);
-
-  React.useEffect(() => {
-    loadSimilarCasesData();
-  }, [loadSimilarCasesData]);
-
-  // Fetch scholarly references when analysis ID is available
-  React.useEffect(() => {
-    if (currentAnalysisId && analysisData?.caseType) {
-      onScholarRefresh(analysisData.caseType, currentAnalysisId);
-    }
-  }, [currentAnalysisId, analysisData?.caseType, onScholarRefresh]);
 
   // Load conversation data
   React.useEffect(() => {
@@ -257,15 +212,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
                 conversation={conversation}
                 conversationLoading={conversationLoading}
                 notes={notes}
-                notesLoading={notesLoading}
-                scholarlyReferences={scholarlyReferences}
-                isScholarlyReferencesLoading={isScholarlyReferencesLoading}
-                onScholarSearch={onScholarSearch}
-                onScholarRefresh={onScholarRefresh}
-                similarCases={similarCases}
-                isSimilarCasesLoading={isSimilarCasesLoading}
-                analysisFound={analysisFound}
-                fallbackUsed={fallbackUsed}
+                 notesLoading={notesLoading}
               />
             </div>
           );

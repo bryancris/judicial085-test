@@ -1,5 +1,19 @@
 import { supabase } from "@/integrations/supabase/client";
-import { SimilarCase } from "./similarCasesApiService";
+// Local interface for similar cases
+interface SimilarCase {
+  source: "internal" | "courtlistener" | "perplexity";
+  clientId: string | null;
+  clientName: string;
+  similarity: number;
+  relevantFacts: string;
+  outcome: string;
+  court?: string;
+  citation?: string;
+  dateDecided?: string;
+  url?: string | null;
+  agentReasoning?: string;
+  citations?: string[];
+}
 
 export interface CourtListenerCase {
   id: string;

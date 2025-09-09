@@ -6,8 +6,6 @@ import ConversationList from "../conversation/ConversationList";
 import AttorneyNotesList from "../conversation/AttorneyNotesList";
 
 import { AnalysisData } from "@/hooks/useAnalysisData";
-import { ScholarlyArticle } from "@/utils/api/scholarApiService";
-import { SimilarCase } from "../SimilarCasesSection";
 
 interface TabsContainerProps {
   selectedTab: string;
@@ -20,15 +18,6 @@ interface TabsContainerProps {
   conversationLoading: boolean;
   notes: any[];
   notesLoading: boolean;
-  scholarlyReferences: ScholarlyArticle[];
-  isScholarlyReferencesLoading: boolean;
-  onScholarSearch: (query: string) => void;
-  onScholarRefresh?: () => void;
-  similarCases: SimilarCase[];
-  isSimilarCasesLoading: boolean;
-  analysisFound: boolean;
-  fallbackUsed: boolean;
-  onSimilarCasesRefresh?: () => void;
 }
 
 const TabsContainer: React.FC<TabsContainerProps> = ({
@@ -42,15 +31,6 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
   conversationLoading,
   notes,
   notesLoading,
-  scholarlyReferences,
-  isScholarlyReferencesLoading,
-  onScholarSearch,
-  onScholarRefresh,
-  similarCases,
-  isSimilarCasesLoading,
-  analysisFound,
-  fallbackUsed,
-  onSimilarCasesRefresh,
 }) => {
   return (
     <div className="mt-6">
@@ -60,14 +40,6 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
             analysisData={analysisData}
             isLoading={isLoading}
             clientId={clientId}
-            scholarlyReferences={scholarlyReferences}
-            isScholarlyReferencesLoading={isScholarlyReferencesLoading}
-            onScholarSearch={onScholarSearch}
-            onScholarRefresh={onScholarRefresh}
-            similarCases={similarCases}
-            isSimilarCasesLoading={isSimilarCasesLoading}
-            analysisFound={analysisFound}
-            fallbackUsed={fallbackUsed}
           />
         </div>
       )}

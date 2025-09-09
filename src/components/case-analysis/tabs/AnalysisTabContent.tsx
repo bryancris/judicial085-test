@@ -11,9 +11,6 @@ import CaseStrengthsWeaknesses from "../CaseStrengthsWeaknesses";
 import RefinedAnalysisSection from "../steps/RefinedAnalysisSection";
 import FollowUpQuestionsSection from "../steps/FollowUpQuestionsSection";
 import LawReferencesSection from "../LawReferencesSection";
-import SimilarCasesSection, { SimilarCase } from "../SimilarCasesSection";
-import ScholarlyReferencesSection from "../ScholarlyReferencesSection";
-import { ScholarlyArticle } from "@/utils/api/scholarApiService";
 import { AnalysisData } from "@/hooks/useAnalysisData";
 import { parseIracAnalysis } from "@/utils/iracParser";
 
@@ -21,30 +18,12 @@ interface AnalysisTabContentProps {
   analysisData: AnalysisData;
   isLoading: boolean;
   clientId: string;
-  scholarlyReferences: ScholarlyArticle[];
-  isScholarlyReferencesLoading: boolean;
-  onScholarSearch: (query: string) => void;
-  onScholarRefresh?: () => void;
-  similarCases: SimilarCase[];
-  isSimilarCasesLoading: boolean;
-  analysisFound: boolean;
-  fallbackUsed: boolean;
-  onSimilarCasesRefresh?: () => void;
 }
 
 const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
   analysisData,
   isLoading,
   clientId,
-  scholarlyReferences,
-  isScholarlyReferencesLoading,
-  onScholarSearch,
-  onScholarRefresh,
-  similarCases,
-  isSimilarCasesLoading,
-  analysisFound,
-  fallbackUsed,
-  onSimilarCasesRefresh,
 }) => {
   // Parse IRAC analysis from raw content
   const iracAnalysis = analysisData.rawContent ? parseIracAnalysis(analysisData.rawContent) : null;
@@ -124,26 +103,6 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
         />
       )}
 
-      {/* Similar Cases with integrated Outcome Prediction */}
-      <SimilarCasesSection
-        similarCases={similarCases}
-        isLoading={isSimilarCasesLoading}
-        caseType={analysisData.caseType}
-        analysisFound={analysisFound}
-        fallbackUsed={fallbackUsed}
-        clientId={clientId}
-        legalAnalysisId={analysisData.id}
-        onCasesFound={onSimilarCasesRefresh}
-      />
-
-      {/* Scholarly Legal References */}
-      <ScholarlyReferencesSection
-        references={scholarlyReferences}
-        isLoading={isScholarlyReferencesLoading}
-        caseType={analysisData.caseType}
-        onSearch={onScholarSearch}
-        onRefresh={onScholarRefresh}
-      />
     </div>
   );
 };
