@@ -298,7 +298,6 @@ async function executeSequentialWorkflow(
     executionTime,
     qualityControlPassed,
     overallQualityScore: averageScore,
-    qualityControlPassed: true,
     researchSources: extractResearchSources(workflowState)
   };
 }
@@ -429,8 +428,8 @@ async function executeStep4CaseLaw(workflowState: WorkflowState, authHeader: str
   
   const legalAreas = extractLegalAreas(workflowState.stepResults.step2?.content || '');
   const perplexityResult = await coordinateWithPerplexity(
-    'case-law',
-    `Research recent Texas case law (last 5 years) for: ${legalAreas.join(', ')}. Include both favorable and adverse precedents.`,
+    'case-precedents',
+    `Research Texas case law precedents for: ${legalAreas.join(', ')}. Focus on recent Texas Supreme Court and appellate decisions.`,
     workflowState.context.clientId,
     workflowState.context.caseId,
     authHeader
@@ -442,28 +441,26 @@ async function executeStep4CaseLaw(workflowState: WorkflowState, authHeader: str
 CRITICAL: This is Step 4 of 9. Build upon Steps 1-3 but do not include content from later steps.
 
 PREVIOUS STEPS:
-Step 1: ${workflowState.stepResults.step1?.content || ''}
-Step 2: ${workflowState.stepResults.step2?.content || ''}
+Steps 1-2: ${combineStepsForAnalysis(workflowState, [1, 2])}
 Step 3: ${workflowState.stepResults.step3?.content || ''}
 
 PERPLEXITY CASE LAW RESEARCH:
 ${perplexityResult.content}
 
 STEP 4 TASKS - GEMINI:
-- Organize cases by legal issue
-- Create case law hierarchy (Texas Supreme Court → Appeals → Federal)
-- Cross-reference cases with statutory analysis
+- Organize case law by legal area and relevance
+- Cross-reference with statutory research from Step 3
+- Ensure comprehensive precedent coverage
 
 REQUIRED OUTPUT FORMAT:
 ADDITIONAL CASE LAW
 
-- [Issue 1 Cases]: [Case name, citation, holding, relevance]
-- [Issue 2 Cases]: [Case name, citation, holding, relevance]  
-- Favorable Precedents: [Cases supporting client position]
-- Adverse Precedents: [Cases opposing client position]
-- Distinguishing Factors: [How adverse cases differ]
+- [Legal Area 1]: [Key case citations and holdings]
+- [Legal Area 2]: [Key case citations and holdings]
+- Precedent Analysis: [How cases interact with statutes]
+- Jurisdictional Notes: [Texas vs. federal precedents]
 
-Organize the case law research into the required format above.`;
+Organize the Perplexity case law research into the required format above.`;
 
   return await callGeminiOrchestrator(prompt, geminiApiKey, 'CASE_LAW');
 }
@@ -483,10 +480,10 @@ async function executeStep5IracAnalysis(workflowState: WorkflowState, authHeader
     authHeader
   );
 
-  // Then have Gemini ensure IRAC format compliance
+  // Then have Gemini organize and structure the IRAC analysis
   const prompt = `You are GEMINI, the orchestrator. You are executing STEP 5: IRAC LEGAL ANALYSIS.
 
-CRITICAL: This is Step 5 of 9. Build upon Steps 1-4 but do not include content from later steps.
+CRITICAL: This is Step 5 of 9. Build upon Steps 1-4 to conduct comprehensive IRAC analysis.
 
 COMBINED RESEARCH FROM STEPS 1-4:
 ${combinedResearch}
@@ -495,17 +492,16 @@ OPENAI IRAC ANALYSIS:
 ${openAIResult.content}
 
 STEP 5 TASKS - GEMINI:
-- Ensure IRAC format is followed for each issue
-- Integrate statutory and case law research seamlessly  
-- Maintain logical flow and legal precision
+- Coordinate with OPENAI to conduct systematic IRAC analysis
+- Apply Texas law research to specific fact patterns
+- Provide comprehensive legal analysis with citations
 
-REQUIRED IRAC FORMAT FOR EACH ISSUE:
-ISSUE: [Specific legal question]
-RULE: [Applicable law - statutes and cases]
-APPLICATION: [How law applies to these specific facts]
-CONCLUSION: [Legal outcome for this issue]
+REQUIRED OUTPUT FORMAT:
+IRAC LEGAL ANALYSIS
 
-Organize the OpenAI analysis to ensure strict IRAC compliance for each identified issue.`;
+[Detailed IRAC analysis organized by legal issue]
+
+Organize the OpenAI IRAC analysis into a comprehensive legal analysis.`;
 
   return await callGeminiOrchestrator(prompt, geminiApiKey, 'IRAC_ANALYSIS');
 }
@@ -525,32 +521,31 @@ async function executeStep6IssuesAssessment(workflowState: WorkflowState, authHe
     authHeader
   );
 
-  // Then have Gemini organize the assessment
+  // Then have Gemini structure the assessment
   const prompt = `You are GEMINI, the orchestrator. You are executing STEP 6: LEGAL ISSUES ASSESSMENT.
 
-CRITICAL: This is Step 6 of 9. Build upon Steps 1-5 but do not include content from later steps.
+CRITICAL: This is Step 6 of 9. Build upon Steps 1-5 to assess issue viability after IRAC analysis.
 
 IRAC ANALYSIS FROM STEP 5:
 ${iracResults}
 
-OPENAI VIABILITY ASSESSMENT:
+OPENAI ISSUES ASSESSMENT:
 ${openAIResult.content}
 
 STEP 6 TASKS - GEMINI:
-- Rank issues by strength and strategic importance
-- Eliminate weak or unviable claims
-- Provide confidence ratings
+- Evaluate viability of each legal issue after IRAC analysis
+- Assign probability assessments to potential claims
+- Prioritize issues by strength and strategic value
 
 REQUIRED OUTPUT FORMAT:
 LEGAL ISSUES ASSESSMENT
 
-- Strong Issues: [Issues with high probability of success]
-- Moderate Issues: [Issues with reasonable prospects]  
-- Weak Issues: [Issues unlikely to succeed]
-- Eliminated Issues: [Issues with insufficient support]
-- Strategic Priorities: [Which issues to pursue first]
+- Issue Viability Analysis
+- Probability Assessments  
+- Strategic Prioritization
+- Risk Factors
 
-Organize the assessment into the required format above.`;
+Organize the OpenAI assessment into the required format above.`;
 
   return await callGeminiOrchestrator(prompt, geminiApiKey, 'ISSUES_ASSESSMENT');
 }
@@ -570,37 +565,31 @@ async function executeStep7StrengthsWeaknesses(workflowState: WorkflowState, aut
     authHeader
   );
 
-  // Then have Gemini organize clearly with authority references
+  // Then have Gemini structure the strengths and weaknesses analysis
   const prompt = `You are GEMINI, the orchestrator. You are executing STEP 7: CASE STRENGTHS & WEAKNESSES.
 
-CRITICAL: This is Step 7 of 9. Build upon Steps 1-6 but do not include content from later steps.
+CRITICAL: This is Step 7 of 9. Build upon Steps 1-6 to analyze overall case strength.
 
-COMPREHENSIVE ANALYSIS FROM STEPS 1-6:
+COMBINED ANALYSIS FROM STEPS 1-6:
 ${combinedAnalysis}
 
 OPENAI STRENGTHS & WEAKNESSES ANALYSIS:
 ${openAIResult.content}
 
 STEP 7 TASKS - GEMINI:
-- Organize strengths and weaknesses clearly
-- Ensure all assessments are supported by prior analysis
-- Maintain objectivity and accuracy
+- Synthesize overall case strength assessment
+- Identify key strengths and vulnerabilities
+- Provide strategic recommendations based on analysis
 
 REQUIRED OUTPUT FORMAT:
 CASE STRENGTHS & WEAKNESSES
 
-STRENGTHS:
-- [Strength 1]: [Supporting authority and reasoning]
-- [Strength 2]: [Supporting authority and reasoning]
+- Case Strengths
+- Case Weaknesses  
+- Strategic Recommendations
+- Risk Mitigation
 
-WEAKNESSES:
-- [Weakness 1]: [Legal/factual basis and potential impact]
-- [Weakness 2]: [Legal/factual basis and potential impact]
-
-MITIGATION STRATEGIES:
-- [How to address each weakness]
-
-Organize the analysis into the required format above.`;
+Organize the OpenAI analysis into the required format above.`;
 
   return await callGeminiOrchestrator(prompt, geminiApiKey, 'STRENGTHS_WEAKNESSES');
 }
@@ -620,10 +609,10 @@ async function executeStep8RefinedAnalysis(workflowState: WorkflowState, authHea
     authHeader
   );
 
-  // Then have Gemini synthesize comprehensive strategic overview
+  // Then have Gemini perform final synthesis
   const prompt = `You are GEMINI, the orchestrator. You are executing STEP 8: REFINED ANALYSIS.
 
-CRITICAL: This is Step 8 of 9. Build upon Steps 1-7 but do not include content from later steps.
+CRITICAL: This is Step 8 of 9. Synthesize all previous steps into refined comprehensive analysis.
 
 COMPREHENSIVE ANALYSIS FROM STEPS 1-7:
 ${comprehensiveAnalysis}
@@ -632,29 +621,20 @@ OPENAI RISK ASSESSMENT:
 ${openAIResult.content}
 
 STEP 8 TASKS - GEMINI:
-- Synthesize all previous analysis into comprehensive strategic overview
-- Include strategic considerations and litigation positioning
+- Synthesize all previous analysis into refined comprehensive overview
+- Conduct final risk assessment and strategic planning
+- Provide executive summary of key findings
 
 REQUIRED OUTPUT FORMAT:
 REFINED ANALYSIS
 
-EXECUTIVE SUMMARY:
-[2-3 paragraph synthesis of entire case analysis]
+- Executive Summary
+- Key Legal Findings
+- Risk Assessment
+- Strategic Recommendations
+- Action Plan
 
-RISK ASSESSMENT:
-- High Risk Factors: [Issues that could derail case]
-- Medium Risk Factors: [Issues requiring monitoring]  
-- Risk Mitigation: [Steps to reduce identified risks]
-
-STRATEGIC RECOMMENDATIONS:
-- Primary Strategy: [Recommended approach]
-- Alternative Strategies: [Backup options]
-- Immediate Priorities: [Next steps to take]
-
-LIKELIHOOD OF SUCCESS:
-[Overall assessment with reasoning]
-
-Provide comprehensive synthesis in the required format above.`;
+Synthesize all previous steps into a comprehensive refined analysis.`;
 
   return await callGeminiOrchestrator(prompt, geminiApiKey, 'REFINED_ANALYSIS');
 }
@@ -665,14 +645,14 @@ async function executeStep9FollowUpQuestions(workflowState: WorkflowState, gemin
 
 CRITICAL: This is the final Step 9 of 9. Build upon all previous steps.
 
-COMPLETE ANALYSIS FROM STEPS 1-8:
+COMPLETE 9-STEP ANALYSIS:
 ${combineStepsForAnalysis(workflowState, [1, 2, 3, 4, 5, 6, 7, 8])}
 
 STEP 9 TASKS - GEMINI:
-- Identify information gaps revealed during analysis
-- Generate specific questions to strengthen case development
-- Prioritize questions by importance and urgency
-- Consider discovery and investigation needs
+- Identify critical information gaps from all previous steps
+- Generate strategic follow-up questions organized by priority
+- Recommend additional investigation areas
+- Suggest expert consultation needs
 
 REQUIRED OUTPUT FORMAT:
 RECOMMENDED FOLLOW-UP QUESTIONS
@@ -753,10 +733,9 @@ async function callGeminiOrchestrator(prompt: string, geminiApiKey: string, step
     const data = await response.json();
     const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     
-    console.log(`✅ Gemini ${stepType} completed:`, { 
-      contentLength: content.length,
-      stepType 
-    });
+    if (!content) {
+      throw new Error(`No content generated by Gemini for ${stepType}`);
+    }
     
     return { content, stepType };
   } catch (error) {
@@ -925,46 +904,18 @@ async function validateStepCompletion(stepNumber: number, stepResult: any, stepT
       score -= 0.4;
     }
   }
-  }
 
-  // Citation validation for legal content
-  if (['TEXAS_LAWS', 'CASE_LAW', 'IRAC_ANALYSIS'].includes(stepType)) {
-    const texasCitations = content.match(/Tex\.\s+(Code|Civ\.|Crim\.|Penal|Bus\.|Prop\.)\s+Ann\.\s+§\s*\d+/gi) || [];
-    const caseCitations = content.match(/\b\d+\s+S\.W\.\d+d\s+\d+/gi) || [];
-    
-    if (content.length > 300 && texasCitations.length === 0 && caseCitations.length === 0) {
-      warnings.push(`Step ${stepNumber} may need more legal citations`);
+  // Cross-step consistency validation
+  if (stepNumber > 1) {
+    const previousSteps = Object.keys(allStepResults).filter(key => key.match(/step\d+/));
+    if (previousSteps.length < stepNumber - 1) {
+      warnings.push(`Step ${stepNumber} may be missing context from previous steps`);
       score -= 0.1;
     }
-
-    // Validate citation format
-    texasCitations.forEach(citation => {
-      if (!/^Tex\.\s+(Code|Civ\.|Crim\.|Penal|Bus\.|Prop\.)\s+Ann\.\s+§\s*\d+(\.\d+)*$/i.test(citation.trim())) {
-        errors.push(`Improper Texas citation format: "${citation}"`);
-        score -= 0.1;
-      }
-    });
   }
 
-  // Cross-step consistency validation (for later steps)
-  if (stepNumber >= 3 && Object.keys(allStepResults).length >= 2) {
-    // Check party consistency
-    const caseSummary = allStepResults['CASE_SUMMARY']?.content || '';
-    const partyMatches = caseSummary.match(/(?:plaintiff|defendant|petitioner|respondent)[\s:]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/gi) || [];
-    const parties = partyMatches.map(match => match.split(/[:]/)[1]?.trim()).filter(Boolean);
-    
-    parties.forEach(party => {
-      if (party && !new RegExp(party.replace(/\s+/g, '\\s+'), 'i').test(content)) {
-        warnings.push(`Party "${party}" from case summary not referenced in step ${stepNumber}`);
-        score -= 0.05;
-      }
-    });
-  }
-
-  // Quality scoring
+  // Final score adjustment
   score = Math.max(0, Math.min(1, score));
-
-  // Hard validation failure threshold
   const isValid = errors.length === 0 && score >= 0.6;
 
   console.log(`${isValid ? '✅' : '❌'} Step ${stepNumber} validation:`, { 
@@ -999,7 +950,7 @@ function extractResearchPriorities(preliminaryAnalysis: string): string[] {
     if (line.includes('Research Priorities:') || line.includes('Potential Legal Areas:')) {
       const match = line.match(/:\s*(.+)/);
       if (match) {
-        priorities.push(...match[1].split(',').map(s => s.trim()));
+        priorities.push(...match[1].split(',').map(p => p.trim()));
       }
     }
   }
@@ -1015,7 +966,7 @@ function extractLegalAreas(preliminaryAnalysis: string): string[] {
     if (line.includes('Potential Legal Areas:') || line.includes('Legal Areas:')) {
       const match = line.match(/:\s*(.+)/);
       if (match) {
-        areas.push(...match[1].split(',').map(s => s.trim()));
+        areas.push(...match[1].split(',').map(a => a.trim()));
       }
     }
   }
@@ -1026,19 +977,18 @@ function extractLegalAreas(preliminaryAnalysis: string): string[] {
 async function performFinalSynthesis(workflowState: WorkflowState, geminiApiKey: string): Promise<string> {
   const allSteps = combineStepsForAnalysis(workflowState, [1, 2, 3, 4, 5, 6, 7, 8, 9]);
   
-  const prompt = `You are GEMINI, the orchestrator. Perform the FINAL SYNTHESIS of the complete 9-step workflow.
+  const prompt = `You are GEMINI, the final orchestrator. Synthesize the complete 9-step legal analysis into a comprehensive, professional legal memo.
 
 COMPLETE 9-STEP ANALYSIS:
 ${allSteps}
 
-FINAL SYNTHESIS TASKS:
-- Combine all 9 steps into a cohesive, comprehensive legal analysis
-- Ensure logical flow from fact pattern through final recommendations  
-- Maintain the structured format from each step
-- Provide executive summary that ties everything together
-- Ensure all citations and references are properly formatted
+SYNTHESIS REQUIREMENTS:
+- Create a cohesive, professional legal analysis
+- Maintain all key findings and recommendations
+- Ensure proper legal structure and formatting
+- Include executive summary and action items
 
-Create a comprehensive final document that presents the complete 9-step analysis in a professional, cohesive format.`;
+Synthesize all 9 steps into a comprehensive legal analysis.`;
 
   const result = await callGeminiOrchestrator(prompt, geminiApiKey, 'FINAL_SYNTHESIS');
   return result.content;
@@ -1046,18 +996,18 @@ Create a comprehensive final document that presents the complete 9-step analysis
 
 function extractCitations(content: string): string[] {
   const citations = [];
-  const patterns = [
-    /([A-Z][a-zA-Z\s&,\.]+)\s+v\.\s+([A-Z][a-zA-Z\s&,\.]+)/g,
-    /Tex\.\s+[A-Z][a-zA-Z\s]+\s+Code/g,
-    /§\s*\d+[\.\d]*/g
-  ];
   
-  patterns.forEach(pattern => {
-    let match;
-    while ((match = pattern.exec(content)) !== null) {
-      citations.push(match[0]);
-    }
-  });
+  // Extract Texas statute citations
+  const statuteMatches = content.match(/Texas [A-Z][a-zA-Z\s&]+ Code §[\s]*[\d\.\-A-Za-z]+/g) || [];
+  citations.push(...statuteMatches);
+  
+  // Extract case citations
+  const caseMatches = content.match(/\b[A-Z][a-zA-Z\s&]+\s+v\.\s+[A-Z][a-zA-Z\s&]+/g) || [];
+  citations.push(...caseMatches);
+  
+  // Extract section references
+  const sectionMatches = content.match(/§[\s]*[\d\.\-A-Za-z]+/g) || [];
+  citations.push(...sectionMatches);
   
   return [...new Set(citations)];
 }
@@ -1065,24 +1015,15 @@ function extractCitations(content: string): string[] {
 function extractResearchSources(workflowState: WorkflowState): any[] {
   const sources = [];
   
-  // Extract from step results
-  Object.values(workflowState.stepResults).forEach((step: any) => {
-    if (step?.metadata?.source) {
+  // Extract from each step's metadata
+  for (const [stepKey, stepResult] of Object.entries(workflowState.stepResults)) {
+    if (stepResult?.metadata?.citations) {
       sources.push({
-        source: step.metadata.source,
-        type: step.stepType,
-        available: true
+        step: stepKey,
+        citations: stepResult.metadata.citations,
+        type: stepResult.stepType || 'unknown'
       });
     }
-  });
-  
-  // Add default sources if none found
-  if (sources.length === 0) {
-    sources.push(
-      { source: 'gemini', type: 'orchestration', available: true },
-      { source: 'openai', type: 'legal-analysis', available: true },
-      { source: 'perplexity', type: 'research', available: true }
-    );
   }
   
   return sources;
