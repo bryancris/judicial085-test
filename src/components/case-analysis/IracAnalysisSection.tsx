@@ -9,8 +9,6 @@ import { useCitationProcessor } from "@/hooks/useCitationProcessor";
 import { EnhancedText } from "@/components/ui/EnhancedText";
 import { assessIssueStrength, getStrengthBadgeClasses } from "@/utils/iracAssessment";
 import { extractLawReferences } from "@/utils/lawReferenceUtils";
-import SmartConnectionsSection from "./SmartConnectionsSection";
-import { RiskAssessmentSection } from "./RiskAssessmentSection";
 
 interface IracAnalysisSectionProps {
   analysis: IracAnalysis;
@@ -245,20 +243,6 @@ const IracAnalysisSection: React.FC<IracAnalysisSectionProps> = ({
           </>
         )}
 
-        {/* Smart Connections Section */}
-        <Separator />
-        <SmartConnectionsSection 
-          issues={analysis.legalIssues} 
-          isLoading={isLoading}
-        />
-
-        {/* Risk Assessment Section */}
-        <Separator />
-        <RiskAssessmentSection 
-          analysis={analysis}
-          isLoading={isLoading}
-          analysisData={analysisData}
-        />
       </CardContent>
     </Card>
   );
