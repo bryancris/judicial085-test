@@ -5,7 +5,7 @@ import { AnalysisData } from "@/hooks/useAnalysisData";
 import { extractLegalCitations, mapCitationsToKnowledgeBase, generateDirectPdfUrl } from "@/utils/lawReferences/knowledgeBaseMapping";
 import { cleanupDuplicateAnalyses } from "@/utils/duplicateCleanupService";
 import { extractAnalysisSections, extractStrengthsWeaknesses } from "@/utils/analysisParsingUtils";
-import { parseIracAnalysis } from "@/utils/iracParser";
+
 
 export const useAnalysisData = (clientId: string, caseId?: string) => {
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
@@ -38,7 +38,6 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           .eq("client_id", clientId)
           .eq("case_id", caseId)
           .in("validation_status", ["validated", "pending_review", "pending"])  // Include validated, pending review, and pending
-          .neq("analysis_type", "3-agent-coordination")
           // Allow case-analysis from coordinator but exclude deprecated coordinator-research
           .order("created_at", { ascending: false });
 
@@ -58,7 +57,6 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
             .eq("client_id", clientId)
             .is("case_id", null)
             .in("validation_status", ["validated", "pending_review", "pending"])  // Include validated, pending review, and pending
-            .neq("analysis_type", "3-agent-coordination")
             // Allow case-analysis from coordinator but exclude deprecated coordinator-research
             .order("created_at", { ascending: false });
 
@@ -70,17 +68,9 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           console.log(`Found ${analyses?.length || 0} client-level analysis records (fallback)`);
         }
         
-        // 🎯 Prioritize base analysis for IRAC: prefer case-analysis or direct-analysis
+        // Simplify: prefer most recent analysis
         if (analyses && analyses.length > 1) {
-          const iracPreferred = analyses.filter(a =>
-            a.analysis_type === 'case-analysis' || a.analysis_type === 'direct-analysis'
-          );
-          if (iracPreferred.length > 0) {
-            console.log(`📋 Preferring ${iracPreferred[0].analysis_type} as base for IRAC`);
-            analyses = [iracPreferred[0]];
-          } else {
-            analyses = [analyses[0]]; // most recent
-          }
+          analyses = [analyses[0]];
         }
       } else {
         // If no case ID, look for client-level analysis (case_id IS NULL)
@@ -91,7 +81,7 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           .eq("client_id", clientId)
           .is("case_id", null)
           .in("validation_status", ["validated", "pending_review", "pending"])  // Include validated, pending review, and pending
-          .neq("analysis_type", "3-agent-coordination")
+          
           // Allow case-analysis from coordinator but exclude deprecated coordinator-research
           .order("created_at", { ascending: false });
 
@@ -102,17 +92,9 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
         analyses = clientAnalyses;
         console.log(`Found ${analyses?.length || 0} client-level analysis records`);
         
-        // 🎯 Prioritize base analysis for IRAC at client-level: prefer case-analysis or direct-analysis
+        // Simplify: prefer most recent analysis (client-level)
         if (analyses && analyses.length > 1) {
-          const iracPreferred = analyses.filter(a =>
-            a.analysis_type === 'case-analysis' || a.analysis_type === 'direct-analysis'
-          );
-          if (iracPreferred.length > 0) {
-            console.log(`📋 Preferring ${iracPreferred[0].analysis_type} as base for IRAC (client-level)`);
-            analyses = [iracPreferred[0]];
-          } else {
-            analyses = [analyses[0]]; // most recent
-          }
+          analyses = [analyses[0]];
         }
       }
 
@@ -147,34 +129,6 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
         let finalPreliminaryAnalysis = sections.preliminaryAnalysis || "";
         let finalPotentialIssues = sections.potentialIssues || "";
         
-        if (!finalPreliminaryAnalysis || finalPreliminaryAnalysis === "No preliminary analysis available") {
-          console.log("🔧 Preliminary Analysis missing, attempting IRAC fallback...");
-          const iracAnalysis = parseIracAnalysis(analysis.content || "");
-          if (iracAnalysis && iracAnalysis.legalIssues.length > 0) {
-            const applicationTexts = iracAnalysis.legalIssues.map(issue => issue.application).filter(Boolean);
-            const conclusionTexts = iracAnalysis.legalIssues.map(issue => issue.conclusion).filter(Boolean);
-            
-            if (applicationTexts.length > 0 || conclusionTexts.length > 0) {
-              finalPreliminaryAnalysis = [
-                ...applicationTexts.slice(0, 2), // Limit to first 2 applications for brevity
-                ...conclusionTexts.slice(0, 1)   // Add one conclusion
-              ].join("\n\n");
-              console.log("✅ Generated preliminary analysis from IRAC sections");
-            }
-          }
-        }
-        
-        if (!finalPotentialIssues || finalPotentialIssues === "No potential issues identified") {
-          console.log("🔧 Potential Issues missing, attempting IRAC fallback...");
-          const iracAnalysis = parseIracAnalysis(analysis.content || "");
-          if (iracAnalysis && iracAnalysis.legalIssues.length > 0) {
-            const issueStatements = iracAnalysis.legalIssues.map(issue => `• ${issue.issueStatement}`);
-            if (issueStatements.length > 0) {
-              finalPotentialIssues = issueStatements.join("\n");
-              console.log("✅ Generated potential issues from IRAC issue statements");
-            }
-          }
-        }
 
         // 🎯 ALWAYS try to get Case Summary, Relevant Texas Law, and Preliminary Analysis from client-intake first for better formatting
         let relevantLaw = sections.relevantLaw || "";
@@ -232,12 +186,19 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
             if (intakeData && intakeData.length > 0) {
               const intakeSections = extractAnalysisSections(intakeData[0].content || "");
               
-              // 🎯 PRIORITIZE client-intake Preliminary Analysis if available and not a placeholder
-              if (intakeSections.preliminaryAnalysis && 
-                  !/No preliminary analysis/i.test(intakeSections.preliminaryAnalysis) &&
-                  intakeSections.preliminaryAnalysis.trim().length > 50) { // Ensure it's substantial
+              // Use client-intake Preliminary Analysis only if current is missing or too short
+              if (
+                intakeSections.preliminaryAnalysis &&
+                !/No preliminary analysis/i.test(intakeSections.preliminaryAnalysis) &&
+                (
+                  !finalPreliminaryAnalysis ||
+                  finalPreliminaryAnalysis.trim().length < 80
+                )
+              ) {
                 finalPreliminaryAnalysis = intakeSections.preliminaryAnalysis;
-                console.log("✅ Using Preliminary Analysis from client-intake");
+                console.log("✅ Using Preliminary Analysis from client-intake (existing was missing/short)");
+              } else {
+                console.log("ℹ️ Keeping existing Preliminary Analysis from primary analysis source");
               }
               
               // Use client-intake Case Summary if available and better

@@ -321,7 +321,7 @@ export const extractAnalysisSections = (content: string) => {
     /\*\*INITIAL ANALYSIS:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
     /\*\*ANALYSIS:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
     // NEW: Extract from IRAC APPLICATION sections
-    /\*\*APPLICATION:\*\*([\s\S]*?)(?=\*\*(?:CONCLUSION|ISSUE):|$)/i,
+    
     // Plaintext uppercase headings
     /(?:^|\n)\s*PRELIMINARY ANALYSIS:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
     /(?:^|\n)\s*INITIAL ANALYSIS:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
@@ -473,17 +473,6 @@ export const extractAnalysisSections = (content: string) => {
     }
   }
   
-  // Special handling for IRAC format - combine multiple APPLICATION sections
-  if (!preliminaryAnalysisMatch) {
-    const applicationMatches = content.match(/\*\*APPLICATION:\*\*([\s\S]*?)(?=\*\*(?:CONCLUSION|ISSUE):|$)/gi);
-    if (applicationMatches && applicationMatches.length > 0) {
-      const combinedApplications = applicationMatches
-        .map(match => match.replace(/\*\*APPLICATION:\*\*/i, '').trim())
-        .join('\n\n');
-      preliminaryAnalysisMatch = [combinedApplications, combinedApplications] as unknown as RegExpMatchArray;
-      console.log("Combined IRAC APPLICATION sections for preliminary analysis");
-    }
-  }
   
   let potentialIssuesMatch = null;
   for (const pattern of potentialIssuesPatterns) {
@@ -569,12 +558,11 @@ export const extractAnalysisSections = (content: string) => {
   console.log("Extracted case summary:", extractedCaseSummary ? extractedCaseSummary.substring(0, 200) + "..." : "NONE FOUND");
   
   const rawPreliminary = preliminaryAnalysisMatch ? preliminaryAnalysisMatch[1].trim() : "";
-  const extractedPreliminary = rawPreliminary.includes('<') ? toPlainText(rawPreliminary) : rawPreliminary;
   
   return {
     relevantLaw: extractedLaw || "No relevant law analysis available.",
     caseSummary: extractedCaseSummary || "No case summary available.",
-    preliminaryAnalysis: extractedPreliminary || "No preliminary analysis available.",
+    preliminaryAnalysis: rawPreliminary || "No preliminary analysis available.",
     potentialIssues: potentialIssuesMatch ? potentialIssuesMatch[1].trim() : "No potential issues identified.",
     followUpQuestions,
     remedies

@@ -93,7 +93,6 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
           .eq("client_id", clientId)
           .eq("case_id", caseId)
           .in("validation_status", ["validated", "pending_review"]) 
-          .neq("analysis_type", "3-agent-coordination")
           .neq("analysis_type", "coordinator-research")
           .order("created_at", { ascending: false })
           .limit(1);
@@ -123,7 +122,6 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
           .eq("client_id", clientId)
           .is("case_id", null)
           .in("validation_status", ["validated", "pending_review"]) 
-          .neq("analysis_type", "3-agent-coordination")
           .neq("analysis_type", "coordinator-research")
           .order("created_at", { ascending: false })
           .limit(1);
@@ -228,9 +226,18 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
 
         if (intakeData && intakeData.length > 0) {
           const intakeSections = extractAnalysisSections(intakeData[0].content || "");
-          if (intakeSections.preliminaryAnalysis && !/No preliminary analysis/i.test(intakeSections.preliminaryAnalysis)) {
+          if (
+            intakeSections.preliminaryAnalysis &&
+            !/No preliminary analysis/i.test(intakeSections.preliminaryAnalysis) &&
+            (
+              !preliminaryAnalysis ||
+              preliminaryAnalysis.trim().length < 80
+            )
+          ) {
             preliminaryAnalysis = intakeSections.preliminaryAnalysis;
-            console.log("✅ Using Preliminary Analysis from client-intake (preferred)");
+            console.log("✅ Using Preliminary Analysis from client-intake (existing was missing/short)");
+          } else {
+            console.log("ℹ️ Keeping existing Preliminary Analysis from primary analysis source");
           }
           if (intakeSections.caseSummary && !/No case summary/i.test(intakeSections.caseSummary)) {
             caseSummary = intakeSections.caseSummary;
