@@ -319,14 +319,9 @@ export const extractAnalysisSections = (content: string) => {
   const preliminaryAnalysisPatterns = [
     /\*\*PRELIMINARY ANALYSIS:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
     /\*\*INITIAL ANALYSIS:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
-    /\*\*ANALYSIS:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:|$)/i,
-    // NEW: Extract from IRAC APPLICATION sections
-    
     // Plaintext uppercase headings
     /(?:^|\n)\s*PRELIMINARY ANALYSIS:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
     /(?:^|\n)\s*INITIAL ANALYSIS:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
-    /(?:^|\n)\s*ANALYSIS:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
-    /(?:^|\n)\s*APPLICATION:\s*([\s\S]*?)(?=\n[A-Z][A-Z \-()&\/]+:\s*|$)/i,
   ];
   
   const potentialIssuesPatterns = [
@@ -445,8 +440,6 @@ export const extractAnalysisSections = (content: string) => {
     const preliminaryHtmlPatterns = [
       /<strong[^>]*>\s*PRELIMINARY ANALYSIS\s*:?[\s\S]*?<\/strong>\s*(?:<\/p>)?\s*([\s\S]*?)(?=<(?:p[^>]*>\s*)?<strong[^>]*>|\*\*|$)/i,
       /<strong[^>]*>\s*INITIAL ANALYSIS\s*:?[\s\S]*?<\/strong>\s*(?:<\/p>)?\s*([\s\S]*?)(?=<(?:p[^>]*>\s*)?<strong[^>]*>|\*\*|$)/i,
-      /<strong[^>]*>\s*ANALYSIS\s*:?[\s\S]*?<\/strong>\s*(?:<\/p>)?\s*([\s\S]*?)(?=<(?:p[^>]*>\s*)?<strong[^>]*>|\*\*|$)/i,
-      /<strong[^>]*>\s*APPLICATION\s*:?[\s\S]*?<\/strong>\s*(?:<\/p>)?\s*([\s\S]*?)(?=<(?:p[^>]*>\s*)?<strong[^>]*>|\*\*|$)/i,
     ];
     for (const pattern of preliminaryHtmlPatterns) {
       const htmlMatch = content.match(pattern);
@@ -460,7 +453,7 @@ export const extractAnalysisSections = (content: string) => {
     // Last-resort fallback: strip HTML and slice between headings
     if (!preliminaryAnalysisMatch) {
       const textOnly = content.replace(/<[^>]+>/g, '\n');
-      const startIdx = textOnly.search(/PRELIMINARY ANALYSIS|INITIAL ANALYSIS|ANALYSIS|APPLICATION/i);
+      const startIdx = textOnly.search(/PRELIMINARY ANALYSIS|INITIAL ANALYSIS/i);
       if (startIdx >= 0) {
         const rest = textOnly.slice(startIdx);
         const endMatch = rest.match(/\n\s*(POTENTIAL LEGAL ISSUES|RECOMMENDED FOLLOW[- ]?UP QUESTIONS|FOLLOW[- ]?UP QUESTIONS|CASE SUMMARY|CASE OVERVIEW|SUMMARY|RELEVANT TEXAS LAW[S]?|APPLICABLE TEXAS LAW[S]?|LEGAL FRAMEWORK)\b/i);
