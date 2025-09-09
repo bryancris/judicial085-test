@@ -694,7 +694,7 @@ function transformIracToPreliminary(content: string): string {
   // Damages/remedies sentences
   const damages = (text.split(/(?<=\.)\s+/) || []).filter(s => /(damages?|remed(?:y|ies)|fees|treble)/i.test(s)).slice(0,6);
   if (damages.length === 0) {
-    damages.push('Actual damages (e.g., difference in value, cost of repairs), incidental expenses, attorney's fees, and potential treble damages where authorized.');
+    damages.push('Actual damages (e.g., difference in value, cost of repairs), incidental expenses, attorney\'s fees, and potential treble damages where authorized.');
   }
 
   // Evidence sentences
