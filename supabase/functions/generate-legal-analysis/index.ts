@@ -342,6 +342,10 @@ console.log('📋 Fact-based analysis mode enabled');
       ...legalContext.cases
     ].join(" ");
     
+    // Determine step type for prompt building EARLY so guards apply everywhere
+    const effectiveStepType = stepType === 'preliminary-analysis' ? 'preliminary-analysis' : 'detailed-analysis';
+    console.log(`Building ${effectiveStepType} prompt for ${stepType || requestContext || 'analysis'}`);
+    
     // Initialize relevant law references - Get ACTUAL law references, not document names
     let relevantLawReferences = [];
     if (effectiveStepType !== 'preliminary-analysis') {
@@ -362,9 +366,7 @@ console.log('📋 Fact-based analysis mode enabled');
     const isConsumerCase = detectedCaseType === "consumer-protection";
     console.log(`Case identified as consumer protection case: ${isConsumerCase}`);
     
-    // Determine step type for prompt building
-    const effectiveStepType = stepType === 'preliminary-analysis' ? 'preliminary-analysis' : 'detailed-analysis';
-    console.log(`Building ${effectiveStepType} prompt for ${stepType || requestContext || 'analysis'}`);
+    // effectiveStepType already determined above for guardrails and prompt selection
     
     // Create step-aware system prompt
     const systemPrompt = buildSystemPrompt(

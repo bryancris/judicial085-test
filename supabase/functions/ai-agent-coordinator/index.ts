@@ -338,14 +338,20 @@ async function executeStep2PreliminaryAnalysis(workflowState: WorkflowState, aut
   // First, coordinate with OpenAI for legal issue identification
   console.log('🤝 Step 2: Gemini coordinating with OpenAI for preliminary analysis...');
   
-  const openAIResult = await coordinateWithOpenAI(
-    'preliminary-analysis',
-    workflowState.context.query,
-    workflowState.stepResults.step1?.content || '',
-    workflowState.context.clientId,
-    workflowState.context.caseId,
-    authHeader
-  );
+  let openAIResult: any = { content: '' };
+  try {
+    openAIResult = await coordinateWithOpenAI(
+      'preliminary-analysis',
+      workflowState.context.query,
+      workflowState.stepResults.step1?.content || '',
+      workflowState.context.clientId,
+      workflowState.context.caseId,
+      authHeader
+    );
+  } catch (err) {
+    console.error('Error coordinating with OpenAI for preliminary-analysis:', err);
+    // Proceed without OpenAI contribution; Gemini will handle Step 2 solo
+  }
 
   // Sanitize OpenAI output to ensure no IRAC content leaks into Step 2
   const cleanedOpenAI = (openAIResult.content || '')
@@ -379,15 +385,15 @@ STEP 2 TASKS - GEMINI:
 - Identify areas requiring focused research (priorities)
 - Maintain professional legal tone without detailed analysis
 
-REQUIRED OUTPUT FORMAT (Markdown headers with **):
-PRELIMINARY ANALYSIS
-
-- **POTENTIAL LEGAL AREAS:** [Contract, Tort, Consumer Protection, etc.]
-- **PRELIMINARY ISSUES IDENTIFIED:** [List 5-8 fact-driven issues]
-- **RESEARCH PRIORITIES:** [High/Medium/Low with brief rationale]
-- **STRATEGIC NOTES:** [Factual gaps, evidence needs, early tactics]
-
-Do not include IRAC or detailed legal reasoning. Keep it broad and fact-driven.`;
+  REQUIRED OUTPUT FORMAT (Markdown headers with **):
+  PRELIMINARY ANALYSIS
+  
+  - **Potential Legal Areas:** [Contract, Tort, Consumer Protection, etc.]
+  - **Preliminary Issues:** [List 5-8 fact-driven issues]
+  - **Research Priorities:** [High/Medium/Low with brief rationale]
+  - **Strategic Notes:** [Factual gaps, evidence needs, early tactics]
+  
+  Do not include IRAC or detailed legal reasoning. Keep it broad and fact-driven.`;
 
   const result = await callGeminiOrchestrator(prompt, geminiApiKey, 'PRELIMINARY_ANALYSIS');
   const enforced = enforcePreliminaryStructure(
@@ -1072,20 +1078,20 @@ function enforcePreliminaryStructure(content: string, step1Summary: string): str
 
   let appendix = '';
   if (!hasPLA) {
-    appendix += `\n\n**POTENTIAL LEGAL AREAS:**\n- [Identify broad areas based on Step 1 facts]`;
+    appendix += `\n\n**Potential Legal Areas:**\n- [Identify broad areas based on Step 1 facts]`;
   }
   if (!hasPI) {
     // Use first few non-empty lines from content as issues, if any
     const lines = result.split('\n').map(l => l.trim()).filter(l => l.length > 0).slice(0, 5);
     const issues = lines.map(l => `- ${l}`).join('\n') || '- [Fact-driven issues to be refined]';
-    appendix += `\n\n**PRELIMINARY ISSUES IDENTIFIED:**\n${issues}`;
+    appendix += `\n\n**Preliminary Issues:**\n${issues}`;
   }
   if (!hasRP) {
-    appendix += `\n\n**RESEARCH PRIORITIES:**\n- High: [Most impactful issues]\n- Medium: [Issues needing facts]\n- Low: [Speculative leads]`;
+    appendix += `\n\n**Research Priorities:**\n- High: [Most impactful issues]\n- Medium: [Issues needing facts]\n- Low: [Speculative leads]`;
   }
   if (!hasSN) {
     const step1Hint = step1Summary ? '\n- Leverage Step 1 case summary to guide next steps' : '';
-    appendix += `\n\n**STRATEGIC NOTES:**\n- Identify factual gaps and needed documents${step1Hint}`;
+    appendix += `\n\n**Strategic Notes:**\n- Identify factual gaps and needed documents${step1Hint}`;
   }
 
   return appendix ? `${result}${appendix}` : result;
