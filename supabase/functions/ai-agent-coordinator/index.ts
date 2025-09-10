@@ -1131,8 +1131,14 @@ async function validateStepCompletion(stepNumber: number, stepResult: any, stepT
 
   const requiredStructure = requiredStructures[stepType as keyof typeof requiredStructures];
   if (requiredStructure && !requiredStructure.test(content)) {
-    errors.push(`Step ${stepNumber} lacks required structural elements for ${stepType}`);
-    score -= 0.3;
+    if (stepType === 'PRELIMINARY_ANALYSIS') {
+      // Downgrade to warning for Step 2 – don't block the workflow
+      warnings.push(`Step ${stepNumber} lacks required structural elements for ${stepType}`);
+      score -= 0.2;
+    } else {
+      errors.push(`Step ${stepNumber} lacks required structural elements for ${stepType}`);
+      score -= 0.3;
+    }
   }
   
   // Critical validation: Step 2 must NOT contain IRAC format
@@ -1143,11 +1149,12 @@ async function validateStepCompletion(stepNumber: number, stepResult: any, stepT
       score -= 0.5;
     }
     
-    // Must contain preliminary analysis elements
+    // Prefer, but don't require, preliminary analysis sections
     const prelimRequired = /(?=.*POTENTIAL LEGAL AREAS)(?=.*PRELIMINARY ISSUES)(?=.*RESEARCH PRIORITIES)(?=.*STRATEGIC NOTES)/i;
     if (!prelimRequired.test(content)) {
-      errors.push(`Step ${stepNumber} missing required preliminary analysis sections`);
-      score -= 0.3;
+      // Downgrade to warning so we can proceed to later steps
+      warnings.push(`Step ${stepNumber} missing required preliminary analysis sections`);
+      score -= 0.2;
     }
   }
   

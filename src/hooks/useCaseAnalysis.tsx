@@ -5,6 +5,7 @@ import { useAnalysisData } from "@/hooks/useAnalysisData";
 import { useEnhancedCaseAnalysis } from "@/hooks/useEnhancedCaseAnalysis";
 import { searchSimilarCases } from "@/utils/api/analysisApiService";
 import { useToast } from "@/hooks/use-toast";
+import { coordinateAIAgents } from "@/utils/api/aiAgentService";
 
 export type { CaseAnalysisData } from "@/types/caseAnalysis";
 
@@ -78,6 +79,23 @@ export const useCaseAnalysis = (clientId?: string, caseId?: string) => {
       async () => {
         console.log("useCaseAnalysis: Analysis complete callback - refetching data");
         await fetchAnalysisData();
+
+        // Kick off 9-step coordinator to ensure Step 7 is created
+        try {
+          console.log("useCaseAnalysis: Invoking 9-step coordinator for refined Step 7...");
+          await coordinateAIAgents({
+            query: `Comprehensive case refinement and practical counsel for client ${clientId}${caseId ? `, case ${caseId}` : ''}`,
+            clientId,
+            caseId,
+            researchTypes: ["legal-research", "current-research"],
+          });
+          // Re-fetch to pick up the saved Step 7 record
+          await fetchAnalysisData();
+          toast({ title: "Refined Analysis Ready", description: "Step 7 generated successfully." });
+        } catch (e) {
+          console.error("useCaseAnalysis: Coordinator invocation failed", e);
+        }
+
         // Auto-trigger similar cases search after analysis is complete
         setTimeout(searchSimilarCasesAfterAnalysis, 1000);
       },
