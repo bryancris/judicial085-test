@@ -153,8 +153,13 @@ async function executeSequentialWorkflow(
     CASE_SUMMARY: workflowState.stepResults.step1, 
     PRELIMINARY_ANALYSIS: workflowState.stepResults.step2 
   });
-  if (!validation2.isValid) {
+  // Relaxed gating: proceed if no errors and score >= 0.5 (warnings allowed)
+  const step2Proceed = (validation2.errors?.length ?? 0) === 0 && (validation2.score ?? 0) >= 0.5;
+  if (!validation2.isValid && !step2Proceed) {
     throw new Error(`Step 2 validation failed: ${validation2.errors.join('; ')}`);
+  }
+  if (!validation2.isValid && step2Proceed) {
+    console.warn('⚠️ Step 2 validation warnings present but proceeding (score >= 0.5, no errors).', validation2);
   }
   workflowState.completedSteps.add(2);
 
