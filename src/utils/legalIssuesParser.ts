@@ -133,3 +133,30 @@ export const parseLegalIssuesAssessment = (content: string): LegalIssuesAssessme
     }
 
     // Extract overall strategy
+    const strategyMatch = content.match(/OVERALL[\\s\\S]*?STRATEGY[:\\s]*([\\s\\S]*?)(?=PRIORITY|$)/i);
+    if (strategyMatch && strategyMatch[1]) {
+      sections.overallStrategy = strategyMatch[1].trim().substring(0, 1000);
+    }
+
+    // Extract priority recommendations
+    const priorityMatch = content.match(/PRIORITY[\\s\\S]*?RECOMMENDATION[s]?[:\\s]*([\\s\\S]*?)$/i);
+    if (priorityMatch && priorityMatch[1]) {
+      const priorityText = priorityMatch[1].trim();
+      sections.priorityRecommendations = priorityText
+        .split(/\n/)
+        .map(line => line.trim())
+        .filter(line => line && line.length > 10)
+        .slice(0, 5); // Limit to 5 recommendations
+    }
+
+    // Only return if we found at least some issues
+    totalIssues = sections.strongIssues.length + sections.moderateIssues.length + 
+                  sections.weakIssues.length + sections.eliminatedIssues.length;
+    
+    return totalIssues > 0 ? sections : null;
+
+  } catch (error) {
+    console.error('Error parsing legal issues assessment:', error);
+    return null;
+  }
+};
