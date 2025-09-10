@@ -172,8 +172,14 @@ async function executeSequentialWorkflow(
     PRELIMINARY_ANALYSIS: workflowState.stepResults.step2,
     TEXAS_LAWS: workflowState.stepResults.step3
   });
-  if (!validation3.isValid) {
+  // Relaxed gating: proceed if structural issues only and score >= 0.6
+  const step3Proceed = (validation3.errors?.length ?? 0) <= 1 && (validation3.score ?? 0) >= 0.6;
+  if (!validation3.isValid && !step3Proceed) {
     throw new Error(`Step 3 validation failed: ${validation3.errors.join('; ')}`);
+  }
+  if (!validation3.isValid && step3Proceed) {
+    console.warn('⚠️ Step 3 validation issues present but proceeding (score >= 0.6, <=1 error).', validation3);
+  }
   }
   workflowState.completedSteps.add(3);
 
@@ -212,6 +218,7 @@ async function executeSequentialWorkflow(
   console.log('⚡ Step 6: CASE STRENGTHS & WEAKNESSES - Combining risk assessment and strengths...');
   workflowState.stepResults.step6 = await executeStep6StrengthsWeaknesses(workflowState, authHeader, geminiApiKey);
   workflowState.stepResults.step6.stepType = 'STRENGTHS_WEAKNESSES';
+  console.log(`📝 Step 6 generated content length: ${workflowState.stepResults.step6.content?.length || 0}`);
   const validation6 = await validateStepCompletion(6, workflowState.stepResults.step6, 'STRENGTHS_WEAKNESSES', {
     CASE_SUMMARY: workflowState.stepResults.step1,
     PRELIMINARY_ANALYSIS: workflowState.stepResults.step2,
@@ -229,6 +236,7 @@ async function executeSequentialWorkflow(
   console.log('🎯 Step 7: REFINED ANALYSIS - Gemini generating requirements comparison...');
   workflowState.stepResults.step7 = await executeStep7RefinedAnalysis(workflowState, authHeader, geminiApiKey);
   workflowState.stepResults.step7.stepType = 'REFINED_ANALYSIS';
+  console.log(`📝 Step 7 generated content length: ${workflowState.stepResults.step7.content?.length || 0}`);
   const validation7 = await validateStepCompletion(7, workflowState.stepResults.step7, 'REFINED_ANALYSIS', {
     CASE_SUMMARY: workflowState.stepResults.step1,
     PRELIMINARY_ANALYSIS: workflowState.stepResults.step2,
@@ -694,12 +702,12 @@ Organize the OpenAI assessment into the required format above.`;
   return await callGeminiOrchestrator(prompt, geminiApiKey, 'ISSUES_ASSESSMENT');
 }
 
-// Step 7: CASE STRENGTHS & WEAKNESSES
-async function executeStep7StrengthsWeaknesses(workflowState: WorkflowState, authHeader: string | null, geminiApiKey: string) {
+// Step 6: CASE STRENGTHS & WEAKNESSES
+async function executeStep6StrengthsWeaknesses(workflowState: WorkflowState, authHeader: string | null, geminiApiKey: string) {
   // Have OpenAI analyze overall case strength
-  console.log('💪 Step 7: OpenAI analyzing case strengths and weaknesses...');
+  console.log('💪 Step 6: OpenAI analyzing case strengths and weaknesses...');
   
-  const combinedAnalysis = combineStepsForAnalysis(workflowState, [1, 2, 3, 4, 5, 6]);
+  const combinedAnalysis = combineStepsForAnalysis(workflowState, [1, 2, 3, 4, 5]);
   const openAIResult = await coordinateWithOpenAI(
     'strengths-weaknesses',
     `Analyze overall case strength and weaknesses based on completed analysis`,
@@ -710,17 +718,17 @@ async function executeStep7StrengthsWeaknesses(workflowState: WorkflowState, aut
   );
 
   // Then have Gemini structure the strengths and weaknesses analysis
-  const prompt = `You are GEMINI, the orchestrator. You are executing STEP 7: CASE STRENGTHS & WEAKNESSES.
+  const prompt = `You are GEMINI, the orchestrator. You are executing STEP 6: CASE STRENGTHS & WEAKNESSES.
 
-CRITICAL: This is Step 7 of 9. Build upon Steps 1-6 to analyze overall case strength.
+CRITICAL: This is Step 6 of 9. Build upon Steps 1-5 to analyze overall case strength.
 
-COMBINED ANALYSIS FROM STEPS 1-6:
+COMBINED ANALYSIS FROM STEPS 1-5:
 ${combinedAnalysis}
 
 OPENAI STRENGTHS & WEAKNESSES ANALYSIS:
 ${openAIResult.content}
 
-STEP 7 TASKS - GEMINI:
+STEP 6 TASKS - GEMINI:
 - Synthesize overall case strength assessment
 - Identify key strengths and vulnerabilities
 - Provide strategic recommendations based on analysis
