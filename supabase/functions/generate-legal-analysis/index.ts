@@ -176,10 +176,10 @@ console.log("Fact sufficiency check:", {
   documentCount: 0 // Will be set later after document fetch
 });
 
-// 🛡️ Prevent recursion: Skip coordinator if request comes from coordinator
-const skipCoordinator = requestContext?.includes('step') || requestContext === '9-step-workflow';
+// 🛡️ Prevent recursion only when explicitly requested
+const skipCoordinator = payload?.skipCoordinator === true;
 
-if (!skipCoordinator && userId) {
+if (!skipCoordinator) {
       console.log('🎯 Starting 3-agent coordination for client:', clientId);
       
       try {
@@ -200,9 +200,7 @@ if (!skipCoordinator && userId) {
             researchTypes: ['legal-research', 'current-research', 'similar-cases'],
             requestContext
           },
-          headers: {
-            Authorization: authHeader
-          }
+          headers: authHeader ? { Authorization: authHeader } : {}
         });
 
         if (coordinatorResponse.data?.success && coordinatorResponse.data?.synthesizedContent) {
@@ -342,9 +340,11 @@ console.log('📋 Fact-based analysis mode enabled');
       ...legalContext.cases
     ].join(" ");
     
-    // Determine step type for prompt building EARLY so guards apply everywhere
-    const effectiveStepType = stepType === 'preliminary-analysis' ? 'preliminary-analysis' : 'detailed-analysis';
-    console.log(`Building ${effectiveStepType} prompt for ${stepType || requestContext || 'analysis'}`);
+// Determine step type for prompt building EARLY so guards apply everywhere
+const effectiveStepType = (stepType === 'preliminary-analysis')
+  ? 'preliminary-analysis'
+  : (stepType === 'irac-analysis' || stepType === 'step-5' ? 'irac-analysis' : 'preliminary-analysis');
+console.log(`Building ${effectiveStepType} prompt for ${stepType || requestContext || 'analysis'}`);
     
     // Initialize relevant law references - Get ACTUAL law references, not document names
     let relevantLawReferences = [];
@@ -460,11 +460,6 @@ console.log('📋 Fact-based analysis mode enabled');
       console.log('💰 Estimated cost: $' + (geminiResponse.usage?.totalTokens * 0.00000125 || 0).toFixed(4));
       console.log('Starting enhanced citation extraction from analysis...');
 
-      // 🔧 Step 2 Format Enforcement: Transform IRAC to preliminary format
-      if (effectiveStepType === 'preliminary-analysis' && (analysis.includes('**ISSUE:**') || analysis.includes('**RULE:**'))) {
-        console.log('🔧 Transforming Step 2 content from IRAC to preliminary format');
-        analysis = transformIracToPreliminary(analysis);
-      }
       
       // Validate generated content matches input context
       const generatedPreview = analysis.substring(0, 200);
@@ -603,31 +598,29 @@ console.log('📋 Fact-based analysis mode enabled');
     console.log("Generated analysis length:", analysis?.length || 0);
     console.log("Source:", analysisSource, "Case type:", detectedCaseType);
 
-    // ⚠️ CRITICAL: Block IRAC content if not Step 5
-    if (stepType && stepType !== 'irac-analysis' && stepType !== 'step-5') {
-      const iracDetectionPatterns = [
-        /\*\*ISSUE\s*\[?\d*\]?\s*:\*\*/i,
-        /\*\*RULE\s*:\*\*/i,
-        /\*\*APPLICATION\s*:\*\*/i,
-        /\*\*CONCLUSION\s*:\*\*/i,
-        /\*\*IRAC.*ANALYSIS\*\*/i
-      ];
-      
-      const foundIracPattern = iracDetectionPatterns.find(pattern => 
-        pattern.test(analysis || '')
-      );
-      
-      if (foundIracPattern) {
-        console.log(`🚫 IRAC_NOT_ALLOWED: Step "${stepType}" produced IRAC content (pattern: ${foundIracPattern})`);
-        return new Response(
-          JSON.stringify({ 
-            error: `IRAC format detected in ${stepType}. IRAC is ONLY allowed in Step 5. Found pattern: ${foundIracPattern}`,
-            code: "IRAC_NOT_ALLOWED"
-          }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
+// ⚠️ CRITICAL: Block IRAC content if not Step 5
+if (effectiveStepType !== 'irac-analysis') {
+  const iracDetectionPatterns = [
+    /\*\*ISSUE\s*\[?\d*\]?\s*:\*\*/i,
+    /\*\*RULE\s*:\*\*/i,
+    /\*\*APPLICATION\s*:\*\*/i,
+    /\*\*CONCLUSION\s*:\*\*/i,
+    /\*\*IRAC.*ANALYSIS\*\*/i
+  ];
+  const foundIracPattern = iracDetectionPatterns.find(pattern => 
+    pattern.test(analysis || '')
+  );
+  if (foundIracPattern) {
+    console.log(`🚫 IRAC_NOT_ALLOWED: Non-IRAC step produced IRAC content (pattern: ${foundIracPattern})`);
+    return new Response(
+      JSON.stringify({ 
+        error: `IRAC format detected but current step is not IRAC (Step 5). Found pattern: ${foundIracPattern}`,
+        code: "IRAC_NOT_ALLOWED"
+      }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+}
 
     // Extract fact sources and citations for validation
     const factSources = analysisSource === 'client conversation' ? 
