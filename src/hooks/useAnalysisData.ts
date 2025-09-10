@@ -289,6 +289,39 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
         rawContent: analysis.content
       };
 
+      // Try to get dedicated risk assessment analysis first
+      const { data: riskAssessmentData } = await supabase
+        .from('legal_analyses')
+        .select('*')
+        .eq('client_id', clientId)
+        .eq('analysis_type', 'risk-assessment')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (riskAssessmentData && riskAssessmentData.length > 0) {
+        console.log('📊 Found dedicated risk assessment record');
+        const riskContent = riskAssessmentData[0].content || '';
+        const legalIssuesAssessment = parseLegalIssuesAssessment(riskContent);
+        if (legalIssuesAssessment) {
+          completeAnalysisData.legalIssuesAssessment = legalIssuesAssessment;
+          console.log('✅ Parsed legal issues from dedicated risk assessment with', 
+            legalIssuesAssessment.strongIssues.length + legalIssuesAssessment.moderateIssues.length + 
+            legalIssuesAssessment.weakIssues.length + legalIssuesAssessment.eliminatedIssues.length, 'total issues');
+        }
+      } else {
+        // Fallback: Parse legal issues assessment from main analysis content
+        console.log('⚠️ No dedicated risk assessment found, trying to parse from main analysis');
+        const legalIssuesAssessment = parseLegalIssuesAssessment(completeAnalysisData.rawContent || '');
+        if (legalIssuesAssessment) {
+          completeAnalysisData.legalIssuesAssessment = legalIssuesAssessment;
+          console.log('✅ Parsed legal issues assessment from main content with', 
+            legalIssuesAssessment.strongIssues.length + legalIssuesAssessment.moderateIssues.length + 
+            legalIssuesAssessment.weakIssues.length + legalIssuesAssessment.eliminatedIssues.length, 'total issues');
+        } else {
+          console.log('📋 No legal issues assessment found - Step 6 may not be complete');
+        }
+      }
+
       console.log("Setting analysis data with enriched Case Summary and Relevant Law", {
         relevantLawLength: completeAnalysisData.legalAnalysis.relevantLaw.length,
         caseSummaryLength: completeAnalysisData.conversationSummary.length,

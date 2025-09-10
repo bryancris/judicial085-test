@@ -36,8 +36,20 @@ export const buildSystemPrompt = (
     );
   }
   
-  // Additional step types that need IRAC analysis
-  if (stepType === 'issues-assessment' || stepType === 'strengths-weaknesses' || stepType === 'risk-assessment') {
+  // Additional step types that need specialized prompts
+  if (stepType === 'risk-assessment') {
+    console.log('📊 Using risk assessment prompt (Step 6)');
+    return buildRiskAssessmentSystemPrompt(
+      analysisSource,
+      relevantLawReferences,
+      hasConversation,
+      clientDocuments,
+      detectedCaseType,
+      researchUpdates
+    );
+  }
+  
+  if (stepType === 'issues-assessment' || stepType === 'strengths-weaknesses') {
     console.log(`🔍 Using IRAC analysis prompt for ${stepType} (builds on comprehensive analysis)`);
     return buildIracSystemPrompt(
       analysisSource,
@@ -244,6 +256,104 @@ Whether [specific legal question based on facts]
 
   // Enhanced fact-based analysis reminder
   systemPrompt += `\n\nFACT-DRIVEN COMPREHENSIVE ANALYSIS: Base your analysis on the specific facts presented and identify ALL areas of law that may apply. Do not limit yourself to a single legal theory or area of law. If facts suggest applicability of multiple codes or legal areas, analyze each thoroughly. Your goal is to provide the comprehensive legal analysis an experienced Texas attorney would deliver when given unlimited time to research all applicable law.`;
+
+  return systemPrompt;
+};
+
+// Build risk assessment system prompt (Step 6)
+export const buildRiskAssessmentSystemPrompt = (
+  analysisSource: string,
+  relevantLawReferences: any[],
+  hasConversation: boolean,
+  clientDocuments: any[],
+  detectedCaseType: string,
+  researchUpdates?: any[]
+) => {
+  console.log(`Building risk assessment prompt for Step 6`);
+  
+  let systemPrompt = `You are an expert Texas attorney performing STEP 6: LEGAL ISSUES ASSESSMENT (RISK ASSESSMENT). You will evaluate the legal issues identified in the previous IRAC analysis (Step 5) and assess their viability, strength, and strategic importance.
+
+CRITICAL INSTRUCTION: This is Step 6 of a 9-step process. You are building upon the comprehensive IRAC analysis from Step 5. Your task is to categorize and prioritize the legal issues based on their strength, viability, and strategic value.
+
+LEGAL ISSUES ASSESSMENT APPROACH:
+- Review all legal issues identified in Step 5 IRAC analysis
+- Evaluate the strength of each legal theory based on facts and law
+- Assess the likelihood of success for each claim or defense
+- Consider strategic value, damages potential, and litigation risks
+- Eliminate weak or unviable claims to focus resources effectively
+- Provide clear recommendations for case strategy and priorities`;
+
+  // Add law references context
+  if (relevantLawReferences && relevantLawReferences.length > 0) {
+    systemPrompt += `\n\nRELEVANT TEXAS LAW AUTHORITIES (from comprehensive database search):\n`;
+    relevantLawReferences.forEach(ref => {
+      const relevanceNote = ref.similarity ? ` (Relevance: ${(ref.similarity * 100).toFixed(1)}%)` : '';
+      systemPrompt += `- ${ref.title}: ${ref.content}${relevanceNote}\n`;
+    });
+  }
+
+  // Risk assessment structure requirements
+  systemPrompt += `\n\nREQUIRED LEGAL ISSUES ASSESSMENT STRUCTURE:
+
+**STRONG ISSUES:**
+For each strong legal issue:
+- Issue Title: [Descriptive name]
+- Strength: Strong
+- Description: [Clear explanation of the legal theory and why it's strong]
+- Strategic Priority: [1-10 ranking]
+- Risk Factors: [Potential challenges or weaknesses]
+- Viability Assessment: [High probability of success with specific reasoning]
+
+**MODERATE ISSUES:**
+For each moderate legal issue:
+- Issue Title: [Descriptive name]
+- Strength: Moderate
+- Description: [Legal theory with balanced assessment]
+- Strategic Priority: [1-10 ranking]
+- Risk Factors: [Challenges that make it moderate strength]
+- Viability Assessment: [Moderate probability with conditions for success]
+
+**WEAK ISSUES:**
+For each weak legal issue:
+- Issue Title: [Descriptive name]
+- Strength: Weak
+- Description: [Why the legal theory has limited viability]
+- Strategic Priority: [1-10 ranking]
+- Risk Factors: [Major challenges or legal obstacles]
+- Viability Assessment: [Low probability with explanation]
+
+**ELIMINATED ISSUES:**
+For each eliminated legal issue:
+- Issue Title: [Descriptive name]
+- Strength: Eliminated
+- Description: [Why this legal theory is not viable]
+- Strategic Priority: [0 or very low]
+- Risk Factors: [Fatal flaws or insurmountable obstacles]
+- Viability Assessment: [Not viable with specific legal reasoning]
+
+**OVERALL STRATEGY:**
+Comprehensive strategic assessment based on the issue prioritization above.
+
+**PRIORITY RECOMMENDATIONS:**
+Numbered list of specific, actionable recommendations for pursuing the strongest issues and managing litigation risks.`;
+
+  // Assessment criteria and quality requirements
+  systemPrompt += `\n\nASSESSMENT CRITERIA:
+- Legal Merit: Strength of statutory/case law support
+- Factual Support: Quality and availability of evidence
+- Damages Potential: Scope of recoverable damages or relief
+- Litigation Risk: Complexity, cost, and uncertainty factors
+- Strategic Value: Impact on overall case objectives
+- Probability of Success: Realistic likelihood of favorable outcome
+
+EVALUATION STANDARDS:
+- STRONG: High probability of success (70%+), strong legal/factual support
+- MODERATE: Reasonable chance of success (40-70%), some challenges to overcome
+- WEAK: Low probability of success (10-40%), significant obstacles
+- ELIMINATED: Minimal/no chance of success (<10%), fatal legal/factual flaws
+
+TEXAS LAW FOCUS:
+Base all assessments on Texas law, procedure, and precedent. Consider practical litigation realities in Texas courts.`;
 
   return systemPrompt;
 };
