@@ -271,18 +271,8 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
           potentialIssues: mainSections.potentialIssues || "",
           followUpQuestions: mainSections.followUpQuestions || [],
         },
-        strengths: extractedStrengthsWeaknesses.strengths.length > 0 ? 
-          extractedStrengthsWeaknesses.strengths : [
-            "Documentary evidence supports client's position",
-            "Legal precedent favors our arguments",
-            "Clear liability chain established"
-          ],
-        weaknesses: extractedStrengthsWeaknesses.weaknesses.length > 0 ? 
-          extractedStrengthsWeaknesses.weaknesses : [
-            "Burden of proof challenges may arise",
-            "Opposing counsel likely to dispute key facts",
-            "Damages calculation requires further documentation"
-          ],
+        strengths: extractedStrengthsWeaknesses.strengths,
+        weaknesses: extractedStrengthsWeaknesses.weaknesses,
         conversationSummary: caseSummary,
         outcome: {
           defense: 65,

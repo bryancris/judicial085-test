@@ -1,150 +1,58 @@
 
 import { StrengthsAndWeaknesses, PredictionPercentages } from "@/types/caseAnalysis";
 import { extractDTPAReferences } from "./lawReferences/consumerProtectionUtils";
+import { extractStrengthsWeaknesses as extractStrengthsWeaknessesFromAnalysis } from "./analysisExtractors";
 
-// Extract strengths and weaknesses from analysis text
+// Extract strengths and weaknesses from analysis text - prioritizes AI-generated content
 export const extractStrengthsWeaknesses = (analysisText: string, caseType?: string): StrengthsAndWeaknesses => {
-  const strengths: string[] = [];
-  const weaknesses: string[] = [];
+  console.log('🔍 Extracting strengths/weaknesses from analysis content');
   
-  // Find positive factors in the potential issues section
-  const potentialIssuesMatch = analysisText.match(/\*\*POTENTIAL LEGAL ISSUES:\*\*([\s\S]*?)(?=\*\*RECOMMENDED FOLLOW-UP|$)/);
-  if (potentialIssuesMatch) {
-    const issues = potentialIssuesMatch[1].split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 10); // Filter out short lines
-    
-    // Categorize issues as strengths or weaknesses based on keywords
-    issues.forEach(issue => {
-      const lowerIssue = issue.toLowerCase();
-      
-      // Check for positive indicators
-      if (
-        lowerIssue.includes("favorable") || 
-        lowerIssue.includes("advantage") || 
-        lowerIssue.includes("support") || 
-        lowerIssue.includes("benefit") ||
-        lowerIssue.includes("evidence in favor") ||
-        lowerIssue.includes("strong argument")
-      ) {
-        strengths.push(issue.replace(/^[-•*]\s*/, '')); // Remove bullet points
-      } 
-      // Check for negative indicators
-      else if (
-        lowerIssue.includes("challenge") || 
-        lowerIssue.includes("difficult") || 
-        lowerIssue.includes("concern") || 
-        lowerIssue.includes("problem") ||
-        lowerIssue.includes("weak") ||
-        lowerIssue.includes("against") ||
-        lowerIssue.includes("risk")
-      ) {
-        weaknesses.push(issue.replace(/^[-•*]\s*/, '')); // Remove bullet points
-      }
-      // If unclear, default logic
-      else if (strengths.length <= weaknesses.length) {
-        strengths.push(issue.replace(/^[-•*]\s*/, ''));
-      } else {
-        weaknesses.push(issue.replace(/^[-•*]\s*/, ''));
-      }
+  // First, try to extract from existing analysis using the enhanced extractor from analysisExtractors
+  const enhancedExtraction = extractStrengthsWeaknessesFromAnalysis(analysisText);
+  
+  if (enhancedExtraction.strengths.length > 0 || enhancedExtraction.weaknesses.length > 0) {
+    console.log('✅ Successfully extracted strengths/weaknesses from analysis content:', {
+      strengths: enhancedExtraction.strengths.length,
+      weaknesses: enhancedExtraction.weaknesses.length
     });
-  }
-  
-  // Add consumer protection specific strengths and weaknesses for DTPA cases
-  if (caseType === "consumer-protection" || analysisText.toLowerCase().includes("deceptive trade") || analysisText.toLowerCase().includes("dtpa")) {
-    const dtpaReferences = extractDTPAReferences(analysisText);
     
-    // If we have DTPA references, use them to create strengths
-    if (dtpaReferences.length > 0 && strengths.length < 3) {
-      dtpaReferences.slice(0, 2).forEach(ref => {
-        if (!strengths.some(s => s.includes(ref))) {
-          strengths.push(`Potential ${ref} violation supports DTPA claim`);
-        }
-      });
-    }
+    // Filter out generic template language
+    const filteredStrengths = enhancedExtraction.strengths.filter(s => !isGenericTemplate(s));
+    const filteredWeaknesses = enhancedExtraction.weaknesses.filter(w => !isGenericTemplate(w));
     
-    // Add standard DTPA strengths if needed
-    if (strengths.length < 2) {
-      if (!strengths.some(s => s.toLowerCase().includes("treble"))) {
-        strengths.push("Potential for treble damages under DTPA for knowing violations");
-      }
-      if (!strengths.some(s => s.toLowerCase().includes("attorney"))) {
-        strengths.push("DTPA allows recovery of attorney's fees for successful claims");
-      }
-    }
-    
-    // Add standard DTPA weaknesses if needed
-    if (weaknesses.length < 2) {
-      if (!weaknesses.some(w => w.toLowerCase().includes("consumer"))) {
-        weaknesses.push("Must establish consumer status under DTPA to maintain claim");
-      }
-      if (!weaknesses.some(w => w.toLowerCase().includes("notice"))) {
-        weaknesses.push("Pre-suit notice requirements must be satisfied for DTPA claims");
-      }
+    if (filteredStrengths.length > 0 && filteredWeaknesses.length > 0) {
+      return {
+        strengths: filteredStrengths.slice(0, 4),
+        weaknesses: filteredWeaknesses.slice(0, 4)
+      };
     }
   }
   
-  // If we couldn't extract enough strengths/weaknesses, add generic ones based on the analysis
-  if (strengths.length < 2) {
-    const prelimAnalysisMatch = analysisText.match(/\*\*PRELIMINARY ANALYSIS:\*\*([\s\S]*?)(?=\*\*POTENTIAL LEGAL ISSUES|\*\*RECOMMENDED FOLLOW-UP|$)/);
-    if (prelimAnalysisMatch) {
-      const prelimText = prelimAnalysisMatch[1].toLowerCase();
-      
-      if (prelimText.includes("witness") && !strengths.some(s => s.toLowerCase().includes("witness"))) {
-        strengths.push("Witness testimony may strengthen the case");
-      }
-      
-      if (prelimText.includes("evidence") && !strengths.some(s => s.toLowerCase().includes("evidence"))) {
-        strengths.push("Available evidence supports client's position");
-      }
-      
-      if (prelimText.includes("precedent") && !strengths.some(s => s.toLowerCase().includes("precedent"))) {
-        strengths.push("Legal precedent supports elements of our case");
-      }
-    }
-  }
+  console.log('⚠️ No AI-generated strengths/weaknesses found, using minimal fallbacks');
   
-  if (weaknesses.length < 2) {
-    const prelimAnalysisMatch = analysisText.match(/\*\*PRELIMINARY ANALYSIS:\*\*([\s\S]*?)(?=\*\*POTENTIAL LEGAL ISSUES|\*\*RECOMMENDED FOLLOW-UP|$)/);
-    if (prelimAnalysisMatch) {
-      const prelimText = prelimAnalysisMatch[1].toLowerCase();
-      
-      if (prelimText.includes("burden") && !weaknesses.some(w => w.toLowerCase().includes("burden"))) {
-        weaknesses.push("Burden of proof challenges");
-      }
-      
-      if (prelimText.includes("credibility") && !weaknesses.some(w => w.toLowerCase().includes("credibility"))) {
-        weaknesses.push("Potential credibility challenges");
-      }
-      
-      if (prelimText.includes("limitation") && !weaknesses.some(w => w.toLowerCase().includes("limitation"))) {
-        weaknesses.push("Procedural or statutory limitations may apply");
-      }
-    }
-  }
-  
-  // Ensure we have at least some strengths and weaknesses
-  if (strengths.length === 0) {
-    strengths.push(
-      "Client's testimony appears consistent",
-      "Documentation of incident is available",
-      "Applicable law has favorable precedents"
-    );
-  }
-  
-  if (weaknesses.length === 0) {
-    weaknesses.push(
-      "Potential gaps in evidence chain",
-      "Timeline inconsistencies may need resolution",
-      "Opposing counsel likely to challenge key facts"
-    );
-  }
-  
-  // Ensure a reasonable number (2-4) of strengths and weaknesses
+  // Minimal fallback only when AI generation completely failed
   return {
-    strengths: strengths.slice(0, 4),
-    weaknesses: weaknesses.slice(0, 4)
+    strengths: ["Analysis reveals potential legal claims require evaluation"],
+    weaknesses: ["Additional fact development and legal research needed"]
   };
+};
+
+// Helper function to detect generic template language
+const isGenericTemplate = (text: string): boolean => {
+  const lowerText = text.toLowerCase();
+  const genericPhrases = [
+    "potential gaps in evidence chain",
+    "timeline inconsistencies may need resolution", 
+    "opposing counsel likely to challenge key facts",
+    "client's testimony appears consistent",
+    "documentation of incident is available",
+    "applicable law has favorable precedents",
+    "treble damages under dtpa",
+    "attorney's fees recoverable under dtpa",
+    "consumer status under dtpa"
+  ];
+  
+  return genericPhrases.some(phrase => lowerText.includes(phrase));
 };
 
 // Calculate prediction percentages based on analysis text - completely revamped
