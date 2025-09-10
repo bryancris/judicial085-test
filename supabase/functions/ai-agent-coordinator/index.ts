@@ -180,7 +180,6 @@ async function executeSequentialWorkflow(
   if (!validation3.isValid && step3Proceed) {
     console.warn('⚠️ Step 3 validation issues present but proceeding (score >= 0.6, <=1 error).', validation3);
   }
-  }
   workflowState.completedSteps.add(3);
 
   // Step 4: ADDITIONAL CASE LAW (Precedent research)
