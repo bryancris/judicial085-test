@@ -29,6 +29,7 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
       }
 
       let analyses = null;
+      let iracAnalysis = null;
 
       // If case ID is provided, ONLY look for case-specific analysis
       if (caseId) {
@@ -46,8 +47,10 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           throw new Error(`Failed to fetch case-specific analysis: ${caseError.message}`);
         }
 
-        analyses = caseAnalyses;
-        console.log(`Found ${analyses?.length || 0} case-specific analysis records`);
+        // Separate IRAC analysis from main analysis
+        iracAnalysis = caseAnalyses?.find(a => a.analysis_type === 'irac-analysis');
+        analyses = caseAnalyses?.filter(a => a.analysis_type !== 'irac-analysis');
+        console.log(`Found ${analyses?.length || 0} case-specific analysis records, ${iracAnalysis ? 1 : 0} IRAC records`);
 
         // If no case-specific analysis, fall back to latest client-level analysis
         if (!analyses || analyses.length === 0) {
@@ -65,7 +68,12 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
             throw new Error(`Failed to fetch client-level analysis (fallback): ${clientFallbackError.message}`);
           }
 
-          analyses = clientAnalysesFallback;
+          // Separate IRAC analysis from main analysis for fallback too
+          const fallbackIrac = clientAnalysesFallback?.find(a => a.analysis_type === 'irac-analysis');
+          if (fallbackIrac && !iracAnalysis) {
+            iracAnalysis = fallbackIrac;
+          }
+          analyses = clientAnalysesFallback?.filter(a => a.analysis_type !== 'irac-analysis');
           console.log(`Found ${analyses?.length || 0} client-level analysis records (fallback)`);
         }
         
@@ -90,8 +98,10 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           throw new Error(`Failed to fetch client-level analysis: ${clientError.message}`);
         }
 
-        analyses = clientAnalyses;
-        console.log(`Found ${analyses?.length || 0} client-level analysis records`);
+        // Separate IRAC analysis from main analysis
+        iracAnalysis = clientAnalyses?.find(a => a.analysis_type === 'irac-analysis');
+        analyses = clientAnalyses?.filter(a => a.analysis_type !== 'irac-analysis');
+        console.log(`Found ${analyses?.length || 0} client-level analysis records, ${iracAnalysis ? 1 : 0} IRAC records`);
         
         // Simplify: prefer most recent analysis (client-level)
         if (analyses && analyses.length > 1) {
@@ -239,6 +249,7 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           caseType: analysis.case_type || "general",
           remedies: sections.remedies || "",
           rawContent: analysis.content,
+          iracContent: iracAnalysis?.content || null,
           validationStatus: analysis.validation_status
         };
 

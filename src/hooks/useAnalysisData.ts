@@ -26,6 +26,7 @@ export interface AnalysisData {
   validationStatus?: string;
   remedies?: string;
   rawContent?: string; // Add raw content for direct rendering
+  iracContent?: string | null; // Add IRAC content for Step 5
 }
 
 export const useAnalysisData = (clientId?: string, caseId?: string) => {

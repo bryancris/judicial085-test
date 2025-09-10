@@ -4,7 +4,7 @@ import { ProcessDocumentContentFunction } from "@/types/caseAnalysis";
 import CaseSummarySection from "../steps/CaseSummarySection";
 import PreliminaryAnalysisSection from "../steps/PreliminaryAnalysisSection";
 import RelevantTexasLawsSection from "../steps/RelevantTexasLawsSection";
-import { AdditionalCaseLawSection } from "../AdditionalCaseLawSection";
+import AdditionalCaseLawSectionWithPersistence from "../steps/AdditionalCaseLawSectionWithPersistence";
 import IracAnalysisSection from "../IracAnalysisSection";
 import LegalIssuesAssessmentSection from "../steps/LegalIssuesAssessmentSection";
 import CaseStrengthsWeaknesses from "../CaseStrengthsWeaknesses";
@@ -25,15 +25,25 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
   isLoading,
   clientId,
 }) => {
-  // Parse IRAC analysis from raw content with safeguards (only when truly IRAC)
+  // Parse IRAC analysis - prefer dedicated iracContent, fallback to raw content
   const iracAnalysis = useMemo(() => {
+    // First try dedicated IRAC content
+    if (analysisData.iracContent) {
+      console.log("🧮 Using dedicated IRAC content for Step 5");
+      if (isIracStructured(analysisData.iracContent)) {
+        return parseIracAnalysis(analysisData.iracContent);
+      }
+    }
+    
+    // Fallback to raw content parsing (legacy)
     const raw = analysisData.rawContent || "";
     if (!raw) return null;
     // Only parse if IRAC structure is clearly present and not a preliminary-only output
     if (!isIracStructured(raw)) return null;
     if (/\*\*PRELIMINARY ANALYSIS:\*\*/i.test(raw)) return null;
+    console.log("🔄 Using legacy IRAC parsing from raw content");
     return parseIracAnalysis(raw);
-  }, [analysisData.rawContent]);
+  }, [analysisData.rawContent, analysisData.iracContent]);
 
   return (
     <div className="space-y-8">
@@ -59,7 +69,7 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
       />
 
       {/* Step 4: Additional Case Law (Precedent research) */}
-      <AdditionalCaseLawSection
+      <AdditionalCaseLawSectionWithPersistence
         analysisData={analysisData}
         clientId={clientId}
         caseType={analysisData.caseType}

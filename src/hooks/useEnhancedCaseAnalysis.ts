@@ -130,6 +130,47 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
 
       console.log("✅ Quality-controlled analysis validated and saved, id:", saveResult.analysisId);
       
+      // Step 5: Generate IRAC Analysis if Step 2 was successful
+      console.log("🧮 Starting Step 5: IRAC Analysis generation...");
+      const iracResult = await generateLegalAnalysis(
+        clientId,
+        [],
+        caseId,
+        'step-5-irac',
+        { stepType: 'irac-analysis', skipCoordinator: true }
+      );
+      
+      if (iracResult.error) {
+        console.warn("⚠️ IRAC Analysis (Step 5) failed:", iracResult.error);
+        toast({
+          title: "IRAC Analysis Failed",
+          description: "Step 2 completed but Step 5 (IRAC) failed. Continuing with available analysis.",
+          variant: "destructive",
+        });
+      } else {
+        // Save IRAC analysis as separate record
+        const iracSaveResult = await saveLegalAnalysis(
+          clientId,
+          iracResult.analysis,
+          new Date().toISOString(),
+          {
+            caseId,
+            analysisType: "irac-analysis",
+            lawReferences: iracResult.lawReferences || [],
+            documentsUsed: iracResult.documentsUsed || [],
+            factSources: iracResult.factSources || [],
+            citations: iracResult.citations || [],
+            provenance: { qualityControlEnabled: true, sourceStep: 5 }
+          }
+        );
+        
+        if (iracSaveResult.success) {
+          console.log("✅ IRAC Analysis (Step 5) saved successfully, id:", iracSaveResult.analysisId);
+        } else {
+          console.warn("⚠️ IRAC Analysis save failed:", iracSaveResult.error);
+        }
+      }
+      
       // Show success message
       toast({
         title: "Analysis Complete",
