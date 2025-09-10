@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Json } from "@/integrations/supabase/types";
 import { extractAnalysisSections } from "@/utils/analysisParsingUtils";
+import { parseLegalIssuesAssessment } from "@/utils/legalIssuesParser";
+import { LegalIssuesAssessment } from "@/types/caseAnalysis";
 // ⚠️ NOTE: IRAC parsing removed from analysisParsingUtils - IRAC only for Step 5
 
 export interface AnalysisData {
@@ -27,6 +29,7 @@ export interface AnalysisData {
   remedies?: string;
   rawContent?: string; // Add raw content for direct rendering
   iracContent?: string | null; // Add IRAC content for Step 5
+  legalIssuesAssessment?: LegalIssuesAssessment | null; // Add Step 6 parsed data
 }
 
 export const useAnalysisData = (clientId?: string, caseId?: string) => {

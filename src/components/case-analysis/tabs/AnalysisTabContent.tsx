@@ -86,7 +86,12 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
 
       {/* Step 6: Legal Issues Assessment (Issues validated through analysis) */}
       <LegalIssuesAssessmentSection
-        issues={[]} // TODO: Extract from analysis data when available
+        issues={analysisData.legalIssuesAssessment ? [
+          ...analysisData.legalIssuesAssessment.strongIssues,
+          ...analysisData.legalIssuesAssessment.moderateIssues,
+          ...analysisData.legalIssuesAssessment.weakIssues,
+          ...analysisData.legalIssuesAssessment.eliminatedIssues
+        ] : []}
         isLoading={isLoading}
       />
 

@@ -194,6 +194,25 @@ export const validateStepCompletion = async (stepNumber: number, stepResult: any
     score -= 0.3;
   }
 
+  // Step 6 specific validation - RISK_ASSESSMENT
+  if (stepType === 'RISK_ASSESSMENT') {
+    const requiredSections = ['STRONG ISSUES', 'MODERATE ISSUES', 'WEAK ISSUES', 'ELIMINATED ISSUES'];
+    const missingStructures = requiredSections.filter(section => 
+      !content.toUpperCase().includes(section)
+    );
+    
+    if (missingStructures.length > 0) {
+      errors.push(`Step ${stepNumber} missing required sections: ${missingStructures.join(', ')}`);
+      score -= 0.4;
+    }
+
+    // Check for strategic priority markers
+    if (!content.includes('Priority') && !content.includes('PRIORITY')) {
+      warnings.push(`Step ${stepNumber} lacks strategic priority rankings`);
+      score -= 0.1;
+    }
+  }
+
   // Citation validation for legal content
   if (['TEXAS_LAWS', 'CASE_LAW', 'IRAC_ANALYSIS'].includes(stepType)) {
     const citationErrors = [

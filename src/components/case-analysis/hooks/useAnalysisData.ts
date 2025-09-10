@@ -5,6 +5,8 @@ import { AnalysisData } from "@/hooks/useAnalysisData";
 import { extractLegalCitations, mapCitationsToKnowledgeBase, generateDirectPdfUrl } from "@/utils/lawReferences/knowledgeBaseMapping";
 import { cleanupDuplicateAnalyses } from "@/utils/duplicateCleanupService";
 import { extractAnalysisSections, extractStrengthsWeaknesses } from "@/utils/analysisParsingUtils";
+import { parseLegalIssuesAssessment } from "@/utils/legalIssuesParser";
+import { LegalIssuesAssessment } from "@/types/caseAnalysis";
 // ⚠️ NOTE: IRAC fallback parsing removed - IRAC only for Step 5
 
 
@@ -30,6 +32,7 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
 
       let analyses = null;
       let iracAnalysis = null;
+      let legalIssuesAssessment = null;
 
       // If case ID is provided, ONLY look for case-specific analysis
       if (caseId) {
@@ -47,9 +50,10 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           throw new Error(`Failed to fetch case-specific analysis: ${caseError.message}`);
         }
 
-        // Separate IRAC analysis from main analysis
+        // Separate IRAC analysis and Step 6 assessment from main analysis
         iracAnalysis = caseAnalyses?.find(a => a.analysis_type === 'irac-analysis');
-        analyses = caseAnalyses?.filter(a => a.analysis_type !== 'irac-analysis');
+        legalIssuesAssessment = caseAnalyses?.find(a => a.analysis_type === 'risk-assessment');
+        analyses = caseAnalyses?.filter(a => !['irac-analysis', 'risk-assessment'].includes(a.analysis_type));
         console.log(`Found ${analyses?.length || 0} case-specific analysis records, ${iracAnalysis ? 1 : 0} IRAC records`);
 
         // If no case-specific analysis, fall back to latest client-level analysis
@@ -68,12 +72,16 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
             throw new Error(`Failed to fetch client-level analysis (fallback): ${clientFallbackError.message}`);
           }
 
-          // Separate IRAC analysis from main analysis for fallback too
+          // Separate IRAC analysis and Step 6 assessment from main analysis for fallback too
           const fallbackIrac = clientAnalysesFallback?.find(a => a.analysis_type === 'irac-analysis');
+          const fallbackAssessment = clientAnalysesFallback?.find(a => a.analysis_type === 'risk-assessment');
           if (fallbackIrac && !iracAnalysis) {
             iracAnalysis = fallbackIrac;
           }
-          analyses = clientAnalysesFallback?.filter(a => a.analysis_type !== 'irac-analysis');
+          if (fallbackAssessment && !legalIssuesAssessment) {
+            legalIssuesAssessment = fallbackAssessment;
+          }
+          analyses = clientAnalysesFallback?.filter(a => !['irac-analysis', 'risk-assessment'].includes(a.analysis_type));
           console.log(`Found ${analyses?.length || 0} client-level analysis records (fallback)`);
         }
         
@@ -98,9 +106,10 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           throw new Error(`Failed to fetch client-level analysis: ${clientError.message}`);
         }
 
-        // Separate IRAC analysis from main analysis
+        // Separate IRAC analysis and Step 6 assessment from main analysis
         iracAnalysis = clientAnalyses?.find(a => a.analysis_type === 'irac-analysis');
-        analyses = clientAnalyses?.filter(a => a.analysis_type !== 'irac-analysis');
+        legalIssuesAssessment = clientAnalyses?.find(a => a.analysis_type === 'risk-assessment');
+        analyses = clientAnalyses?.filter(a => !['irac-analysis', 'risk-assessment'].includes(a.analysis_type));
         console.log(`Found ${analyses?.length || 0} client-level analysis records, ${iracAnalysis ? 1 : 0} IRAC records`);
         
         // Simplify: prefer most recent analysis (client-level)
@@ -250,6 +259,7 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           remedies: sections.remedies || "",
           rawContent: analysis.content,
           iracContent: iracAnalysis?.content || null,
+          legalIssuesAssessment: legalIssuesAssessment ? parseLegalIssuesAssessment(legalIssuesAssessment.content) : null,
           validationStatus: analysis.validation_status
         };
 

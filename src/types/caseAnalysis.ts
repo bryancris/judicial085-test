@@ -28,6 +28,26 @@ export interface IracAnalysis {
   nextSteps: string[];
 }
 
+// Legal Issues Assessment Structure for Step 6
+export interface LegalIssue {
+  id: string;
+  title: string;
+  strength: 'strong' | 'moderate' | 'weak' | 'eliminated';
+  description: string;
+  strategicPriority: number;
+  riskFactors?: string[];
+  viabilityAssessment?: string;
+}
+
+export interface LegalIssuesAssessment {
+  strongIssues: LegalIssue[];
+  moderateIssues: LegalIssue[];
+  weakIssues: LegalIssue[];
+  eliminatedIssues: LegalIssue[];
+  overallStrategy: string;
+  priorityRecommendations: string[];
+}
+
 export interface CaseAnalysisData {
   outcome: {
     defense: number;
