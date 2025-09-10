@@ -743,44 +743,33 @@ async function executeStep7RefinedAnalysis(workflowState: WorkflowState, authHea
   const caseType = workflowState.context.caseType || 'Legal';
   const clientName = workflowState.context.clientName || 'Client';
   
-  const prompt = `You are GEMINI, the orchestrator. You are executing STEP 7: REFINED ANALYSIS.
+  const prompt = `You are GEMINI, the final orchestrator. This is STEP 7: REFINED ANALYSIS - the most critical step.
 
-CRITICAL: This is Step 7 of 9. Create a practical requirements vs. case comparison format.
+MISSION: Act as 3 seasoned attorneys providing their collective expertise. Synthesize all previous steps into practical, honest counsel. This is the "prize at the end of the tunnel" - the real analysis the client needs.
 
-COMPREHENSIVE ANALYSIS FROM STEPS 1-6:
+COMPREHENSIVE FOUNDATION (Steps 1-6):
 ${comprehensiveAnalysis}
 
-STEP 7 TASKS - GEMINI:
-Create a practical "Requirements vs. Case" comparison showing how the client's facts meet or don't meet specific legal requirements.
+==== FREEFORM ANALYSIS DIRECTIVE ====
 
-REQUIRED OUTPUT FORMAT:
-${caseType} Requirements vs. ${clientName}'s Case
+You are now THREE experienced legal minds working together:
 
-1. [Requirement Name]
+1. **SENIOR PARTNER**: Provides strategic overview and risk assessment
+2. **SPECIALIST**: Applies deep domain expertise to the specific legal area  
+3. **TRIAL ATTORNEY**: Focuses on practical outcomes and court realities
 
-Law: [Legal requirement description]
-Citation: [Specific statute/regulation citation]
-${clientName}: [Client's specific facts] → ✅ [Meets requirement] / ❌ [Doesn't meet requirement]
+COLLABORATE to deliver comprehensive counsel on:
+- What this case is REALLY about (cut through the noise)
+- Honest assessment of strengths vs. weaknesses
+- Practical legal strategy recommendations
+- Risk factors and mitigation approaches
+- Settlement vs. litigation considerations
+- Client expectations management
+- Next steps and timeline
 
-2. [Next Requirement]
+USE NATURAL LEGAL WRITING - no rigid structures. Apply your collective judgment freely. Be direct, practical, and honest about the case realities.
 
-Law: [Legal requirement description]
-Citation: [Specific statute/regulation citation]
-${clientName}: [Client's specific facts] → ✅ [Meets requirement] / ❌ [Doesn't meet requirement]
-
-[Continue for all relevant requirements]
-
-Bottom Line for ${clientName}
-
-[Summary of which requirements are met and overall legal conclusion with specific recommendations]
-
-INSTRUCTIONS:
-- Use ✅ for requirements that ARE met
-- Use ❌ for requirements that are NOT met
-- Include specific statute citations (e.g., "Tex. Occ. Code § 2301.605(a)(1)")
-- Match client facts to each requirement precisely
-- End with clear bottom-line assessment and recommendation
-- Focus on practical, actionable analysis`;
+Format as natural legal counsel - like a memo from seasoned attorneys to their client. Include specific citations where relevant, but prioritize substance over form.`;
 
   return await callGeminiOrchestrator(prompt, geminiApiKey, 'REFINED_ANALYSIS');
 }

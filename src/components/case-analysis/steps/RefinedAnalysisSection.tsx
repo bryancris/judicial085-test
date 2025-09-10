@@ -5,26 +5,42 @@ import { Badge } from "@/components/ui/badge";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
 import { RefinedAnalysisData } from "@/utils/refinedAnalysisParser";
+import { Button } from "@/components/ui/button";
 
 interface RefinedAnalysisSectionProps {
   analysisData: RefinedAnalysisData | null;
+  refinedAnalysisRaw?: string | null;
   isLoading?: boolean;
+  onRegenerateStep7?: () => void;
 }
 
 const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
   analysisData,
-  isLoading = false
+  refinedAnalysisRaw,
+  isLoading = false,
+  onRegenerateStep7
 }) => {
-  const executiveSummaryHtml = useMemo(() => {
-    if (!analysisData?.executiveSummary) return "";
-    const md = analysisData.executiveSummary.trim();
+  const refinedAnalysisHtml = useMemo(() => {
+    // Prioritize raw refined analysis content if available
+    const content = refinedAnalysisRaw || analysisData?.executiveSummary || "";
+    if (!content) return "";
+    
+    const md = content.trim();
     try {
       const html = marked.parse(md, { breaks: true });
       return DOMPurify.sanitize(typeof html === "string" ? html : String(html));
     } catch (e) {
       return DOMPurify.sanitize(`<p>${md.replace(/\n/g, "<br/>")}</p>`);
     }
-  }, [analysisData?.executiveSummary]);
+  }, [refinedAnalysisRaw, analysisData?.executiveSummary]);
+
+  console.log('🔍 RefinedAnalysisSection state:', {
+    hasAnalysisData: !!analysisData,
+    hasRefinedAnalysisRaw: !!refinedAnalysisRaw,
+    refinedAnalysisRawLength: refinedAnalysisRaw?.length || 0,
+    htmlLength: refinedAnalysisHtml.length,
+    isLoading
+  });
 
   if (isLoading) {
     return (
@@ -48,6 +64,37 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
     );
   }
 
+  // If we have raw refined analysis content, show it in freeform format
+  if (refinedAnalysisRaw) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Brain className="h-5 w-5" />
+            <span className="text-muted-foreground">Step 7:</span>
+            Refined Analysis (Strategic Synthesis)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="prose dark:prose-invert max-w-none text-sm" 
+               dangerouslySetInnerHTML={{ __html: refinedAnalysisHtml }} />
+          {onRegenerateStep7 && (
+            <div className="pt-4 border-t border-border">
+              <Button 
+                onClick={onRegenerateStep7} 
+                variant="outline" 
+                size="sm"
+                className="text-xs"
+              >
+                Regenerate Step 7 Analysis
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (!analysisData) {
     return (
       <Card>
@@ -55,11 +102,21 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
           <CardTitle className="flex items-center gap-2">
             <Brain className="h-5 w-5" />
             <span className="text-muted-foreground">Step 7:</span>
-            Refined Analysis (Comprehensive synthesis + Risk Assessment)
+            Refined Analysis (Strategic Synthesis)
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <p className="text-muted-foreground text-sm">No refined analysis available.</p>
+          {onRegenerateStep7 && (
+            <Button 
+              onClick={onRegenerateStep7} 
+              variant="outline" 
+              size="sm"
+              className="text-xs"
+            >
+              Generate Step 7 Analysis
+            </Button>
+          )}
         </CardContent>
       </Card>
     );
@@ -100,7 +157,7 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
             <CheckCircle className="h-4 w-4" />
             Executive Summary
           </h4>
-          <div className="prose dark:prose-invert max-w-none text-sm" dangerouslySetInnerHTML={{ __html: executiveSummaryHtml }} />
+          <div className="prose dark:prose-invert max-w-none text-sm" dangerouslySetInnerHTML={{ __html: refinedAnalysisHtml }} />
         </div>
 
         {/* Risk Assessment */}

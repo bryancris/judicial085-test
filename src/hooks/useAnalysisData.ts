@@ -33,6 +33,7 @@ export interface AnalysisData {
   iracContent?: string | null; // Add IRAC content for Step 5
   legalIssuesAssessment?: LegalIssuesAssessment | null; // Add Step 6 parsed data
   refinedAnalysis?: RefinedAnalysisData | null; // Add Step 7 parsed data
+  refinedAnalysisRaw?: string | null; // Add Step 7 raw content
 }
 
 export const useAnalysisData = (clientId?: string, caseId?: string) => {
@@ -264,8 +265,30 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
       // Extract strengths and weaknesses from analysis content
       const extractedStrengthsWeaknesses = extractStrengthsWeaknesses(analysis.content || '');
       
-      // Parse refined analysis
+      // Parse refined analysis from main content
       const refinedAnalysis = parseRefinedAnalysis(analysis.content || '');
+      
+      // Try to get dedicated Step 7 refined analysis record
+      let refinedAnalysisRaw: string | null = null;
+      try {
+        const { data: step7Data } = await supabase
+          .from('legal_analyses')
+          .select('content')
+          .eq('client_id', clientId)
+          .eq('analysis_type', 'step-7-refined-analysis')
+          .or(caseId ? `case_id.eq.${caseId},case_id.is.null` : 'case_id.is.null')
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (step7Data && step7Data.length > 0) {
+          refinedAnalysisRaw = step7Data[0].content;
+          console.log('✅ Found dedicated Step 7 refined analysis record');
+        } else {
+          console.log('📋 No dedicated Step 7 refined analysis found');
+        }
+      } catch (e) {
+        console.warn("Step 7 refined analysis lookup failed:", e);
+      }
       
       // Create analysis data with parsed sections and raw content for rendering
       const completeAnalysisData: AnalysisData = {
@@ -288,7 +311,8 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
         caseType: analysis.case_type || extractCaseType(analysis.content),
         validationStatus: analysis.validation_status,
         rawContent: analysis.content,
-        refinedAnalysis
+        refinedAnalysis,
+        refinedAnalysisRaw
       };
 
       // Try to get dedicated risk assessment analysis first

@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { CaseAnalysisData } from "@/types/caseAnalysis";
-import { useAnalysisData } from "@/components/case-analysis/hooks/useAnalysisData";
+import { useAnalysisData } from "@/hooks/useAnalysisData";
 import { useEnhancedCaseAnalysis } from "@/hooks/useEnhancedCaseAnalysis";
 import { searchSimilarCases } from "@/utils/api/analysisApiService";
 import { useToast } from "@/hooks/use-toast";
@@ -15,8 +15,8 @@ export const useCaseAnalysis = (clientId?: string, caseId?: string) => {
   // Use our hooks with case ID support
   const { 
     analysisData, 
-    isAnalysisLoading, 
-    analysisError, 
+    isLoading: isAnalysisLoading, 
+    error: analysisError, 
     fetchAnalysisData 
   } = useAnalysisData(clientId, caseId);
   
