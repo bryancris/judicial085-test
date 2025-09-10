@@ -2,8 +2,7 @@
 import { useState, useEffect } from "react";
 import { CaseAnalysisData } from "@/types/caseAnalysis";
 import { useAnalysisData } from "@/components/case-analysis/hooks/useAnalysisData";
-import { AnalysisData } from "@/hooks/useAnalysisData";
-import { useAnalysisGeneration } from "@/hooks/useAnalysisGeneration";
+import { useEnhancedCaseAnalysis } from "@/hooks/useEnhancedCaseAnalysis";
 import { searchSimilarCases } from "@/utils/api/analysisApiService";
 import { useToast } from "@/hooks/use-toast";
 
@@ -21,10 +20,11 @@ export const useCaseAnalysis = (clientId?: string, caseId?: string) => {
     fetchAnalysisData 
   } = useAnalysisData(clientId, caseId);
   
-  const { 
-    isGeneratingAnalysis, 
-    generateRealTimeAnalysis 
-  } = useAnalysisGeneration(clientId, caseId);
+  const {
+    isGeneratingAnalysis,
+    generateRealTimeAnalysisWithQualityControl
+  } = useEnhancedCaseAnalysis(clientId, caseId);
+
 
   // Load data on initial render
   useEffect(() => {
@@ -74,7 +74,7 @@ export const useCaseAnalysis = (clientId?: string, caseId?: string) => {
   // Create a wrapper function that matches the expected interface
   const generateNewAnalysis = async () => {
     console.log("useCaseAnalysis: Generating new analysis...");
-    await generateRealTimeAnalysis(
+    await generateRealTimeAnalysisWithQualityControl(
       async () => {
         console.log("useCaseAnalysis: Analysis complete callback - refetching data");
         await fetchAnalysisData();

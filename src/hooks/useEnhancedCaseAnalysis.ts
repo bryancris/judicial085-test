@@ -52,7 +52,7 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
       setCurrentStep(1);
       
       // Generate analysis using the enhanced 9-step workflow
-      const result = await generateLegalAnalysis(clientId, [], caseId, caseId ? 'case-analysis' : 'client-analysis');
+      const result = await generateLegalAnalysis(clientId, [], caseId, caseId ? 'case-analysis-9-step' : 'client-analysis-9-step');
       
       if (result.error) {
         console.error("Analysis generation failed:", result.error);
