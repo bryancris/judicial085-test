@@ -43,6 +43,16 @@ serve(async (req) => {
 
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
+    // Ensure Gemini API key exists before proceeding
+    const geminiKey = Deno.env.get("GEMINI_API_KEY");
+    if (!geminiKey) {
+      console.error("GEMINI_API_KEY is not set");
+      return new Response(
+        JSON.stringify({ error: "Missing GEMINI_API_KEY on server" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // 1) Load latest substantive analysis as context (prefer case-specific)
     console.log("🧱 Loading base analysis for refined synthesis", { clientId, caseId });
 
