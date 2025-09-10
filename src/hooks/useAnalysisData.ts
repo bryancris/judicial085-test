@@ -6,6 +6,7 @@ import { extractAnalysisSections } from "@/utils/analysisParsingUtils";
 import { parseLegalIssuesAssessment } from "@/utils/legalIssuesParser";
 import { extractStrengthsWeaknesses } from "@/utils/analysisExtractors";
 import { LegalIssuesAssessment } from "@/types/caseAnalysis";
+import { parseRefinedAnalysis, RefinedAnalysisData } from "@/utils/refinedAnalysisParser";
 // ⚠️ NOTE: IRAC parsing removed from analysisParsingUtils - IRAC only for Step 5
 
 export interface AnalysisData {

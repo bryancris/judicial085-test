@@ -4,29 +4,7 @@ import { Brain, AlertTriangle, CheckCircle, Target } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
-
-interface RiskFactor {
-  level: 'high' | 'medium' | 'low';
-  description: string;
-}
-
-interface RefinedAnalysisData {
-  executiveSummary: string;
-  riskAssessment: {
-    highRiskFactors: string[];
-    mediumRiskFactors: string[];
-    riskMitigation: string[];
-  };
-  strategicRecommendations: {
-    primaryStrategy: string;
-    alternativeStrategies: string[];
-    immediatePriorities: string[];
-  };
-  likelihoodOfSuccess: {
-    percentage: number;
-    reasoning: string;
-  };
-}
+import { RefinedAnalysisData } from "@/utils/refinedAnalysisParser";
 
 interface RefinedAnalysisSectionProps {
   analysisData: RefinedAnalysisData | null;
@@ -101,6 +79,11 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
     return 'text-red-600 dark:text-red-400';
   };
 
+  // Group risk factors by level
+  const highRiskFactors = analysisData.riskAssessment.riskFactors.filter(f => f.level === 'high');
+  const mediumRiskFactors = analysisData.riskAssessment.riskFactors.filter(f => f.level === 'medium');
+  const lowRiskFactors = analysisData.riskAssessment.riskFactors.filter(f => f.level === 'low');
+
   return (
     <Card>
       <CardHeader>
@@ -127,40 +110,54 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
             Risk Assessment
           </h4>
           <div className="space-y-4">
-            {analysisData.riskAssessment.highRiskFactors.length > 0 && (
+            {/* Overall Risk Level */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium">Overall Risk:</span>
+              <Badge className={getRiskColor(analysisData.riskAssessment.overallRisk)}>
+                {analysisData.riskAssessment.overallRisk.toUpperCase()}
+              </Badge>
+            </div>
+
+            {/* High Risk Factors */}
+            {highRiskFactors.length > 0 && (
               <div>
                 <h5 className="text-xs font-medium mb-2">High Risk Factors</h5>
                 <ul className="space-y-1">
-                  {analysisData.riskAssessment.highRiskFactors.map((factor, index) => (
+                  {highRiskFactors.map((factor, index) => (
                     <li key={index} className="flex items-start gap-2 text-sm">
                       <Badge className={getRiskColor('high')}>High</Badge>
-                      <span>{factor}</span>
+                      <span>{factor.description}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             )}
             
-            {analysisData.riskAssessment.mediumRiskFactors.length > 0 && (
+            {/* Medium Risk Factors */}
+            {mediumRiskFactors.length > 0 && (
               <div>
                 <h5 className="text-xs font-medium mb-2">Medium Risk Factors</h5>
                 <ul className="space-y-1">
-                  {analysisData.riskAssessment.mediumRiskFactors.map((factor, index) => (
+                  {mediumRiskFactors.map((factor, index) => (
                     <li key={index} className="flex items-start gap-2 text-sm">
                       <Badge className={getRiskColor('medium')}>Medium</Badge>
-                      <span>{factor}</span>
+                      <span>{factor.description}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             )}
 
-            {analysisData.riskAssessment.riskMitigation.length > 0 && (
+            {/* Low Risk Factors */}
+            {lowRiskFactors.length > 0 && (
               <div>
-                <h5 className="text-xs font-medium mb-2">Risk Mitigation</h5>
-                <ul className="space-y-1 text-sm">
-                  {analysisData.riskAssessment.riskMitigation.map((mitigation, index) => (
-                    <li key={index}>• {mitigation}</li>
+                <h5 className="text-xs font-medium mb-2">Low Risk Factors</h5>
+                <ul className="space-y-1">
+                  {lowRiskFactors.map((factor, index) => (
+                    <li key={index} className="flex items-start gap-2 text-sm">
+                      <Badge className={getRiskColor('low')}>Low</Badge>
+                      <span>{factor.description}</span>
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -174,34 +171,11 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
             <Target className="h-4 w-4" />
             Strategic Recommendations
           </h4>
-          <div className="space-y-4">
-            <div>
-              <h5 className="text-xs font-medium mb-2">Primary Strategy</h5>
-              <p className="text-sm">{analysisData.strategicRecommendations.primaryStrategy}</p>
-            </div>
-            
-            {analysisData.strategicRecommendations.alternativeStrategies.length > 0 && (
-              <div>
-                <h5 className="text-xs font-medium mb-2">Alternative Strategies</h5>
-                <ul className="space-y-1 text-sm">
-                  {analysisData.strategicRecommendations.alternativeStrategies.map((strategy, index) => (
-                    <li key={index}>• {strategy}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {analysisData.strategicRecommendations.immediatePriorities.length > 0 && (
-              <div>
-                <h5 className="text-xs font-medium mb-2">Immediate Priorities</h5>
-                <ul className="space-y-1 text-sm">
-                  {analysisData.strategicRecommendations.immediatePriorities.map((priority, index) => (
-                    <li key={index}>• {priority}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
+          <ul className="space-y-1 text-sm">
+            {analysisData.strategicRecommendations.map((recommendation, index) => (
+              <li key={index}>• {recommendation}</li>
+            ))}
+          </ul>
         </div>
 
         {/* Likelihood of Success */}
@@ -213,7 +187,16 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
                 {analysisData.likelihoodOfSuccess.percentage}%
               </span>
             </div>
-            <p className="text-sm text-muted-foreground">{analysisData.likelihoodOfSuccess.reasoning}</p>
+            {analysisData.likelihoodOfSuccess.factors.length > 0 && (
+              <div>
+                <h5 className="text-xs font-medium mb-2">Supporting Factors</h5>
+                <ul className="space-y-1 text-sm">
+                  {analysisData.likelihoodOfSuccess.factors.map((factor, index) => (
+                    <li key={index}>• {factor}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       </CardContent>
