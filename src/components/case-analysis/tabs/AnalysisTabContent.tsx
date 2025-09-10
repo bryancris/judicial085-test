@@ -84,7 +84,7 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
         />
       )}
 
-      {/* Step 6: Case Strengths & Weaknesses */}
+      {/* Step 6: Case Strengths & Weaknesses (Combined risk assessment + strengths) */}
       <CaseStrengthsWeaknesses
         strengths={analysisData.strengths}
         weaknesses={analysisData.weaknesses}
@@ -105,9 +105,7 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
         isLoading={isLoading}
       />
 
-      {/* Additional Reference Sections */}
-      
-      {/* Law References Section */}
+      {/* Step 9: Relevant Texas Law References (Vectorized Legal Documents) */}
       {analysisData.lawReferences && analysisData.lawReferences.length > 0 && (
         <LawReferencesSection
           references={analysisData.lawReferences}

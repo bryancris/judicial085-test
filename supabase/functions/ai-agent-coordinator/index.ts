@@ -132,8 +132,8 @@ async function executeSequentialWorkflow(
 
   console.log('🧠 GEMINI ORCHESTRATOR: Beginning 9-step sequential workflow...');
 
-  // Enhanced step execution with quality control and blocking mechanism
-  const stepTypes = ['CASE_SUMMARY', 'PRELIMINARY_ANALYSIS', 'TEXAS_LAWS', 'CASE_LAW', 'IRAC_ANALYSIS', 'RISK_ASSESSMENT', 'STRENGTHS_WEAKNESSES', 'REFINED_ANALYSIS', 'FOLLOW_UP'];
+  // Enhanced step execution with updated 9-step alignment
+  const stepTypes = ['CASE_SUMMARY', 'PRELIMINARY_ANALYSIS', 'TEXAS_LAWS', 'CASE_LAW', 'IRAC_ANALYSIS', 'STRENGTHS_WEAKNESSES', 'REFINED_ANALYSIS', 'FOLLOW_UP', 'LAW_REFERENCES'];
   
   // Step 1: CASE SUMMARY (Organized Fact Pattern)
   console.log('📝 Step 1: CASE SUMMARY - Gemini organizing fact pattern...');
@@ -203,74 +203,74 @@ async function executeSequentialWorkflow(
   }
   workflowState.completedSteps.add(5);
 
-  // Step 6: LEGAL ISSUES ASSESSMENT (Issues validated through analysis)
-  console.log('📊 Step 6: LEGAL ISSUES ASSESSMENT - Gemini evaluating issue viability...');
-  workflowState.stepResults.step6 = await executeStep6IssuesAssessment(workflowState, authHeader, geminiApiKey);
-  workflowState.stepResults.step6.stepType = 'RISK_ASSESSMENT';
-  const validation6 = await validateStepCompletion(6, workflowState.stepResults.step6, 'RISK_ASSESSMENT', {
+  // Step 6: CASE STRENGTHS & WEAKNESSES (Combined from old Steps 6+7)
+  console.log('⚡ Step 6: CASE STRENGTHS & WEAKNESSES - Combining risk assessment and strengths...');
+  workflowState.stepResults.step6 = await executeStep6StrengthsWeaknesses(workflowState, authHeader, geminiApiKey);
+  workflowState.stepResults.step6.stepType = 'STRENGTHS_WEAKNESSES';
+  const validation6 = await validateStepCompletion(6, workflowState.stepResults.step6, 'STRENGTHS_WEAKNESSES', {
     CASE_SUMMARY: workflowState.stepResults.step1,
     PRELIMINARY_ANALYSIS: workflowState.stepResults.step2,
     TEXAS_LAWS: workflowState.stepResults.step3,
     CASE_LAW: workflowState.stepResults.step4,
     IRAC_ANALYSIS: workflowState.stepResults.step5,
-    RISK_ASSESSMENT: workflowState.stepResults.step6
+    STRENGTHS_WEAKNESSES: workflowState.stepResults.step6
   });
   if (!validation6.isValid) {
     throw new Error(`Step 6 validation failed: ${validation6.errors.join('; ')}`);
   }
   workflowState.completedSteps.add(6);
 
-  // Step 7: CASE STRENGTHS & WEAKNESSES
-  console.log('⚡ Step 7: CASE STRENGTHS & WEAKNESSES - OpenAI analyzing case strength...');
-  workflowState.stepResults.step7 = await executeStep7StrengthsWeaknesses(workflowState, authHeader, geminiApiKey);
-  workflowState.stepResults.step7.stepType = 'STRENGTHS_WEAKNESSES';
-  const validation7 = await validateStepCompletion(7, workflowState.stepResults.step7, 'STRENGTHS_WEAKNESSES', {
+  // Step 7: REFINED ANALYSIS (Comprehensive synthesis + Risk Assessment)
+  console.log('🎯 Step 7: REFINED ANALYSIS - Gemini synthesizing comprehensive overview...');
+  workflowState.stepResults.step7 = await executeStep7RefinedAnalysis(workflowState, authHeader, geminiApiKey);
+  workflowState.stepResults.step7.stepType = 'REFINED_ANALYSIS';
+  const validation7 = await validateStepCompletion(7, workflowState.stepResults.step7, 'REFINED_ANALYSIS', {
     CASE_SUMMARY: workflowState.stepResults.step1,
     PRELIMINARY_ANALYSIS: workflowState.stepResults.step2,
     TEXAS_LAWS: workflowState.stepResults.step3,
     CASE_LAW: workflowState.stepResults.step4,
     IRAC_ANALYSIS: workflowState.stepResults.step5,
-    RISK_ASSESSMENT: workflowState.stepResults.step6,
-    STRENGTHS_WEAKNESSES: workflowState.stepResults.step7
+    STRENGTHS_WEAKNESSES: workflowState.stepResults.step6,
+    REFINED_ANALYSIS: workflowState.stepResults.step7
   });
   if (!validation7.isValid) {
     throw new Error(`Step 7 validation failed: ${validation7.errors.join('; ')}`);
   }
   workflowState.completedSteps.add(7);
 
-  // Step 8: REFINED ANALYSIS (Comprehensive synthesis + Risk Assessment)
-  console.log('🎯 Step 8: REFINED ANALYSIS - Gemini synthesizing comprehensive overview...');
-  workflowState.stepResults.step8 = await executeStep8RefinedAnalysis(workflowState, authHeader, geminiApiKey);
-  workflowState.stepResults.step8.stepType = 'REFINED_ANALYSIS';
-  const validation8 = await validateStepCompletion(8, workflowState.stepResults.step8, 'REFINED_ANALYSIS', {
+  // Step 8: RECOMMENDED FOLLOW-UP QUESTIONS
+  console.log('❓ Step 8: FOLLOW-UP QUESTIONS - Gemini identifying information gaps...');
+  workflowState.stepResults.step8 = await executeStep8FollowUpQuestions(workflowState, geminiApiKey);
+  workflowState.stepResults.step8.stepType = 'FOLLOW_UP';
+  const validation8 = await validateStepCompletion(8, workflowState.stepResults.step8, 'FOLLOW_UP', {
     CASE_SUMMARY: workflowState.stepResults.step1,
     PRELIMINARY_ANALYSIS: workflowState.stepResults.step2,
     TEXAS_LAWS: workflowState.stepResults.step3,
     CASE_LAW: workflowState.stepResults.step4,
     IRAC_ANALYSIS: workflowState.stepResults.step5,
-    RISK_ASSESSMENT: workflowState.stepResults.step6,
-    STRENGTHS_WEAKNESSES: workflowState.stepResults.step7,
-    REFINED_ANALYSIS: workflowState.stepResults.step8
+    STRENGTHS_WEAKNESSES: workflowState.stepResults.step6,
+    REFINED_ANALYSIS: workflowState.stepResults.step7,
+    FOLLOW_UP: workflowState.stepResults.step8
   });
   if (!validation8.isValid) {
     throw new Error(`Step 8 validation failed: ${validation8.errors.join('; ')}`);
   }
   workflowState.completedSteps.add(8);
 
-  // Step 9: RECOMMENDED FOLLOW-UP QUESTIONS
-  console.log('❓ Step 9: FOLLOW-UP QUESTIONS - Gemini identifying information gaps...');
-  workflowState.stepResults.step9 = await executeStep9FollowUpQuestions(workflowState, geminiApiKey);
-  workflowState.stepResults.step9.stepType = 'FOLLOW_UP';
-  const validation9 = await validateStepCompletion(9, workflowState.stepResults.step9, 'FOLLOW_UP', {
+  // Step 9: RELEVANT TEXAS LAW REFERENCES (Vectorized Legal Documents)
+  console.log('📚 Step 9: LAW REFERENCES - Retrieving vectorized legal documents...');
+  workflowState.stepResults.step9 = await executeStep9LawReferences(workflowState, geminiApiKey);
+  workflowState.stepResults.step9.stepType = 'LAW_REFERENCES';
+  const validation9 = await validateStepCompletion(9, workflowState.stepResults.step9, 'LAW_REFERENCES', {
     CASE_SUMMARY: workflowState.stepResults.step1,
     PRELIMINARY_ANALYSIS: workflowState.stepResults.step2,
     TEXAS_LAWS: workflowState.stepResults.step3,
     CASE_LAW: workflowState.stepResults.step4,
     IRAC_ANALYSIS: workflowState.stepResults.step5,
-    RISK_ASSESSMENT: workflowState.stepResults.step6,
-    STRENGTHS_WEAKNESSES: workflowState.stepResults.step7,
-    REFINED_ANALYSIS: workflowState.stepResults.step8,
-    FOLLOW_UP: workflowState.stepResults.step9
+    STRENGTHS_WEAKNESSES: workflowState.stepResults.step6,
+    REFINED_ANALYSIS: workflowState.stepResults.step7,
+    FOLLOW_UP: workflowState.stepResults.step8,
+    LAW_REFERENCES: workflowState.stepResults.step9
   });
   if (!validation9.isValid) {
     throw new Error(`Step 9 validation failed: ${validation9.errors.join('; ')}`);
@@ -1364,6 +1364,71 @@ function enforceTexasLawsStructure(content: string): string {
   return result.trim();
 }
 
+// Save individual steps as separate analysis records
+async function saveIndividualSteps(
+  workflowResult: any,
+  clientId: string,
+  caseId: string | undefined,
+  supabase: any,
+  authHeader: string | null
+) {
+  try {
+    const stepMappings = {
+      step1: 'step-1-case-summary',
+      step2: 'step-2-preliminary-analysis',
+      step3: 'step-3-texas-laws',
+      step4: 'step-4-case-law',
+      step5: 'step-5-irac-analysis',
+      step6: 'step-6-strengths-weaknesses',
+      step7: 'step-7-refined-analysis',
+      step8: 'step-8-follow-up-questions',
+      step9: 'step-9-law-references'
+    };
+
+    const savePromises = [];
+
+    for (const [stepKey, analysisType] of Object.entries(stepMappings)) {
+      const stepResult = workflowResult.stepResults[stepKey];
+      if (stepResult?.content) {
+        const savePromise = supabase.functions.invoke('validate-and-save-legal-analysis', {
+          body: {
+            clientId,
+            caseId,
+            content: stepResult.content,
+            timestamp: new Date().toISOString(),
+            analysisType,
+            provenance: {
+              step: stepKey,
+              stepType: stepResult.stepType,
+              methodology: '9-step-workflow',
+              workflowVersion: '2.0',
+              metadata: stepResult.metadata || {}
+            }
+          },
+          headers: authHeader ? { Authorization: authHeader } : {}
+        });
+        savePromises.push(savePromise);
+        console.log(`💾 Saving ${stepKey} as ${analysisType}`);
+      }
+    }
+
+    const results = await Promise.allSettled(savePromises);
+    const successful = results.filter(r => r.status === 'fulfilled').length;
+    const failed = results.filter(r => r.status === 'rejected').length;
+
+    console.log(`✅ Saved ${successful} steps successfully, ${failed} failed`);
+    
+    if (failed > 0) {
+      console.warn('Some steps failed to save:', results.filter(r => r.status === 'rejected'));
+    }
+
+    return { successful, failed };
+  } catch (error) {
+    console.error('Failed to save individual steps:', error);
+    throw error;
+  }
+}
+
 async function saveWorkflowToDatabase(
   workflowResult: any,
   clientId: string,
@@ -1372,21 +1437,31 @@ async function saveWorkflowToDatabase(
   authHeader: string | null
 ) {
   try {
+    // Save individual steps as separate analysis records
+    await saveIndividualSteps(workflowResult, clientId, caseId, supabase, authHeader);
+    
+    // Also save the complete synthesis as a master record
     const { data, error } = await supabase.functions.invoke('validate-and-save-legal-analysis', {
       body: {
         clientId,
         caseId,
-        analysisContent: workflowResult.finalSynthesis,
-        methodology: '9-step-workflow',
-        workflowResults: workflowResult.stepResults,
-        researchSources: workflowResult.researchSources,
-        qualityControlPassed: workflowResult.qualityControlPassed
+        content: workflowResult.finalSynthesis,
+        timestamp: new Date().toISOString(),
+        analysisType: '9-step-workflow-synthesis',
+        provenance: {
+          methodology: '9-step-workflow',
+          workflowResults: Object.keys(workflowResult.stepResults),
+          researchSources: workflowResult.researchSources,
+          qualityControlPassed: workflowResult.qualityControlPassed,
+          overallQualityScore: workflowResult.overallQualityScore,
+          completedSteps: Array.from(workflowResult.completedSteps)
+        }
       },
       headers: authHeader ? { Authorization: authHeader } : {}
     });
 
     if (error) {
-      console.error('Error saving 9-step workflow to database:', error);
+      console.error('Error saving 9-step workflow synthesis to database:', error);
       throw error;
     }
 
