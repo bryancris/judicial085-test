@@ -240,7 +240,7 @@ async function executeSequentialWorkflow(
 
   // Step 8: RECOMMENDED FOLLOW-UP QUESTIONS
   console.log('❓ Step 8: FOLLOW-UP QUESTIONS - Gemini identifying information gaps...');
-  workflowState.stepResults.step8 = await executeStep9FollowUpQuestions(workflowState, geminiApiKey);
+  workflowState.stepResults.step8 = await executeStep8FollowUpQuestions(workflowState, geminiApiKey);
   workflowState.stepResults.step8.stepType = 'FOLLOW_UP';
   const validation8 = await validateStepCompletion(8, workflowState.stepResults.step8, 'FOLLOW_UP', {
     CASE_SUMMARY: workflowState.stepResults.step1,
@@ -774,16 +774,16 @@ Format as natural legal counsel - like a memo from seasoned attorneys to their c
   return await callGeminiOrchestrator(prompt, geminiApiKey, 'REFINED_ANALYSIS');
 }
 
-// Step 9: RECOMMENDED FOLLOW-UP QUESTIONS
-async function executeStep9FollowUpQuestions(workflowState: WorkflowState, geminiApiKey: string) {
-  const prompt = `You are GEMINI, the orchestrator. You are executing STEP 9: RECOMMENDED FOLLOW-UP QUESTIONS.
+// Step 8: RECOMMENDED FOLLOW-UP QUESTIONS
+async function executeStep8FollowUpQuestions(workflowState: WorkflowState, geminiApiKey: string) {
+  const prompt = `You are GEMINI, the orchestrator. You are executing STEP 8: RECOMMENDED FOLLOW-UP QUESTIONS.
 
-CRITICAL: This is the final Step 9 of 9. Build upon all previous steps.
+CRITICAL: This is Step 8 of 9. Build upon all previous steps.
 
-COMPLETE 9-STEP ANALYSIS:
-${combineStepsForAnalysis(workflowState, [1, 2, 3, 4, 5, 6, 7, 8])}
+COMPLETE ANALYSIS (Steps 1–7):
+${combineStepsForAnalysis(workflowState, [1, 2, 3, 4, 5, 6, 7])}
 
-STEP 9 TASKS - GEMINI:
+STEP 8 TASKS - GEMINI:
 - Identify critical information gaps from all previous steps
 - Generate strategic follow-up questions organized by priority
 - Recommend additional investigation areas
@@ -794,7 +794,7 @@ RECOMMENDED FOLLOW-UP QUESTIONS
 
 CRITICAL INFORMATION NEEDED:
 1. [Question about key factual gap]
-2. [Question about legal clarification]  
+2. [Question about legal clarification]
 3. [Question about evidence/documentation]
 
 ADDITIONAL INVESTIGATION:
@@ -806,9 +806,47 @@ EXPERT CONSULTATION:
 - [Whether specialized experts needed]
 - [Areas requiring additional legal research]
 
-Generate specific, actionable follow-up questions based on the complete 9-step analysis.`;
+Generate specific, actionable follow-up questions based on the complete analysis.`;
 
   return await callGeminiOrchestrator(prompt, geminiApiKey, 'FOLLOW_UP_QUESTIONS');
+}
+
+// Step 9: RELEVANT TEXAS LAW REFERENCES
+async function executeStep9LawReferences(workflowState: WorkflowState, geminiApiKey: string) {
+  // Gather vectorized law snippets using Step 3/4 context and the original query
+  let lawSnippets = '';
+  try {
+    const basis = `${truncate(workflowState.stepResults.step3?.content || '', 1500)}\n\n${truncate(workflowState.stepResults.step4?.content || '', 1500)}\n\n${truncate(workflowState.context.query || '', 500)}`;
+    const embedding = await generateEmbeddingForText(basis);
+    const lawCtx = await fetchVectorLawContext(embedding, 0.7, 6);
+    lawSnippets = lawCtx.topSnippets;
+  } catch (e) {
+    console.warn('⚠️ Step 9 law reference vector search failed:', (e as Error).message);
+  }
+
+  const prompt = `You are GEMINI, the orchestrator. You are executing STEP 9: RELEVANT TEXAS LAW REFERENCES.
+
+CRITICAL: This is the final Step 9 of 9. Provide concise, accurate references tied to the case.
+
+PRIOR ANALYSIS (Steps 1–8):
+${combineStepsForAnalysis(workflowState, [1, 2, 3, 4, 5, 6, 7, 8])}
+
+VECTOR LAW CONTEXT:
+${lawSnippets || 'No vector law context available'}
+
+TASKS:
+- List the most relevant Texas statutes and regulations with short summaries
+- Map each reference to specific issues from the case
+- Include citations in a consistent format
+
+REQUIRED OUTPUT FORMAT:
+TEXAS LAW REFERENCES
+- [Citation]: [One‑sentence relevance summary]
+- [Citation]: [One‑sentence relevance summary]
+
+Keep it focused and practical.`;
+
+  return await callGeminiOrchestrator(prompt, geminiApiKey, 'LAW_REFERENCES');
 }
 
 // Helper functions
