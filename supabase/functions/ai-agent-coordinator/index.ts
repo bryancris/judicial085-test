@@ -220,8 +220,8 @@ async function executeSequentialWorkflow(
   }
   workflowState.completedSteps.add(6);
 
-  // Step 7: REFINED ANALYSIS (Comprehensive synthesis + Risk Assessment)
-  console.log('🎯 Step 7: REFINED ANALYSIS - Gemini synthesizing comprehensive overview...');
+  // Step 7: REFINED ANALYSIS (Requirements vs. Case Comparison)
+  console.log('🎯 Step 7: REFINED ANALYSIS - Gemini generating requirements comparison...');
   workflowState.stepResults.step7 = await executeStep7RefinedAnalysis(workflowState, authHeader, geminiApiKey);
   workflowState.stepResults.step7.stepType = 'REFINED_ANALYSIS';
   const validation7 = await validateStepCompletion(7, workflowState.stepResults.step7, 'REFINED_ANALYSIS', {
@@ -733,47 +733,54 @@ Organize the OpenAI analysis into the required format above.`;
   return await callGeminiOrchestrator(prompt, geminiApiKey, 'STRENGTHS_WEAKNESSES');
 }
 
-// Step 8: REFINED ANALYSIS (Comprehensive synthesis + Risk Assessment)
-async function executeStep8RefinedAnalysis(workflowState: WorkflowState, authHeader: string | null, geminiApiKey: string) {
-  // Coordinate final risk assessment with OpenAI
-  console.log('🎯 Step 8: Gemini coordinating final risk assessment with OpenAI...');
+// Step 7: REFINED ANALYSIS (Requirements vs. Case Comparison)
+async function executeStep7RefinedAnalysis(workflowState: WorkflowState, authHeader: string | null, geminiApiKey: string) {
+  console.log('🎯 Step 7: Gemini generating requirements vs. case comparison...');
   
-  const comprehensiveAnalysis = combineStepsForAnalysis(workflowState, [1, 2, 3, 4, 5, 6, 7]);
-  const openAIResult = await coordinateWithOpenAI(
-    'risk-assessment',
-    `Conduct final legal risk analysis and strategic recommendations`,
-    comprehensiveAnalysis,
-    workflowState.context.clientId,
-    workflowState.context.caseId,
-    authHeader
-  );
+  const comprehensiveAnalysis = combineStepsForAnalysis(workflowState, [1, 2, 3, 4, 5, 6]);
+  
+  // Extract case type and client name from context
+  const caseType = workflowState.context.caseType || 'Legal';
+  const clientName = workflowState.context.clientName || 'Client';
+  
+  const prompt = `You are GEMINI, the orchestrator. You are executing STEP 7: REFINED ANALYSIS.
 
-  // Then have Gemini perform final synthesis
-  const prompt = `You are GEMINI, the orchestrator. You are executing STEP 8: REFINED ANALYSIS.
+CRITICAL: This is Step 7 of 9. Create a practical requirements vs. case comparison format.
 
-CRITICAL: This is Step 8 of 9. Synthesize all previous steps into refined comprehensive analysis.
-
-COMPREHENSIVE ANALYSIS FROM STEPS 1-7:
+COMPREHENSIVE ANALYSIS FROM STEPS 1-6:
 ${comprehensiveAnalysis}
 
-OPENAI RISK ASSESSMENT:
-${openAIResult.content}
-
-STEP 8 TASKS - GEMINI:
-- Synthesize all previous analysis into refined comprehensive overview
-- Conduct final risk assessment and strategic planning
-- Provide executive summary of key findings
+STEP 7 TASKS - GEMINI:
+Create a practical "Requirements vs. Case" comparison showing how the client's facts meet or don't meet specific legal requirements.
 
 REQUIRED OUTPUT FORMAT:
-REFINED ANALYSIS
+${caseType} Requirements vs. ${clientName}'s Case
 
-- Executive Summary
-- Key Legal Findings
-- Risk Assessment
-- Strategic Recommendations
-- Action Plan
+1. [Requirement Name]
 
-Synthesize all previous steps into a comprehensive refined analysis.`;
+Law: [Legal requirement description]
+Citation: [Specific statute/regulation citation]
+${clientName}: [Client's specific facts] → ✅ [Meets requirement] / ❌ [Doesn't meet requirement]
+
+2. [Next Requirement]
+
+Law: [Legal requirement description]
+Citation: [Specific statute/regulation citation]
+${clientName}: [Client's specific facts] → ✅ [Meets requirement] / ❌ [Doesn't meet requirement]
+
+[Continue for all relevant requirements]
+
+Bottom Line for ${clientName}
+
+[Summary of which requirements are met and overall legal conclusion with specific recommendations]
+
+INSTRUCTIONS:
+- Use ✅ for requirements that ARE met
+- Use ❌ for requirements that are NOT met
+- Include specific statute citations (e.g., "Tex. Occ. Code § 2301.605(a)(1)")
+- Match client facts to each requirement precisely
+- End with clear bottom-line assessment and recommendation
+- Focus on practical, actionable analysis`;
 
   return await callGeminiOrchestrator(prompt, geminiApiKey, 'REFINED_ANALYSIS');
 }
