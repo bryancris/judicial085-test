@@ -5,7 +5,7 @@ import { useAnalysisData } from "@/hooks/useAnalysisData";
 import { useEnhancedCaseAnalysis } from "@/hooks/useEnhancedCaseAnalysis";
 import { searchSimilarCases } from "@/utils/api/analysisApiService";
 import { useToast } from "@/hooks/use-toast";
-import { coordinateAIAgents } from "@/utils/api/aiAgentService";
+import { supabase } from "@/integrations/supabase/client";
 
 export type { CaseAnalysisData } from "@/types/caseAnalysis";
 
@@ -80,25 +80,31 @@ export const useCaseAnalysis = (clientId?: string, caseId?: string) => {
         console.log("useCaseAnalysis: Analysis complete callback - refetching data");
         await fetchAnalysisData();
 
-        // Kick off 9-step coordinator to ensure Step 7 is created
+        // Kick off lightweight Step 7 generator to create refined analysis
         try {
-          console.log("useCaseAnalysis: Invoking 9-step coordinator for refined Step 7...");
-          await coordinateAIAgents({
-            query: `Comprehensive case refinement and practical counsel for client ${clientId}${caseId ? `, case ${caseId}` : ''}`,
-            clientId,
-            caseId,
-            researchTypes: ["legal-research", "current-research"],
+          console.log("useCaseAnalysis: Invoking generate-refined-analysis for Step 7...");
+          const { data, error } = await supabase.functions.invoke('generate-refined-analysis', {
+            body: { clientId, caseId }
           });
+          if (error) {
+            console.error("useCaseAnalysis: generate-refined-analysis failed", error);
+          } else {
+            console.log("useCaseAnalysis: Step 7 generation response:", data);
+          }
           // Re-fetch to pick up the saved Step 7 record (if any)
           await fetchAnalysisData();
-          // Only show success toast if refined analysis is actually present
-          if (analysisData?.refinedAnalysisRaw && analysisData.refinedAnalysisRaw.length > 50) {
+
+          // Show success if the function reported substantial content
+          const contentLen = (data as any)?.contentLength ?? 0;
+          if (contentLen > 200) {
+            toast({ title: "Refined Analysis Ready", description: "Step 7 generated successfully." });
+          } else if (analysisData?.refinedAnalysisRaw && analysisData.refinedAnalysisRaw.length > 50) {
             toast({ title: "Refined Analysis Ready", description: "Step 7 generated successfully." });
           } else {
-            console.log("useCaseAnalysis: Step 7 not detected yet after coordinator run; skipping success toast.");
+            console.log("useCaseAnalysis: Step 7 not detected yet after generation; skipping success toast.");
           }
         } catch (e) {
-          console.error("useCaseAnalysis: Coordinator invocation failed", e);
+          console.error("useCaseAnalysis: generate-refined-analysis invocation failed", e);
         }
 
         // Auto-trigger similar cases search after analysis is complete
