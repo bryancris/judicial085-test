@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Json } from "@/integrations/supabase/types";
 import { extractAnalysisSections } from "@/utils/analysisParsingUtils";
+// ⚠️ NOTE: IRAC parsing removed from analysisParsingUtils - IRAC only for Step 5
 
 export interface AnalysisData {
   id?: string; // Add analysis ID for database operations

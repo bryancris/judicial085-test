@@ -9,7 +9,7 @@ export const buildSystemPrompt = (
   researchUpdates?: any[],
   stepType?: string
 ) => {
-  // Route to appropriate prompt builder based on step type
+  // Route to specific step types only - NO FALLBACK TO IRAC
   if (stepType === 'preliminary-analysis') {
     return buildPreliminarySystemPrompt(
       analysisSource,
@@ -21,15 +21,19 @@ export const buildSystemPrompt = (
     );
   }
   
-  // Default to IRAC analysis for backwards compatibility
-  return buildIracSystemPrompt(
-    analysisSource,
-    relevantLawReferences,
-    hasConversation,
-    clientDocuments,
-    detectedCaseType,
-    researchUpdates
-  );
+  if (stepType === 'irac-analysis' || stepType === 'step-5') {
+    return buildIracSystemPrompt(
+      analysisSource,
+      relevantLawReferences,
+      hasConversation,
+      clientDocuments,
+      detectedCaseType,
+      researchUpdates
+    );
+  }
+  
+  // NO DEFAULT FALLBACK - throw error if step type not recognized
+  throw new Error(`INVALID_STEP_TYPE: '${stepType}' - Only 'preliminary-analysis' and 'irac-analysis' are allowed. IRAC is ONLY for Step 5.`);
 };
 
 // Build preliminary analysis system prompt (Step 2)

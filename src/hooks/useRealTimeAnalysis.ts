@@ -4,6 +4,7 @@ import { generateLegalAnalysis } from "@/utils/api/analysisApiService";
 import { supabase } from "@/integrations/supabase/client";
 import { AnalysisData } from "@/hooks/useAnalysisData";
 import { extractAnalysisSections, extractStrengthsWeaknesses } from "@/utils/analysisParsingUtils";
+// ⚠️ NOTE: IRAC fallback parsing removed - IRAC only for Step 5
 
 export const useRealTimeAnalysis = (clientId?: string, caseId?: string) => {
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);

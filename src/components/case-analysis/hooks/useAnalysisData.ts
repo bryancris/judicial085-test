@@ -5,6 +5,7 @@ import { AnalysisData } from "@/hooks/useAnalysisData";
 import { extractLegalCitations, mapCitationsToKnowledgeBase, generateDirectPdfUrl } from "@/utils/lawReferences/knowledgeBaseMapping";
 import { cleanupDuplicateAnalyses } from "@/utils/duplicateCleanupService";
 import { extractAnalysisSections, extractStrengthsWeaknesses } from "@/utils/analysisParsingUtils";
+// ⚠️ NOTE: IRAC fallback parsing removed - IRAC only for Step 5
 
 
 export const useAnalysisData = (clientId: string, caseId?: string) => {

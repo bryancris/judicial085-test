@@ -603,6 +603,32 @@ console.log('📋 Fact-based analysis mode enabled');
     console.log("Generated analysis length:", analysis?.length || 0);
     console.log("Source:", analysisSource, "Case type:", detectedCaseType);
 
+    // ⚠️ CRITICAL: Block IRAC content if not Step 5
+    if (stepType && stepType !== 'irac-analysis' && stepType !== 'step-5') {
+      const iracDetectionPatterns = [
+        /\*\*ISSUE\s*\[?\d*\]?\s*:\*\*/i,
+        /\*\*RULE\s*:\*\*/i,
+        /\*\*APPLICATION\s*:\*\*/i,
+        /\*\*CONCLUSION\s*:\*\*/i,
+        /\*\*IRAC.*ANALYSIS\*\*/i
+      ];
+      
+      const foundIracPattern = iracDetectionPatterns.find(pattern => 
+        pattern.test(analysis || '')
+      );
+      
+      if (foundIracPattern) {
+        console.log(`🚫 IRAC_NOT_ALLOWED: Step "${stepType}" produced IRAC content (pattern: ${foundIracPattern})`);
+        return new Response(
+          JSON.stringify({ 
+            error: `IRAC format detected in ${stepType}. IRAC is ONLY allowed in Step 5. Found pattern: ${foundIracPattern}`,
+            code: "IRAC_NOT_ALLOWED"
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // Extract fact sources and citations for validation
     const factSources = analysisSource === 'client conversation' ? 
       [{ type: 'conversation', source: 'Client intake and conversation' }] : 
@@ -655,90 +681,6 @@ console.log('📋 Fact-based analysis mode enabled');
   }
 });
 
-// 🔧 Transform IRAC format to preliminary analysis format (robust)
-function transformIracToPreliminary(content: string): string {
-  const text = content || '';
-  const bullets = (arr: string[], max = 6) => arr.filter(Boolean).slice(0, max).map(s => `- ${s.trim()}`).join('\n');
-  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-
-  // Extract issues → theories
-  const issueMatches = Array.from(text.matchAll(/\*\*ISSUE[^*]*\*\*[:\-]?\s*(.*)/gi));
-  const theories = issueMatches.map(m => (m[1] || '').trim()).filter(Boolean);
-
-  // Extract elements from RULE sections
-  const ruleBlocks = Array.from(text.matchAll(/\*\*RULE\*\*[:\-]?\s*([\s\S]*?)(?=\n\*\*|$)/gi));
-  const elements: string[] = [];
-  for (const r of ruleBlocks) {
-    const block = (r[1] || '').replace(/\n+/g, ' ').trim();
-    const elemLine = block.match(/(?:elements?|requires?|must (?:show|prove)).*?:?\s*(.+?)(?:\.|$)/i);
-    if (elemLine && elemLine[1]) {
-      elements.push(elemLine[1].trim());
-    } else {
-      const firstSentence = (block.match(/[^.]+\./) || [''])[0].trim();
-      if (firstSentence) elements.push(firstSentence);
-    }
-  }
-
-  // Defenses from APPLICATION/RULE sentences
-  const defenseBlocks = Array.from(text.matchAll(/\*\*(?:APPLICATION|RULE)\*\*[:\-]?\s*([\s\S]*?)(?=\n\*\*|$)/gi));
-  const defensesSet = new Set<string>();
-  const defenseSeeds = ['statute of limitations','comparative negligence','assumption of risk','failure to mitigate','adequate repair','misuse','no causation','lack of notice','waiver','disclaimer','no defect'];
-  defenseBlocks.forEach(b => {
-    const blk = (b[1] || '');
-    const lower = blk.toLowerCase();
-    defenseSeeds.forEach(c => { if (lower.includes(c)) defensesSet.add(cap(c)); });
-    blk.split(/(?<=\.)\s+/).forEach(s => { if (/(defen[cs]e|argue|contend)/i.test(s)) defensesSet.add(s.trim()); });
-  });
-  const defenses = Array.from(defensesSet);
-
-  // Damages/remedies sentences
-  const damages = (text.split(/(?<=\.)\s+/) || []).filter(s => /(damages?|remed(?:y|ies)|fees|treble)/i.test(s)).slice(0,6);
-  if (damages.length === 0) {
-    damages.push('Actual damages (e.g., difference in value, cost of repairs), incidental expenses, attorney\'s fees, and potential treble damages where authorized.');
-  }
-
-  // Evidence sentences
-  const evidence = (text.split(/(?<=\.)\s+/) || []).filter(s => /(evidence|records|documents|testimony|expert|photos|communications|repair orders)/i.test(s)).slice(0,6);
-  if (evidence.length === 0) {
-    evidence.push('Client records (contracts, repair orders, communications), witness statements, and expert evaluation as needed.');
-  }
-
-  // Strategic considerations from CONCLUSION/APPLICATION
-  const stratSet = new Set<string>();
-  const conclBlocks = Array.from(text.matchAll(/\*\*CONCLUSION\*\*[:\-]?\s*([\s\S]*?)(?=\n\*\*|$)/gi));
-  conclBlocks.forEach(b => (b[1] || '').split(/(?<=\.)\s+/).slice(0,3).forEach(s => stratSet.add(s.trim())));
-  if (stratSet.size === 0) {
-    stratSet.add('Send a targeted demand letter; evaluate settlement posture versus litigation; gather missing records; calendar limitations.');
-  }
-  const strategic = Array.from(stratSet);
-
-  // Build unified 4-section preliminary output
-  const priorities: string[] = [];
-  if (elements.length) priorities.push(...elements.slice(0, 4));
-  if (defenses.length) priorities.push(`Assess defenses: ${defenses.slice(0, 3).join(', ')}.`);
-  if (evidence.length) priorities.push(`Collect evidence: ${evidence.slice(0, 3).join('; ')}.`);
-  if (damages.length) priorities.push(`Clarify remedies/damages exposure.`);
-  if (priorities.length === 0) {
-    priorities.push('Identify governing statutes and confirm elements for top issues.');
-    priorities.push('Gather key documents (contracts, communications, repair orders).');
-    priorities.push('Verify limitations periods and notice requirements.');
-  }
-
-  const prelim = [
-    '**PRELIMINARY ANALYSIS:**',
-    '',
-    '**POTENTIAL LEGAL AREAS:**',
-    bullets(theories.length ? theories : ['Identify applicable areas from facts (e.g., warranties, Lemon Law, DTPA, negligence, fraud, contract).']),
-    '',
-    '**PRELIMINARY ISSUES:**',
-    bullets(elements.length ? elements : ['State the key issues/elements to confirm for the most likely claims (no citations).']),
-    '',
-    '**RESEARCH PRIORITIES:**',
-    bullets(priorities),
-    '',
-    '**STRATEGIC NOTES:**',
-    bullets(strategic)
-  ].join('\n');
-
-  return prelim.trim();
-}
+// 🗑️ REMOVED: transformIracToPreliminary - NO FALLBACK TRANSFORMATIONS
+// IRAC is ONLY for Step 5. All other steps must produce their own format.
+// This function has been removed to prevent any IRAC fallbacks.

@@ -353,13 +353,15 @@ async function executeStep2PreliminaryAnalysis(workflowState: WorkflowState, aut
     // Proceed without OpenAI contribution; Gemini will handle Step 2 solo
   }
 
-  // Sanitize OpenAI output to ensure no IRAC content leaks into Step 2
+  // 🚫 AGGRESSIVE IRAC SANITIZATION for Step 2
   const cleanedOpenAI = (openAIResult.content || '')
     .replace(/\*\*IRAC[^\n]*\n?/gi, '')
-    .replace(/\*\*ISSUE:?\*\*/gi, '')
-    .replace(/\*\*RULE:?\*\*/gi, '')
-    .replace(/\*\*APPLICATION:?\*\*/gi, '')
-    .replace(/\*\*CONCLUSION:?\*\*/gi, '');
+    .replace(/\*\*ISSUE\s*\[?\d*\]?\s*:\*\*/gi, '**POTENTIAL AREA:**')
+    .replace(/\*\*RULE\s*:\*\*/gi, '**RESEARCH NOTE:**')
+    .replace(/\*\*APPLICATION\s*:\*\*/gi, '**FACTUAL CONSIDERATION:**')
+    .replace(/\*\*CONCLUSION\s*:\*\*/gi, '**PRELIMINARY FINDING:**')
+    .replace(/\*\*OVERALL CONCLUSION\*\*/gi, '**SUMMARY NOTES**')
+    .replace(/IRAC/gi, 'preliminary review');
 
   // Try to enrich with vectorized document context (client/case documents)
   let vectorContextText = '';
