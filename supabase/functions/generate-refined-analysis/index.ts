@@ -6,6 +6,7 @@ import { generateLegalAnalysis } from "../shared/geminiService.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 interface RequestBody {
@@ -106,9 +107,10 @@ serve(async (req) => {
 
     console.log("🧠 Generating refined analysis with Gemini. Context length:", contextText.length);
 
-    // 3) Generate with Gemini
-    const generated = await generateLegalAnalysis(prompt);
-    const content = (generated || "").trim();
+    // 3) Generate with Gemini using shared service (returns { text, usage })
+    const systemPrompt = "You are a senior attorney. Follow strict legal writing standards, avoid hallucinations, cite only real statutes/cases conservatively, and provide practical, client-facing guidance. Output clear markdown headings.";
+    const { text: contentText } = await generateLegalAnalysis(prompt, systemPrompt, geminiKey);
+    const content = (contentText || "").trim();
     const contentLength = content.length;
 
     console.log("📝 Refined analysis generated. Length:", contentLength);

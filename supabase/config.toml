@@ -1,1 +1,4 @@
 project_id = "ghpljdgecjmhkwkfctgy"
+
+[functions.generate-refined-analysis]
+verify_jwt = false
