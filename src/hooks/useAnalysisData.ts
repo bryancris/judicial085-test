@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Json } from "@/integrations/supabase/types";
 import { extractAnalysisSections } from "@/utils/analysisParsingUtils";
 import { parseLegalIssuesAssessment } from "@/utils/legalIssuesParser";
+import { extractStrengthsWeaknesses } from "@/utils/analysisExtractors";
 import { LegalIssuesAssessment } from "@/types/caseAnalysis";
 // ⚠️ NOTE: IRAC parsing removed from analysisParsingUtils - IRAC only for Step 5
 
@@ -258,6 +259,9 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
         console.warn("Client-intake enrichment failed:", e);
       }
 
+      // Extract strengths and weaknesses from analysis content
+      const extractedStrengthsWeaknesses = extractStrengthsWeaknesses(analysis.content || '');
+      
       // Create analysis data with parsed sections and raw content for rendering
       const completeAnalysisData: AnalysisData = {
         id: analysis.id,
@@ -267,16 +271,18 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
           potentialIssues: mainSections.potentialIssues || "",
           followUpQuestions: mainSections.followUpQuestions || [],
         },
-        strengths: [
-          "Documentary evidence supports client's position",
-          "Legal precedent favors our arguments",
-          "Clear liability chain established"
-        ],
-        weaknesses: [
-          "Burden of proof challenges may arise",
-          "Opposing counsel likely to dispute key facts",
-          "Damages calculation requires further documentation"
-        ],
+        strengths: extractedStrengthsWeaknesses.strengths.length > 0 ? 
+          extractedStrengthsWeaknesses.strengths : [
+            "Documentary evidence supports client's position",
+            "Legal precedent favors our arguments",
+            "Clear liability chain established"
+          ],
+        weaknesses: extractedStrengthsWeaknesses.weaknesses.length > 0 ? 
+          extractedStrengthsWeaknesses.weaknesses : [
+            "Burden of proof challenges may arise",
+            "Opposing counsel likely to dispute key facts",
+            "Damages calculation requires further documentation"
+          ],
         conversationSummary: caseSummary,
         outcome: {
           defense: 65,

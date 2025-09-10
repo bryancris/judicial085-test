@@ -66,7 +66,7 @@ const FollowUpQuestionsSection: React.FC<FollowUpQuestionsSectionProps> = ({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <HelpCircle className="h-5 w-5" />
-            <span className="text-muted-foreground">Step 9:</span>
+            <span className="text-muted-foreground">Step 8:</span>
             Recommended Follow-up Questions
           </CardTitle>
         </CardHeader>
@@ -82,7 +82,7 @@ const FollowUpQuestionsSection: React.FC<FollowUpQuestionsSectionProps> = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <HelpCircle className="h-5 w-5" />
-          <span className="text-muted-foreground">Step 9:</span>
+          <span className="text-muted-foreground">Step 8:</span>
           Recommended Follow-up Questions
         </CardTitle>
       </CardHeader>

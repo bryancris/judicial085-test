@@ -76,7 +76,7 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Brain className="h-5 w-5" />
-            <span className="text-muted-foreground">Step 8:</span>
+            <span className="text-muted-foreground">Step 7:</span>
             Refined Analysis (Comprehensive synthesis + Risk Assessment)
           </CardTitle>
         </CardHeader>
@@ -106,7 +106,7 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Brain className="h-5 w-5" />
-          <span className="text-muted-foreground">Step 8:</span>
+          <span className="text-muted-foreground">Step 7:</span>
           Refined Analysis (Comprehensive synthesis + Risk Assessment)
         </CardTitle>
       </CardHeader>

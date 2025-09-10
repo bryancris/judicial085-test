@@ -84,18 +84,7 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
         />
       )}
 
-      {/* Step 6: Legal Issues Assessment (Issues validated through analysis) */}
-      <LegalIssuesAssessmentSection
-        issues={analysisData.legalIssuesAssessment ? [
-          ...analysisData.legalIssuesAssessment.strongIssues,
-          ...analysisData.legalIssuesAssessment.moderateIssues,
-          ...analysisData.legalIssuesAssessment.weakIssues,
-          ...analysisData.legalIssuesAssessment.eliminatedIssues
-        ] : []}
-        isLoading={isLoading}
-      />
-
-      {/* Step 7: Case Strengths & Weaknesses */}
+      {/* Step 6: Case Strengths & Weaknesses */}
       <CaseStrengthsWeaknesses
         strengths={analysisData.strengths}
         weaknesses={analysisData.weaknesses}
@@ -103,13 +92,13 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
         caseType={analysisData.caseType}
       />
 
-      {/* Step 8: Refined Analysis (Comprehensive synthesis + Risk Assessment) */}
+      {/* Step 7: Refined Analysis (Comprehensive synthesis + Risk Assessment) */}
       <RefinedAnalysisSection
         analysisData={null} // TODO: Extract from analysis data when available
         isLoading={isLoading}
       />
 
-      {/* Step 9: Recommended Follow-up Questions */}
+      {/* Step 8: Recommended Follow-up Questions */}
       <FollowUpQuestionsSection
         questionsData={null} // TODO: Extract from analysis data when available
         followUpQuestions={analysisData.legalAnalysis.followUpQuestions}
