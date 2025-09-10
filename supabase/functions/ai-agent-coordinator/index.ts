@@ -240,7 +240,7 @@ async function executeSequentialWorkflow(
 
   // Step 8: RECOMMENDED FOLLOW-UP QUESTIONS
   console.log('❓ Step 8: FOLLOW-UP QUESTIONS - Gemini identifying information gaps...');
-  workflowState.stepResults.step8 = await executeStep8FollowUpQuestions(workflowState, geminiApiKey);
+  workflowState.stepResults.step8 = await executeStep9FollowUpQuestions(workflowState, geminiApiKey);
   workflowState.stepResults.step8.stepType = 'FOLLOW_UP';
   const validation8 = await validateStepCompletion(8, workflowState.stepResults.step8, 'FOLLOW_UP', {
     CASE_SUMMARY: workflowState.stepResults.step1,
