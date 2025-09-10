@@ -57,7 +57,7 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
         [],
         caseId,
         'step-2-preliminary',
-        { stepType: 'preliminary-analysis', skipCoordinator: false }
+        { stepType: 'preliminary-analysis', skipCoordinator: true }
       );
       
       if (result.error) {

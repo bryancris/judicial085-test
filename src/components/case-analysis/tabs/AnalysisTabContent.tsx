@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useMemo } from "react";
 import { ProcessDocumentContentFunction } from "@/types/caseAnalysis";
 import CaseSummarySection from "../steps/CaseSummarySection";
 import PreliminaryAnalysisSection from "../steps/PreliminaryAnalysisSection";
@@ -12,7 +12,7 @@ import RefinedAnalysisSection from "../steps/RefinedAnalysisSection";
 import FollowUpQuestionsSection from "../steps/FollowUpQuestionsSection";
 import LawReferencesSection from "../LawReferencesSection";
 import { AnalysisData } from "@/hooks/useAnalysisData";
-import { parseIracAnalysis } from "@/utils/iracParser";
+import { parseIracAnalysis, isIracStructured } from "@/utils/iracParser";
 
 interface AnalysisTabContentProps {
   analysisData: AnalysisData;
@@ -25,8 +25,15 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
   isLoading,
   clientId,
 }) => {
-  // Parse IRAC analysis from raw content
-  const iracAnalysis = analysisData.rawContent ? parseIracAnalysis(analysisData.rawContent) : null;
+  // Parse IRAC analysis from raw content with safeguards (only when truly IRAC)
+  const iracAnalysis = useMemo(() => {
+    const raw = analysisData.rawContent || "";
+    if (!raw) return null;
+    // Only parse if IRAC structure is clearly present and not a preliminary-only output
+    if (!isIracStructured(raw)) return null;
+    if (/\*\*PRELIMINARY ANALYSIS:\*\*/i.test(raw)) return null;
+    return parseIracAnalysis(raw);
+  }, [analysisData.rawContent]);
 
   return (
     <div className="space-y-8">

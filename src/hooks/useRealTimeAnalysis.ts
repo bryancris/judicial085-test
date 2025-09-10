@@ -86,7 +86,7 @@ export const useRealTimeAnalysis = (clientId?: string, caseId?: string) => {
         formattedMessages,
         caseId,
         requestContext,
-        { stepType: 'preliminary-analysis', skipCoordinator: false }
+        { stepType: 'preliminary-analysis', skipCoordinator: true }
       );
       
       if (analysisError) throw new Error(analysisError);

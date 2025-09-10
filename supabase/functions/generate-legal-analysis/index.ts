@@ -176,8 +176,9 @@ console.log("Fact sufficiency check:", {
   documentCount: 0 // Will be set later after document fetch
 });
 
-// 🛡️ Prevent recursion only when explicitly requested
-const skipCoordinator = payload?.skipCoordinator === true;
+// 🛡️ Prevent recursion or force-skip for preliminary analysis
+const forceSkipForPreliminary = (stepType === 'preliminary-analysis');
+const skipCoordinator = forceSkipForPreliminary || payload?.skipCoordinator === true;
 
 if (!skipCoordinator) {
       console.log('🎯 Starting 3-agent coordination for client:', clientId);
@@ -205,49 +206,100 @@ if (!skipCoordinator) {
 
         if (coordinatorResponse.data?.success && coordinatorResponse.data?.synthesizedContent) {
           console.log('✅ 3-agent coordination successful, using synthesized content');
-          
-          // 🚫 DISABLED: Prevent coordinator from saving unvalidated analyses
-          console.log('📋 Skipping coordinator analysis save to prevent data pollution');
-          
-          // Note: 3-agent coordination should return research for immediate use,
-          // not save fake analyses to the database that bypass validation
+          const synthesized = coordinatorResponse.data.synthesizedContent || '';
 
-           // Build fact sources and citations for validator
-           const factSources = hasConversation
-             ? [{ type: 'conversation', source: 'Client intake and conversation' }]
-             : [];
+          // Guard: Block IRAC output for preliminary-analysis when coming from coordinator
+          if (stepType === 'preliminary-analysis') {
+            const iracDetectionPatterns = [
+              /\*\*ISSUE\s*\[?\d*\]?\s*:\*\*/i,
+              /\*\*RULE\s*:\*\*/i,
+              /\*\*APPLICATION\s*:\*\*/i,
+              /\*\*CONCLUSION\s*:\*\*/i,
+              /\*\*IRAC.*ANALYSIS\*\*/i
+            ];
+            const iracFound = iracDetectionPatterns.some(p => p.test(synthesized));
+            if (iracFound) {
+              console.warn('🚫 Coordinator produced IRAC content for preliminary step. Skipping coordinator result and falling back to direct analysis.');
+            } else {
+              // 🚫 DISABLED: Prevent coordinator from saving unvalidated analyses
+              console.log('📋 Skipping coordinator analysis save to prevent data pollution');
 
-           // Use coordinator citations if provided, otherwise extract from content
-           const coordinatorCitations = Array.isArray(coordinatorResponse.data.citations)
-             ? coordinatorResponse.data.citations
-             : extractLegalCitations(coordinatorResponse.data.synthesizedContent || '');
+              // Build fact sources and citations for validator
+              const factSources = hasConversation
+                ? [{ type: 'conversation', source: 'Client intake and conversation' }]
+                : [];
 
-           const citationsForValidation = (coordinatorCitations || []).map((c: any) =>
-             typeof c === 'string'
-               ? { citation: c, type: 'statute', jurisdiction: 'Texas' }
-               : c
-           );
+              // Use coordinator citations if provided, otherwise extract from content
+              const coordinatorCitations = Array.isArray(coordinatorResponse.data.citations)
+                ? coordinatorResponse.data.citations
+                : extractLegalCitations(synthesized || '');
 
-           console.log(`📋 Coordinator return: ${factSources.length} fact sources, ${citationsForValidation.length} citations`);
+              const citationsForValidation = (coordinatorCitations || []).map((c: any) =>
+                typeof c === 'string'
+                  ? { citation: c, type: 'statute', jurisdiction: 'Texas' }
+                  : c
+              );
 
-           return new Response(
-             JSON.stringify({
-               analysis: coordinatorResponse.data.synthesizedContent,
-               lawReferences: coordinatorResponse.data.researchSources || [],
-               documentsUsed: [],
-               factSources,
-               citations: citationsForValidation,
-               caseType: detectCaseType(coordinatorResponse.data.synthesizedContent || ''),
-               analysisSource: hasConversation ? 'client conversation' : 'coordinator',
-               metadata: {
-                 provider: '3-agent-coordinator',
-                 sources: coordinatorResponse.data.researchSources?.length || 0,
-                 citations: citationsForValidation.length,
-                 factBasedAnalysis: true
-               }
-             }),
-             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-           );
+              console.log(`📋 Coordinator return: ${factSources.length} fact sources, ${citationsForValidation.length} citations`);
+
+              return new Response(
+                JSON.stringify({
+                  analysis: synthesized,
+                  lawReferences: coordinatorResponse.data.researchSources || [],
+                  documentsUsed: [],
+                  factSources,
+                  citations: citationsForValidation,
+                  caseType: detectCaseType(synthesized || ''),
+                  analysisSource: hasConversation ? 'client conversation' : 'coordinator',
+                  metadata: {
+                    provider: '3-agent-coordinator',
+                    sources: coordinatorResponse.data.researchSources?.length || 0,
+                    citations: citationsForValidation.length,
+                    factBasedAnalysis: true
+                  }
+                }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+          } else {
+            // Non-preliminary steps can return coordinator content as-is
+            console.log('📋 Skipping coordinator analysis save to prevent data pollution');
+
+            const factSources = hasConversation
+              ? [{ type: 'conversation', source: 'Client intake and conversation' }]
+              : [];
+
+            const coordinatorCitations = Array.isArray(coordinatorResponse.data.citations)
+              ? coordinatorResponse.data.citations
+              : extractLegalCitations(synthesized || '');
+
+            const citationsForValidation = (coordinatorCitations || []).map((c: any) =>
+              typeof c === 'string'
+                ? { citation: c, type: 'statute', jurisdiction: 'Texas' }
+                : c
+            );
+
+            console.log(`📋 Coordinator return: ${factSources.length} fact sources, ${citationsForValidation.length} citations`);
+
+            return new Response(
+              JSON.stringify({
+                analysis: synthesized,
+                lawReferences: coordinatorResponse.data.researchSources || [],
+                documentsUsed: [],
+                factSources,
+                citations: citationsForValidation,
+                caseType: detectCaseType(synthesized || ''),
+                analysisSource: hasConversation ? 'client conversation' : 'coordinator',
+                metadata: {
+                  provider: '3-agent-coordinator',
+                  sources: coordinatorResponse.data.researchSources?.length || 0,
+                  citations: citationsForValidation.length,
+                  factBasedAnalysis: true
+                }
+              }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
         } else {
           console.warn('⚠️ 3-agent coordination failed or returned no content, falling back to direct analysis');
           console.warn('Coordinator error:', coordinatorResponse.error);
