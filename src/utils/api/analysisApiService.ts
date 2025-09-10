@@ -22,7 +22,8 @@ export const generateLegalAnalysis = async (
   clientId: string, 
   conversation: ChatMessageProps[],
   caseId?: string,
-  requestContext?: string
+  requestContext?: string,
+  options?: { stepType?: string; skipCoordinator?: boolean }
 ): Promise<{ 
   analysis: string; 
   lawReferences?: any[]; 
@@ -32,7 +33,7 @@ export const generateLegalAnalysis = async (
   error?: string 
 }> => {
   try {
-    console.log("Calling generate-legal-analysis with:", { clientId, caseId, conversationLength: conversation.length, requestContext });
+    console.log("Calling generate-legal-analysis with:", { clientId, caseId, conversationLength: conversation.length, requestContext, stepType: options?.stepType, skipCoordinator: options?.skipCoordinator });
     
     const { data, error } = await invokeFunction<{ 
       analysis: string; 
@@ -43,7 +44,7 @@ export const generateLegalAnalysis = async (
       caseType?: string;
     }>(
       "generate-legal-analysis", 
-      { clientId, conversation, caseId, requestContext }
+      { clientId, conversation, caseId, requestContext, stepType: options?.stepType, skipCoordinator: options?.skipCoordinator === true }
     );
 
     if (error) {

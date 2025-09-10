@@ -52,7 +52,13 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
       setCurrentStep(1);
       
       // Generate analysis using the enhanced 9-step workflow
-      const result = await generateLegalAnalysis(clientId, [], caseId, caseId ? 'case-analysis-9-step' : 'client-analysis-9-step');
+      const result = await generateLegalAnalysis(
+        clientId,
+        [],
+        caseId,
+        'step-2-preliminary',
+        { stepType: 'preliminary-analysis', skipCoordinator: false }
+      );
       
       if (result.error) {
         console.error("Analysis generation failed:", result.error);
@@ -71,6 +77,15 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
           toast({
             title: "Quality Control Failed",
             description: "Analysis did not meet quality standards. Please review and try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+        // Handle IRAC blocked for non-Step 5
+        if (result.error.includes("IRAC_NOT_ALLOWED") || result.error.toLowerCase().includes("irac format detected")) {
+          toast({
+            title: "IRAC Blocked for Step 2",
+            description: "IRAC formatting was detected and blocked. The coordinator will enforce Step 2 format on retry.",
             variant: "destructive",
           });
           return;

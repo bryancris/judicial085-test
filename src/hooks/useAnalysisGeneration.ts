@@ -33,7 +33,13 @@ export const useAnalysisGeneration = (clientId?: string, caseId?: string) => {
 
       console.log("Sending empty conversation to edge function - it will handle message fetching");
 
-      const result = await generateLegalAnalysis(clientId, emptyConversation, caseId, caseId ? 'case-analysis-9-step' : 'client-analysis-9-step');
+      const result = await generateLegalAnalysis(
+        clientId,
+        emptyConversation,
+        caseId,
+        'step-2-preliminary',
+        { stepType: 'preliminary-analysis', skipCoordinator: false }
+      );
       
       if (result.error) {
         console.error("Analysis generation failed:", result.error);
@@ -53,6 +59,15 @@ export const useAnalysisGeneration = (clientId?: string, caseId?: string) => {
           toast({
             title: "Analysis Blocked",
             description: "Generated content appears too generic. Please provide more specific case facts.",
+            variant: "destructive",
+          });
+          return;
+        }
+        // Handle IRAC being blocked for non-Step 5
+        if (result.error.includes("IRAC_NOT_ALLOWED") || result.error.toLowerCase().includes("irac format detected")) {
+          toast({
+            title: "IRAC Blocked for Step 2",
+            description: "The system detected IRAC formatting and blocked it. Retrying will enforce Step 2 (preliminary) format.",
             variant: "destructive",
           });
           return;

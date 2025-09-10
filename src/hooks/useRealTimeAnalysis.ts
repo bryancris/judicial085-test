@@ -85,7 +85,8 @@ export const useRealTimeAnalysis = (clientId?: string, caseId?: string) => {
         clientId, 
         formattedMessages,
         caseId,
-        requestContext
+        requestContext,
+        { stepType: 'preliminary-analysis', skipCoordinator: false }
       );
       
       if (analysisError) throw new Error(analysisError);
@@ -117,9 +118,12 @@ export const useRealTimeAnalysis = (clientId?: string, caseId?: string) => {
     } catch (err: any) {
       console.error("Error generating real-time analysis:", err);
       setError(err.message || "Failed to generate analysis");
+      const desc = (err.message || '').includes('IRAC_NOT_ALLOWED')
+        ? 'IRAC formatting was detected and blocked for Step 2. Please try again; the system enforces preliminary format.'
+        : (err.message || 'Failed to generate real-time analysis.');
       toast({
         title: "Generation Failed",
-        description: err.message || "Failed to generate real-time analysis.",
+        description: desc,
         variant: "destructive",
       });
     } finally {
