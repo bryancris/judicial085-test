@@ -470,46 +470,94 @@ STRICT REWRITE INSTRUCTIONS:
 
 // Step 3: RELEVANT TEXAS LAWS (Targeted legal research)
 async function executeStep3TexasLaws(workflowState: WorkflowState, authHeader: string | null, geminiApiKey: string) {
-  // First, have Perplexity research Texas statutes
-  console.log('📖 Step 3: Perplexity researching Texas statutes...');
+  // First, have Perplexity research Texas statutes with gap analysis
+  console.log('📖 Step 3: Perplexity researching Texas statutes with vectorized law comparison...');
   
   const researchPriorities = extractResearchPriorities(workflowState.stepResults.step2?.content || '');
+  
+  // Enhanced Perplexity query to check for missed statutes and recent changes
+  const enhancedQuery = `Texas legal research for: ${researchPriorities.join(', ')}. 
+  
+SEARCH REQUIREMENTS:
+1. Find ALL relevant Texas statutes (not just the obvious ones)
+2. Check for any 2024-2025 legislative changes or amendments
+3. Look for recent updates that may not be in knowledge bases
+4. Cross-reference multiple Texas codes for comprehensive coverage
+5. Include ANY recent legislative sessions that changed these areas
+
+Focus on: Texas Business & Commerce Code, Texas Civil Practice & Remedies Code, Texas Transportation Code, and other relevant codes.`;
+
   const perplexityResult = await coordinateWithPerplexity(
-    'texas-statutes',
-    `Research current Texas statutes for: ${researchPriorities.join(', ')}. Focus on 2024-2025 updates.`,
+    'legal-research',
+    enhancedQuery,
     workflowState.context.clientId,
     workflowState.context.caseId,
     authHeader
   );
 
-  // Then have Gemini organize the statutory research
-  const prompt = `You are GEMINI, the orchestrator. You are executing STEP 3: RELEVANT TEXAS LAWS.
+  // Try to get vectorized law database context for comparison
+  let vectorLawContext = '';
+  try {
+    const embedding = await generateEmbeddingForText(researchPriorities.join(' '));
+    const lawContext = await fetchVectorLawContext(embedding, 0.7, 5);
+    vectorLawContext = lawContext.topSnippets;
+    console.log('📚 Step 3 vector law context: found statutes from knowledge base');
+  } catch (e) {
+    console.warn('⚠️ Step 3 vector law context unavailable:', (e as Error).message);
+  }
 
-CRITICAL: This is Step 3 of 9. Build upon Steps 1-2 but do not include content from later steps.
+  // Then have Gemini organize according to your exact specification
+  const prompt = `You are GEMINI, the orchestrator executing STEP 3: RELEVANT TEXAS LAWS (3 agent system).
+
+CRITICAL: This is Step 3 of 9. You must organize legal research using the EXACT format specified below.
+
+YOUR ROLE IN 3-AGENT SYSTEM:
+- Vector database has been searched for relevant Texas laws
+- Perplexity has researched additional statutes and recent changes
+- You must organize by legal issue area as specified
 
 PREVIOUS STEPS:
 Step 1: ${workflowState.stepResults.step1?.content || ''}
 Step 2: ${workflowState.stepResults.step2?.content || ''}
 
-PERPLEXITY STATUTORY RESEARCH:
+VECTORIZED LAWS FROM KNOWLEDGE BASE:
+${vectorLawContext}
+
+PERPLEXITY RESEARCH (gap analysis + recent updates):
 ${perplexityResult.content}
 
-STEP 3 TASKS - GEMINI:
-- Organize statutory research by legal issue area
-- Cross-reference with preliminary analysis  
-- Ensure comprehensive coverage of identified issues
+MANDATORY OUTPUT FORMAT (do not deviate):
 
-REQUIRED OUTPUT FORMAT:
-RELEVANT TEXAS LAWS
+**RELEVANT TEXAS LAWS (Targeted legal research)**
 
-- [Legal Area 1]: [Statute citations with current text]
-- [Legal Area 2]: [Statute citations with current text]
-- Recent Updates: [Any 2024-2025 changes]
-- Key Provisions: [Most relevant statutory language]
+**Legal Area Statutes:**
+- [Legal Area from Step 2]: [Relevant statute citations and key provisions]
+- [Legal Area from Step 2]: [Relevant statute citations and key provisions]
+- [Continue for each legal area identified in Step 2]
 
-Organize the Perplexity research into the required format above.`;
+**Recent Updates:**
+- [Any 2024-2025 legislative changes found by Perplexity]
+- [Recent amendments or new statutes]
+- [Session updates that affect this case]
 
-  return await callGeminiOrchestrator(prompt, geminiApiKey, 'TEXAS_LAWS');
+**Key Provisions:**
+- [Most relevant statutory language for this case]
+- [Critical elements or requirements]
+- [Procedural requirements or deadlines]
+
+STRICT REQUIREMENTS:
+1. Organize by legal issue areas from Step 2 preliminary analysis
+2. Must include "Legal Area Statutes", "Recent Updates", and "Key Provisions" sections
+3. Cross-reference vectorized knowledge base with Perplexity findings
+4. Flag any gaps where Perplexity found statutes not in knowledge base
+5. Focus on Texas statutes only - no federal law in this step`;
+
+  const result = await callGeminiOrchestrator(prompt, geminiApiKey, 'TEXAS_LAWS');
+  
+  // Enforce the exact structure format
+  const enforcedContent = enforceTexasLawsStructure(result.content || '');
+  
+  return { ...result, content: enforcedContent };
 }
 
 // Step 4: ADDITIONAL CASE LAW (Precedent research)
@@ -960,6 +1008,53 @@ async function fetchVectorContext(
   return { topSnippets: snippets ? `${snippets}` : '', totalFound: chunks.length };
 }
 
+async function fetchVectorLawContext(
+  queryEmbedding: number[],
+  match_threshold = 0.7,
+  match_count = 5
+): Promise<{ topSnippets: string; totalFound: number }> {
+  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.38.0');
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!supabaseUrl || !supabaseServiceKey) throw new Error('Supabase config missing');
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  // Search Texas law documents in knowledge base
+  const { data, error } = await supabase.rpc('search_texas_law_documents', {
+    query_embedding: queryEmbedding,
+    match_threshold,
+    match_count
+  });
+  
+  if (error) {
+    console.warn('Texas law vector search failed, falling back to general search:', error.message);
+    // Fallback to searching general documents table if Texas law function doesn't exist
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from('documents')
+      .select('content, metadata')
+      .textSearch('content', 'Texas statute law code', { 
+        type: 'websearch',
+        config: 'english'
+      })
+      .limit(match_count);
+    
+    if (fallbackError) throw new Error(`Fallback law search error: ${fallbackError.message}`);
+    
+    const snippets = (fallbackData || [])
+      .map((doc, i) => `- [statute] ${truncate((doc.content || '').replace(/\s+/g, ' ').trim(), 200)}`)
+      .join('\n');
+    
+    return { topSnippets: snippets || '', totalFound: fallbackData?.length || 0 };
+  }
+  
+  const lawChunks = (data || []) as Array<{ content: string; similarity: number; title: string }>; 
+  const snippets = lawChunks
+    .map((c, i) => `- [${c.title || 'statute'}] ${truncate((c.content || '').replace(/\s+/g, ' ').trim(), 250)}`)
+    .join('\n');
+  
+  return { topSnippets: snippets || '', totalFound: lawChunks.length };
+}
+
 function truncate(s: string, n: number) { return s && s.length > n ? s.slice(0, n) + '…' : (s || ''); }
 
 function sectionSlice(content: string, header: string): string {
@@ -1034,6 +1129,7 @@ async function validateStepCompletion(stepNumber: number, stepResult: any, stepT
   const requiredStructures = {
   'CASE_SUMMARY': /Parties|Timeline|Key Facts/i,
   'PRELIMINARY_ANALYSIS': /(?=.*POTENTIAL LEGAL AREAS)(?=.*PRELIMINARY ISSUES)(?=.*RESEARCH PRIORITIES)(?=.*STRATEGIC NOTES)/i,
+  'TEXAS_LAWS': /(?=.*Legal Area Statutes)(?=.*Recent Updates)(?=.*Key Provisions)/i,
   'IRAC_ANALYSIS': /ISSUE.*:|RULE:|APPLICATION:|CONCLUSION:/i
   };
 
@@ -1220,6 +1316,42 @@ function enforcePreliminaryStructure(content: string, step1Summary: string): str
     '**PRELIMINARY ISSUES:**',
     '**RESEARCH PRIORITIES:**',
     '**STRATEGIC NOTES:**',
+  ];
+
+  for (const header of required) {
+    const re = new RegExp(header.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    if (!re.test(result)) {
+      result += `\n\n${header}\n`;
+    }
+  }
+
+  return result.trim();
+}
+
+// Enforce Texas Laws structure according to specification
+function enforceTexasLawsStructure(content: string): string {
+  let result = content || '';
+
+  // Normalize headings to exact format
+  const normalize = (text: string) => text
+    .replace(/^\s*#{1,6}\s*RELEVANT TEXAS LAWS[^\n]*$/gim, '**RELEVANT TEXAS LAWS (Targeted legal research)**')
+    .replace(/\*\*\s*RELEVANT TEXAS LAWS[^\n]*\*\*/gi, '**RELEVANT TEXAS LAWS (Targeted legal research)**')
+    .replace(/\*\*\s*Legal\s+Area\s+Statutes?\s*:?(\*\*)?/gi, '**Legal Area Statutes:**')
+    .replace(/\*\*\s*Recent\s+Updates?\s*:?(\*\*)?/gi, '**Recent Updates:**')
+    .replace(/\*\*\s*Key\s+Provisions?\s*:?(\*\*)?/gi, '**Key Provisions:**');
+
+  result = normalize(result);
+
+  // Ensure main header exists at the top
+  if (!/\*\*RELEVANT TEXAS LAWS \(Targeted legal research\)\*\*/.test(result)) {
+    result = `**RELEVANT TEXAS LAWS (Targeted legal research)**\n\n${result}`.trim();
+  }
+
+  // Ensure required section headers exist
+  const required = [
+    '**Legal Area Statutes:**',
+    '**Recent Updates:**',
+    '**Key Provisions:**',
   ];
 
   for (const header of required) {
