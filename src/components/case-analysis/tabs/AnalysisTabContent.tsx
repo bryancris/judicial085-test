@@ -4,7 +4,7 @@ import { ProcessDocumentContentFunction } from "@/types/caseAnalysis";
 import CaseSummarySection from "../steps/CaseSummarySection";
 import PreliminaryAnalysisSection from "../steps/PreliminaryAnalysisSection";
 import RelevantTexasLawsSection from "../steps/RelevantTexasLawsSection";
-import AdditionalCaseLawSection from "../steps/AdditionalCaseLawSection";
+import { AdditionalCaseLawSection } from "../AdditionalCaseLawSection";
 import IracAnalysisSection from "../IracAnalysisSection";
 import LegalIssuesAssessmentSection from "../steps/LegalIssuesAssessmentSection";
 import CaseStrengthsWeaknesses from "../CaseStrengthsWeaknesses";
@@ -60,8 +60,9 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
 
       {/* Step 4: Additional Case Law (Precedent research) */}
       <AdditionalCaseLawSection
-        caseLaw={[]} // TODO: Extract from analysis data when available
-        isLoading={isLoading}
+        analysisData={analysisData}
+        clientId={clientId}
+        caseType={analysisData.caseType}
       />
 
       {/* Step 5: IRAC Legal Analysis (Comprehensive deep analysis) */}
