@@ -53,7 +53,7 @@ PRELIMINARY ANALYSIS
 
 ### Step 3: Relevant Texas Laws (Targeted legal research)
 **PERPLEXITY Tasks:**
-- Research current Texas statutes related to preliminary issues identified
+- Research Texas statutes related to preliminary issues identified
 - Find recent legislative changes or updates
 - Provide proper statutory citations
 - Focus research based on Step 2 priorities
