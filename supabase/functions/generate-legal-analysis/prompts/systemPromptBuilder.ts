@@ -9,8 +9,11 @@ export const buildSystemPrompt = (
   researchUpdates?: any[],
   stepType?: string
 ) => {
-  // Route to specific step types only - NO FALLBACK TO IRAC
+  console.log('🛠️ Building system prompt for:', { analysisSource, stepType, caseType: detectedCaseType });
+  
+  // Route to specific step types
   if (stepType === 'preliminary-analysis') {
+    console.log('📋 Using preliminary analysis prompt (Step 2)');
     return buildPreliminarySystemPrompt(
       analysisSource,
       relevantLawReferences,
@@ -22,6 +25,7 @@ export const buildSystemPrompt = (
   }
   
   if (stepType === 'irac-analysis' || stepType === 'step-5') {
+    console.log('🧮 Using IRAC analysis prompt (Step 5)');
     return buildIracSystemPrompt(
       analysisSource,
       relevantLawReferences,
@@ -32,8 +36,34 @@ export const buildSystemPrompt = (
     );
   }
   
-  // NO DEFAULT FALLBACK - throw error if step type not recognized
-  throw new Error(`INVALID_STEP_TYPE: '${stepType}' - Only 'preliminary-analysis' and 'irac-analysis' are allowed. IRAC is ONLY for Step 5.`);
+  // Additional step types that need IRAC analysis
+  if (stepType === 'issues-assessment' || stepType === 'strengths-weaknesses' || stepType === 'risk-assessment') {
+    console.log(`🔍 Using IRAC analysis prompt for ${stepType} (builds on comprehensive analysis)`);
+    return buildIracSystemPrompt(
+      analysisSource,
+      relevantLawReferences,
+      hasConversation,
+      clientDocuments,
+      detectedCaseType,
+      researchUpdates
+    );
+  }
+  
+  // Default fallback for older API calls without stepType
+  if (!stepType) {
+    console.log('⚠️ No stepType provided, defaulting to preliminary analysis');
+    return buildPreliminarySystemPrompt(
+      analysisSource,
+      relevantLawReferences,
+      hasConversation,
+      clientDocuments,
+      detectedCaseType,
+      researchUpdates
+    );
+  }
+  
+  // Error for unrecognized stepType
+  throw new Error(`INVALID_STEP_TYPE: '${stepType}' - Must be 'preliminary-analysis', 'irac-analysis', or related workflow step`);
 };
 
 // Build preliminary analysis system prompt (Step 2)

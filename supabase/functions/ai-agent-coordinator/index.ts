@@ -1130,7 +1130,7 @@ async function validateStepCompletion(stepNumber: number, stepResult: any, stepT
   'CASE_SUMMARY': /Parties|Timeline|Key Facts/i,
   'PRELIMINARY_ANALYSIS': /(?=.*POTENTIAL LEGAL AREAS)(?=.*PRELIMINARY ISSUES)(?=.*RESEARCH PRIORITIES)(?=.*STRATEGIC NOTES)/i,
   'TEXAS_LAWS': /(?=.*Legal Area Statutes)(?=.*Recent Updates)(?=.*Key Provisions)/i,
-  'IRAC_ANALYSIS': /ISSUE.*:|RULE:|APPLICATION:|CONCLUSION:/i
+  'IRAC_ANALYSIS': /\*\*ISSUE.*?:\*\*|\*\*RULE.*?:\*\*|\*\*APPLICATION.*?:\*\*|\*\*CONCLUSION.*?:\*\*/i
   };
 
   const requiredStructure = requiredStructures[stepType as keyof typeof requiredStructures];
