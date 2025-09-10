@@ -3,6 +3,9 @@ import { LegalIssue, LegalIssuesAssessment } from "@/types/caseAnalysis";
 export const parseLegalIssuesAssessment = (content: string): LegalIssuesAssessment | null => {
   if (!content) return null;
 
+  console.log('🔍 Legal Issues Parser Input (first 500 chars):', content.substring(0, 500));
+  console.log('🔍 Looking for sections in content...');
+
   try {
     const sections = {
       strongIssues: [] as LegalIssue[],
@@ -81,26 +84,52 @@ export const parseLegalIssuesAssessment = (content: string): LegalIssuesAssessme
       });
     };
 
-    const strongA = extractIssuesFromSection('STRONG ISSUES?', 'strong');
-    const strongB = extractIssuesFromSection('STRONG', 'strong');
-    sections.strongIssues = mergeUnique([ ...strongA, ...strongB ]);
+    // Try the exact format first
+    const strongA = extractIssuesFromSection('\\*\\*STRONG ISSUES\\*\\*', 'strong');
+    const strongB = extractIssuesFromSection('STRONG ISSUES?', 'strong');
+    const strongC = extractIssuesFromSection('STRONG', 'strong');
+    sections.strongIssues = mergeUnique([ ...strongA, ...strongB, ...strongC ]);
 
-    const moderateA = extractIssuesFromSection('MODERATE ISSUES?', 'moderate');
-    const moderateB = extractIssuesFromSection('MODERATE', 'moderate');
-    sections.moderateIssues = mergeUnique([ ...moderateA, ...moderateB ]);
+    const moderateA = extractIssuesFromSection('\\*\\*MODERATE ISSUES\\*\\*', 'moderate');
+    const moderateB = extractIssuesFromSection('MODERATE ISSUES?', 'moderate');
+    const moderateC = extractIssuesFromSection('MODERATE', 'moderate');
+    sections.moderateIssues = mergeUnique([ ...moderateA, ...moderateB, ...moderateC ]);
 
-    const weakA = extractIssuesFromSection('WEAK ISSUES?', 'weak');
-    const weakB = extractIssuesFromSection('WEAK', 'weak');
-    sections.weakIssues = mergeUnique([ ...weakA, ...weakB ]);
+    const weakA = extractIssuesFromSection('\\*\\*WEAK ISSUES\\*\\*', 'weak');
+    const weakB = extractIssuesFromSection('WEAK ISSUES?', 'weak');
+    const weakC = extractIssuesFromSection('WEAK', 'weak');
+    sections.weakIssues = mergeUnique([ ...weakA, ...weakB, ...weakC ]);
 
-    const elimA = extractIssuesFromSection('ELIMINATED ISSUES?', 'eliminated');
-    const elimB = extractIssuesFromSection('ELIMINATED', 'eliminated');
-    const elimC = extractIssuesFromSection('NOT VIABLE', 'eliminated');
-    sections.eliminatedIssues = mergeUnique([ ...elimA, ...elimB, ...elimC ]);
+    const elimA = extractIssuesFromSection('\\*\\*ELIMINATED ISSUES\\*\\*', 'eliminated');
+    const elimB = extractIssuesFromSection('ELIMINATED ISSUES?', 'eliminated');
+    const elimC = extractIssuesFromSection('ELIMINATED', 'eliminated');
+    const elimD = extractIssuesFromSection('NOT VIABLE', 'eliminated');
+    sections.eliminatedIssues = mergeUnique([ ...elimA, ...elimB, ...elimC, ...elimD ]);
 
-    // Fallback: If nothing parsed, try generic bullets with inline Strength: labels
+    // Fallback: Try parsing case strengths/weaknesses format
     let totalIssues = sections.strongIssues.length + sections.moderateIssues.length + sections.weakIssues.length + sections.eliminatedIssues.length;
     if (totalIssues === 0) {
+      console.log('No structured legal issues found, trying case strengths/weaknesses format');
+      
+      // Look for case strengths and convert to strong legal issues
+      const strengthsA = extractIssuesFromSection('\\*\\*CASE STRENGTHS\\*\\*', 'strong');
+      const strengthsB = extractIssuesFromSection('CASE STRENGTHS?', 'strong');
+      const strengthsC = extractIssuesFromSection('STRENGTHS?', 'strong');
+      sections.strongIssues = mergeUnique([...strengthsA, ...strengthsB, ...strengthsC]);
+      
+      // Look for case weaknesses and convert to weak legal issues
+      const weaknessesA = extractIssuesFromSection('\\*\\*CASE WEAKNESSES\\*\\*', 'weak');
+      const weaknessesB = extractIssuesFromSection('CASE WEAKNESSES?', 'weak');
+      const weaknessesC = extractIssuesFromSection('WEAKNESSES?', 'weak');
+      sections.weakIssues = mergeUnique([...weaknessesA, ...weaknessesB, ...weaknessesC]);
+      
+      totalIssues = sections.strongIssues.length + sections.weakIssues.length;
+      console.log(`Extracted ${sections.strongIssues.length} strengths and ${sections.weakIssues.length} weaknesses`);
+    }
+
+    // Final fallback: generic bullets with inline Strength: labels
+    if (totalIssues === 0) {
+      console.log('Trying final fallback with generic bullet parsing');
       const normalized = content.replace(/\r/g, '');
       const blocks = normalized.split(/\n{2,}/).map(b => b.trim()).filter(Boolean);
       const temp: LegalIssue[] = [];
@@ -133,13 +162,13 @@ export const parseLegalIssuesAssessment = (content: string): LegalIssuesAssessme
     }
 
     // Extract overall strategy
-    const strategyMatch = content.match(/OVERALL[\\s\\S]*?STRATEGY[:\\s]*([\\s\\S]*?)(?=PRIORITY|$)/i);
+    const strategyMatch = content.match(/(?:\*\*)?OVERALL[\s\S]*?STRATEGY(?:\*\*)?[:\s]*([\s\S]*?)(?=(?:\*\*)?PRIORITY|$)/i);
     if (strategyMatch && strategyMatch[1]) {
       sections.overallStrategy = strategyMatch[1].trim().substring(0, 1000);
     }
 
     // Extract priority recommendations
-    const priorityMatch = content.match(/PRIORITY[\\s\\S]*?RECOMMENDATION[s]?[:\\s]*([\\s\\S]*?)$/i);
+    const priorityMatch = content.match(/(?:\*\*)?PRIORITY[\s\S]*?RECOMMENDATION[s]?(?:\*\*)?[:\s]*([\s\S]*?)$/i);
     if (priorityMatch && priorityMatch[1]) {
       const priorityText = priorityMatch[1].trim();
       sections.priorityRecommendations = priorityText

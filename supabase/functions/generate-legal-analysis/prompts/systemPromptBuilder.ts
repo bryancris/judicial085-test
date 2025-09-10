@@ -293,19 +293,19 @@ LEGAL ISSUES ASSESSMENT APPROACH:
   }
 
   // Risk assessment structure requirements
-  systemPrompt += `\n\nREQUIRED LEGAL ISSUES ASSESSMENT STRUCTURE:
+  systemPrompt += `\n\nCRITICAL: You MUST use this EXACT format with these EXACT headers (including the ** markdown formatting):
 
 **STRONG ISSUES:**
-For each strong legal issue:
+For each strong legal issue, use this format:
 - Issue Title: [Descriptive name]
-- Strength: Strong
+- Strength: Strong  
 - Description: [Clear explanation of the legal theory and why it's strong]
 - Strategic Priority: [1-10 ranking]
 - Risk Factors: [Potential challenges or weaknesses]
 - Viability Assessment: [High probability of success with specific reasoning]
 
 **MODERATE ISSUES:**
-For each moderate legal issue:
+For each moderate legal issue, use this format:
 - Issue Title: [Descriptive name]
 - Strength: Moderate
 - Description: [Legal theory with balanced assessment]
@@ -314,7 +314,7 @@ For each moderate legal issue:
 - Viability Assessment: [Moderate probability with conditions for success]
 
 **WEAK ISSUES:**
-For each weak legal issue:
+For each weak legal issue, use this format:
 - Issue Title: [Descriptive name]
 - Strength: Weak
 - Description: [Why the legal theory has limited viability]
@@ -323,7 +323,7 @@ For each weak legal issue:
 - Viability Assessment: [Low probability with explanation]
 
 **ELIMINATED ISSUES:**
-For each eliminated legal issue:
+For each eliminated legal issue, use this format:
 - Issue Title: [Descriptive name]
 - Strength: Eliminated
 - Description: [Why this legal theory is not viable]
@@ -335,7 +335,11 @@ For each eliminated legal issue:
 Comprehensive strategic assessment based on the issue prioritization above.
 
 **PRIORITY RECOMMENDATIONS:**
-Numbered list of specific, actionable recommendations for pursuing the strongest issues and managing litigation risks.`;
+1. [First specific, actionable recommendation]
+2. [Second specific, actionable recommendation]
+3. [Third specific, actionable recommendation]
+
+IMPORTANT: Do NOT use "CASE STRENGTHS" or "CASE WEAKNESSES" - use only the headers shown above for proper parsing.`;
 
   // Assessment criteria and quality requirements
   systemPrompt += `\n\nASSESSMENT CRITERIA:
