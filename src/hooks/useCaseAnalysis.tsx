@@ -89,9 +89,14 @@ export const useCaseAnalysis = (clientId?: string, caseId?: string) => {
             caseId,
             researchTypes: ["legal-research", "current-research"],
           });
-          // Re-fetch to pick up the saved Step 7 record
+          // Re-fetch to pick up the saved Step 7 record (if any)
           await fetchAnalysisData();
-          toast({ title: "Refined Analysis Ready", description: "Step 7 generated successfully." });
+          // Only show success toast if refined analysis is actually present
+          if (analysisData?.refinedAnalysisRaw && analysisData.refinedAnalysisRaw.length > 50) {
+            toast({ title: "Refined Analysis Ready", description: "Step 7 generated successfully." });
+          } else {
+            console.log("useCaseAnalysis: Step 7 not detected yet after coordinator run; skipping success toast.");
+          }
         } catch (e) {
           console.error("useCaseAnalysis: Coordinator invocation failed", e);
         }

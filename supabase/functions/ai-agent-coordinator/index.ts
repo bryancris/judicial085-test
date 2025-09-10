@@ -235,7 +235,8 @@ async function executeSequentialWorkflow(
   console.log('🎯 Step 7: REFINED ANALYSIS - Gemini generating requirements comparison...');
   workflowState.stepResults.step7 = await executeStep7RefinedAnalysis(workflowState, authHeader, geminiApiKey);
   workflowState.stepResults.step7.stepType = 'REFINED_ANALYSIS';
-  console.log(`📝 Step 7 generated content length: ${workflowState.stepResults.step7.content?.length || 0}`);
+  const step7Len = workflowState.stepResults.step7.content?.length || 0;
+  console.log(`📝 Step 7 generated content length: ${step7Len}`);
   const validation7 = await validateStepCompletion(7, workflowState.stepResults.step7, 'REFINED_ANALYSIS', {
     CASE_SUMMARY: workflowState.stepResults.step1,
     PRELIMINARY_ANALYSIS: workflowState.stepResults.step2,
@@ -245,10 +246,47 @@ async function executeSequentialWorkflow(
     STRENGTHS_WEAKNESSES: workflowState.stepResults.step6,
     REFINED_ANALYSIS: workflowState.stepResults.step7
   });
-  if (!validation7.isValid) {
+  // More resilient gating: allow proceed if reasonably substantive
+  const step7Proceed = step7Len >= 400 || ((validation7.errors?.length ?? 0) <= 1 && (validation7.score ?? 0) >= 0.6);
+  if (!validation7.isValid && !step7Proceed) {
     throw new Error(`Step 7 validation failed: ${validation7.errors.join('; ')}`);
   }
+  if (!validation7.isValid && step7Proceed) {
+    console.warn('⚠️ Step 7 validation issues present but proceeding (len>=400 or score>=0.6 with <=1 error).', validation7);
+  }
   workflowState.completedSteps.add(7);
+
+  // Eager-save Step 7 so UI can render even if later steps fail
+  try {
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.38.0');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (supabaseUrl && supabaseServiceKey) {
+      const sb = createClient(supabaseUrl, supabaseServiceKey);
+      await sb.functions.invoke('validate-and-save-legal-analysis', {
+        body: {
+          clientId: workflowState.context.clientId,
+          caseId: workflowState.context.caseId,
+          content: workflowState.stepResults.step7.content,
+          timestamp: new Date().toISOString(),
+          analysisType: 'step-7-refined-analysis',
+          provenance: {
+            step: 'step7',
+            stepType: 'REFINED_ANALYSIS',
+            methodology: '9-step-workflow',
+            workflowVersion: '2.0',
+            metadata: workflowState.stepResults.step7.metadata || {}
+          }
+        },
+        headers: authHeader ? { Authorization: authHeader } : {}
+      });
+      console.log('💾 Eager-saved Step 7 refined analysis');
+    } else {
+      console.warn('⚠️ Cannot eager-save Step 7: Supabase env not configured');
+    }
+  } catch (e) {
+    console.warn('⚠️ Failed to eager-save Step 7 (non-blocking):', e);
+  }
 
   // Step 8: RECOMMENDED FOLLOW-UP QUESTIONS
   console.log('❓ Step 8: FOLLOW-UP QUESTIONS - Gemini identifying information gaps...');

@@ -266,7 +266,7 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
       const extractedStrengthsWeaknesses = extractStrengthsWeaknesses(analysis.content || '');
       
       // Parse refined analysis from main content
-      const refinedAnalysis = parseRefinedAnalysis(analysis.content || '');
+      let refinedAnalysis = parseRefinedAnalysis(analysis.content || '');
       
       // Try to get dedicated Step 7 refined analysis record
       let refinedAnalysisRaw: string | null = null;
