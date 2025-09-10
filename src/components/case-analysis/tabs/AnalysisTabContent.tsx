@@ -94,7 +94,7 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
 
       {/* Step 7: Refined Analysis (Comprehensive synthesis + Risk Assessment) */}
       <RefinedAnalysisSection
-        analysisData={null} // TODO: Extract from analysis data when available
+        analysisData={analysisData.refinedAnalysis}
         isLoading={isLoading}
       />
 

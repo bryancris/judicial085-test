@@ -31,6 +31,7 @@ export interface AnalysisData {
   rawContent?: string; // Add raw content for direct rendering
   iracContent?: string | null; // Add IRAC content for Step 5
   legalIssuesAssessment?: LegalIssuesAssessment | null; // Add Step 6 parsed data
+  refinedAnalysis?: RefinedAnalysisData | null; // Add Step 7 parsed data
 }
 
 export const useAnalysisData = (clientId?: string, caseId?: string) => {
@@ -262,6 +263,9 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
       // Extract strengths and weaknesses from analysis content
       const extractedStrengthsWeaknesses = extractStrengthsWeaknesses(analysis.content || '');
       
+      // Parse refined analysis
+      const refinedAnalysis = parseRefinedAnalysis(analysis.content || '');
+      
       // Create analysis data with parsed sections and raw content for rendering
       const completeAnalysisData: AnalysisData = {
         id: analysis.id,
@@ -282,7 +286,8 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
         lawReferences: lawReferences,
         caseType: analysis.case_type || extractCaseType(analysis.content),
         validationStatus: analysis.validation_status,
-        rawContent: analysis.content
+        rawContent: analysis.content,
+        refinedAnalysis
       };
 
       // Try to get dedicated risk assessment analysis first
