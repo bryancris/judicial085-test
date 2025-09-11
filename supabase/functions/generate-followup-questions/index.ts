@@ -154,7 +154,21 @@ Format your response in clear, readable markdown. Each question should be action
       throw new Error("Generated content appears too short to be meaningful follow-up questions");
     }
 
-    // 5) Save to legal_analyses table
+    // 5) Try to preserve law references from the latest analysis
+    let lawReferences = [];
+    try {
+      const latestAnalysisWithRefs = analyses.find(a => a.law_references && Array.isArray(a.law_references) && a.law_references.length > 0);
+      if (latestAnalysisWithRefs) {
+        lawReferences = latestAnalysisWithRefs.law_references;
+        console.log("✅ Preserving law references from existing analysis:", lawReferences.length, "references");
+      } else {
+        console.log("📋 No law references found in existing analyses to preserve");
+      }
+    } catch (e) {
+      console.warn("Failed to preserve law references:", e);
+    }
+
+    // 6) Save to legal_analyses table
     const insertData = {
       client_id: clientId,
       user_id: userId,
@@ -162,6 +176,7 @@ Format your response in clear, readable markdown. Each question should be action
       analysis_type: "step-8-followup-questions",
       content: content,
       timestamp: new Date().toISOString(),
+      law_references: lawReferences,
       provenance: {
         source: "individual-step-refresh",
         aiProvider: "gemini-1.5-pro",
@@ -169,7 +184,8 @@ Format your response in clear, readable markdown. Each question should be action
         generatedAt: new Date().toISOString(),
         contentLength,
         contextAnalysesUsed: analyses.length,
-        instructions: baseInstructions
+        instructions: baseInstructions,
+        preservedLawReferences: lawReferences.length
       }
     };
 

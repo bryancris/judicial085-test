@@ -22,9 +22,8 @@ const LawReferencesSection: React.FC<LawReferencesSectionProps> = ({
   isLoading = false,
   caseType
 }) => {
-  if (!references || references.length === 0) {
-    return null;
-  }
+  // Show an empty state instead of returning null
+  const hasReferences = references && references.length > 0;
 
   return (
     <Card className="mb-6 shadow-sm">
@@ -41,8 +40,14 @@ const LawReferencesSection: React.FC<LawReferencesSectionProps> = ({
         </p>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {references.map((ref, index) => (
+        {!hasReferences ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <p className="text-sm">No law references found in the current analysis.</p>
+            <p className="text-xs mt-2">Law references will appear here when they are extracted from the legal analysis content.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {references.map((ref, index) => (
             <div key={index} className="border p-4 rounded-md bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -72,15 +77,18 @@ const LawReferencesSection: React.FC<LawReferencesSectionProps> = ({
                   </div>
                 )}
               </div>
-            </div>
-          ))}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
         
-        <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-md">
-          <p className="text-sm text-blue-700 dark:text-blue-200">
-            <strong>Note:</strong> These references are automatically extracted from the legal analysis and linked to relevant Texas law documents. Click "View Document" to open the full PDF document.
-          </p>
-        </div>
+        {hasReferences && (
+          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-md">
+            <p className="text-sm text-blue-700 dark:text-blue-200">
+              <strong>Note:</strong> These references are automatically extracted from the legal analysis and linked to relevant Texas law documents. Click "View Document" to open the full PDF document.
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -181,7 +181,34 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
       };
       
       // Combine with metadata
-      const lawReferences = safeLawReferences(analysis.law_references);
+      let lawReferences = safeLawReferences(analysis.law_references);
+      
+      // Fallback: If no law references in database, try to extract from content
+      if (lawReferences.length === 0) {
+        console.log("📋 No law references in database, attempting fallback extraction from content...");
+        try {
+          const { extractLegalCitations, mapCitationsToKnowledgeBase, generateDirectPdfUrl } = await import("@/utils/lawReferences/knowledgeBaseMapping");
+          
+          const extractedCitations = extractLegalCitations(analysis.content || "");
+          console.log("Fallback extracted citations:", extractedCitations);
+          
+          const knowledgeBaseDocs = mapCitationsToKnowledgeBase(extractedCitations);
+          console.log("Fallback mapped knowledge base documents:", knowledgeBaseDocs);
+          
+          // Convert to law references format
+          lawReferences = knowledgeBaseDocs.map(doc => ({
+            id: doc.id,
+            title: doc.title,
+            url: generateDirectPdfUrl(doc.filename),
+            content: `Click to view the full ${doc.title} document.`
+          }));
+          
+          console.log(`✅ Fallback extraction found ${lawReferences.length} law references`);
+        } catch (fallbackError) {
+          console.warn("Fallback law reference extraction failed:", fallbackError);
+        }
+      }
+      
       console.log("Final processed law references:", lawReferences);
       
       // Parse sections from the selected analysis content

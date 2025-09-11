@@ -120,13 +120,11 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
       />
 
       {/* Step 9: Relevant Texas Law References (Vectorized Legal Documents) */}
-      {analysisData.lawReferences && analysisData.lawReferences.length > 0 && (
-        <LawReferencesSection
-          references={analysisData.lawReferences}
-          isLoading={isLoading}
-          caseType={analysisData.caseType}
-        />
-      )}
+      <LawReferencesSection
+        references={analysisData.lawReferences || []}
+        isLoading={isLoading}
+        caseType={analysisData.caseType}
+      />
 
     </div>
   );
