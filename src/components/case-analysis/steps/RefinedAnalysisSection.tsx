@@ -6,19 +6,22 @@ import { marked } from "marked";
 import DOMPurify from "dompurify";
 import { RefinedAnalysisData } from "@/utils/refinedAnalysisParser";
 import { Button } from "@/components/ui/button";
+import { RefreshCw, Loader2 } from "lucide-react";
 
 interface RefinedAnalysisSectionProps {
   analysisData: RefinedAnalysisData | null;
   refinedAnalysisRaw?: string | null;
   isLoading?: boolean;
   onRegenerateStep7?: () => void;
+  isRegenerating?: boolean;
 }
 
 const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
   analysisData,
   refinedAnalysisRaw,
   isLoading = false,
-  onRegenerateStep7
+  onRegenerateStep7,
+  isRegenerating = false
 }) => {
   const refinedAnalysisHtml = useMemo(() => {
     // Prioritize raw refined analysis content if available
@@ -82,11 +85,22 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
             <div className="pt-4 border-t border-border">
               <Button 
                 onClick={onRegenerateStep7} 
+                disabled={isRegenerating}
                 variant="outline" 
                 size="sm"
                 className="text-xs"
               >
-                Regenerate Step 7 Analysis
+                {isRegenerating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Regenerating...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Regenerate Step 7 Analysis
+                  </>
+                )}
               </Button>
             </div>
           )}

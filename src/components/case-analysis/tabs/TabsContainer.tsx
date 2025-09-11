@@ -11,6 +11,10 @@ interface TabsContainerProps {
   selectedTab: string;
   analysisData: AnalysisData;
   isLoading: boolean;
+  regenerateStep7?: () => void;
+  regenerateStep8?: () => void;
+  isRegeneratingStep7?: boolean;
+  isRegeneratingStep8?: boolean;
   clientId: string;
   caseId?: string;
   currentAnalysisId?: string;
@@ -31,6 +35,10 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
   conversationLoading,
   notes,
   notesLoading,
+  regenerateStep7,
+  regenerateStep8,
+  isRegeneratingStep7,
+  isRegeneratingStep8,
 }) => {
   return (
     <div className="mt-6">
@@ -40,6 +48,10 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
             analysisData={analysisData}
             isLoading={isLoading}
             clientId={clientId}
+            regenerateStep7={regenerateStep7}
+            regenerateStep8={regenerateStep8}
+            isRegeneratingStep7={isRegeneratingStep7}
+            isRegeneratingStep8={isRegeneratingStep8}
           />
         </div>
       )}

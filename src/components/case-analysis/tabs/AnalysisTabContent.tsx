@@ -18,12 +18,20 @@ interface AnalysisTabContentProps {
   analysisData: AnalysisData;
   isLoading: boolean;
   clientId: string;
+  regenerateStep7?: () => void;
+  regenerateStep8?: () => void;
+  isRegeneratingStep7?: boolean;
+  isRegeneratingStep8?: boolean;
 }
 
 const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
   analysisData,
   isLoading,
   clientId,
+  regenerateStep7,
+  regenerateStep8,
+  isRegeneratingStep7,
+  isRegeneratingStep8,
 }) => {
   // Parse IRAC analysis - prefer dedicated iracContent, fallback to raw content
   const iracAnalysis = useMemo(() => {
@@ -97,6 +105,8 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
         analysisData={analysisData.refinedAnalysis}
         refinedAnalysisRaw={analysisData.refinedAnalysisRaw}
         isLoading={isLoading}
+        onRegenerateStep7={regenerateStep7}
+        isRegenerating={isRegeneratingStep7}
       />
 
       {/* Step 8: Recommended Follow-up Questions */}
@@ -104,6 +114,8 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
         questionsData={null} // TODO: Extract from analysis data when available
         followUpQuestions={analysisData.legalAnalysis.followUpQuestions}
         isLoading={isLoading}
+        onRegenerateStep8={regenerateStep8}
+        isRegenerating={isRegeneratingStep8}
       />
 
       {/* Step 9: Relevant Texas Law References (Vectorized Legal Documents) */}

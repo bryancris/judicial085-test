@@ -40,7 +40,11 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
     analysisData,
     isLoading: isAnalysisLoading,
     error: analysisError,
-    generateNewAnalysis
+    generateNewAnalysis,
+    regenerateStep7,
+    regenerateStep8,
+    isRegeneratingStep7,
+    isRegeneratingStep8
   } = useCaseAnalysis(client.id, currentCase?.id);
 
   const [currentAnalysisId, setCurrentAnalysisId] = useState<string | undefined>();
@@ -202,18 +206,22 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
                 caseType={analysisData?.caseType}
               />
               
-              <TabsContainer
-                selectedTab={analysisTab}
-                analysisData={analysisData}
-                isLoading={isAnalysisLoading}
-                clientId={client.id}
-                caseId={currentCase?.id}
-                currentAnalysisId={currentAnalysisId}
-                conversation={conversation}
-                conversationLoading={conversationLoading}
-                notes={notes}
+               <TabsContainer
+                 selectedTab={analysisTab}
+                 analysisData={analysisData}
+                 isLoading={isAnalysisLoading}
+                 clientId={client.id}
+                 caseId={currentCase?.id}
+                 currentAnalysisId={currentAnalysisId}
+                 conversation={conversation}
+                 conversationLoading={conversationLoading}
+                 notes={notes}
                  notesLoading={notesLoading}
-              />
+                 regenerateStep7={regenerateStep7}
+                 regenerateStep8={regenerateStep8}
+                 isRegeneratingStep7={isRegeneratingStep7}
+                 isRegeneratingStep8={isRegeneratingStep8}
+               />
             </div>
           );
         }

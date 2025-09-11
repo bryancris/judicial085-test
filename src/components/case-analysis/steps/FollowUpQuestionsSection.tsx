@@ -1,6 +1,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { HelpCircle, AlertCircle, Users, Microscope } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { HelpCircle, AlertCircle, Users, Microscope, RefreshCw, Loader2, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface FollowUpQuestionsData {
@@ -20,12 +21,16 @@ interface FollowUpQuestionsSectionProps {
   questionsData: FollowUpQuestionsData | null;
   followUpQuestions?: string[]; // Fallback for legacy data
   isLoading?: boolean;
+  onRegenerateStep8?: () => void;
+  isRegenerating?: boolean;
 }
 
 const FollowUpQuestionsSection: React.FC<FollowUpQuestionsSectionProps> = ({
   questionsData,
   followUpQuestions = [],
-  isLoading = false
+  isLoading = false,
+  onRegenerateStep8,
+  isRegenerating = false
 }) => {
   if (isLoading) {
     return (
@@ -71,7 +76,32 @@ const FollowUpQuestionsSection: React.FC<FollowUpQuestionsSectionProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground text-sm">No follow-up questions available.</p>
+          <div className="text-center py-8 text-muted-foreground">
+            <MessageSquare className="mx-auto h-12 w-12 mb-4 opacity-50" />
+            <p>No follow-up questions available yet.</p>
+            <p className="text-sm mt-2">Questions will appear after the analysis is complete.</p>
+            {onRegenerateStep8 && (
+              <Button 
+                onClick={onRegenerateStep8}
+                disabled={isRegenerating}
+                variant="outline" 
+                size="sm" 
+                className="mt-4"
+              >
+                {isRegenerating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating Questions...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Generate Follow-up Questions
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
     );
@@ -184,6 +214,30 @@ const FollowUpQuestionsSection: React.FC<FollowUpQuestionsSectionProps> = ({
               </div>
             )}
           </>
+        )}
+        
+        {/* Regenerate Button for existing questions */}
+        {(hasLegacyData || hasNewData) && onRegenerateStep8 && (
+          <div className="flex justify-end mt-4 pt-4 border-t">
+            <Button 
+              onClick={onRegenerateStep8}
+              disabled={isRegenerating}
+              variant="outline" 
+              size="sm"
+            >
+              {isRegenerating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Regenerating...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Regenerate Step 8 Questions
+                </>
+              )}
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>
