@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Layout } from "lucide-react";
 import ClientIntakeChat from "@/components/clients/chat/ClientIntakeChat";
@@ -55,6 +55,14 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
   const [conversationLoading, setConversationLoading] = useState(false);
   const [notes, setNotes] = useState<any[]>([]);
   const [notesLoading, setNotesLoading] = useState(false);
+
+  // Auto-load existing analysis when case-analysis tab is accessed (one-time only)
+  useEffect(() => {
+    if ((activeTab === "analysis" || activeTab === "case-analysis") && !isAnalysisLoading && !analysisData) {
+      console.log("🔄 Auto-loading existing analysis data for tab access...");
+      loadExistingAnalysis();
+    }
+  }, [activeTab, loadExistingAnalysis, isAnalysisLoading, analysisData]);
 
   // Get the legal analysis ID from database
   React.useEffect(() => {
@@ -168,14 +176,6 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
       case "analysis":
       case "case-analysis":
         console.log("✅ Entering case-analysis case");
-        
-        // Auto-load existing analysis when tab is accessed (read-only, no generation)
-        React.useEffect(() => {
-          if (activeTab === "analysis" || activeTab === "case-analysis") {
-            console.log("🔄 Auto-loading existing analysis data for tab access...");
-            loadExistingAnalysis();
-          }
-        }, [activeTab, loadExistingAnalysis]);
         
         if (isAnalysisLoading) {
           console.log("📊 Showing loading skeleton");
