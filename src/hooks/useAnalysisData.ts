@@ -366,12 +366,14 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
     }
   }, [clientId, caseId, toast]);
 
-  // Auto-fetch on mount and when dependencies change
-  useEffect(() => {
-    if (clientId) {
-      fetchAnalysisData();
-    }
-  }, [fetchAnalysisData, clientId, caseId]);
+  // Auto-fetch disabled to prevent expensive API calls on every page load/refresh/navigation
+  // Analysis data will only be fetched when explicitly triggered by user actions (button clicks)
+  // Uncomment below to re-enable auto-fetch:
+  // useEffect(() => {
+  //   if (clientId) {
+  //     fetchAnalysisData();
+  //   }
+  // }, [fetchAnalysisData, clientId, caseId]);
 
   return {
     analysisData,
