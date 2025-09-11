@@ -285,8 +285,8 @@ serve(async (req) => {
       content,
       validation_status: contentLength >= 400 ? "validated" : "pending_review",
       timestamp: new Date().toISOString(),
-      provenance: "individual-step-refresh",
-      metadata: {
+      provenance: {
+        source: "individual-step-refresh",
         model: modelUsed,
         aiProvider: modelUsed.includes("gpt-5") ? "openai-gpt-5" : "openai-gpt-4o-mini",
         usage: usageData,
