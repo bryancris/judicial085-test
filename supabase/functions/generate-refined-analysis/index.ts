@@ -1,7 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.3";
-import { generateLegalAnalysis } from "../shared/geminiService.ts";
+// Removed Gemini import - using OpenAI directly
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -63,12 +63,12 @@ serve(async (req) => {
     const userId = clientData.user_id;
     console.log("✅ Found user_id:", userId);
 
-    // Ensure Gemini API key exists before proceeding
-    const geminiKey = Deno.env.get("GEMINI_API_KEY");
-    if (!geminiKey) {
-      console.error("GEMINI_API_KEY is not set");
+    // Ensure OpenAI API key exists before proceeding
+    const openAIApiKey = Deno.env.get("OPENAI_API_KEY");
+    if (!openAIApiKey) {
+      console.error("❌ OpenAI API key not found");
       return new Response(
-        JSON.stringify({ error: "Missing GEMINI_API_KEY on server" }),
+        JSON.stringify({ error: "OpenAI API key not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -124,13 +124,59 @@ serve(async (req) => {
 
     const prompt = `${header}\n\nContext:\n${contextText}\n\nInstructions:\n${instructions || defaultInstructions}`;
 
-    console.log("🧠 Generating refined analysis with Gemini. Context length:", contextText.length);
+    console.log("🧠 Generating refined analysis with OpenAI. Context length:", contextText.length);
 
-    // 3) Generate with Gemini using shared service (returns { text, usage })
+    // 3) Generate with OpenAI API
     const systemPrompt = "You are a senior attorney. Follow strict legal writing standards, avoid hallucinations, cite only real statutes/cases conservatively, and provide practical, client-facing guidance. Output clear markdown headings.";
-    const { text: contentText } = await generateLegalAnalysis(prompt, systemPrompt, geminiKey);
-    const content = (contentText || "").trim();
+    
+    console.log("🤖 OpenAI API Request (gpt-5-2025-08-07):", {
+      model: "gpt-5-2025-08-07",
+      promptLength: prompt.length,
+      hasSystemPrompt: true
+    });
+
+    const openAIResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${openAIApiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "gpt-5-2025-08-07",
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt
+          },
+          {
+            role: "user", 
+            content: prompt
+          }
+        ],
+        max_completion_tokens: 2000
+      })
+    });
+
+    if (!openAIResponse.ok) {
+      const errorData = await openAIResponse.json();
+      console.error('❌ OpenAI API returned an error:', errorData);
+      throw new Error(`OpenAI API error: ${JSON.stringify(errorData)}`);
+    }
+
+    const openAIData = await openAIResponse.json();
+
+    if (!openAIData.choices || openAIData.choices.length === 0) {
+      console.error('❌ OpenAI API error:', openAIData);
+      throw new Error('Failed to generate response');
+    }
+
+    const content = (openAIData.choices[0].message.content || "").trim();
     const contentLength = content.length;
+    
+    console.log("✅ OpenAI API Success:", {
+      responseLength: contentLength,
+      usage: openAIData.usage
+    });
 
     console.log("📝 Refined analysis generated. Length:", contentLength);
 
@@ -149,6 +195,13 @@ serve(async (req) => {
       content,
       validation_status: contentLength >= 400 ? "validated" : "pending_review",
       timestamp: new Date().toISOString(),
+      ai_provider: "openai-gpt-5",
+      provenance: "individual-step-refresh",
+      metadata: {
+        model: "gpt-5-2025-08-07",
+        usage: openAIData.usage,
+        contentLength
+      }
     };
     if (caseId) insertPayload.case_id = caseId;
 
