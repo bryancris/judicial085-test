@@ -48,12 +48,12 @@ const EmptyAnalysisState: React.FC<EmptyAnalysisStateProps> = ({
         const hasAnalysis = existingAnalysis && existingAnalysis.length > 0;
         setHasExistingAnalysis(hasAnalysis);
         
-        // If we have existing analysis, load it instead of showing generate button
-        if (hasAnalysis && onLoadExisting) {
-          console.log("🔄 Found existing analysis, loading...");
-          onLoadExisting();
-          return;
-        }
+        // REMOVED: Auto-loading existing analysis to prevent expensive API calls
+        // if (hasAnalysis && onLoadExisting) {
+        //   console.log("🔄 Found existing analysis, loading...");
+        //   onLoadExisting();
+        //   return;
+        // }
         
         // Check for client messages
         const { data: messages } = await supabase
@@ -88,7 +88,7 @@ const EmptyAnalysisState: React.FC<EmptyAnalysisStateProps> = ({
     if (clientId) {
       checkAvailableContent();
     }
-  }, [clientId, caseId, onLoadExisting]);
+  }, [clientId, caseId]);
 
   const getDescription = () => {
     if (isChecking) {

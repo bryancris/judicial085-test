@@ -177,7 +177,7 @@ export const useSessionManager = () => {
         console.error('Error in periodic session validation:', error);
         // Don't crash, just log the error
       }
-    }, 60000); // Increased to 60 seconds to reduce load
+    }, 300000); // Increased to 5 minutes to significantly reduce load
 
     return () => clearInterval(interval);
   }, [currentSessionId, isSessionValid, validateSession, updateSessionActivity]);

@@ -127,14 +127,8 @@ const BackgroundEnrichmentDashboard: React.FC = () => {
     };
 
     loadData();
-
-    // Set up auto-refresh every 30 seconds
-    const interval = setInterval(() => {
-      fetchStats();
-      fetchRecentJobs();
-    }, 30000);
-
-    return () => clearInterval(interval);
+    // REMOVED: Auto-refresh to prevent expensive API calls
+    // Users can manually refresh if needed
   }, []);
 
   const getJobStatusBadge = (status: string) => {

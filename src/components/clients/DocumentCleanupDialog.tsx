@@ -46,8 +46,8 @@ const DocumentCleanupDialog: React.FC<DocumentCleanupDialogProps> = ({
       };
       checkTestDocs();
       
-      // Set up interval to check for new test documents
-      const interval = setInterval(checkTestDocs, 10000); // Check every 10 seconds
+      // Set up interval to check for new test documents (reduced frequency)
+      const interval = setInterval(checkTestDocs, 30000); // Check every 30 seconds
       return () => clearInterval(interval);
     }
   }, [isOpen, clientId]);
