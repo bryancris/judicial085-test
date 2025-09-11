@@ -171,46 +171,7 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
         }
       }
       
-      // Step 6: Generate Legal Issues Assessment (Risk Assessment)
-      console.log("📊 Starting Step 6: Legal Issues Assessment (Risk Assessment)...");
-      const riskAssessmentResult = await generateLegalAnalysis(
-        clientId,
-        [],
-        caseId,
-        'step-6-risk-assessment',
-        { stepType: 'risk-assessment', skipCoordinator: true }
-      );
-      
-      if (riskAssessmentResult.error) {
-        console.warn("⚠️ Risk Assessment (Step 6) failed:", riskAssessmentResult.error);
-        toast({
-          title: "Risk Assessment Failed",
-          description: "IRAC completed but Step 6 (Risk Assessment) failed. Continuing with available analysis.",
-          variant: "destructive",
-        });
-      } else {
-        // Save Risk Assessment as separate record
-        const riskSaveResult = await saveLegalAnalysis(
-          clientId,
-          riskAssessmentResult.analysis,
-          new Date().toISOString(),
-          {
-            caseId,
-            analysisType: "risk-assessment",
-            lawReferences: riskAssessmentResult.lawReferences || [],
-            documentsUsed: riskAssessmentResult.documentsUsed || [],
-            factSources: riskAssessmentResult.factSources || [],
-            citations: riskAssessmentResult.citations || [],
-            provenance: { qualityControlEnabled: true, sourceStep: 6 }
-          }
-        );
-        
-        if (riskSaveResult.success) {
-          console.log("✅ Risk Assessment (Step 6) saved successfully, id:", riskSaveResult.analysisId);
-        } else {
-          console.warn("⚠️ Risk Assessment save failed:", riskSaveResult.error);
-        }
-      }
+      // REMOVED: Step 6 Risk Assessment - no longer needed to reduce API costs
       
       // Show success message
       toast({
