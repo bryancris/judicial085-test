@@ -131,12 +131,13 @@ export const useRealTimeAnalysis = (clientId?: string, caseId?: string) => {
     }
   };
 
-  // Auto-generate analysis on mount
-  useEffect(() => {
-    if (clientId) {
-      generateAnalysis();
-    }
-  }, [clientId, caseId]);
+  // Auto-generation disabled to prevent expensive API calls on every mount/reload
+  // Uncomment below to re-enable auto-generation:
+  // useEffect(() => {
+  //   if (clientId) {
+  //     generateAnalysis();
+  //   }
+  // }, [clientId, caseId]);
 
   return {
     analysisData,
