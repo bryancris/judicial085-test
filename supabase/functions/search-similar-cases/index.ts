@@ -551,6 +551,14 @@ function extractCasesFromAIResponse(content: string, citations: any[]): any[] {
  * Search CourtListener with expanded terms
  */
 async function searchCourtListener(context: LegalContext): Promise<any[]> {
+  // Temporarily disable CourtListener API calls
+  const COURTLISTENER_ENABLED = false;
+  
+  if (!COURTLISTENER_ENABLED) {
+    console.log('🚫 CourtListener search disabled - returning empty results');
+    return [];
+  }
+
   try {
     const courtListenerApiKey = Deno.env.get('COURTLISTENER_API_KEY');
     
