@@ -34,6 +34,7 @@ export interface AnalysisData {
   legalIssuesAssessment?: LegalIssuesAssessment | null; // Add Step 6 parsed data
   refinedAnalysis?: RefinedAnalysisData | null; // Add Step 7 parsed data
   refinedAnalysisRaw?: string | null; // Add Step 7 raw content
+  followUpQuestionsRaw?: string | null; // Add Step 8 raw content
 }
 
 export const useAnalysisData = (clientId?: string, caseId?: string) => {
@@ -290,6 +291,28 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
         console.warn("Step 7 refined analysis lookup failed:", e);
       }
 
+      // Try to get dedicated Step 8 follow-up questions record
+      let followUpQuestionsRaw: string | null = null;
+      try {
+        const { data: step8Data } = await supabase
+          .from('legal_analyses')
+          .select('content')
+          .eq('client_id', clientId)
+          .eq('analysis_type', 'step-8-followup-questions')
+          .or(caseId ? `case_id.eq.${caseId},case_id.is.null` : 'case_id.is.null')
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (step8Data && step8Data.length > 0) {
+          followUpQuestionsRaw = step8Data[0].content;
+          console.log('✅ Found dedicated Step 8 follow-up questions record');
+        } else {
+          console.log('📋 No dedicated Step 8 follow-up questions found');
+        }
+      } catch (e) {
+        console.warn("Step 8 follow-up questions lookup failed:", e);
+      }
+
       // Try to get dedicated IRAC analysis (Step 5) content
       let iracContent: string | null = null;
       try {
@@ -335,7 +358,8 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
         rawContent: analysis.content,
         iracContent,
         refinedAnalysis,
-        refinedAnalysisRaw
+        refinedAnalysisRaw,
+        followUpQuestionsRaw
       };
 
       // Try to get dedicated risk assessment analysis first

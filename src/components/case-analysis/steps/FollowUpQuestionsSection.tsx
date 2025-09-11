@@ -20,6 +20,7 @@ interface FollowUpQuestionsData {
 interface FollowUpQuestionsSectionProps {
   questionsData: FollowUpQuestionsData | null;
   followUpQuestions?: string[]; // Fallback for legacy data
+  followUpQuestionsRaw?: string | null; // Raw Step 8 content
   isLoading?: boolean;
   onRegenerateStep8?: () => void;
   isRegenerating?: boolean;
@@ -28,6 +29,7 @@ interface FollowUpQuestionsSectionProps {
 const FollowUpQuestionsSection: React.FC<FollowUpQuestionsSectionProps> = ({
   questionsData,
   followUpQuestions = [],
+  followUpQuestionsRaw,
   isLoading = false,
   onRegenerateStep8,
   isRegenerating = false
@@ -55,8 +57,9 @@ const FollowUpQuestionsSection: React.FC<FollowUpQuestionsSectionProps> = ({
     );
   }
 
-  // Use legacy data if new format is not available
-  const hasLegacyData = !questionsData && followUpQuestions.length > 0;
+  // Check for Step 8 dedicated content first, then legacy data
+  const hasStep8Data = followUpQuestionsRaw && followUpQuestionsRaw.trim().length > 0;
+  const hasLegacyData = !questionsData && !hasStep8Data && followUpQuestions.length > 0;
   const hasNewData = questionsData && (
     questionsData.criticalInformationNeeded.length > 0 ||
     questionsData.additionalInvestigation.areas.length > 0 ||
@@ -65,7 +68,7 @@ const FollowUpQuestionsSection: React.FC<FollowUpQuestionsSectionProps> = ({
     questionsData.expertConsultation.needed
   );
 
-  if (!hasLegacyData && !hasNewData) {
+  if (!hasLegacyData && !hasNewData && !hasStep8Data) {
     return (
       <Card>
         <CardHeader>
@@ -117,6 +120,21 @@ const FollowUpQuestionsSection: React.FC<FollowUpQuestionsSectionProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Step 8 dedicated content */}
+        {hasStep8Data && (
+          <div>
+            <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
+              <HelpCircle className="h-4 w-4" />
+              Generated Follow-up Questions
+            </h4>
+            <div className="prose prose-sm max-w-none">
+              <div className="whitespace-pre-wrap text-sm text-muted-foreground">
+                {followUpQuestionsRaw}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Legacy format fallback */}
         {hasLegacyData && (
           <div>
@@ -217,7 +235,7 @@ const FollowUpQuestionsSection: React.FC<FollowUpQuestionsSectionProps> = ({
         )}
         
         {/* Regenerate Button for existing questions */}
-        {(hasLegacyData || hasNewData) && onRegenerateStep8 && (
+        {(hasLegacyData || hasNewData || hasStep8Data) && onRegenerateStep8 && (
           <div className="flex justify-end mt-4 pt-4 border-t">
             <Button 
               onClick={onRegenerateStep8}

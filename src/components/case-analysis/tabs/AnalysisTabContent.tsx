@@ -111,8 +111,9 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
 
       {/* Step 8: Recommended Follow-up Questions */}
       <FollowUpQuestionsSection
-        questionsData={null} // TODO: Extract from analysis data when available
+        questionsData={null} // TODO: Parse structured data from followUpQuestionsRaw when available
         followUpQuestions={analysisData.legalAnalysis.followUpQuestions}
+        followUpQuestionsRaw={analysisData.followUpQuestionsRaw}
         isLoading={isLoading}
         onRegenerateStep8={regenerateStep8}
         isRegenerating={isRegeneratingStep8}

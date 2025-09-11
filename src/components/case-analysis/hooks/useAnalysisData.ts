@@ -259,7 +259,8 @@ export const useAnalysisData = (clientId: string, caseId?: string) => {
           remedies: sections.remedies || "",
           rawContent: analysis.content,
           iracContent: iracAnalysis?.content || null,
-          validationStatus: analysis.validation_status
+          validationStatus: analysis.validation_status,
+          followUpQuestionsRaw: null // Will be added when Step 8 lookup is implemented
         };
 
         // Try to get dedicated risk assessment analysis first
