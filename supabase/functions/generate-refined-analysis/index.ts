@@ -126,63 +126,153 @@ serve(async (req) => {
 
     console.log("🧠 Generating refined analysis with OpenAI. Context length:", contextText.length);
 
-    // 3) Generate with OpenAI API
+    // 3) Generate with OpenAI API (with fallback logic)
     const systemPrompt = "You are a senior attorney. Follow strict legal writing standards, avoid hallucinations, cite only real statutes/cases conservatively, and provide practical, client-facing guidance. Output clear markdown headings.";
     
-    console.log("🤖 OpenAI API Request (gpt-5-2025-08-07):", {
+    let content = "";
+    let contentLength = 0;
+    let modelUsed = "";
+    let usageData: any = null;
+
+    // Try GPT-5 first
+    console.log("🤖 Attempting OpenAI API Request (gpt-5-2025-08-07):", {
       model: "gpt-5-2025-08-07",
       promptLength: prompt.length,
       hasSystemPrompt: true
     });
 
-    const openAIResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${openAIApiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "gpt-5-2025-08-07",
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt
-          },
-          {
-            role: "user", 
-            content: prompt
+    try {
+      const gpt5Response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${openAIApiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "gpt-5-2025-08-07",
+          messages: [
+            {
+              role: "system",
+              content: systemPrompt
+            },
+            {
+              role: "user", 
+              content: prompt
+            }
+          ],
+          max_completion_tokens: 2000
+          // Note: GPT-5 doesn't support temperature parameter
+        })
+      });
+
+      console.log("📡 GPT-5 Response Status:", gpt5Response.status);
+
+      if (gpt5Response.ok) {
+        const gpt5Data = await gpt5Response.json();
+        console.log("📥 GPT-5 Raw Response:", {
+          hasChoices: !!gpt5Data.choices,
+          choicesLength: gpt5Data.choices?.length || 0,
+          usage: gpt5Data.usage,
+          firstChoiceContent: gpt5Data.choices?.[0]?.message?.content ? 
+            `${gpt5Data.choices[0].message.content.substring(0, 100)}...` : 'NO CONTENT'
+        });
+
+        if (gpt5Data.choices && gpt5Data.choices.length > 0 && gpt5Data.choices[0].message.content) {
+          content = gpt5Data.choices[0].message.content.trim();
+          contentLength = content.length;
+          modelUsed = "gpt-5-2025-08-07";
+          usageData = gpt5Data.usage;
+
+          if (contentLength > 200) {
+            console.log("✅ GPT-5 Success:", {
+              responseLength: contentLength,
+              usage: usageData
+            });
+          } else {
+            console.warn("⚠️ GPT-5 returned short content, will try fallback. Length:", contentLength);
+            content = "";
           }
-        ],
-        max_completion_tokens: 2000
-      })
-    });
-
-    if (!openAIResponse.ok) {
-      const errorData = await openAIResponse.json();
-      console.error('❌ OpenAI API returned an error:', errorData);
-      throw new Error(`OpenAI API error: ${JSON.stringify(errorData)}`);
+        } else {
+          console.warn("⚠️ GPT-5 returned empty content, will try fallback");
+        }
+      } else {
+        const errorData = await gpt5Response.json();
+        console.warn("⚠️ GPT-5 failed with status", gpt5Response.status, errorData);
+      }
+    } catch (error) {
+      console.warn("⚠️ GPT-5 request failed:", error);
     }
 
-    const openAIData = await openAIResponse.json();
+    // Fallback to GPT-4o-mini if GPT-5 failed or returned empty content
+    if (!content || contentLength < 200) {
+      console.log("🔄 Falling back to GPT-4o-mini...");
+      
+      try {
+        const fallbackResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${openAIApiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: [
+              {
+                role: "system",
+                content: systemPrompt
+              },
+              {
+                role: "user", 
+                content: prompt
+              }
+            ],
+            max_tokens: 2000,
+            temperature: 0.3
+          })
+        });
 
-    if (!openAIData.choices || openAIData.choices.length === 0) {
-      console.error('❌ OpenAI API error:', openAIData);
-      throw new Error('Failed to generate response');
+        if (!fallbackResponse.ok) {
+          const errorData = await fallbackResponse.json();
+          console.error('❌ Fallback GPT-4o-mini API error:', errorData);
+          throw new Error(`Fallback API error: ${JSON.stringify(errorData)}`);
+        }
+
+        const fallbackData = await fallbackResponse.json();
+        
+        if (!fallbackData.choices || fallbackData.choices.length === 0) {
+          console.error('❌ Fallback API returned no choices:', fallbackData);
+          throw new Error('Fallback failed to generate response');
+        }
+
+        content = (fallbackData.choices[0].message.content || "").trim();
+        contentLength = content.length;
+        modelUsed = "gpt-4o-mini (fallback)";
+        usageData = fallbackData.usage;
+
+        console.log("✅ Fallback Success:", {
+          responseLength: contentLength,
+          usage: usageData
+        });
+
+      } catch (fallbackError) {
+        console.error("❌ Both GPT-5 and fallback failed:", fallbackError);
+        throw new Error(`Both primary and fallback models failed: ${fallbackError.message}`);
+      }
     }
 
-    const content = (openAIData.choices[0].message.content || "").trim();
-    const contentLength = content.length;
-    
-    console.log("✅ OpenAI API Success:", {
-      responseLength: contentLength,
-      usage: openAIData.usage
+    console.log("📝 Final refined analysis generated:", {
+      model: modelUsed,
+      length: contentLength
     });
-
-    console.log("📝 Refined analysis generated. Length:", contentLength);
 
     if (contentLength < 200) {
+      console.error("❌ Final content still too short:", contentLength);
       return new Response(
-        JSON.stringify({ error: "Generated content too short", contentLength }),
+        JSON.stringify({ 
+          error: "Generated content too short after fallback", 
+          contentLength,
+          modelUsed 
+        }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -195,12 +285,14 @@ serve(async (req) => {
       content,
       validation_status: contentLength >= 400 ? "validated" : "pending_review",
       timestamp: new Date().toISOString(),
-      ai_provider: "openai-gpt-5",
+      ai_provider: modelUsed.includes("gpt-5") ? "openai-gpt-5" : "openai-gpt-4o-mini",
       provenance: "individual-step-refresh",
       metadata: {
-        model: "gpt-5-2025-08-07",
-        usage: openAIData.usage,
-        contentLength
+        model: modelUsed,
+        usage: usageData,
+        contentLength,
+        originalModelAttempted: "gpt-5-2025-08-07",
+        fallbackUsed: modelUsed.includes("fallback")
       }
     };
     if (caseId) insertPayload.case_id = caseId;
