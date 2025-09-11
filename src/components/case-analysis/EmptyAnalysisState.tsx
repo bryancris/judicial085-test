@@ -11,6 +11,7 @@ interface EmptyAnalysisStateProps {
   setSelectedTab: (tab: string) => void;
   isGenerating: boolean;
   onGenerate: () => void;
+  onLoadExisting?: () => void;
 }
 
 const EmptyAnalysisState: React.FC<EmptyAnalysisStateProps> = ({
@@ -21,9 +22,11 @@ const EmptyAnalysisState: React.FC<EmptyAnalysisStateProps> = ({
   setSelectedTab,
   isGenerating,
   onGenerate,
+  onLoadExisting,
 }) => {
   const [hasDocuments, setHasDocuments] = useState(false);
   const [hasConversation, setHasConversation] = useState(false);
+  const [hasExistingAnalysis, setHasExistingAnalysis] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
@@ -31,6 +34,27 @@ const EmptyAnalysisState: React.FC<EmptyAnalysisStateProps> = ({
       setIsChecking(true);
       
       try {
+        // Check for existing analysis first
+        let analysisQuery = supabase
+          .from("legal_analyses")
+          .select("id")
+          .eq("client_id", clientId);
+        
+        if (caseId) {
+          analysisQuery = analysisQuery.eq("case_id", caseId);
+        }
+        
+        const { data: existingAnalysis } = await analysisQuery.limit(1);
+        const hasAnalysis = existingAnalysis && existingAnalysis.length > 0;
+        setHasExistingAnalysis(hasAnalysis);
+        
+        // If we have existing analysis, load it instead of showing generate button
+        if (hasAnalysis && onLoadExisting) {
+          console.log("🔄 Found existing analysis, loading...");
+          onLoadExisting();
+          return;
+        }
+        
         // Check for client messages
         const { data: messages } = await supabase
           .from("client_messages")
@@ -64,11 +88,15 @@ const EmptyAnalysisState: React.FC<EmptyAnalysisStateProps> = ({
     if (clientId) {
       checkAvailableContent();
     }
-  }, [clientId, caseId]);
+  }, [clientId, caseId, onLoadExisting]);
 
   const getDescription = () => {
     if (isChecking) {
-      return "Checking available content...";
+      return "Checking for existing analysis...";
+    }
+    
+    if (hasExistingAnalysis) {
+      return "Loading existing analysis...";
     }
     
     if (hasConversation || hasDocuments) {

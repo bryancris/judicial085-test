@@ -41,6 +41,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
     isLoading: isAnalysisLoading,
     error: analysisError,
     generateNewAnalysis,
+    loadExistingAnalysis,
     regenerateStep7,
     regenerateStep8,
     isRegeneratingStep7,
@@ -168,6 +169,14 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
       case "case-analysis":
         console.log("✅ Entering case-analysis case");
         
+        // Auto-load existing analysis when tab is accessed (read-only, no generation)
+        React.useEffect(() => {
+          if (activeTab === "analysis" || activeTab === "case-analysis") {
+            console.log("🔄 Auto-loading existing analysis data for tab access...");
+            loadExistingAnalysis();
+          }
+        }, [activeTab, loadExistingAnalysis]);
+        
         if (isAnalysisLoading) {
           console.log("📊 Showing loading skeleton");
           return <CaseAnalysisLoadingSkeleton />;
@@ -190,6 +199,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
               setSelectedTab={setAnalysisTab}
               isGenerating={isAnalysisLoading}
               onGenerate={generateNewAnalysis}
+              onLoadExisting={loadExistingAnalysis}
             />
           );
         } else {

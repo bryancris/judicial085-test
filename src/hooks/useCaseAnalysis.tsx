@@ -29,6 +29,14 @@ export const useCaseAnalysis = (clientId?: string, caseId?: string) => {
   } = useEnhancedCaseAnalysis(clientId, caseId);
 
 
+  // Load existing analysis data (database read only - no generation)
+  const loadExistingAnalysis = async () => {
+    if (!clientId) return;
+    
+    console.log("useCaseAnalysis: Loading existing analysis data (read-only)...");
+    await fetchAnalysisData();
+  };
+
   // Auto-fetch disabled to prevent expensive API calls on every page load/refresh/navigation
   // Analysis data will only be loaded when "Generate Real-Time Analysis" or regeneration buttons are clicked
   // Uncomment below to re-enable auto-fetch:
@@ -219,6 +227,7 @@ export const useCaseAnalysis = (clientId?: string, caseId?: string) => {
     isLoading: combinedIsLoading,
     error: analysisError,
     generateNewAnalysis,
+    loadExistingAnalysis,
     regenerateStep7,
     regenerateStep8,
     isRegeneratingStep7,
