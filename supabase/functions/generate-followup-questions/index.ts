@@ -89,48 +89,56 @@ serve(async (req) => {
     // 2) Prepare context from existing analyses
     const contextParts = [];
     
-    // Include summaries, preliminary analysis, laws, case law, IRAC, and strengths/weaknesses
-    const relevantTypes = [
-      "step-1-summary", "step-2-preliminary", "step-3-texas-laws", 
-      "step-4-case-law", "step-5-irac", "step-6-strengths-weaknesses"
-    ];
-    
-    for (const type of relevantTypes) {
-      const analysis = analyses.find(a => a.analysis_type === type);
-      if (analysis?.content) {
-        contextParts.push(`=== ${type.toUpperCase()} ===\n${analysis.content}\n`);
+    // Include ALL available analyses to provide comprehensive context
+    for (const analysis of analyses) {
+      if (analysis?.content && analysis.content.trim().length > 50) {
+        const cleanType = analysis.analysis_type.replace(/-/g, ' ').toUpperCase();
+        contextParts.push(`=== ${cleanType} ===\n${analysis.content.trim()}\n`);
       }
     }
 
     const contextText = contextParts.join("\n");
     console.log("📝 Prepared context length:", contextText.length);
+    
+    // If we still don't have enough context, get more details
+    if (contextText.length < 500) {
+      console.log("⚠️ Limited context available. Including all analysis types...");
+      for (const analysis of analyses) {
+        if (analysis?.content) {
+          contextParts.push(`${analysis.analysis_type}: ${analysis.content.substring(0, 1000)}`);
+        }
+      }
+    }
 
     // 3) Create prompt for follow-up questions generation
     const baseInstructions = instructions || "Generate strategic follow-up questions to strengthen the case";
     
-    const prompt = `Based on the comprehensive legal analysis provided below, generate targeted follow-up questions that would help strengthen this case and identify any gaps in the current analysis.
+    const prompt = `Based on the comprehensive legal analysis provided below, generate targeted follow-up questions that would help strengthen this specific case and identify any gaps in the current analysis.
+
+IMPORTANT: You MUST analyze the provided case context carefully and generate questions that are directly relevant to the specific facts, legal issues, and circumstances described in this case.
 
 ${baseInstructions}
 
 CONTEXT FROM EXISTING ANALYSIS:
-${contextText}
+${contextText || "No detailed analysis context available yet. Please generate general strategic questions."}
 
-Please generate 8-12 strategic follow-up questions organized into these categories:
+Please generate 6-10 strategic follow-up questions that are SPECIFIC to this case. Organize them into these categories:
 
-**CRITICAL INFORMATION GAPS:**
-- Questions about missing facts that could significantly impact the legal outcome
-- Key details about timeline, parties, or circumstances that need clarification
+## Critical Information Gaps
+- What specific facts are missing that could change the legal outcome?
+- What timeline details need clarification?
+- Which parties or relationships need better definition?
 
-**ADDITIONAL INVESTIGATION:**
-- Areas requiring deeper factual investigation
-- Potential witnesses or experts to consult
-- Documents or evidence that should be obtained
+## Additional Investigation Needed  
+- What evidence should be gathered?
+- Which witnesses should be interviewed?
+- What documents are missing?
 
-**EXPERT CONSULTATION:**
-- Whether specialized expert testimony might be needed
-- Areas where professional consultation would strengthen the case
+## Expert Consultation
+- What type of expert testimony might strengthen the case?
+- Are there technical or specialized areas requiring professional analysis?
 
-Format your response in clear markdown with bullet points for each question. Focus on practical, actionable questions that would genuinely help improve the case strategy and fill knowledge gaps.`;
+Format your response in clear, readable markdown. Each question should be actionable and directly relevant to the case details provided above. Avoid generic legal questions.`;
 
     console.log("🧠 Generating follow-up questions with Gemini. Context length:", contextText.length);
 

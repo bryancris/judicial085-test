@@ -141,7 +141,7 @@ const FollowUpQuestionsSection: React.FC<FollowUpQuestionsSectionProps> = ({
               Generated Follow-up Questions
             </h4>
             <div 
-              className="prose prose-sm max-w-none [&>h1]:text-base [&>h1]:font-semibold [&>h1]:mb-3 [&>h2]:text-sm [&>h2]:font-medium [&>h2]:mb-2 [&>h3]:text-sm [&>h3]:font-medium [&>h3]:mb-2 [&>p]:text-sm [&>p]:mb-2 [&>ul]:text-sm [&>ol]:text-sm [&>li]:mb-1 [&>strong]:font-medium" 
+              className="prose prose-sm max-w-none text-foreground [&>h1]:text-foreground [&>h1]:text-base [&>h1]:font-semibold [&>h1]:mb-3 [&>h2]:text-foreground [&>h2]:text-sm [&>h2]:font-medium [&>h2]:mb-2 [&>h3]:text-foreground [&>h3]:text-sm [&>h3]:font-medium [&>h3]:mb-2 [&>p]:text-foreground [&>p]:text-sm [&>p]:mb-2 [&>ul]:text-foreground [&>ul]:text-sm [&>ol]:text-foreground [&>ol]:text-sm [&>li]:text-foreground [&>li]:mb-1 [&>strong]:font-semibold [&>strong]:text-foreground" 
               dangerouslySetInnerHTML={renderMarkdown(followUpQuestionsRaw!)}
             />
           </div>
