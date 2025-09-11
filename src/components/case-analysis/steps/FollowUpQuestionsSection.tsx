@@ -141,7 +141,22 @@ const FollowUpQuestionsSection: React.FC<FollowUpQuestionsSectionProps> = ({
               Generated Follow-up Questions
             </h4>
             <div 
-              className="prose prose-sm max-w-none text-foreground [&>h1]:text-foreground [&>h1]:text-base [&>h1]:font-semibold [&>h1]:mb-3 [&>h2]:text-foreground [&>h2]:text-sm [&>h2]:font-medium [&>h2]:mb-2 [&>h3]:text-foreground [&>h3]:text-sm [&>h3]:font-medium [&>h3]:mb-2 [&>p]:text-foreground [&>p]:text-sm [&>p]:mb-2 [&>ul]:text-foreground [&>ul]:text-sm [&>ol]:text-foreground [&>ol]:text-sm [&>li]:text-foreground [&>li]:mb-1 [&>strong]:font-semibold [&>strong]:text-foreground" 
+              className="prose prose-sm max-w-none p-4 rounded-md bg-card/50 
+                text-card-foreground
+                prose-headings:text-card-foreground prose-headings:font-semibold
+                prose-h1:text-lg prose-h1:mb-4 prose-h1:border-b prose-h1:border-border prose-h1:pb-2
+                prose-h2:text-base prose-h2:mb-3 prose-h2:text-muted-foreground
+                prose-h3:text-sm prose-h3:mb-2 prose-h3:text-muted-foreground
+                prose-p:text-card-foreground prose-p:leading-relaxed prose-p:mb-3
+                prose-ul:text-card-foreground prose-ul:space-y-1
+                prose-ol:text-card-foreground prose-ol:space-y-1 prose-ol:pl-2
+                prose-li:text-card-foreground prose-li:leading-relaxed
+                prose-strong:text-card-foreground prose-strong:font-semibold
+                prose-a:text-primary prose-a:underline
+                [&>ol]:pl-6 [&>ul]:pl-6
+                [&>ol>li]:pl-2 [&>ul>li]:pl-2
+                [&>ol>li]:marker:text-muted-foreground
+                [&>ul>li]:marker:text-muted-foreground"
               dangerouslySetInnerHTML={renderMarkdown(followUpQuestionsRaw!)}
             />
           </div>
