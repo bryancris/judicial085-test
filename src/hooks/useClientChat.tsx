@@ -86,17 +86,19 @@ export const useClientChat = (clientId: string) => {
     setInterviewMode                // Mode switching function
   } = useClientChatMessages(clientId, messages, setMessages, generateAnalysis);
 
-  // Auto-trigger analysis on initial load when we have facts and no analysis
-  const [autoTriggered, setAutoTriggered] = useState(false);
-  useEffect(() => {
-    if (isLoadingHistory || autoTriggered) return;
-    const hasFacts = messages.some(m => m.role === "facts" && m.content?.trim());
-    const hasAnalysis = legalAnalysis.length > 0;
-    if (hasFacts && !hasAnalysis) {
-      setAutoTriggered(true);
-      generateAnalysis(messages);
-    }
-  }, [isLoadingHistory, autoTriggered, messages, legalAnalysis, generateAnalysis]);
+  // Auto-analysis disabled to prevent expensive API calls on every page load/refresh/navigation
+  // Analysis will only run when user actively sends messages (via useClientChatMessages)
+  // Uncomment below to re-enable auto-analysis:
+  // const [autoTriggered, setAutoTriggered] = useState(false);
+  // useEffect(() => {
+  //   if (isLoadingHistory || autoTriggered) return;
+  //   const hasFacts = messages.some(m => m.role === "facts" && m.content?.trim());
+  //   const hasAnalysis = legalAnalysis.length > 0;
+  //   if (hasFacts && !hasAnalysis) {
+  //     setAutoTriggered(true);
+  //     generateAnalysis(messages);
+  //   }
+  // }, [isLoadingHistory, autoTriggered, messages, legalAnalysis, generateAnalysis]);
 
   /**
    * MESSAGE HANDLER INTEGRATION
