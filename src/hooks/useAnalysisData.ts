@@ -289,6 +289,28 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
       } catch (e) {
         console.warn("Step 7 refined analysis lookup failed:", e);
       }
+
+      // Try to get dedicated IRAC analysis (Step 5) content
+      let iracContent: string | null = null;
+      try {
+        const { data: iracData } = await supabase
+          .from('legal_analyses')
+          .select('content')
+          .eq('client_id', clientId)
+          .eq('analysis_type', 'irac-analysis')
+          .or(caseId ? `case_id.eq.${caseId},case_id.is.null` : 'case_id.is.null')
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (iracData && iracData.length > 0) {
+          iracContent = iracData[0].content;
+          console.log('✅ Found dedicated IRAC analysis record');
+        } else {
+          console.log('📋 No dedicated IRAC analysis found');
+        }
+      } catch (e) {
+        console.warn("IRAC analysis lookup failed:", e);
+      }
       
       // Create analysis data with parsed sections and raw content for rendering
       const completeAnalysisData: AnalysisData = {
@@ -311,6 +333,7 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
         caseType: analysis.case_type || extractCaseType(analysis.content),
         validationStatus: analysis.validation_status,
         rawContent: analysis.content,
+        iracContent,
         refinedAnalysis,
         refinedAnalysisRaw
       };
