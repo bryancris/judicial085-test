@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HelpCircle, AlertCircle, Users, Microscope, RefreshCw, Loader2, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { marked } from "marked";
+import DOMPurify from "dompurify";
 
 interface FollowUpQuestionsData {
   criticalInformationNeeded: string[];
@@ -34,6 +36,17 @@ const FollowUpQuestionsSection: React.FC<FollowUpQuestionsSectionProps> = ({
   onRegenerateStep8,
   isRegenerating = false
 }) => {
+  // Function to safely render markdown content
+  const renderMarkdown = (content: string) => {
+    try {
+      const html = marked.parse(content) as string;
+      const sanitized = DOMPurify.sanitize(html);
+      return { __html: sanitized };
+    } catch (error) {
+      console.error('Error parsing markdown:', error);
+      return { __html: content };
+    }
+  };
   if (isLoading) {
     return (
       <Card>
@@ -127,11 +140,10 @@ const FollowUpQuestionsSection: React.FC<FollowUpQuestionsSectionProps> = ({
               <HelpCircle className="h-4 w-4" />
               Generated Follow-up Questions
             </h4>
-            <div className="prose prose-sm max-w-none">
-              <div className="whitespace-pre-wrap text-sm text-muted-foreground">
-                {followUpQuestionsRaw}
-              </div>
-            </div>
+            <div 
+              className="prose prose-sm max-w-none [&>h1]:text-base [&>h1]:font-semibold [&>h1]:mb-3 [&>h2]:text-sm [&>h2]:font-medium [&>h2]:mb-2 [&>h3]:text-sm [&>h3]:font-medium [&>h3]:mb-2 [&>p]:text-sm [&>p]:mb-2 [&>ul]:text-sm [&>ol]:text-sm [&>li]:mb-1 [&>strong]:font-medium" 
+              dangerouslySetInnerHTML={renderMarkdown(followUpQuestionsRaw!)}
+            />
           </div>
         )}
 
