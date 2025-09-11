@@ -154,9 +154,9 @@ Format your response in clear markdown with bullet points for each question. Foc
       analysis_type: "step-8-followup-questions",
       content: content,
       timestamp: new Date().toISOString(),
-      ai_provider: "gemini-1.5-pro",
-      provenance: "individual-step-refresh",
-      metadata: {
+      provenance: {
+        source: "individual-step-refresh",
+        aiProvider: "gemini-1.5-pro",
         step: 8,
         generatedAt: new Date().toISOString(),
         contentLength,
