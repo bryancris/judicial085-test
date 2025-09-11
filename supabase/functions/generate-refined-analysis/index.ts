@@ -128,6 +128,7 @@ serve(async (req) => {
       analysis_type: "step-7-refined-analysis",
       content,
       validation_status: contentLength >= 400 ? "validated" : "pending_review",
+      timestamp: new Date().toISOString(),
     };
     if (caseId) insertPayload.case_id = caseId;
 
