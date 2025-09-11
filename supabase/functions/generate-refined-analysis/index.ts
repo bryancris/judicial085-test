@@ -44,6 +44,25 @@ serve(async (req) => {
 
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
+    // Get user_id from client record
+    console.log("🔍 Looking up user_id for client:", clientId);
+    const { data: clientData, error: clientError } = await supabaseAdmin
+      .from("clients")
+      .select("user_id")
+      .eq("id", clientId)
+      .single();
+
+    if (clientError || !clientData) {
+      console.error("Failed to find client:", clientError);
+      return new Response(
+        JSON.stringify({ error: "Client not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = clientData.user_id;
+    console.log("✅ Found user_id:", userId);
+
     // Ensure Gemini API key exists before proceeding
     const geminiKey = Deno.env.get("GEMINI_API_KEY");
     if (!geminiKey) {
@@ -125,6 +144,7 @@ serve(async (req) => {
     // 4) Insert into legal_analyses as dedicated Step 7 record
     const insertPayload: any = {
       client_id: clientId,
+      user_id: userId,
       analysis_type: "step-7-refined-analysis",
       content,
       validation_status: contentLength >= 400 ? "validated" : "pending_review",

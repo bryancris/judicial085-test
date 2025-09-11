@@ -43,6 +43,22 @@ serve(async (req) => {
     // Initialize Supabase client
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Get user_id from client record
+    console.log("🔍 Looking up user_id for client:", clientId);
+    const { data: clientData, error: clientError } = await supabase
+      .from("clients")
+      .select("user_id")
+      .eq("id", clientId)
+      .single();
+
+    if (clientError || !clientData) {
+      console.error("Failed to find client:", clientError);
+      throw new Error("Client not found");
+    }
+
+    const userId = clientData.user_id;
+    console.log("✅ Found user_id:", userId);
+
     // 1) Fetch existing legal analyses to use as context
     console.log("📋 Fetching existing analysis context...");
     
@@ -133,9 +149,11 @@ Format your response in clear markdown with bullet points for each question. Foc
     // 5) Save to legal_analyses table
     const insertData = {
       client_id: clientId,
+      user_id: userId,
       case_id: caseId || null,
       analysis_type: "step-8-followup-questions",
       content: content,
+      timestamp: new Date().toISOString(),
       ai_provider: "gemini-1.5-pro",
       provenance: "individual-step-refresh",
       metadata: {
