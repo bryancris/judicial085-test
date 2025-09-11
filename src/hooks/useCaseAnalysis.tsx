@@ -203,10 +203,9 @@ export const useCaseAnalysis = (clientId?: string, caseId?: string) => {
           console.error("useCaseAnalysis: generate-refined-analysis invocation failed", e);
         }
 
-        // Auto-trigger similar cases search after analysis is complete
-        setTimeout(searchSimilarCasesAfterAnalysis, 1000);
+        // Similar cases search is now manual only - no auto-trigger
       },
-      searchSimilarCasesAfterAnalysis
+      undefined // Removed automatic similar cases callback
     );
   };
 
