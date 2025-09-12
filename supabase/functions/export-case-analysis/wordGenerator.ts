@@ -1125,25 +1125,3 @@ function parseRelevantLawForWord(relevantLaw: string): any[] {
   
   return content;
 }
-
-      const trimmed = line.trim();
-      if (trimmed.match(/^\d+\.\s/) || trimmed.startsWith('•') || trimmed.startsWith('-')) {
-        const area = trimmed.replace(/^\d+\.\s*|^[•-]\s*/, '').trim();
-        if (area && area.length > 3) {
-          potentialLegalAreas.push(area);
-        }
-      }
-    });
-  }
-
-  // Extract Preliminary Issues section  
-  const issuesMatch = analysisContent.match(/\*\*Preliminary Issues:\*\*([\s\S]*?)(?=\*\*|$)/);
-  if (issuesMatch) {
-    const lines = issuesMatch[1].split('\n');
-    lines.forEach(line => {
-      const trimmed = line.trim();
-      if (trimmed.match(/^\d+\.\s/) || trimmed.startsWith('•') || trimmed.startsWith('-')) {
-        const issue = trimmed.replace(/^\d+\.\s*|^[•-]\s*/, '').trim();
-        if (issue && issue.length > 10) {
-          preliminaryIssues.push(issue);
-        }
