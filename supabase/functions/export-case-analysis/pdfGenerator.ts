@@ -1,4 +1,4 @@
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument } from 'npm:pdf-lib';
 import { CaseAnalysisData } from './types.ts';
 import { 
   initPdf, 
