@@ -15,14 +15,36 @@ export function parsePreliminaryAnalysis(analysisContent: string): PreliminaryAn
     };
   }
 
-  // Detect analysis format (case-insensitive for robustness)
+  // 🚫 STRICT IRAC DETECTION AND BLOCKING FOR STEP 2
   const upper = analysisContent.toUpperCase();
-  const isIracFormat = upper.includes('**ISSUE') || upper.includes('IRAC LEGAL ANALYSIS');
+  const iracPatterns = [
+    '**ISSUE',
+    '**RULE:',
+    '**APPLICATION:',
+    '**CONCLUSION:',
+    'IRAC LEGAL ANALYSIS',
+    '**ISSUE [',
+    'IRAC ANALYSIS'
+  ];
+  
+  const isIracFormat = iracPatterns.some(pattern => upper.includes(pattern));
+  
+  if (isIracFormat) {
+    console.error('🚫 IRAC format detected in Step 2 preliminary analysis - this should NOT happen!');
+    console.error('Content preview:', analysisContent.substring(0, 200));
+    
+    // Return error state instead of trying to parse IRAC for Step 2
+    return {
+      potentialLegalAreas: ["⚠️ Error: IRAC format detected in Step 2"],
+      preliminaryIssues: ["Step 2 should use preliminary analysis format, not IRAC"],
+      researchPriorities: ["Analysis needs to be regenerated with correct Step 2 format"],
+      strategicNotes: ["Contact support - Step 2 generated incorrect format"]
+    };
+  }
+
   const isTraditionalFormat = /\*\*PRELIMINARY ANALYSIS:|\*\*POTENTIAL LEGAL AREAS:/i.test(analysisContent);
 
-  if (isIracFormat) {
-    return parseIracFormat(analysisContent);
-  } else if (isTraditionalFormat) {
+  if (isTraditionalFormat) {
     return parseTraditionalFormat(analysisContent);
   } else {
     return parseGenericFormat(analysisContent);

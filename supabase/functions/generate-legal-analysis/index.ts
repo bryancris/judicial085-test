@@ -212,14 +212,24 @@ if (!skipCoordinator) {
           if (stepType === 'preliminary-analysis') {
             const iracDetectionPatterns = [
               /\*\*ISSUE\s*\[?\d*\]?\s*:\*\*/i,
+              /\*\*ISSUE\s*\[.*?\]\*\*/i,
               /\*\*RULE\s*:\*\*/i,
               /\*\*APPLICATION\s*:\*\*/i,
               /\*\*CONCLUSION\s*:\*\*/i,
-              /\*\*IRAC.*ANALYSIS\*\*/i
+              /\*\*IRAC.*ANALYSIS\*\*/i,
+              /IRAC LEGAL ANALYSIS/i
             ];
             const iracFound = iracDetectionPatterns.some(p => p.test(synthesized));
             if (iracFound) {
-              console.warn('🚫 Coordinator produced IRAC content for preliminary step. Skipping coordinator result and falling back to direct analysis.');
+              console.error('🚫 CRITICAL: Coordinator produced IRAC content for Step 2 preliminary analysis!');
+              console.error('Content preview:', synthesized.substring(0, 200));
+              return new Response(
+                JSON.stringify({ 
+                  error: "IRAC format detected in Step 2 preliminary analysis. Step 2 must use preliminary format only.",
+                  code: "IRAC_NOT_ALLOWED_STEP_2"
+                }),
+                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
             } else {
               // 🚫 DISABLED: Prevent coordinator from saving unvalidated analyses
               console.log('📋 Skipping coordinator analysis save to prevent data pollution');
@@ -650,23 +660,38 @@ console.log(`Building ${effectiveStepType} prompt for ${stepType || requestConte
     console.log("Generated analysis length:", analysis?.length || 0);
     console.log("Source:", analysisSource, "Case type:", detectedCaseType);
 
-// ⚠️ CRITICAL: Block IRAC content if not Step 5
+// 🚫 CRITICAL: Block IRAC content if not Step 5 (Enhanced Detection)
 if (effectiveStepType !== 'irac-analysis') {
   const iracDetectionPatterns = [
     /\*\*ISSUE\s*\[?\d*\]?\s*:\*\*/i,
+    /\*\*ISSUE\s*\[.*?\]\*\*/i,
     /\*\*RULE\s*:\*\*/i,
     /\*\*APPLICATION\s*:\*\*/i,
     /\*\*CONCLUSION\s*:\*\*/i,
-    /\*\*IRAC.*ANALYSIS\*\*/i
+    /\*\*IRAC.*ANALYSIS\*\*/i,
+    /IRAC LEGAL ANALYSIS/i
   ];
   const foundIracPattern = iracDetectionPatterns.find(pattern => 
     pattern.test(analysis || '')
   );
   if (foundIracPattern) {
-    console.log(`🚫 IRAC_NOT_ALLOWED: Non-IRAC step produced IRAC content (pattern: ${foundIracPattern})`);
+    console.error(`🚫 CRITICAL IRAC VIOLATION: Non-IRAC step (${effectiveStepType}) produced IRAC content!`);
+    console.error(`Found pattern: ${foundIracPattern}`);
+    console.error('Content preview:', analysis?.substring(0, 300));
+    
+    if (effectiveStepType === 'preliminary-analysis') {
+      return new Response(
+        JSON.stringify({ 
+          error: "Step 2 generated IRAC format content instead of preliminary analysis format. This violates the step requirements.",
+          code: "IRAC_NOT_ALLOWED_STEP_2"
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     return new Response(
       JSON.stringify({ 
-        error: `IRAC format detected but current step is not IRAC (Step 5). Found pattern: ${foundIracPattern}`,
+        error: `IRAC format detected but current step is ${effectiveStepType}, not Step 5 IRAC. Found pattern: ${foundIracPattern}`,
         code: "IRAC_NOT_ALLOWED"
       }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
