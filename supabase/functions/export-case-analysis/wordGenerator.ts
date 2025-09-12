@@ -100,319 +100,668 @@ export async function generateWord(data: CaseAnalysisData): Promise<Uint8Array> 
 }
 
 function createWordDocumentContent(data: CaseAnalysisData, docxElements: any) {
-  const { Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle } = docxElements
+  const { Paragraph, TextRun, HeadingLevel } = docxElements
+  
+  const clientName = data.client ? `${data.client.first_name || ''} ${data.client.last_name || ''}`.trim() : 'Unknown Client'
   
   const content = [
-    // Title
+    // Document Title
     new Paragraph({
-      text: "Legal Case Analysis Report",
-      heading: HeadingLevel.TITLE,
+      children: [
+        new TextRun({
+          text: `Legal Case Analysis Report - ${clientName}`,
+          size: 32,
+          bold: true,
+          color: "1e40af"
+        })
+      ],
       alignment: AlignmentType.CENTER,
-      spacing: { after: 400 }
+      spacing: { after: 600 }
     }),
     
-    // Client Information Table
+    // Step 1: Case Summary (Organized Fact Pattern)
     new Paragraph({
-      text: "Client Information",
+      text: "STEP 1: CASE SUMMARY (ORGANIZED FACT PATTERN)",
       heading: HeadingLevel.HEADING_1,
     }),
+    new Paragraph({
+      children: [new TextRun({
+        text: "AI-assisted organization of core case facts into structured legal narrative",
+        italic: true,
+        color: "6b7280"
+      })],
+      spacing: { after: 200 }
+    }),
+    ...createCaseSummarySection(data, docxElements),
     
-    createClientInfoTable(data.client, docxElements),
+    // Step 2: Preliminary Analysis 
+    new Paragraph({
+      text: "STEP 2: PRELIMINARY ANALYSIS (AI-ASSISTED BROAD ISSUE SPOTTING)",
+      heading: HeadingLevel.HEADING_1,
+    }),
+    new Paragraph({
+      children: [new TextRun({
+        text: "Initial broad identification of potential legal issues and areas of concern",
+        italic: true,
+        color: "6b7280"
+      })],
+      spacing: { after: 200 }
+    }),
+    ...createPreliminaryAnalysisSection(data, docxElements),
     
-        // Case Information (if exists)
-        ...(data.case ? createCaseInfoSection(data.case, docxElements) : []),
-        
-        // Legal Analysis (if exists)
-        ...(data.analysis ? createFormattedAnalysisSection(data.analysis, data.parsedAnalysis, docxElements) : []),
-        
-        // Conversation History (if exists)
-        ...(data.messages.length > 0 ? createConversationSection(data.messages, docxElements) : []),
-        
-        // Strengths & Weaknesses (if parsed analysis exists)
-        ...(data.parsedAnalysis ? createStrengthsWeaknessesSection(data.parsedAnalysis, docxElements) : []),
-        
-        // Follow-up Questions (if exist)
-        ...(data.parsedAnalysis?.followUpQuestions.length > 0 ? createFollowUpQuestionsSection(data.parsedAnalysis.followUpQuestions, docxElements) : []),
-        
-        // Similar Cases (if exist)
-        ...(data.similarCases.length > 0 ? createSimilarCasesSection(data.similarCases, docxElements) : createEmptySimilarCasesSection(docxElements)),
+    // Step 3: Relevant Texas Laws
+    new Paragraph({
+      text: "STEP 3: RELEVANT TEXAS LAWS (TARGETED LEGAL RESEARCH)",
+      heading: HeadingLevel.HEADING_1,
+    }),
+    new Paragraph({
+      children: [new TextRun({
+        text: "Targeted research into applicable Texas statutes and regulations",
+        italic: true,
+        color: "6b7280"
+      })],
+      spacing: { after: 200 }
+    }),
+    ...createRelevantLawSection(data, docxElements),
     
-    // Additional Case Law (using the correct data source)
-    ...(data.additionalCaseLaw.length > 0 ? createAdditionalCaseLawSection(data.additionalCaseLaw, docxElements) : createEmptyAdditionalCaseLawSection(docxElements)),
+    // Step 4: Additional Case Law
+    new Paragraph({
+      text: "STEP 4: ADDITIONAL CASE LAW (PRECEDENT RESEARCH)",
+      heading: HeadingLevel.HEADING_1,
+    }),
+    new Paragraph({
+      children: [new TextRun({
+        text: "Research into relevant case precedents and judicial interpretations",
+        italic: true,
+        color: "6b7280"
+      })],
+      spacing: { after: 200 }
+    }),
+    ...createAdditionalCaseLawSection(data, docxElements),
     
-    // Perplexity Research (if exists)
-    ...(data.perplexityResearch.length > 0 ? createPerplexityResearchSection(data.perplexityResearch, docxElements) : []),
+    // Step 5: IRAC Legal Analysis
+    new Paragraph({
+      text: "STEP 5: IRAC LEGAL ANALYSIS (STRUCTURED LEGAL REASONING)",
+      heading: HeadingLevel.HEADING_1,
+    }),
+    new Paragraph({
+      children: [new TextRun({
+        text: "Detailed legal analysis using Issue, Rule, Application, Conclusion methodology",
+        italic: true,
+        color: "6b7280"
+      })],
+      spacing: { after: 200 }
+    }),
+    ...createIracAnalysisSection(data, docxElements),
     
-    // Scholarly References (if exist)
-    ...(data.scholarlyReferences.length > 0 ? createScholarlyReferencesSection(data.scholarlyReferences, docxElements) : createEmptyScholarlyReferencesSection(docxElements)),
+    // Step 6: Case Strengths & Weaknesses
+    new Paragraph({
+      text: "STEP 6: CASE STRENGTHS & WEAKNESSES (RISK ASSESSMENT)",
+      heading: HeadingLevel.HEADING_1,
+    }),
+    new Paragraph({
+      children: [new TextRun({
+        text: "Comprehensive risk assessment identifying advantages and vulnerabilities",
+        italic: true,
+        color: "6b7280"
+      })],
+      spacing: { after: 200 }
+    }),
+    ...createStrengthsWeaknessesSection(data, docxElements),
     
-    // Attorney Notes (if exist)
-    ...(data.notes.length > 0 ? createNotesSection(data.notes, docxElements) : createEmptyNotesSection(docxElements)),
+    // Step 7: Legal Requirements Verification & Case Conclusion
+    new Paragraph({
+      text: "STEP 7: LEGAL REQUIREMENTS VERIFICATION & CASE CONCLUSION",
+      heading: HeadingLevel.HEADING_1,
+    }),
+    new Paragraph({
+      children: [new TextRun({
+        text: "Systematic verification of legal requirements and overall case assessment",
+        italic: true,
+        color: "6b7280"
+      })],
+      spacing: { after: 200 }
+    }),
+    ...createLegalRequirementsSection(data, docxElements),
     
-    // Documents (if exist)
-    ...(data.documents.length > 0 ? createDocumentsSection(data.documents, docxElements) : [])
+    // Step 8: Recommended Follow-up Questions
+    new Paragraph({
+      text: "STEP 8: RECOMMENDED FOLLOW-UP QUESTIONS",
+      heading: HeadingLevel.HEADING_1,
+    }),
+    new Paragraph({
+      children: [new TextRun({
+        text: "Strategic questions to gather additional information for case development",
+        italic: true,
+        color: "6b7280"
+      })],
+      spacing: { after: 200 }
+    }),
+    ...createFollowUpQuestionsSection(data, docxElements),
+    
+    // Step 9: Law References
+    new Paragraph({
+      text: "STEP 9: LAW REFERENCES (VECTORIZED LEGAL DOCUMENTS)",
+      heading: HeadingLevel.HEADING_1,
+    }),
+    new Paragraph({
+      children: [new TextRun({
+        text: "Reference materials from vectorized legal document database",
+        italic: true,
+        color: "6b7280"
+      })],
+      spacing: { after: 200 }
+    }),
+    ...createLawReferencesSection(data, docxElements)
   ]
   
   return content
 }
 
-function createClientInfoTable(client: any, docxElements: any) {
-  const { Table, TableRow, TableCell, Paragraph, TextRun, WidthType, BorderStyle } = docxElements
-  
-  return new Table({
-    width: {
-      size: 100,
-      type: WidthType.PERCENTAGE,
-    },
-    borders: {
-      top: { style: BorderStyle.SINGLE, size: 1 },
-      bottom: { style: BorderStyle.SINGLE, size: 1 },
-      left: { style: BorderStyle.SINGLE, size: 1 },
-      right: { style: BorderStyle.SINGLE, size: 1 },
-      insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
-      insideVertical: { style: BorderStyle.SINGLE, size: 1 },
-    },
-    rows: [
-      new TableRow({
-        children: [
-          new TableCell({
-            children: [new Paragraph({ children: [new TextRun({ text: "Name", bold: true })] })],
-            width: { size: 30, type: WidthType.PERCENTAGE },
-          }),
-          new TableCell({
-            children: [new Paragraph({ children: [new TextRun(`${client?.first_name || ''} ${client?.last_name || ''}`)] })],
-            width: { size: 70, type: WidthType.PERCENTAGE },
-          }),
-        ],
-      }),
-      new TableRow({
-        children: [
-          new TableCell({
-            children: [new Paragraph({ children: [new TextRun({ text: "Email", bold: true })] })],
-          }),
-          new TableCell({
-            children: [new Paragraph({ children: [new TextRun(client?.email || 'N/A')] })],
-          }),
-        ],
-      }),
-      new TableRow({
-        children: [
-          new TableCell({
-            children: [new Paragraph({ children: [new TextRun({ text: "Phone", bold: true })] })],
-          }),
-          new TableCell({
-            children: [new Paragraph({ children: [new TextRun(client?.phone || 'N/A')] })],
-          }),
-        ],
-      }),
-    ],
-  })
-}
-
-function createCaseInfoSection(caseData: any, docxElements: any) {
-  const { Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType, BorderStyle } = docxElements
-  
-  return [
-    new Paragraph({
-      text: "Case Information",
-      heading: HeadingLevel.HEADING_1,
-      spacing: { before: 400 }
-    }),
-    
-    new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      borders: {
-        top: { style: BorderStyle.SINGLE, size: 1 },
-        bottom: { style: BorderStyle.SINGLE, size: 1 },
-        left: { style: BorderStyle.SINGLE, size: 1 },
-        right: { style: BorderStyle.SINGLE, size: 1 },
-        insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
-        insideVertical: { style: BorderStyle.SINGLE, size: 1 },
-      },
-      rows: [
-        new TableRow({
-          children: [
-            new TableCell({
-              children: [new Paragraph({ children: [new TextRun({ text: "Case Title", bold: true })] })],
-              width: { size: 30, type: WidthType.PERCENTAGE },
-            }),
-            new TableCell({
-              children: [new Paragraph({ children: [new TextRun(caseData.case_title || 'N/A')] })],
-              width: { size: 70, type: WidthType.PERCENTAGE },
-            }),
-          ],
-        }),
-        new TableRow({
-          children: [
-            new TableCell({
-              children: [new Paragraph({ children: [new TextRun({ text: "Case Type", bold: true })] })],
-            }),
-            new TableCell({
-              children: [new Paragraph({ children: [new TextRun(caseData.case_type || 'N/A')] })],
-            }),
-          ],
-        }),
-        new TableRow({
-          children: [
-            new TableCell({
-              children: [new Paragraph({ children: [new TextRun({ text: "Status", bold: true })] })],
-            }),
-            new TableCell({
-              children: [new Paragraph({ children: [new TextRun(caseData.status || 'N/A')] })],
-            }),
-          ],
-        }),
-      ],
-    })
-  ]
-}
-
-function createFormattedAnalysisSection(analysis: any, parsedAnalysis: any, docxElements: any) {
+function createCaseSummarySection(data: CaseAnalysisData, docxElements: any) {
   const { Paragraph, TextRun, HeadingLevel } = docxElements
+  const content = []
   
-  const content = [
-    new Paragraph({
-      text: "Legal Analysis",
-      heading: HeadingLevel.HEADING_1,
-      spacing: { before: 400 }
-    })
-  ]
-  
-  if (analysis.case_type && analysis.case_type !== 'general') {
+  // Parties
+  if (data.structuredCaseData?.parties && data.structuredCaseData.parties.length > 0) {
     content.push(
       new Paragraph({
-        children: [
-          new TextRun({ text: "Case Type: ", bold: true }),
-          new TextRun(analysis.case_type === 'consumer-protection' ? 'Consumer Protection' : analysis.case_type)
-        ],
+        text: "Parties Involved",
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 200 }
+      })
+    )
+    data.structuredCaseData.parties.forEach((party: any) => {
+      content.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: "• ", bold: true }),
+            new TextRun({ text: `${party.name} (${party.role})` })
+          ],
+          spacing: { after: 100 },
+          indent: { left: 360 }
+        })
+      )
+    })
+  }
+  
+  // Timeline
+  if (data.structuredCaseData?.timeline && data.structuredCaseData.timeline.length > 0) {
+    content.push(
+      new Paragraph({
+        text: "Timeline of Events",
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 200 }
+      })
+    )
+    data.structuredCaseData.timeline.forEach((event: any) => {
+      content.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: `${event.date}: `, bold: true }),
+            new TextRun(event.event)
+          ],
+          spacing: { after: 100 },
+          indent: { left: 360 }
+        })
+      )
+    })
+  }
+  
+  // Core Facts
+  if (data.structuredCaseData?.coreFacts && data.structuredCaseData.coreFacts.length > 0) {
+    content.push(
+      new Paragraph({
+        text: "Core Facts",
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 200 }
+      })
+    )
+    data.structuredCaseData.coreFacts.forEach((fact: string) => {
+      content.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: "• ", bold: true }),
+            new TextRun(fact)
+          ],
+          spacing: { after: 100 },
+          indent: { left: 360 }
+        })
+      )
+    })
+  }
+  
+  if (content.length === 0) {
+    content.push(
+      new Paragraph({
+        children: [new TextRun({
+          text: "No structured case summary data available.",
+          italic: true,
+          color: "6b7280"
+        })],
         spacing: { after: 200 }
       })
     )
   }
   
-  // Always show the full analysis content
-  const analysisContent = analysis.content || 'No analysis content available.'
-  const formattedParagraphs = processAnalysisContent(analysisContent, docxElements)
-  content.push(...formattedParagraphs)
+  return content
+}
+
+function createPreliminaryAnalysisSection(data: CaseAnalysisData, docxElements: any) {
+  const { Paragraph } = docxElements
   
-  // If parsed analysis exists, also show structured sections
-  if (parsedAnalysis) {
+  if (data.parsedAnalysis?.preliminaryAnalysis) {
+    return processAnalysisContent(data.parsedAnalysis.preliminaryAnalysis, docxElements)
+  }
+  
+  return [
+    new Paragraph({
+      children: [new TextRun({
+        text: "No preliminary analysis data available.",
+        italic: true,
+        color: "6b7280"
+      })],
+      spacing: { after: 200 }
+    })
+  ]
+}
+
+function createRelevantLawSection(data: CaseAnalysisData, docxElements: any) {
+  if (data.parsedAnalysis?.relevantLaw) {
+    return processAnalysisContent(data.parsedAnalysis.relevantLaw, docxElements)
+  }
+  
+  return [
+    new Paragraph({
+      children: [new TextRun({
+        text: "No relevant law analysis available.",
+        italic: true,
+        color: "6b7280"
+      })],
+      spacing: { after: 200 }
+    })
+  ]
+}
+
+function createAdditionalCaseLawSection(data: CaseAnalysisData, docxElements: any) {
+  const { Paragraph, TextRun, HeadingLevel } = docxElements
+  const content = []
+  
+  if (data.additionalCaseLaw && data.additionalCaseLaw.length > 0) {
+    data.additionalCaseLaw.forEach((caselaw: any, index: number) => {
+      content.push(
+        new Paragraph({
+          text: `Case ${index + 1}: ${caselaw.case_name || 'Unknown Case'}`,
+          heading: HeadingLevel.HEADING_3,
+          spacing: { before: 200 }
+        })
+      )
+      
+      if (caselaw.court) {
+        content.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: "Court: ", bold: true }),
+              new TextRun(caselaw.court)
+            ],
+            spacing: { after: 100 }
+          })
+        )
+      }
+      
+      if (caselaw.date_decided) {
+        content.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: "Date: ", bold: true }),
+              new TextRun(new Date(caselaw.date_decided).toLocaleDateString())
+            ],
+            spacing: { after: 100 }
+          })
+        )
+      }
+      
+      if (caselaw.snippet) {
+        content.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: "Relevant Facts: ", bold: true }),
+              new TextRun(caselaw.snippet)
+            ],
+            spacing: { after: 200 }
+          })
+        )
+      }
+    })
+  } else {
     content.push(
       new Paragraph({
-        text: "Analysis Summary",
-        heading: HeadingLevel.HEADING_2,
-        spacing: { before: 300, after: 150 }
+        children: [new TextRun({
+          text: "No additional case law research available.",
+          italic: true,
+          color: "6b7280"
+        })],
+        spacing: { after: 200 }
       })
     )
-    
-    if (parsedAnalysis.relevantLaw) {
-      content.push(
-        new Paragraph({
-          text: "Relevant Law",
-          heading: HeadingLevel.HEADING_3,
-          spacing: { before: 200 }
-        }),
-        ...processAnalysisContent(parsedAnalysis.relevantLaw, docxElements)
-      )
-    }
-    
-    if (parsedAnalysis.preliminaryAnalysis) {
-      content.push(
-        new Paragraph({
-          text: "Preliminary Analysis",
-          heading: HeadingLevel.HEADING_3,
-          spacing: { before: 200 }
-        }),
-        ...processAnalysisContent(parsedAnalysis.preliminaryAnalysis, docxElements)
-      )
-    }
-    
-    if (parsedAnalysis.potentialIssues) {
-      content.push(
-        new Paragraph({
-          text: "Potential Issues",
-          heading: HeadingLevel.HEADING_3,
-          spacing: { before: 200 }
-        }),
-        ...processAnalysisContent(parsedAnalysis.potentialIssues, docxElements)
-      )
-    }
   }
   
   return content
 }
 
-
-function createStrengthsWeaknessesSection(parsedAnalysis: any, docxElements: any) {
+function createIracAnalysisSection(data: CaseAnalysisData, docxElements: any) {
   const { Paragraph, TextRun, HeadingLevel } = docxElements
+  const content = []
   
-  return [
-    new Paragraph({
-      text: "Case Strengths & Weaknesses",
-      heading: HeadingLevel.HEADING_1,
-      spacing: { before: 400 }
-    }),
-    new Paragraph({
-      text: "Case Strengths",
-      heading: HeadingLevel.HEADING_2,
-      spacing: { before: 200 }
-    }),
-    ...parsedAnalysis.strengths.map((strength: string) => 
+  if (data.iracAnalysis?.issues && data.iracAnalysis.issues.length > 0) {
+    data.iracAnalysis.issues.forEach((issue: any, index: number) => {
+      content.push(
+        new Paragraph({
+          text: `Issue ${index + 1}: ${issue.issue}`,
+          heading: HeadingLevel.HEADING_2,
+          spacing: { before: 300 }
+        })
+      )
+      
+      if (issue.rule) {
+        content.push(
+          new Paragraph({
+            text: "Rule",
+            heading: HeadingLevel.HEADING_3,
+            spacing: { before: 200 }
+          }),
+          ...processAnalysisContent(issue.rule, docxElements)
+        )
+      }
+      
+      if (issue.application) {
+        content.push(
+          new Paragraph({
+            text: "Application",
+            heading: HeadingLevel.HEADING_3,
+            spacing: { before: 200 }
+          }),
+          ...processAnalysisContent(issue.application, docxElements)
+        )
+      }
+      
+      if (issue.conclusion) {
+        content.push(
+          new Paragraph({
+            text: "Conclusion",
+            heading: HeadingLevel.HEADING_3,
+            spacing: { before: 200 }
+          }),
+          ...processAnalysisContent(issue.conclusion, docxElements)
+        )
+      }
+    })
+    
+    // Overall conclusion
+    if (data.iracAnalysis.conclusion) {
+      content.push(
+        new Paragraph({
+          text: "Overall Legal Conclusion",
+          heading: HeadingLevel.HEADING_2,
+          spacing: { before: 400 }
+        }),
+        ...processAnalysisContent(data.iracAnalysis.conclusion, docxElements)
+      )
+    }
+  } else {
+    content.push(
       new Paragraph({
-        children: [
-          new TextRun({ text: "• ", color: "27ae60" }),
-          new TextRun(strength)
-        ],
-        spacing: { after: 100 },
-        indent: { left: 360 }
-      })
-    ),
-    new Paragraph({
-      text: "Case Weaknesses",
-      heading: HeadingLevel.HEADING_2,
-      spacing: { before: 200 }
-    }),
-    ...parsedAnalysis.weaknesses.map((weakness: string) => 
-      new Paragraph({
-        children: [
-          new TextRun({ text: "• ", color: "e74c3c" }),
-          new TextRun(weakness)
-        ],
-        spacing: { after: 100 },
-        indent: { left: 360 }
+        children: [new TextRun({
+          text: "No IRAC analysis available.",
+          italic: true,
+          color: "6b7280"
+        })],
+        spacing: { after: 200 }
       })
     )
-  ]
+  }
+  
+  return content
 }
 
-function createFollowUpQuestionsSection(followUpQuestions: string[], docxElements: any) {
+function createStrengthsWeaknessesSection(data: CaseAnalysisData, docxElements: any) {
   const { Paragraph, TextRun, HeadingLevel } = docxElements
+  const content = []
   
-  return [
-    new Paragraph({
-      text: "Recommended Follow-up Questions",
-      heading: HeadingLevel.HEADING_1,
-      spacing: { before: 400 }
-    }),
-    ...followUpQuestions.map((question: string, index: number) => 
+  if (data.parsedAnalysis?.strengths && data.parsedAnalysis.strengths.length > 0) {
+    content.push(
       new Paragraph({
-        children: [
-          new TextRun({ text: `${index + 1}. `, bold: true }),
-          new TextRun(question)
-        ],
-        spacing: { after: 120 },
-        indent: { left: 360 }
+        text: "Case Strengths",
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 200 }
       })
     )
-  ]
+    data.parsedAnalysis.strengths.forEach((strength: string) => {
+      content.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: "✅ ", color: "27ae60" }),
+            new TextRun(strength)
+          ],
+          spacing: { after: 100 },
+          indent: { left: 360 }
+        })
+      )
+    })
+  }
+  
+  if (data.parsedAnalysis?.weaknesses && data.parsedAnalysis.weaknesses.length > 0) {
+    content.push(
+      new Paragraph({
+        text: "Case Weaknesses",
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 200 }
+      })
+    )
+    data.parsedAnalysis.weaknesses.forEach((weakness: string) => {
+      content.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: "❌ ", color: "e74c3c" }),
+            new TextRun(weakness)
+          ],
+          spacing: { after: 100 },
+          indent: { left: 360 }
+        })
+      )
+    })
+  }
+  
+  if (content.length === 0) {
+    content.push(
+      new Paragraph({
+        children: [new TextRun({
+          text: "No strengths and weaknesses analysis available.",
+          italic: true,
+          color: "6b7280"
+        })],
+        spacing: { after: 200 }
+      })
+    )
+  }
+  
+  return content
+}
+
+function createLegalRequirementsSection(data: CaseAnalysisData, docxElements: any) {
+  const { Paragraph, TextRun, HeadingLevel } = docxElements
+  const content = []
+  
+  if (data.legalRequirementsChecklist && data.legalRequirementsChecklist.length > 0) {
+    content.push(
+      new Paragraph({
+        text: "Legal Requirements Checklist",
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 200 }
+      })
+    )
+    
+    data.legalRequirementsChecklist.forEach((item: any) => {
+      const status = item.status ? "✅" : "❌"
+      const statusColor = item.status ? "27ae60" : "e74c3c"
+      
+      content.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: `${status} `, color: statusColor }),
+            new TextRun({ text: item.requirement, bold: true })
+          ],
+          spacing: { after: 100 },
+          indent: { left: 360 }
+        })
+      )
+      
+      if (item.law) {
+        content.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: "    Law: ", bold: true, italic: true }),
+              new TextRun({ text: item.law, italic: true })
+            ],
+            spacing: { after: 80 }
+          })
+        )
+      }
+      
+      if (item.analysis) {
+        content.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: "    Analysis: ", bold: true }),
+              new TextRun(item.analysis)
+            ],
+            spacing: { after: 120 }
+          })
+        )
+      }
+    })
+  }
+  
+  // Case Conclusion
+  if (data.parsedAnalysis?.caseConclusion) {
+    content.push(
+      new Paragraph({
+        text: "Case Conclusion",
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 300 }
+      }),
+      ...processAnalysisContent(data.parsedAnalysis.caseConclusion, docxElements)
+    )
+  }
+  
+  if (content.length === 0) {
+    content.push(
+      new Paragraph({
+        children: [new TextRun({
+          text: "No legal requirements verification or case conclusion available.",
+          italic: true,
+          color: "6b7280"
+        })],
+        spacing: { after: 200 }
+      })
+    )
+  }
+  
+  return content
+}
+
+function createFollowUpQuestionsSection(data: CaseAnalysisData, docxElements: any) {
+  const { Paragraph, TextRun } = docxElements
+  const content = []
+  
+  if (data.parsedAnalysis?.followUpQuestions && data.parsedAnalysis.followUpQuestions.length > 0) {
+    data.parsedAnalysis.followUpQuestions.forEach((question: string, index: number) => {
+      content.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: `${index + 1}. `, bold: true }),
+            new TextRun(question)
+          ],
+          spacing: { after: 120 },
+          indent: { left: 360 }
+        })
+      )
+    })
+  } else {
+    content.push(
+      new Paragraph({
+        children: [new TextRun({
+          text: "No follow-up questions available.",
+          italic: true,
+          color: "6b7280"
+        })],
+        spacing: { after: 200 }
+      })
+    )
+  }
+  
+  return content
+}
+
+function createLawReferencesSection(data: CaseAnalysisData, docxElements: any) {
+  const { Paragraph, TextRun, HeadingLevel } = docxElements
+  const content = []
+  
+  if (data.lawReferences && data.lawReferences.length > 0) {
+    data.lawReferences.forEach((ref: any, index: number) => {
+      content.push(
+        new Paragraph({
+          text: `Reference ${index + 1}: ${ref.title || 'Legal Document'}`,
+          heading: HeadingLevel.HEADING_3,
+          spacing: { before: 200 }
+        })
+      )
+      
+      if (ref.content) {
+        content.push(
+          new Paragraph({
+            children: [new TextRun(ref.content.substring(0, 500) + (ref.content.length > 500 ? '...' : ''))],
+            spacing: { after: 200 },
+            indent: { left: 360 }
+          })
+        )
+      }
+    })
+  } else {
+    content.push(
+      new Paragraph({
+        children: [new TextRun({
+          text: "No law references available.",
+          italic: true,
+          color: "6b7280"
+        })],
+        spacing: { after: 200 }
+      })
+    )
+  }
+  
+  return content
 }
 
 function processAnalysisContent(content: string, docxElements: any) {
   const { Paragraph, TextRun, HeadingLevel } = docxElements
   const paragraphs = []
   
-  // Split content into paragraphs first, then process
-  const sections = content.split(/\n\s*\n/) // Split on double line breaks
+  if (!content || !content.trim()) {
+    return [
+      new Paragraph({
+        children: [new TextRun({
+          text: "No content available.",
+          italic: true,
+          color: "6b7280"
+        })],
+        spacing: { after: 200 }
+      })
+    ]
+  }
+  
+  // Split content into paragraphs
+  const sections = content.split(/\n\s*\n/)
   
   for (const section of sections) {
     if (!section.trim()) continue
@@ -420,42 +769,14 @@ function processAnalysisContent(content: string, docxElements: any) {
     const lines = section.split('\n')
     let currentListItems = []
     let inList = false
-    let inCodeBlock = false
     
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]
+    for (const line of lines) {
       const trimmedLine = line.trim()
       
-      // Handle code blocks
-      if (trimmedLine.startsWith('```')) {
-        inCodeBlock = !inCodeBlock
-        continue
-      }
+      if (!trimmedLine) continue
       
-      if (inCodeBlock) {
-        paragraphs.push(
-          new Paragraph({
-            children: [new TextRun({ text: line, font: "Courier New", size: 20 })],
-            spacing: { after: 100 },
-            indent: { left: 720 }
-          })
-        )
-        continue
-      }
-      
-      if (!trimmedLine) {
-        // Empty lines end lists but add paragraph spacing
-        if (inList && currentListItems.length > 0) {
-          paragraphs.push(...createFormattedList(currentListItems, docxElements))
-          currentListItems = []
-          inList = false
-        }
-        continue
-      }
-    
-      // Handle markdown headers (### ## #)
+      // Handle markdown headers
       if (trimmedLine.startsWith('###')) {
-        // End any current list
         if (inList && currentListItems.length > 0) {
           paragraphs.push(...createFormattedList(currentListItems, docxElements))
           currentListItems = []
@@ -472,7 +793,6 @@ function processAnalysisContent(content: string, docxElements: any) {
         )
       }
       else if (trimmedLine.startsWith('##')) {
-        // End any current list
         if (inList && currentListItems.length > 0) {
           paragraphs.push(...createFormattedList(currentListItems, docxElements))
           currentListItems = []
@@ -489,7 +809,6 @@ function processAnalysisContent(content: string, docxElements: any) {
         )
       }
       else if (trimmedLine.startsWith('#') && !trimmedLine.startsWith('##')) {
-        // End any current list
         if (inList && currentListItems.length > 0) {
           paragraphs.push(...createFormattedList(currentListItems, docxElements))
           currentListItems = []
@@ -505,37 +824,12 @@ function processAnalysisContent(content: string, docxElements: any) {
           })
         )
       }
-      // Handle headers (**text**)
-      else if (trimmedLine.startsWith('**') && trimmedLine.endsWith('**') && trimmedLine.length > 4) {
-        // End any current list
-        if (inList && currentListItems.length > 0) {
-          paragraphs.push(...createFormattedList(currentListItems, docxElements))
-          currentListItems = []
-          inList = false
-        }
-        
-        const headerText = trimmedLine.replace(/\*\*/g, '').trim()
-        paragraphs.push(
-          new Paragraph({
-            text: headerText,
-            heading: HeadingLevel.HEADING_2,
-            spacing: { before: 300, after: 150 }
-          })
-        )
-      }
-      // Handle numbered lists (1., 2., etc.)
-      else if (/^\d+\.\s+/.test(trimmedLine)) {
+      // Handle bullet points
+      else if (trimmedLine.match(/^[-*+]\s+/) || trimmedLine.match(/^\d+\.\s+/)) {
+        const listText = trimmedLine.replace(/^[-*+]\s+/, '').replace(/^\d+\.\s+/, '')
+        currentListItems.push(listText)
         inList = true
-        const text = trimmedLine.replace(/^\d+\.\s+/, '').trim()
-        currentListItems.push(text)
       }
-      // Handle bullet points (-, *, •)
-      else if (/^[-*•]\s+/.test(trimmedLine)) {
-        inList = true
-        const text = trimmedLine.replace(/^[-*•]\s+/, '').trim()
-        currentListItems.push(text)
-      }
-      // Regular paragraph
       else {
         // End any current list
         if (inList && currentListItems.length > 0) {
@@ -544,561 +838,55 @@ function processAnalysisContent(content: string, docxElements: any) {
           inList = false
         }
         
-        // Process inline formatting (bold text, links, etc.)
-        const textRuns = processInlineFormatting(trimmedLine, docxElements)
+        // Regular paragraph with inline formatting
         paragraphs.push(
           new Paragraph({
-            children: textRuns,
+            children: processInlineFormatting(trimmedLine, docxElements),
             spacing: { after: 120 }
           })
         )
       }
     }
     
-    // Handle any remaining list items for this section
+    // Handle any remaining list items
     if (inList && currentListItems.length > 0) {
       paragraphs.push(...createFormattedList(currentListItems, docxElements))
-      currentListItems = []
-      inList = false
-    }
-    
-    // Add section break
-    if (sections.indexOf(section) < sections.length - 1) {
-      paragraphs.push(
-        new Paragraph({
-          children: [new TextRun({ text: '' })],
-          spacing: { after: 200 }
-        })
-      )
     }
   }
   
   return paragraphs
 }
 
-function processInlineFormatting(text: string, docxElements: any) {
-  const { TextRun } = docxElements
-  const runs = []
-  let currentIndex = 0
-  
-  // Find bold text patterns (**text**)
-  const boldPattern = /\*\*(.*?)\*\*/g
-  let match
-  
-  while ((match = boldPattern.exec(text)) !== null) {
-    // Add text before bold
-    if (match.index > currentIndex) {
-      const beforeText = text.substring(currentIndex, match.index)
-      if (beforeText) {
-        runs.push(new TextRun({ text: beforeText }))
-      }
-    }
-    
-    // Add bold text
-    runs.push(new TextRun({ text: match[1], bold: true }))
-    currentIndex = match.index + match[0].length
-  }
-  
-  // Add remaining text
-  if (currentIndex < text.length) {
-    const remainingText = text.substring(currentIndex)
-    if (remainingText) {
-      runs.push(new TextRun({ text: remainingText }))
-    }
-  }
-  
-  // If no formatting found, return simple text run
-  if (runs.length === 0) {
-    runs.push(new TextRun({ text }))
-  }
-  
-  return runs
-}
-
 function createFormattedList(items: string[], docxElements: any) {
   const { Paragraph, TextRun } = docxElements
   
-  return items.map((item, index) => 
+  return items.map(item => 
     new Paragraph({
       children: [
-        new TextRun({ text: `${index + 1}. `, bold: true }),
+        new TextRun({ text: "• ", bold: true }),
         ...processInlineFormatting(item, docxElements)
       ],
       spacing: { after: 100 },
-      indent: { left: 360 } // Indent list items
+      indent: { left: 360 }
     })
   )
 }
 
-function createSimilarCasesSection(similarCases: any[], docxElements: any) {
-  const { Paragraph, TextRun, HeadingLevel } = docxElements
+function processInlineFormatting(text: string, docxElements: any) {
+  const { TextRun } = docxElements
+  const runs = []
   
-  console.log('Processing similar cases for Word export:', similarCases)
+  // Simple bold formatting
+  const parts = text.split(/(\*\*[^*]+\*\*)/)
   
-  if (!similarCases || similarCases.length === 0) {
-    return [
-      new Paragraph({
-        text: "Similar Cases",
-        heading: HeadingLevel.HEADING_1,
-        spacing: { before: 400 }
-      }),
-      new Paragraph({
-        children: [new TextRun({ text: "No similar cases have been identified for this client.", italic: true })],
-        spacing: { after: 200 }
-      })
-    ]
-  }
-
-  const content = [
-    new Paragraph({
-      text: "Similar Cases",
-      heading: HeadingLevel.HEADING_1,
-      spacing: { before: 400 }
-    }),
-    new Paragraph({
-      children: [new TextRun({ text: "The following cases were identified as similar based on the case analysis.", italic: true })],
-      spacing: { after: 200 }
-    })
-  ]
-
-  // Process each similar case
-  similarCases.slice(0, 5).forEach((caseItem: any, index: number) => {
-    console.log(`Processing case ${index + 1}:`, caseItem)
-    
-    // Case header with name and court
-    content.push(
-      new Paragraph({
-        children: [
-          new TextRun({ text: `${index + 1}. `, bold: true }),
-          new TextRun({ text: caseItem.clientName || 'Unknown Case', bold: true }),
-          caseItem.court ? new TextRun({ text: ` (${caseItem.court})` }) : new TextRun('')
-        ],
-        spacing: { after: 100 }
-      })
-    )
-    
-    // Citation and date
-    if (caseItem.citation || caseItem.dateDecided) {
-      const citationParts = []
-      if (caseItem.citation) citationParts.push(caseItem.citation)
-      if (caseItem.dateDecided) citationParts.push(`decided ${caseItem.dateDecided}`)
-      
-      content.push(
-        new Paragraph({
-          children: [new TextRun({ text: citationParts.join(', '), italic: true })],
-          spacing: { after: 100 },
-          indent: { left: 360 }
-        })
-      )
+  for (const part of parts) {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      const boldText = part.slice(2, -2)
+      runs.push(new TextRun({ text: boldText, bold: true }))
+    } else if (part) {
+      runs.push(new TextRun(part))
     }
-    
-    // Relevant facts
-    if (caseItem.relevantFacts) {
-      content.push(
-        new Paragraph({
-          children: [
-            new TextRun({ text: 'Relevant Facts: ', bold: true }),
-            new TextRun({ text: caseItem.relevantFacts })
-          ],
-          spacing: { after: 100 },
-          indent: { left: 360 }
-        })
-      )
-    }
-    
-    // Outcome
-    if (caseItem.outcome) {
-      content.push(
-        new Paragraph({
-          children: [
-            new TextRun({ text: 'Outcome: ', bold: true }),
-            new TextRun({ text: caseItem.outcome })
-          ],
-          spacing: { after: 200 },
-          indent: { left: 360 }
-        })
-      )
-    }
-  })
-
-  return content
-}
-
-function createScholarlyReferencesSection(scholarlyReferences: any[], docxElements: any) {
-  const { Paragraph, TextRun, HeadingLevel } = docxElements
-  
-  return [
-    new Paragraph({
-      text: "Scholarly References",
-      heading: HeadingLevel.HEADING_1,
-      spacing: { before: 400 }
-    }),
-    new Paragraph({
-      children: [new TextRun({ text: "The following scholarly articles and legal references support this analysis.", italic: true })],
-      spacing: { after: 200 }
-    }),
-    ...scholarlyReferences.slice(0, 10).map((scholarlyRef: any, index: number) => {
-      // Handle the reference data structure - it might be nested in reference_data
-      const refData = scholarlyRef.reference_data || scholarlyRef
-      const references = Array.isArray(refData) ? refData : (refData.references || [refData])
-      
-      if (Array.isArray(references) && references.length > 0) {
-        return references.slice(0, 5).map((ref: any, refIndex: number) => {
-          const content = []
-          
-          // Title and authors
-          content.push(
-            new Paragraph({
-              children: [
-                new TextRun({ text: `${refIndex + 1}. `, bold: true }),
-                new TextRun({ text: ref.title || 'Untitled Reference', bold: true })
-              ],
-              spacing: { after: 100 },
-              indent: { left: 360 }
-            })
-          )
-          
-          // Authors and publication info
-          if (ref.authors || ref.year || ref.journal) {
-            content.push(
-              new Paragraph({
-                children: [
-                  new TextRun({ text: "Authors: ", bold: true }),
-                  new TextRun(`${ref.authors || 'Unknown Author'}`),
-                  ref.year ? new TextRun(` (${ref.year})`) : new TextRun(''),
-                  ref.journal ? new TextRun(`, ${ref.journal}`) : new TextRun('')
-                ],
-                spacing: { after: 100 },
-                indent: { left: 720 }
-              })
-            )
-          }
-          
-          // Abstract or snippet
-          if (ref.abstract || ref.snippet) {
-            content.push(
-              new Paragraph({
-                children: [
-                  new TextRun({ text: "Abstract: ", bold: true }),
-                  new TextRun(ref.abstract || ref.snippet || '')
-                ],
-                spacing: { after: 100 },
-                indent: { left: 720 }
-              })
-            )
-          }
-          
-          // URL if available
-          if (ref.url) {
-            content.push(
-              new Paragraph({
-                children: [
-                  new TextRun({ text: "URL: ", bold: true }),
-                  new TextRun({ text: ref.url, color: "2563eb" })
-                ],
-                spacing: { after: 150 },
-                indent: { left: 720 }
-              })
-            )
-          }
-          
-          return content
-        }).flat()
-      } else {
-        // Fallback for simple structure
-        return [
-          new Paragraph({
-            children: [
-              new TextRun({ text: `${index + 1}. `, bold: true }),
-              new TextRun({ text: scholarlyRef.title || 'Untitled Reference', bold: true }),
-              new TextRun(` - ${scholarlyRef.authors || 'Unknown Author'} (${scholarlyRef.year || 'Unknown Year'})`)
-            ],
-            spacing: { after: 120 },
-            indent: { left: 360 }
-          })
-        ]
-      }
-    }).flat()
-  ]
-}
-
-function createNotesSection(notes: any[], docxElements: any) {
-  const { Paragraph, TextRun, HeadingLevel } = docxElements
-  
-  return [
-    new Paragraph({
-      text: "Attorney Notes",
-      heading: HeadingLevel.HEADING_1,
-      spacing: { before: 400 }
-    }),
-    ...notes.map((note: any) => 
-      new Paragraph({
-        children: [
-          new TextRun({ text: `${new Date(note.timestamp).toLocaleDateString()}: `, bold: true }),
-          new TextRun(note.content)
-        ],
-        spacing: { after: 150 }
-      })
-    )
-  ]
-}
-
-function createDocumentsSection(documents: any[], docxElements: any) {
-  const { Paragraph, TextRun, HeadingLevel } = docxElements
-  
-  return [
-    new Paragraph({
-      text: "Case Documents",
-      heading: HeadingLevel.HEADING_1,
-      spacing: { before: 400 }
-    }),
-    ...documents.map((doc: any, index: number) => 
-      new Paragraph({
-        children: [
-          new TextRun({ text: `${index + 1}. `, bold: true }),
-          new TextRun({ text: `${doc.title || 'Untitled Document'}: `, bold: true }),
-          new TextRun(`${doc.processing_status || 'Unknown status'} - ${new Date(doc.created_at).toLocaleDateString()}`)
-        ],
-        spacing: { after: 120 },
-        indent: { left: 360 }
-      })
-    )
-  ]
-}
-
-function createConversationSection(messages: any[], docxElements: any) {
-  const { Paragraph, TextRun, HeadingLevel } = docxElements
-  
-  return [
-    new Paragraph({
-      text: "Client Conversation History",
-      heading: HeadingLevel.HEADING_1,
-      spacing: { before: 400 }
-    }),
-    new Paragraph({
-      children: [new TextRun({ text: "This section contains the conversation that led to the legal analysis above.", italic: true })],
-      spacing: { after: 200 }
-    }),
-    ...messages.map((message: any, index: number) => 
-      new Paragraph({
-        children: [
-          new TextRun({ 
-            text: `${message.role === 'user' ? 'Client' : 'Attorney'}: `, 
-            bold: true,
-            color: message.role === 'user' ? "2563eb" : "059669"
-          }),
-          new TextRun(message.content)
-        ],
-        spacing: { after: 150 },
-        indent: { left: message.role === 'user' ? 0 : 360 }
-      })
-    )
-  ]
-}
-
-function createEmptySimilarCasesSection(docxElements: any) {
-  const { Paragraph, TextRun, HeadingLevel } = docxElements
-  
-  return [
-    new Paragraph({
-      text: "Similar Cases",
-      heading: HeadingLevel.HEADING_1,
-      spacing: { before: 400 }
-    }),
-    new Paragraph({
-      children: [new TextRun({ text: "No similar cases have been identified for this analysis yet.", italic: true })],
-      spacing: { after: 200 }
-    })
-  ]
-}
-
-function createEmptyScholarlyReferencesSection(docxElements: any) {
-  const { Paragraph, TextRun, HeadingLevel } = docxElements
-  
-  return [
-    new Paragraph({
-      text: "Scholarly References",
-      heading: HeadingLevel.HEADING_1,
-      spacing: { before: 400 }
-    }),
-    new Paragraph({
-      children: [new TextRun({ text: "No scholarly references have been collected for this analysis yet.", italic: true })],
-      spacing: { after: 200 }
-    })
-  ]
-}
-
-function createAdditionalCaseLawSection(additionalCaseLaw: any[], docxElements: any) {
-  const { Paragraph, TextRun, HeadingLevel } = docxElements
-  
-  if (!additionalCaseLaw || additionalCaseLaw.length === 0) {
-    return []
   }
   
-  return [
-    new Paragraph({
-      text: "Additional Case Law",
-      heading: HeadingLevel.HEADING_1,
-      spacing: { before: 400 }
-    }),
-    new Paragraph({
-      children: [new TextRun({ text: "The following Texas case law was found to be relevant to this analysis.", italic: true })],
-      spacing: { after: 200 }
-    }),
-    ...additionalCaseLaw.slice(0, 10).map((caseItem: any, index: number) => {
-      const content = []
-      
-      // Case name and court
-      content.push(
-        new Paragraph({
-          children: [
-            new TextRun({ text: `${index + 1}. `, bold: true }),
-            new TextRun({ text: caseItem.case_name || 'Unknown Case', bold: true }),
-            new TextRun(caseItem.court ? ` (${caseItem.court})` : '')
-          ],
-          spacing: { after: 100 },
-          indent: { left: 360 }
-        })
-      )
-      
-      // Citation and date
-      if (caseItem.citation || caseItem.date_decided) {
-        content.push(
-          new Paragraph({
-            children: [
-              new TextRun({ text: "Citation: ", bold: true }),
-              new TextRun(caseItem.citation || 'No citation'),
-              caseItem.date_decided ? new TextRun(` (${caseItem.date_decided})`) : new TextRun('')
-            ],
-            spacing: { after: 100 },
-            indent: { left: 720 }
-          })
-        )
-      }
-      
-      // Relevant facts
-      if (caseItem.relevant_facts) {
-        content.push(
-          new Paragraph({
-            children: [
-              new TextRun({ text: "Relevant Facts: ", bold: true }),
-              new TextRun(caseItem.relevant_facts)
-            ],
-            spacing: { after: 100 },
-            indent: { left: 720 }
-          })
-        )
-      }
-      
-      // Outcome
-      if (caseItem.outcome) {
-        content.push(
-          new Paragraph({
-            children: [
-              new TextRun({ text: "Outcome: ", bold: true }),
-              new TextRun(caseItem.outcome)
-            ],
-            spacing: { after: 150 },
-            indent: { left: 720 }
-          })
-        )
-      }
-      
-      return content
-    }).flat()
-  ]
-}
-
-function createPerplexityResearchSection(perplexityResearch: any[], docxElements: any) {
-  const { Paragraph, TextRun, HeadingLevel } = docxElements
-  
-  if (!perplexityResearch || perplexityResearch.length === 0) {
-    return []
-  }
-  
-  return [
-    new Paragraph({
-      text: "Legal Research",
-      heading: HeadingLevel.HEADING_1,
-      spacing: { before: 400 }
-    }),
-    new Paragraph({
-      children: [new TextRun({ text: "The following additional legal research was conducted to support this analysis.", italic: true })],
-      spacing: { after: 200 }
-    }),
-    ...perplexityResearch.slice(0, 10).map((research: any, index: number) => {
-      const content = []
-      
-      // Add research query
-      if (research.query) {
-        content.push(
-          new Paragraph({
-            children: [
-              new TextRun({ text: `${index + 1}. Research Query: `, bold: true }),
-              new TextRun(research.query)
-            ],
-            spacing: { after: 100 },
-            indent: { left: 360 }
-          })
-        )
-      }
-      
-      // Add research content with proper formatting
-      if (research.content) {
-        const formattedContent = processAnalysisContent(research.content, docxElements)
-        content.push(...formattedContent.map(paragraph => ({
-          ...paragraph,
-          indent: { left: 720 } // Double indent for research content
-        })))
-      }
-      
-      // Add citations if available
-      if (research.citations && research.citations.length > 0) {
-        content.push(
-          new Paragraph({
-            children: [
-              new TextRun({ text: "Sources: ", bold: true, italic: true }),
-              new TextRun({ text: research.citations.join(', '), italic: true })
-            ],
-            spacing: { after: 150 },
-            indent: { left: 720 }
-          })
-        )
-      }
-      
-      return content
-    }).flat()
-  ]
-}
-
-function createEmptyAdditionalCaseLawSection(docxElements: any) {
-  const { Paragraph, TextRun, HeadingLevel } = docxElements
-  
-  return [
-    new Paragraph({
-      text: "Additional Case Law",
-      heading: HeadingLevel.HEADING_1,
-      spacing: { before: 400 }
-    }),
-    new Paragraph({
-      children: [new TextRun({ text: "No additional case law has been researched for this analysis yet.", italic: true })],
-      spacing: { after: 200 }
-    })
-  ]
-}
-
-function createEmptyNotesSection(docxElements: any) {
-  const { Paragraph, TextRun, HeadingLevel } = docxElements
-  
-  return [
-    new Paragraph({
-      text: "Attorney Notes",
-      heading: HeadingLevel.HEADING_1,
-      spacing: { before: 400 }
-    }),
-    new Paragraph({
-      children: [new TextRun({ text: "No attorney notes have been added for this case yet.", italic: true })],
-      spacing: { after: 200 }
-    })
-  ]
+  return runs.length > 0 ? runs : [new TextRun(text)]
 }
