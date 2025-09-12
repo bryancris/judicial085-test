@@ -9,7 +9,7 @@ import {
   drawBulletList,
 } from './pdfLayout.ts';
 
-// Native PDF generator using pdf-lib (no external APIs)
+// Modern 9-Step Case Analysis PDF Generator
 export async function generatePDF(data: CaseAnalysisData): Promise<Uint8Array> {
   const { doc, ctx } = await initPdf();
 
@@ -39,54 +39,126 @@ export async function generatePDF(data: CaseAnalysisData): Promise<Uint8Array> {
     if (data.case.case_notes) drawParagraph(ctx, `Notes: ${data.case.case_notes}`);
   }
 
-  // Analysis Summary (parsed)
-  if (data.parsedAnalysis) {
-    drawSectionTitle(ctx, 'Legal Analysis Summary');
-    if (data.parsedAnalysis.caseType) drawKeyValue(ctx, 'Case Type', data.parsedAnalysis.caseType);
-    if (data.parsedAnalysis.relevantLaw) {
-      drawParagraph(ctx, `Relevant Law: ${data.parsedAnalysis.relevantLaw}`);
+  // 9-Step Analysis Structure
+  drawTitle(ctx, 'Legal Analysis (9-Step Method)');
+
+  // Step 1: Case Summary (Organized Fact Pattern)
+  drawStepHeader(ctx, 1, 'Case Summary (Organized Fact Pattern)');
+  if (data.structuredCaseData) {
+    if (data.structuredCaseData.parties?.length) {
+      drawSubsectionTitle(ctx, 'Parties');
+      const partyLines = data.structuredCaseData.parties.map(p => `${p.role}: ${p.name}`);
+      drawBulletList(ctx, partyLines);
     }
-    if (data.parsedAnalysis.preliminaryAnalysis) {
-      drawParagraph(ctx, `Preliminary Analysis: ${data.parsedAnalysis.preliminaryAnalysis}`);
+    if (data.structuredCaseData.timeline?.length) {
+      drawSubsectionTitle(ctx, 'Timeline');
+      const timelineLines = data.structuredCaseData.timeline.map(t => `${t.date}: ${t.event}`);
+      drawBulletList(ctx, timelineLines);
     }
-    if (data.parsedAnalysis.potentialIssues) {
-      drawParagraph(ctx, 'Potential Issues:');
-      drawBulletList(ctx, data.parsedAnalysis.potentialIssues.split(/\n|\r/g).filter(Boolean));
+    if (data.structuredCaseData.coreFacts?.length) {
+      drawSubsectionTitle(ctx, 'Core Facts');
+      drawBulletList(ctx, data.structuredCaseData.coreFacts);
     }
-    if (data.parsedAnalysis.strengths?.length) {
-      drawParagraph(ctx, 'Strengths:');
-      drawBulletList(ctx, data.parsedAnalysis.strengths);
-    }
-    if (data.parsedAnalysis.weaknesses?.length) {
-      drawParagraph(ctx, 'Weaknesses:');
-      drawBulletList(ctx, data.parsedAnalysis.weaknesses);
-    }
-    if (data.parsedAnalysis.followUpQuestions?.length) {
-      drawParagraph(ctx, 'Recommended Follow-up Questions:');
-      drawBulletList(ctx, data.parsedAnalysis.followUpQuestions);
-    }
-  } else if (data.analysis?.content) {
-    // Fallback to raw analysis text
-    drawSectionTitle(ctx, 'Legal Analysis');
-    drawParagraph(ctx, data.analysis.content);
+  } else if (data.conversationSummary) {
+    drawParagraph(ctx, data.conversationSummary);
   }
 
-  // Similar Cases
+  // Step 2: Preliminary Analysis
+  drawStepHeader(ctx, 2, 'Preliminary Analysis (AI-assisted broad issue spotting)');
+  if (data.preliminaryAnalysis || data.parsedAnalysis?.preliminaryAnalysis) {
+    drawParagraph(ctx, data.preliminaryAnalysis || data.parsedAnalysis?.preliminaryAnalysis || '');
+  }
+
+  // Step 3: Relevant Texas Laws
+  drawStepHeader(ctx, 3, 'Relevant Texas Laws (Targeted legal research)');
+  if (data.relevantLaw || data.parsedAnalysis?.relevantLaw) {
+    drawParagraph(ctx, data.relevantLaw || data.parsedAnalysis?.relevantLaw || '');
+  }
+
+  // Step 4: Additional Case Law
+  drawStepHeader(ctx, 4, 'Additional Case Law (Precedent research)');
+  if (Array.isArray(data.additionalCaseLaw) && data.additionalCaseLaw.length > 0) {
+    const caseLines = data.additionalCaseLaw.map((c: any, idx: number) => {
+      const title = c.case_name || c.title || 'Untitled';
+      const citation = c.citation ? ` — ${c.citation}` : '';
+      const court = c.court || '';
+      return `${idx + 1}. ${title}${citation}${court ? ` (${court})` : ''}`;
+    });
+    drawBulletList(ctx, caseLines);
+  }
+
+  // Step 5: IRAC Legal Analysis
+  drawStepHeader(ctx, 5, 'IRAC Legal Analysis (Comprehensive deep analysis)');
+  if (data.iracAnalysis?.legalIssues?.length) {
+    data.iracAnalysis.legalIssues.forEach((issue, idx) => {
+      drawSubsectionTitle(ctx, `Issue ${idx + 1}: ${issue.category || 'Legal Issue'}`);
+      drawKeyValue(ctx, 'Issue Statement', issue.issueStatement);
+      drawKeyValue(ctx, 'Rule', issue.rule);
+      drawKeyValue(ctx, 'Application', issue.application);
+      drawKeyValue(ctx, 'Conclusion', issue.conclusion);
+      if (issue.strength) {
+        drawKeyValue(ctx, 'Strength Assessment', issue.strength.toUpperCase());
+      }
+    });
+  }
+
+  // Step 6: Case Strengths & Weaknesses
+  drawStepHeader(ctx, 6, 'Case Strengths & Weaknesses (Combined risk assessment)');
+  if (data.strengths?.length) {
+    drawSubsectionTitle(ctx, 'Strengths');
+    drawBulletList(ctx, data.strengths);
+  }
+  if (data.weaknesses?.length) {
+    drawSubsectionTitle(ctx, 'Weaknesses');
+    drawBulletList(ctx, data.weaknesses);
+  }
+
+  // Step 7: Legal Requirements Verification & Case Conclusion
+  drawStepHeader(ctx, 7, 'Legal Requirements Verification & Case Conclusion');
+  if (data.legalRequirementsChecklist?.length) {
+    data.legalRequirementsChecklist.forEach((req, idx) => {
+      drawSubsectionTitle(ctx, `${idx + 1}. ${req.requirement}`);
+      drawKeyValue(ctx, 'Law', req.law);
+      drawKeyValue(ctx, 'Citation', req.citation);
+      drawKeyValue(ctx, 'Client Facts', req.clientFacts);
+      const statusSymbol = req.status === 'meets' ? '✅' : req.status === 'does_not_meet' ? '❌' : '⚠️';
+      drawKeyValue(ctx, 'Status', `${statusSymbol} ${req.status.replace('_', ' ')}`);
+      if (req.analysis) drawKeyValue(ctx, 'Analysis', req.analysis);
+    });
+  }
+  if (data.caseConclusion) {
+    drawSubsectionTitle(ctx, 'CONCLUSION');
+    drawParagraph(ctx, data.caseConclusion);
+  } else if (data.refinedAnalysis) {
+    drawParagraph(ctx, data.refinedAnalysis);
+  }
+
+  // Step 8: Recommended Follow-up Questions
+  drawStepHeader(ctx, 8, 'Recommended Follow-up Questions');
+  if (data.followUpQuestions?.length) {
+    drawBulletList(ctx, data.followUpQuestions);
+  }
+
+  // Step 9: Law References
+  drawStepHeader(ctx, 9, 'Relevant Texas Law References (Vectorized Legal Documents)');
+  if (Array.isArray(data.lawReferences) && data.lawReferences.length > 0) {
+    const refLines = data.lawReferences.map((r: any, idx: number) => {
+      const title = r.title || 'Legal Reference';
+      const url = r.url ? ` — ${r.url}` : '';
+      return `${idx + 1}. ${title}${url}`;
+    });
+    drawBulletList(ctx, refLines);
+  }
+
+  // Additional Supporting Information
   if (Array.isArray(data.similarCases) && data.similarCases.length > 0) {
-    drawSectionTitle(ctx, 'Similar Cases');
+    drawSectionTitle(ctx, 'Similar Cases (Reference)');
     const lines = data.similarCases.map((c: any, idx: number) => {
       const title = c.case_name || c.title || 'Untitled';
       const citation = c.citation ? ` — ${c.citation}` : '';
       const court = c.court_name || c.court || '';
       return `${idx + 1}. ${title}${citation}${court ? ` (${court})` : ''}`;
     });
-    drawBulletList(ctx, lines);
-  }
-
-  // Scholarly References
-  if (Array.isArray(data.scholarlyReferences) && data.scholarlyReferences.length > 0) {
-    drawSectionTitle(ctx, 'Scholarly References');
-    const lines = data.scholarlyReferences.map((r: any) => r.title || r.reference || r.url || 'Reference');
     drawBulletList(ctx, lines);
   }
 
@@ -102,15 +174,6 @@ export async function generatePDF(data: CaseAnalysisData): Promise<Uint8Array> {
     drawSectionTitle(ctx, 'Case Documents');
     const lines = data.documents.map((d: any) => `${d.title || 'Document'}${d.url ? ` — ${d.url}` : ''}`);
     drawBulletList(ctx, lines);
-  }
-
-  // Conversation Summary (optional, keep short)
-  if (Array.isArray(data.messages) && data.messages.length > 0) {
-    drawSectionTitle(ctx, 'Conversation Summary');
-    const recent = data.messages.slice(-8); // keep it brief
-    for (const m of recent) {
-      drawParagraph(ctx, `${(m.role || 'user').toUpperCase()}: ${m.content || ''}`);
-    }
   }
 
   // Footer note

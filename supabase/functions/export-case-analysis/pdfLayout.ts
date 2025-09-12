@@ -69,6 +69,54 @@ export function drawTitle(ctx: PdfContext, text: string) {
   ctx.y -= needed;
 }
 
+export function drawStepHeader(ctx: PdfContext, stepNumber: number, title: string): void {
+  if (!title?.trim()) return;
+  
+  // Add space before step
+  ctx.y -= 20;
+  
+  const fullTitle = `Step ${stepNumber}: ${title}`;
+  const y = ctx.y - 10;
+  
+  // Draw step number with background
+  const stepWidth = 30;
+  ctx.page.drawRectangle({
+    x: ctx.x,
+    y: y - 5,
+    width: stepWidth,
+    height: 20,
+    color: rgb(0.1, 0.3, 0.6),
+  });
+  
+  ctx.page.drawText(`${stepNumber}`, {
+    x: ctx.x + 12,
+    y,
+    size: 12,
+    font: ctx.boldFont,
+    color: rgb(1, 1, 1),
+  });
+  
+  // Draw step title
+  ctx.page.drawText(title, {
+    x: ctx.x + stepWidth + 10,
+    y,
+    size: 13,
+    font: ctx.boldFont,
+    color: rgb(0.1, 0.1, 0.1),
+  });
+  
+  // Draw separator line
+  const lineY = y - 8;
+  ctx.page.drawLine({
+    start: { x: ctx.x, y: lineY },
+    end: { x: ctx.x + ctx.width, y: lineY },
+    thickness: 1.5,
+    color: rgb(0.1, 0.3, 0.6),
+  });
+  
+  ctx.y = lineY - 15;
+}
+
 export function drawSectionTitle(ctx: PdfContext, text: string) {
   const size = 14;
   const needed = size * ctx.lineHeight * 1.2;
@@ -82,6 +130,23 @@ export function drawSectionTitle(ctx: PdfContext, text: string) {
   });
   ctx.y -= needed * 0.9;
   drawDivider(ctx);
+}
+
+export function drawSubsectionTitle(ctx: PdfContext, text: string): void {
+  if (!text?.trim()) return;
+  
+  ctx.y -= 10;
+  
+  const y = ctx.y - 5;
+  ctx.page.drawText(text, {
+    x: ctx.x + 10,
+    y,
+    size: 11,
+    font: ctx.boldFont,
+    color: rgb(0.2, 0.2, 0.2),
+  });
+  
+  ctx.y = y - 10;
 }
 
 export function drawDivider(ctx: PdfContext) {
