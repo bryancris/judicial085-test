@@ -1126,28 +1126,6 @@ function parseRelevantLawForWord(relevantLaw: string): any[] {
   return content;
 }
 
-// Helper function to parse Step 2 preliminary analysis like the app does
-function parsePreliminaryAnalysisForWord(analysisContent: string): any {
-  if (!analysisContent?.trim()) {
-    return {
-      potentialLegalAreas: [],
-      preliminaryIssues: [],
-      researchPriorities: [],
-      strategicNotes: []
-    };
-  }
-
-  // Extract sections using the same logic as the app
-  const potentialLegalAreas: string[] = [];
-  const preliminaryIssues: string[] = [];
-  const researchPriorities: string[] = [];
-  const strategicNotes: string[] = [];
-
-  // Extract Potential Legal Areas section
-  const legalAreasMatch = analysisContent.match(/\*\*Potential Legal Areas:\*\*([\s\S]*?)(?=\*\*|$)/);
-  if (legalAreasMatch) {
-    const lines = legalAreasMatch[1].split('\n');
-    lines.forEach(line => {
       const trimmed = line.trim();
       if (trimmed.match(/^\d+\.\s/) || trimmed.startsWith('•') || trimmed.startsWith('-')) {
         const area = trimmed.replace(/^\d+\.\s*|^[•-]\s*/, '').trim();
@@ -1169,44 +1147,3 @@ function parsePreliminaryAnalysisForWord(analysisContent: string): any {
         if (issue && issue.length > 10) {
           preliminaryIssues.push(issue);
         }
-      }
-    });
-  }
-
-  // Extract Research Priorities section
-  const prioritiesMatch = analysisContent.match(/\*\*Research Priorities:\*\*([\s\S]*?)(?=\*\*|$)/);
-  if (prioritiesMatch) {
-    const lines = prioritiesMatch[1].split('\n');
-    lines.forEach(line => {
-      const trimmed = line.trim();
-      if (trimmed.match(/^\d+\.\s/) || trimmed.startsWith('•') || trimmed.startsWith('-')) {
-        const priority = trimmed.replace(/^\d+\.\s*|^[•-]\s*/, '').trim();
-        if (priority && priority.length > 10) {
-          researchPriorities.push(priority);
-        }
-      }
-    });
-  }
-
-  // Extract Strategic Notes section
-  const notesMatch = analysisContent.match(/\*\*Strategic Notes:\*\*([\s\S]*?)(?=\*\*|$)/);
-  if (notesMatch) {
-    const lines = notesMatch[1].split('\n');
-    lines.forEach(line => {
-      const trimmed = line.trim();
-      if (trimmed.match(/^\d+\.\s/) || trimmed.startsWith('•') || trimmed.startsWith('-')) {
-        const note = trimmed.replace(/^\d+\.\s*|^[•-]\s*/, '').trim();
-        if (note && note.length > 10) {
-          strategicNotes.push(note);
-        }
-      }
-    });
-  }
-
-  return {
-    potentialLegalAreas,
-    preliminaryIssues,
-    researchPriorities,
-    strategicNotes
-  };
-}
