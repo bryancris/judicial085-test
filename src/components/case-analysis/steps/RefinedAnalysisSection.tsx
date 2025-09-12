@@ -78,8 +78,8 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
             Refined Analysis (Strategic Synthesis)
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="prose dark:prose-invert max-w-none step7-compact" 
+        <CardContent className="space-y-3">
+          <div className="text-xs space-y-3 step7-compact" 
                dangerouslySetInnerHTML={{ __html: refinedAnalysisHtml }} />
           {onRegenerateStep7 && (
             <div className="pt-4 border-t border-border">
@@ -171,7 +171,7 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
             <CheckCircle className="h-4 w-4" />
             Executive Summary
           </h4>
-          <div className="prose dark:prose-invert max-w-none step7-compact" dangerouslySetInnerHTML={{ __html: refinedAnalysisHtml }} />
+          <div className="text-xs space-y-3 step7-compact" dangerouslySetInnerHTML={{ __html: refinedAnalysisHtml }} />
         </div>
 
         {/* Risk Assessment */}
