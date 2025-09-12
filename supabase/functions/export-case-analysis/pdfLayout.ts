@@ -49,10 +49,108 @@ export function addPage(ctx: PdfContext) {
   ctx.y = ctx.height - ctx.margin;
 }
 
-function ensureSpace(ctx: PdfContext, requiredHeight: number) {
+export function ensureSpace(ctx: PdfContext, requiredHeight: number) {
   if (ctx.y - requiredHeight < ctx.margin) {
     addPage(ctx);
   }
+}
+
+export function drawChecklistItem(ctx: PdfContext, item: any) {
+  if (!item) return;
+  
+  const status = item.status ? '✅' : '❌';
+  const statusColor = item.status ? rgb(0, 0.6, 0) : rgb(0.8, 0, 0);
+  
+  // Draw status indicator
+  ctx.page.drawText(status, {
+    x: ctx.x,
+    y: ctx.y - 12,
+    size: 12,
+    font: ctx.font,
+    color: statusColor,
+  });
+  
+  // Draw requirement
+  if (item.requirement) {
+    ctx.page.drawText(item.requirement, {
+      x: ctx.x + 20,
+      y: ctx.y - 12,
+      size: ctx.fontSize,
+      font: ctx.boldFont,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+    ctx.y -= 16;
+  }
+  
+  // Draw law reference
+  if (item.law) {
+    drawParagraph(ctx, `Law: ${item.law}`, { size: ctx.fontSize - 1 });
+  }
+  
+  // Draw analysis
+  if (item.analysis) {
+    drawParagraph(ctx, `Analysis: ${item.analysis}`, { size: ctx.fontSize - 1 });
+  }
+  
+  ctx.y -= 5;
+}
+
+export function drawPartyInfo(ctx: PdfContext, name: string, role: string) {
+  if (!name || !role) return;
+  
+  const text = `${name} (${role})`;
+  const size = ctx.fontSize;
+  const needed = size * ctx.lineHeight;
+  
+  ensureSpace(ctx, needed);
+  
+  ctx.page.drawText('•', {
+    x: ctx.x,
+    y: ctx.y - size,
+    size,
+    font: ctx.boldFont,
+    color: rgb(0.3, 0.3, 0.3),
+  });
+  
+  ctx.page.drawText(text, {
+    x: ctx.x + 14,
+    y: ctx.y - size,
+    size,
+    font: ctx.font,
+    color: rgb(0.1, 0.1, 0.1),
+  });
+  
+  ctx.y -= needed + 2;
+}
+
+export function drawTimelineEvent(ctx: PdfContext, date: string, event: string) {
+  if (!date || !event) return;
+  
+  const size = ctx.fontSize;
+  const needed = size * ctx.lineHeight;
+  
+  ensureSpace(ctx, needed);
+  
+  // Draw date
+  ctx.page.drawText(date, {
+    x: ctx.x,
+    y: ctx.y - size,
+    size,
+    font: ctx.boldFont,
+    color: rgb(0.2, 0.2, 0.2),
+  });
+  
+  // Draw event
+  const dateWidth = ctx.boldFont.widthOfTextAtSize(date + '  ', size);
+  ctx.page.drawText(event, {
+    x: ctx.x + dateWidth,
+    y: ctx.y - size,
+    size,
+    font: ctx.font,
+    color: rgb(0.1, 0.1, 0.1),
+  });
+  
+  ctx.y -= needed + 3;
 }
 
 export function drawTitle(ctx: PdfContext, text: string) {
