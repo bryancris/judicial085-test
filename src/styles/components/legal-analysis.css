@@ -314,23 +314,55 @@ html body div.legal-analysis-content strong[data-forced-size="true"] {
   color: hsl(var(--foreground)) !important;
 }
 
-/* Ensure all text elements have normal weight unless specifically marked */
-.step7-compact {
+/* ULTRA-HIGH SPECIFICITY OVERRIDES FOR GLOBAL FONT-BOLD RULE */
+/* Target markdown-generated HTML elements with maximum specificity */
+html body div.step7-compact,
+html body div.step7-compact *,
+html body .step7-compact,
+html body .step7-compact * {
   font-weight: 400 !important;
 }
 
-/* Bold only specific legal terms and headings */
-.step7-compact h1,
-.step7-compact h2,
-.step7-compact h3,
-.step7-compact h4,
-.step7-compact h5,
-.step7-compact h6 {
+/* NUCLEAR OPTION: Override global Tailwind @apply font-bold on headings */
+html body div.step7-compact h1,
+html body div.step7-compact h2,
+html body div.step7-compact h3,
+html body div.step7-compact h4,
+html body div.step7-compact h5,
+html body div.step7-compact h6,
+html body .step7-compact h1,
+html body .step7-compact h2,
+html body .step7-compact h3,
+html body .step7-compact h4,
+html body .step7-compact h5,
+html body .step7-compact h6,
+body div.step7-compact h1,
+body div.step7-compact h2,
+body div.step7-compact h3,
+body div.step7-compact h4,
+body div.step7-compact h5,
+body div.step7-compact h6 {
+  font-weight: 500 !important;
+}
+
+/* EXTREME SPECIFICITY: Target all possible text elements */
+html body div.step7-compact p,
+html body div.step7-compact ul,
+html body div.step7-compact ol,
+html body div.step7-compact li,
+html body div.step7-compact span,
+html body div.step7-compact div,
+html body .step7-compact p,
+html body .step7-compact ul,
+html body .step7-compact ol,
+html body .step7-compact li,
+html body .step7-compact span,
+html body .step7-compact div {
+  font-weight: 400 !important;
+}
+
+/* Keep strong elements bold */
+html body div.step7-compact strong,
+html body .step7-compact strong {
   font-weight: 600 !important;
-}
-
-/* Normal weight for all other elements */
-.step7-compact span,
-.step7-compact div {
-  font-weight: 400 !important;
 }
