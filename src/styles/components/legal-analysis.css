@@ -285,28 +285,52 @@ html body div.legal-analysis-content strong[data-forced-size="true"] {
   margin: 0.25rem 0 !important;
 }
 
-/* Compact paragraphs with minimal spacing */
+/* Compact paragraphs with minimal spacing and normal font weight */
 .step7-compact p {
   font-size: 0.875rem !important;
   line-height: 1.5 !important;
   color: hsl(var(--foreground)) !important;
   margin: 0.25rem 0 !important;
+  font-weight: 400 !important;
 }
 
-/* Compact lists */
+/* Compact lists with normal font weight */
 .step7-compact ul,
 .step7-compact ol {
   margin: 0.25rem 0 !important;
   padding-left: 1rem !important;
+  font-weight: 400 !important;
 }
 
 .step7-compact li {
   margin: 0.125rem 0 !important;
   line-height: 1.4 !important;
+  font-weight: 400 !important;
 }
 
-/* Compact strong elements */
+/* Compact strong elements - keep bold */
 .step7-compact strong {
   font-weight: 600 !important;
   color: hsl(var(--foreground)) !important;
+}
+
+/* Ensure all text elements have normal weight unless specifically marked */
+.step7-compact {
+  font-weight: 400 !important;
+}
+
+/* Bold only specific legal terms and headings */
+.step7-compact h1,
+.step7-compact h2,
+.step7-compact h3,
+.step7-compact h4,
+.step7-compact h5,
+.step7-compact h6 {
+  font-weight: 600 !important;
+}
+
+/* Normal weight for all other elements */
+.step7-compact span,
+.step7-compact div {
+  font-weight: 400 !important;
 }
