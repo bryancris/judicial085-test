@@ -28,15 +28,17 @@ const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
   // Assess issue strength and confidence
   const assessment = assessIssueStrength(issue);
 
-  useEffect(() => {
-    if (isExpanded) {
-      // Process citations in rule, application, and conclusion only when expanded
-      const allText = `${issue.rule} ${issue.application} ${issue.conclusion}`;
-      if (allText.trim()) {
-        processText(allText);
-      }
-    }
-  }, [isExpanded, issue.rule, issue.application, issue.conclusion, processText]);
+  // Disabled automatic citation processing to prevent unwanted API calls
+  // Citations will be processed during analysis generation/regeneration only
+  // useEffect(() => {
+  //   if (isExpanded) {
+  //     // Process citations in rule, application, and conclusion only when expanded
+  //     const allText = `${issue.rule} ${issue.application} ${issue.conclusion}`;
+  //     if (allText.trim()) {
+  //       processText(allText);
+  //     }
+  //   }
+  // }, [isExpanded, issue.rule, issue.application, issue.conclusion, processText]);
 
   return (
     <Card 
