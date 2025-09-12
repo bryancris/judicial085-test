@@ -2,11 +2,10 @@ import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Brain, AlertTriangle, CheckCircle, Target } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { marked } from "marked";
-import DOMPurify from "dompurify";
 import { RefinedAnalysisData } from "@/utils/refinedAnalysisParser";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Loader2 } from "lucide-react";
+import { parseRefinedAnalysisContent, parseStrongText, ContentSection } from "@/utils/refinedAnalysisContentParser";
 
 interface RefinedAnalysisSectionProps {
   analysisData: RefinedAnalysisData | null;
@@ -23,25 +22,19 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
   onRegenerateStep7,
   isRegenerating = false
 }) => {
-  const refinedAnalysisHtml = useMemo(() => {
+  const parsedContent = useMemo(() => {
     // Prioritize raw refined analysis content if available
     const content = refinedAnalysisRaw || analysisData?.executiveSummary || "";
-    if (!content) return "";
+    if (!content) return { sections: [] };
     
-    const md = content.trim();
-    try {
-      const html = marked.parse(md, { breaks: true });
-      return DOMPurify.sanitize(typeof html === "string" ? html : String(html));
-    } catch (e) {
-      return DOMPurify.sanitize(`<p>${md.replace(/\n/g, "<br/>")}</p>`);
-    }
+    return parseRefinedAnalysisContent(content);
   }, [refinedAnalysisRaw, analysisData?.executiveSummary]);
 
   console.log('🔍 RefinedAnalysisSection state:', {
     hasAnalysisData: !!analysisData,
     hasRefinedAnalysisRaw: !!refinedAnalysisRaw,
     refinedAnalysisRawLength: refinedAnalysisRaw?.length || 0,
-    htmlLength: refinedAnalysisHtml.length,
+    parsedSections: parsedContent.sections.length,
     isLoading
   });
 
@@ -79,8 +72,9 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="text-xs space-y-3 step7-compact" 
-               dangerouslySetInnerHTML={{ __html: refinedAnalysisHtml }} />
+          <div className="text-xs space-y-3">
+            {renderParsedContent(parsedContent.sections)}
+          </div>
           {onRegenerateStep7 && (
             <div className="pt-4 border-t border-border">
               <Button 
@@ -171,7 +165,9 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
             <CheckCircle className="h-4 w-4" />
             Executive Summary
           </h4>
-          <div className="text-xs space-y-3 step7-compact" dangerouslySetInnerHTML={{ __html: refinedAnalysisHtml }} />
+          <div className="text-xs space-y-3">
+            {renderParsedContent(parsedContent.sections)}
+          </div>
         </div>
 
         {/* Risk Assessment */}
@@ -273,6 +269,80 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
       </CardContent>
     </Card>
   );
+};
+
+/**
+ * Render parsed content sections as React components with explicit Tailwind classes
+ */
+const renderParsedContent = (sections: ContentSection[]) => {
+  return sections.map((section, index) => {
+    switch (section.type) {
+      case 'heading':
+        const HeadingTag = `h${Math.min(section.level || 1, 6)}` as keyof JSX.IntrinsicElements;
+        const headingClasses = {
+          1: 'text-sm font-semibold text-foreground mb-2',
+          2: 'text-xs font-semibold text-foreground mb-2',
+          3: 'text-xs font-medium text-foreground mb-1',
+          4: 'text-xs font-medium text-muted-foreground mb-1',
+          5: 'text-xs font-normal text-muted-foreground mb-1',
+          6: 'text-xs font-normal text-muted-foreground mb-1'
+        };
+        
+        return React.createElement(
+          HeadingTag,
+          { 
+            key: index, 
+            className: headingClasses[section.level as keyof typeof headingClasses] || headingClasses[3]
+          },
+          renderTextWithEmphasis(section.content)
+        );
+
+      case 'paragraph':
+        return (
+          <p key={index} className="text-xs font-normal text-foreground leading-relaxed">
+            {renderTextWithEmphasis(section.content)}
+          </p>
+        );
+
+      case 'list':
+        return (
+          <ul key={index} className="space-y-1 ml-4">
+            {section.items?.map((item, itemIndex) => (
+              <li key={itemIndex} className="text-xs font-normal text-foreground leading-relaxed flex items-start gap-2">
+                <span className="w-1 h-1 bg-primary rounded-full mt-2 flex-shrink-0" />
+                {renderTextWithEmphasis(item)}
+              </li>
+            ))}
+          </ul>
+        );
+
+      case 'text':
+        return (
+          <div key={index} className="text-xs font-normal text-foreground">
+            {renderTextWithEmphasis(section.content)}
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  });
+};
+
+/**
+ * Render text with proper emphasis using explicit font classes
+ */
+const renderTextWithEmphasis = (text: string) => {
+  const parts = parseStrongText(text);
+  
+  return parts.map((part, index) => (
+    <span 
+      key={index} 
+      className={part.strong ? 'font-semibold' : 'font-normal'}
+    >
+      {part.text}
+    </span>
+  ));
 };
 
 export default RefinedAnalysisSection;
