@@ -363,7 +363,7 @@ function createPreliminaryAnalysisSection(data: CaseAnalysisData, docxElements: 
     ]
   }
   
-  // Parse the content using similar logic to the app
+  // Parse the dedicated Step 2 content exactly like the app does
   const parsedData = parsePreliminaryAnalysisForWord(data.preliminaryAnalysis)
   const content = []
   
@@ -373,14 +373,15 @@ function createPreliminaryAnalysisSection(data: CaseAnalysisData, docxElements: 
       new Paragraph({
         text: "Potential Legal Areas",
         heading: HeadingLevel.HEADING_2,
-        spacing: { before: 300, after: 100 }
+        spacing: { before: 200, after: 100 }
       })
     )
     parsedData.potentialLegalAreas.forEach((area: string) => {
       content.push(
         new Paragraph({
-          children: [new TextRun({ text: `• ${area}`, bold: false })],
-          spacing: { before: 50 }
+          children: [new TextRun({ text: `• ${area}` })],
+          spacing: { after: 50 },
+          indent: { left: 360 }
         })
       )
     })
@@ -392,14 +393,15 @@ function createPreliminaryAnalysisSection(data: CaseAnalysisData, docxElements: 
       new Paragraph({
         text: "Preliminary Issues",
         heading: HeadingLevel.HEADING_2,
-        spacing: { before: 300, after: 100 }
+        spacing: { before: 200, after: 100 }
       })
     )
     parsedData.preliminaryIssues.forEach((issue: string) => {
       content.push(
         new Paragraph({
-          children: [new TextRun({ text: `• ${issue}`, bold: false })],
-          spacing: { before: 50 }
+          children: [new TextRun({ text: `• ${issue}` })],
+          spacing: { after: 50 },
+          indent: { left: 360 }
         })
       )
     })
@@ -411,14 +413,15 @@ function createPreliminaryAnalysisSection(data: CaseAnalysisData, docxElements: 
       new Paragraph({
         text: "Research Priorities",
         heading: HeadingLevel.HEADING_2,
-        spacing: { before: 300, after: 100 }
+        spacing: { before: 200, after: 100 }
       })
     )
     parsedData.researchPriorities.forEach((priority: string) => {
       content.push(
         new Paragraph({
-          children: [new TextRun({ text: `• ${priority}`, bold: false })],
-          spacing: { before: 50 }
+          children: [new TextRun({ text: `• ${priority}` })],
+          spacing: { after: 50 },
+          indent: { left: 360 }
         })
       )
     })
@@ -430,14 +433,15 @@ function createPreliminaryAnalysisSection(data: CaseAnalysisData, docxElements: 
       new Paragraph({
         text: "Strategic Notes",
         heading: HeadingLevel.HEADING_2,
-        spacing: { before: 300, after: 100 }
+        spacing: { before: 200, after: 100 }
       })
     )
     parsedData.strategicNotes.forEach((note: string) => {
       content.push(
         new Paragraph({
-          children: [new TextRun({ text: `• ${note}`, bold: false })],
-          spacing: { before: 50 }
+          children: [new TextRun({ text: `• ${note}` })],
+          spacing: { after: 50 },
+          indent: { left: 360 }
         })
       )
     })
@@ -1120,4 +1124,89 @@ function parseRelevantLawForWord(relevantLaw: string): any[] {
   }
   
   return content;
+}
+
+// Helper function to parse Step 2 preliminary analysis like the app does
+function parsePreliminaryAnalysisForWord(analysisContent: string): any {
+  if (!analysisContent?.trim()) {
+    return {
+      potentialLegalAreas: [],
+      preliminaryIssues: [],
+      researchPriorities: [],
+      strategicNotes: []
+    };
+  }
+
+  // Extract sections using the same logic as the app
+  const potentialLegalAreas: string[] = [];
+  const preliminaryIssues: string[] = [];
+  const researchPriorities: string[] = [];
+  const strategicNotes: string[] = [];
+
+  // Extract Potential Legal Areas section
+  const legalAreasMatch = analysisContent.match(/\*\*Potential Legal Areas:\*\*([\s\S]*?)(?=\*\*|$)/);
+  if (legalAreasMatch) {
+    const lines = legalAreasMatch[1].split('\n');
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed.match(/^\d+\.\s/) || trimmed.startsWith('•') || trimmed.startsWith('-')) {
+        const area = trimmed.replace(/^\d+\.\s*|^[•-]\s*/, '').trim();
+        if (area && area.length > 3) {
+          potentialLegalAreas.push(area);
+        }
+      }
+    });
+  }
+
+  // Extract Preliminary Issues section  
+  const issuesMatch = analysisContent.match(/\*\*Preliminary Issues:\*\*([\s\S]*?)(?=\*\*|$)/);
+  if (issuesMatch) {
+    const lines = issuesMatch[1].split('\n');
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed.match(/^\d+\.\s/) || trimmed.startsWith('•') || trimmed.startsWith('-')) {
+        const issue = trimmed.replace(/^\d+\.\s*|^[•-]\s*/, '').trim();
+        if (issue && issue.length > 10) {
+          preliminaryIssues.push(issue);
+        }
+      }
+    });
+  }
+
+  // Extract Research Priorities section
+  const prioritiesMatch = analysisContent.match(/\*\*Research Priorities:\*\*([\s\S]*?)(?=\*\*|$)/);
+  if (prioritiesMatch) {
+    const lines = prioritiesMatch[1].split('\n');
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed.match(/^\d+\.\s/) || trimmed.startsWith('•') || trimmed.startsWith('-')) {
+        const priority = trimmed.replace(/^\d+\.\s*|^[•-]\s*/, '').trim();
+        if (priority && priority.length > 10) {
+          researchPriorities.push(priority);
+        }
+      }
+    });
+  }
+
+  // Extract Strategic Notes section
+  const notesMatch = analysisContent.match(/\*\*Strategic Notes:\*\*([\s\S]*?)(?=\*\*|$)/);
+  if (notesMatch) {
+    const lines = notesMatch[1].split('\n');
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed.match(/^\d+\.\s/) || trimmed.startsWith('•') || trimmed.startsWith('-')) {
+        const note = trimmed.replace(/^\d+\.\s*|^[•-]\s*/, '').trim();
+        if (note && note.length > 10) {
+          strategicNotes.push(note);
+        }
+      }
+    });
+  }
+
+  return {
+    potentialLegalAreas,
+    preliminaryIssues,
+    researchPriorities,
+    strategicNotes
+  };
 }

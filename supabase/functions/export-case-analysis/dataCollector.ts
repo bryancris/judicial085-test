@@ -53,6 +53,27 @@ export async function collectCaseData(supabase: any, clientId: string, caseId?: 
       console.error('Error fetching refined analysis:', error);
     }
 
+    // Get dedicated Step 2 preliminary analysis record like the app does
+    let preliminaryAnalysisRaw: string | null = null;
+    try {
+      const { data: step2Data } = await supabase
+        .from('legal_analyses')
+        .select('content')
+        .eq('client_id', clientId)
+        .eq('analysis_type', 'step-2-preliminary')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (step2Data && step2Data.length > 0) {
+        preliminaryAnalysisRaw = step2Data[0].content;
+        console.log('✅ Found dedicated Step 2 preliminary analysis record');
+      } else {
+        console.log('📋 No dedicated Step 2 preliminary analysis found, will use parsed content');
+      }
+    } catch (error) {
+      console.error('Error fetching Step 2 preliminary analysis:', error);
+    }
+
     const result: CaseAnalysisData = {
       client: clientData,
       case: caseData,
@@ -62,8 +83,8 @@ export async function collectCaseData(supabase: any, clientId: string, caseId?: 
       conversationSummary: extractConversationSummary(messagesData),
       structuredCaseData: await parseStructuredCaseData(messagesData),
       
-      // Step 2: Preliminary Analysis
-      preliminaryAnalysis: structuredData.preliminaryAnalysis,
+      // Step 2: Preliminary Analysis - use dedicated record if available
+      preliminaryAnalysis: preliminaryAnalysisRaw || structuredData.preliminaryAnalysis,
       
       // Step 3: Relevant Texas Laws
       relevantLaw: structuredData.relevantLaw,
