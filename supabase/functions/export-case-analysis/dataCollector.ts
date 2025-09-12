@@ -32,6 +32,27 @@ export async function collectCaseData(supabase: any, clientId: string, caseId?: 
     // Parse the analysis content to extract structured data
     const structuredData = await parseAnalysisContent(analysisData);
 
+    // Try to get dedicated refined analysis (Step 7) record like the app does
+    let refinedAnalysisRaw: string | null = null;
+    try {
+      const { data: step7Data } = await supabase
+        .from('legal_analyses')
+        .select('content')
+        .eq('client_id', clientId)
+        .eq('analysis_type', 'step7-refined-analysis')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (step7Data && step7Data.length > 0) {
+        refinedAnalysisRaw = step7Data[0].content;
+        console.log('✅ Found dedicated Step 7 refined analysis record');
+      } else {
+        console.log('📋 No dedicated Step 7 refined analysis found, using regular analysis');
+      }
+    } catch (error) {
+      console.error('Error fetching refined analysis:', error);
+    }
+
     const result: CaseAnalysisData = {
       client: clientData,
       case: caseData,
@@ -59,7 +80,7 @@ export async function collectCaseData(supabase: any, clientId: string, caseId?: 
       weaknesses: structuredData.weaknesses || [],
       
       // Step 7: Legal Requirements Verification & Case Conclusion
-      refinedAnalysis: structuredData.refinedAnalysis,
+      refinedAnalysis: refinedAnalysisRaw || structuredData.refinedAnalysis,
       legalRequirementsChecklist: structuredData.legalRequirementsChecklist || [],
       caseConclusion: structuredData.caseConclusion,
       
