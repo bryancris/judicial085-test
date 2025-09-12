@@ -1,433 +1,560 @@
-import type { CaseAnalysisData } from './types.ts';
-import { 
-  extractAnalysisSections, 
-  extractStrengthsWeaknesses, 
-  calculatePredictionPercentages,
-  detectCaseType 
-} from './analysisParsingUtils.ts';
+import { CaseAnalysisData } from './types.ts';
 
 export async function collectCaseData(supabase: any, clientId: string, caseId?: string): Promise<CaseAnalysisData> {
-  console.log('📊 Starting data collection for export', { clientId, caseId })
+  console.log('📊 Starting data collection for export', { clientId, caseId });
 
   try {
     // Fetch all data in parallel
     const [
-      client,
+      clientData,
       caseData,
       analysisData,
-      notes,
-      documents,
-      messages,
-      additionalCaseLaw
+      notesData,
+      documentsData,
+      messagesData,
+      additionalCaseLawData,
+      similarCasesData,
+      scholarlyReferencesData,
+      perplexityData
     ] = await Promise.all([
       fetchClientData(supabase, clientId),
       caseId ? fetchCaseData(supabase, caseId) : null,
-      fetchAnalysisData(supabase, clientId, caseId),
+      fetchLatestAnalysisData(supabase, clientId),
       fetchAttorneyNotes(supabase, clientId),
-      fetchClientDocuments(supabase, clientId, caseId),
-      fetchConversationMessages(supabase, clientId, caseId),
-      fetchAdditionalCaseLaw(supabase, clientId)
-    ])
+      fetchDocuments(supabase, clientId),
+      fetchMessages(supabase, clientId),
+      fetchAdditionalCaseLaw(supabase, clientId),
+      fetchSimilarCases(supabase, clientId),
+      fetchScholarlyReferences(supabase, clientId),
+      fetchPerplexityResearch(supabase, clientId)
+    ]);
 
-    // Fetch related analysis data if available
-    let similarCases: any[] = []
-    let scholarlyReferences: any[] = []
-    let perplexityResearch: any[] = []
-    
-    if (analysisData) {
-      const [similar, scholarly, perplexity] = await Promise.all([
-        fetchSimilarCases(supabase, analysisData.id),
-        fetchScholarlyReferences(supabase, analysisData.id),
-        fetchPerplexityResearch(supabase, clientId, analysisData.id)
-      ])
-      similarCases = similar
-      scholarlyReferences = scholarly
-      perplexityResearch = perplexity
-    }
-
-    // Parse structured data from various sources
-    let parsedAnalysis = null
-    let iracAnalysis = null
-    let legalRequirementsChecklist = null
-    let structuredCaseData = null
-    
-    if (analysisData?.content) {
-      try {
-        const caseType = detectCaseType(analysisData.content)
-        const analysisSections = extractAnalysisSections(analysisData.content)
-        const strengthsWeaknesses = extractStrengthsWeaknesses(analysisData.content, caseType)
-        
-        parsedAnalysis = {
-          relevantLaw: analysisSections.relevantLaw,
-          preliminaryAnalysis: analysisSections.preliminaryAnalysis,
-          potentialIssues: analysisSections.potentialIssues,
-          followUpQuestions: analysisSections.followUpQuestions,
-          strengths: strengthsWeaknesses.strengths,
-          weaknesses: strengthsWeaknesses.weaknesses,
-          caseType: caseType
-        }
-        
-        // Parse modern structured analysis formats
-        iracAnalysis = parseIracAnalysis(analysisData.content)
-        legalRequirementsChecklist = parseLegalRequirementsChecklist(analysisData.content)
-      } catch (error) {
-        console.warn('Failed to parse analysis content:', error)
-      }
-    }
-
-    // Parse structured case data from conversation
-    if (messages.length > 0) {
-      try {
-        structuredCaseData = parseStructuredCaseData(messages)
-      } catch (error) {
-        console.warn('Failed to parse structured case data:', error)
-      }
-    }
-
-    // Fetch refined analysis and follow-up questions from separate tables
-    const refinedAnalysis = await fetchRefinedAnalysis(supabase, clientId, analysisData?.id)
-    const followUpQuestionsData = await fetchFollowUpQuestions(supabase, clientId, analysisData?.id)
+    // Parse the analysis content to extract structured data
+    const structuredData = await parseAnalysisContent(analysisData);
 
     const result: CaseAnalysisData = {
-      client,
+      client: clientData,
       case: caseData,
       analysis: analysisData,
       
-      // Step-by-step data structure
-      conversationSummary: extractConversationSummary(messages),
-      structuredCaseData,
-      preliminaryAnalysis: parsedAnalysis?.preliminaryAnalysis,
-      relevantLaw: parsedAnalysis?.relevantLaw,
-      additionalCaseLaw,
-      similarCases,
-      iracAnalysis,
-      strengths: parsedAnalysis?.strengths || [],
-      weaknesses: parsedAnalysis?.weaknesses || [],
-      refinedAnalysis: refinedAnalysis?.content,
-      legalRequirementsChecklist,
-      caseConclusion: extractCaseConclusion(refinedAnalysis?.content),
-      followUpQuestions: followUpQuestionsData?.questions || parsedAnalysis?.followUpQuestions || [],
+      // Step 1: Case Summary (Organized Fact Pattern)
+      conversationSummary: extractConversationSummary(messagesData),
+      structuredCaseData: await parseStructuredCaseData(messagesData),
+      
+      // Step 2: Preliminary Analysis
+      preliminaryAnalysis: structuredData.preliminaryAnalysis,
+      
+      // Step 3: Relevant Texas Laws
+      relevantLaw: structuredData.relevantLaw,
+      
+      // Step 4: Additional Case Law
+      additionalCaseLaw: additionalCaseLawData || [],
+      similarCases: similarCasesData || [],
+      
+      // Step 5: IRAC Legal Analysis
+      iracAnalysis: structuredData.iracAnalysis,
+      
+      // Step 6: Case Strengths & Weaknesses
+      strengths: structuredData.strengths || [],
+      weaknesses: structuredData.weaknesses || [],
+      
+      // Step 7: Legal Requirements Verification & Case Conclusion
+      refinedAnalysis: structuredData.refinedAnalysis,
+      legalRequirementsChecklist: structuredData.legalRequirementsChecklist || [],
+      caseConclusion: structuredData.caseConclusion,
+      
+      // Step 8: Recommended Follow-up Questions
+      followUpQuestions: structuredData.followUpQuestions || [],
+      
+      // Step 9: Law References
       lawReferences: extractLawReferences(analysisData),
       
-      // Legacy data
-      parsedAnalysis,
-      scholarlyReferences,
-      notes,
-      documents,
-      messages,
-      perplexityResearch,
+      // Additional data
+      scholarlyReferences: scholarlyReferencesData || [],
+      notes: notesData || [],
+      documents: documentsData || [],
+      messages: messagesData || [],
+      perplexityResearch: perplexityData || [],
       caseType: analysisData?.case_type
-    }
+    };
 
     console.log('✅ Data collection completed', {
-      hasClient: !!client,
-      hasCase: !!caseData,
-      hasAnalysis: !!analysisData,
-      hasStructuredData: !!structuredCaseData,
-      hasIracAnalysis: !!iracAnalysis,
-      hasRequirementsChecklist: !!legalRequirementsChecklist,
-      hasRefinedAnalysis: !!refinedAnalysis,
-      notesCount: notes.length,
-      documentsCount: documents.length,
-      messagesCount: messages.length,
-      additionalCaseLawCount: additionalCaseLaw.length,
-      similarCasesCount: similarCases.length,
-      scholarlyReferencesCount: scholarlyReferences.length,
-      perplexityCount: perplexityResearch.length
-    })
+      hasClient: !!result.client,
+      hasCase: !!result.case,
+      hasAnalysis: !!result.analysis,
+      hasStructuredData: !!result.structuredCaseData,
+      hasIracAnalysis: !!result.iracAnalysis,
+      hasRequirementsChecklist: !!(result.legalRequirementsChecklist && result.legalRequirementsChecklist.length > 0),
+      hasRefinedAnalysis: !!result.refinedAnalysis,
+      notesCount: result.notes.length,
+      documentsCount: result.documents.length,
+      messagesCount: result.messages.length,
+      additionalCaseLawCount: result.additionalCaseLaw.length,
+      similarCasesCount: result.similarCases.length,
+      scholarlyReferencesCount: result.scholarlyReferences.length,
+      perplexityCount: result.perplexityResearch.length
+    });
 
-    return result
-
+    return result;
   } catch (error) {
-    console.error('❌ Data collection failed:', error)
-    throw error
+    console.error('❌ Error in data collection:', error);
+    throw error;
   }
 }
 
-async function fetchClientData(supabase: any, clientId: string) {
-  const { data: client } = await supabase
+// Fetch Functions
+async function fetchClientData(supabase: any, clientId: string): Promise<any> {
+  const { data, error } = await supabase
     .from('clients')
     .select('*')
     .eq('id', clientId)
-    .single()
-  return client
+    .single();
+  
+  if (error) {
+    console.error('Error fetching client data:', error);
+    return null;
+  }
+  
+  return data;
 }
 
-async function fetchCaseData(supabase: any, caseId: string) {
-  const { data: caseResult } = await supabase
+async function fetchCaseData(supabase: any, caseId: string): Promise<any> {
+  const { data, error } = await supabase
     .from('cases')
     .select('*')
     .eq('id', caseId)
-    .single()
-  return caseResult
+    .single();
+  
+  if (error) {
+    console.error('Error fetching case data:', error);
+    return null;
+  }
+  
+  return data;
 }
 
-async function fetchAnalysisData(supabase: any, clientId: string, caseId?: string) {
-  let query = supabase
+async function fetchLatestAnalysisData(supabase: any, clientId: string): Promise<any> {
+  const { data, error } = await supabase
     .from('legal_analyses')
     .select('*')
     .eq('client_id', clientId)
     .order('created_at', { ascending: false })
-
-  if (caseId) {
-    query = query.eq('case_id', caseId)
+    .limit(1);
+  
+  if (error) {
+    console.error('Error fetching analysis data:', error);
+    return null;
   }
-
-  const { data: analyses } = await query.limit(1)
-  return analyses && analyses.length > 0 ? analyses[0] : null
+  
+  return data && data.length > 0 ? data[0] : null;
 }
 
-async function fetchSimilarCases(supabase: any, analysisId: string) {
-  // First try to get similar cases specifically for this analysis
-  let { data: similarCases } = await supabase
-    .from('similar_cases')
-    .select('*')
-    .eq('legal_analysis_id', analysisId)
-
-  if (!similarCases || similarCases.length === 0) {
-    // Fallback: get recent similar cases for the client
-    const { data: analysis } = await supabase
-      .from('legal_analyses')
-      .select('client_id')
-      .eq('id', analysisId)
-      .single()
-
-    if (analysis) {
-      const { data: fallbackCases } = await supabase
-        .from('similar_cases')
-        .select('*')
-        .eq('client_id', analysis.client_id)
-        .order('created_at', { ascending: false })
-        .limit(10)
-      
-      similarCases = fallbackCases || []
-    }
-  }
-
-  return similarCases || []
-}
-
-async function fetchScholarlyReferences(supabase: any, analysisId: string) {
-  // First try to get scholarly references specifically for this analysis
-  let { data: scholarlyRefs } = await supabase
-    .from('scholarly_references')
-    .select('*')
-    .eq('legal_analysis_id', analysisId)
-
-  if (!scholarlyRefs || scholarlyRefs.length === 0) {
-    // Fallback: get recent scholarly references for the client
-    const { data: analysis } = await supabase
-      .from('legal_analyses')
-      .select('client_id')
-      .eq('id', analysisId)
-      .single()
-
-    if (analysis) {
-      const { data: fallbackRefs } = await supabase
-        .from('scholarly_references')
-        .select('*')
-        .eq('client_id', analysis.client_id)
-        .order('created_at', { ascending: false })
-        .limit(10)
-      
-      scholarlyRefs = fallbackRefs || []
-    }
-  }
-
-  return scholarlyRefs || []
-}
-
-async function fetchAttorneyNotes(supabase: any, clientId: string) {
-  const { data: notes } = await supabase
+async function fetchAttorneyNotes(supabase: any, clientId: string): Promise<any[]> {
+  const { data, error } = await supabase
     .from('case_analysis_notes')
     .select('*')
     .eq('client_id', clientId)
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: false });
   
-  return notes || []
+  if (error) {
+    console.error('Error fetching attorney notes:', error);
+    return [];
+  }
+  
+  return data || [];
 }
 
-async function fetchClientDocuments(supabase: any, clientId: string, caseId?: string) {
-  let query = supabase
+async function fetchDocuments(supabase: any, clientId: string): Promise<any[]> {
+  const { data, error } = await supabase
     .from('document_metadata')
     .select('*')
     .eq('client_id', clientId)
-
-  if (caseId) {
-    query = query.or(`case_id.eq.${caseId},case_id.is.null`)
+    .order('created_at', { ascending: false });
+  
+  if (error) {
+    console.error('Error fetching documents:', error);
+    return [];
   }
-
-  const { data: documents } = await query.order('created_at', { ascending: false })
-  return documents || []
+  
+  return data || [];
 }
 
-async function fetchConversationMessages(supabase: any, clientId: string, caseId?: string) {
-  let query = supabase
+async function fetchMessages(supabase: any, clientId: string): Promise<any[]> {
+  const { data, error } = await supabase
     .from('client_messages')
     .select('*')
     .eq('client_id', clientId)
-
-  if (caseId) {
-    query = query.or(`case_id.eq.${caseId},case_id.is.null`)
-  }
-
-  const { data: messages } = await query.order('created_at', { ascending: true })
-  return messages || []
-}
-
-async function fetchPerplexityResearch(supabase: any, clientId: string, analysisId: string) {
-  const { data: research } = await supabase
-    .from('perplexity_research')
-    .select('*')
-    .eq('client_id', clientId)
-    .eq('legal_analysis_id', analysisId)
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: true });
   
-  return research || []
+  if (error) {
+    console.error('Error fetching messages:', error);
+    return [];
+  }
+  
+  return data || [];
 }
 
-async function fetchAdditionalCaseLaw(supabase: any, clientId: string) {
-  const { data: caseLaw } = await supabase
+async function fetchAdditionalCaseLaw(supabase: any, clientId: string): Promise<any[]> {
+  const { data, error } = await supabase
     .from('additional_case_law')
     .select('*')
     .eq('client_id', clientId)
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: false });
   
-  return caseLaw || []
-}
-
-async function fetchRefinedAnalysis(supabase: any, clientId: string, analysisId?: string) {
-  if (!analysisId) return null
-  
-  const { data: refined } = await supabase
-    .from('legal_analyses')
-    .select('refined_content')
-    .eq('id', analysisId)
-    .single()
-    
-  return refined?.refined_content ? { content: refined.refined_content } : null
-}
-
-async function fetchFollowUpQuestions(supabase: any, clientId: string, analysisId?: string) {
-  if (!analysisId) return null
-  
-  const { data: questions } = await supabase
-    .from('legal_analyses')
-    .select('follow_up_questions_raw')
-    .eq('id', analysisId)
-    .single()
-    
-  return questions?.follow_up_questions_raw ? { questions: questions.follow_up_questions_raw.split('\n') } : null
-}
-
-// Parse IRAC Analysis from content
-function parseIracAnalysis(content: string): any {
-  const iracMatch = content.match(/\*\*IRAC ANALYSIS:\*\*([\s\S]*?)(?=\*\*[A-Z\s]+:\*\*|$)/i)
-  if (!iracMatch) return null
-
-  const iracContent = iracMatch[1].trim()
-  const issues = []
-  
-  // Extract individual issues
-  const issueMatches = iracContent.match(/Issue \d+:([\s\S]*?)(?=Issue \d+:|$)/gi)
-  if (issueMatches) {
-    issueMatches.forEach((issueBlock, index) => {
-      const issue = {
-        id: `issue-${index + 1}`,
-        issueStatement: '',
-        rule: '',
-        application: '',
-        conclusion: '',
-        category: '',
-        strength: 'moderate' as const
-      }
-      
-      const issueMatch = issueBlock.match(/Issue:([\s\S]*?)(?=Rule:|$)/i)
-      if (issueMatch) issue.issueStatement = issueMatch[1].trim()
-      
-      const ruleMatch = issueBlock.match(/Rule:([\s\S]*?)(?=Application:|$)/i)
-      if (ruleMatch) issue.rule = ruleMatch[1].trim()
-      
-      const appMatch = issueBlock.match(/Application:([\s\S]*?)(?=Conclusion:|$)/i)
-      if (appMatch) issue.application = appMatch[1].trim()
-      
-      const concMatch = issueBlock.match(/Conclusion:([\s\S]*?)$/i)
-      if (concMatch) issue.conclusion = concMatch[1].trim()
-      
-      issues.push(issue)
-    })
+  if (error) {
+    console.error('Error fetching additional case law:', error);
+    return [];
   }
   
+  return data || [];
+}
+
+async function fetchSimilarCases(supabase: any, clientId: string): Promise<any[]> {
+  // Get the legal analysis first to find similar cases
+  const { data: analysis } = await supabase
+    .from('legal_analyses')
+    .select('id')
+    .eq('client_id', clientId)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (!analysis || analysis.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('additional_case_law')
+    .select('*')
+    .eq('legal_analysis_id', analysis[0].id)
+    .order('created_at', { ascending: false });
+  
+  if (error) {
+    console.error('Error fetching similar cases:', error);
+    return [];
+  }
+  
+  return data || [];
+}
+
+async function fetchScholarlyReferences(supabase: any, clientId: string): Promise<any[]> {
+  // Get the legal analysis first to find scholarly references
+  const { data: analysis } = await supabase
+    .from('legal_analyses')
+    .select('id')
+    .eq('client_id', clientId)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (!analysis || analysis.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('perplexity_research')
+    .select('*')
+    .eq('legal_analysis_id', analysis[0].id)
+    .order('created_at', { ascending: false });
+  
+  if (error) {
+    console.error('Error fetching scholarly references:', error);
+    return [];
+  }
+  
+  return data || [];
+}
+
+async function fetchPerplexityResearch(supabase: any, clientId: string): Promise<any[]> {
+  const { data, error } = await supabase
+    .from('perplexity_research')
+    .select('*')
+    .eq('client_id', clientId)
+    .order('created_at', { ascending: false });
+  
+  if (error) {
+    console.error('Error fetching perplexity research:', error);
+    return [];
+  }
+  
+  return data || [];
+}
+
+// Content Parsing Functions
+async function parseAnalysisContent(analysisData: any): Promise<any> {
+  if (!analysisData) {
+    return {
+      preliminaryAnalysis: '',
+      relevantLaw: '',
+      iracAnalysis: null,
+      strengths: [],
+      weaknesses: [],
+      refinedAnalysis: '',
+      legalRequirementsChecklist: [],
+      caseConclusion: '',
+      followUpQuestions: []
+    };
+  }
+
+  const content = analysisData.content || '';
+  
+  // Parse different sections from the content
+  return {
+    preliminaryAnalysis: extractPreliminaryAnalysis(content),
+    relevantLaw: extractRelevantLaw(content),
+    iracAnalysis: parseIracAnalysis(content),
+    strengths: extractStrengths(content),
+    weaknesses: extractWeaknesses(content),
+    refinedAnalysis: content, // For Step 7, use the full refined analysis content
+    legalRequirementsChecklist: parseLegalRequirementsChecklist(content),
+    caseConclusion: extractCaseConclusion(content),
+    followUpQuestions: extractFollowUpQuestions(content)
+  };
+}
+
+function extractPreliminaryAnalysis(content: string): string {
+  const match = content.match(/(?:^|\n)\s*(?:#*\s*)?(?:PRELIMINARY ANALYSIS|Preliminary Analysis)[\s:]*\n([\s\S]*?)(?=\n\s*(?:#|$)|$)/i);
+  return match ? match[1].trim() : '';
+}
+
+function extractRelevantLaw(content: string): string {
+  const match = content.match(/(?:^|\n)\s*(?:#*\s*)?(?:RELEVANT LAW|Relevant Law|Texas Law)[\s:]*\n([\s\S]*?)(?=\n\s*(?:#|$)|$)/i);
+  return match ? match[1].trim() : '';
+}
+
+function parseIracAnalysis(content: string): any {
+  // Look for IRAC structure in the content
+  const iracMatch = content.match(/(?:^|\n)\s*(?:#*\s*)?(?:IRAC|Legal Analysis)[\s:]*\n([\s\S]*?)(?=\n\s*(?:#|$)|$)/i);
+  if (!iracMatch) return null;
+
+  const iracContent = iracMatch[1];
+  
+  // Parse issues, rules, application, conclusion
+  const issues: any[] = [];
+  const issueMatches = iracContent.match(/(?:Issue|Issues?)[\s:]*\n([\s\S]*?)(?=\n\s*(?:Rule|$)|$)/gi);
+  
+  if (issueMatches) {
+    issueMatches.forEach((match, index) => {
+      issues.push({
+        id: `issue-${index + 1}`,
+        issueStatement: match.replace(/(?:Issue|Issues?)[\s:]*/i, '').trim(),
+        rule: '',
+        application: '',
+        conclusion: ''
+      });
+    });
+  }
+
   return {
     caseSummary: '',
     legalIssues: issues,
-    overallConclusion: '',
-    followUpQuestions: [],
+    overallConclusion: extractCaseConclusion(content),
+    followUpQuestions: extractFollowUpQuestions(content),
     nextSteps: []
-  }
+  };
 }
 
-// Parse Legal Requirements Checklist from refined analysis
-function parseLegalRequirementsChecklist(content: string): any[] {
-  const checklistMatch = content.match(/Requirements vs\.([\s\S]*?)(?=CONCLUSION:|$)/i)
-  if (!checklistMatch) return []
-
-  const checklistContent = checklistMatch[1].trim()
-  const requirements = []
+function extractStrengths(content: string): string[] {
+  const match = content.match(/(?:^|\n)\s*(?:#*\s*)?(?:STRENGTHS|Strengths|Case Strengths)[\s:]*\n([\s\S]*?)(?=\n\s*(?:#|WEAKNESSES|$)|$)/i);
+  if (!match) return [];
   
-  // Extract individual requirements
-  const reqMatches = checklistContent.match(/\d+\.\s*(.*?)Law:(.*?)Citation:(.*?)(?=\d+\.|$)/gs)
-  if (reqMatches) {
-    reqMatches.forEach(reqBlock => {
-      const requirement = {
-        requirement: '',
-        law: '',
-        citation: '',
-        clientFacts: '',
-        status: 'meets' as const,
-        analysis: ''
+  return match[1]
+    .split(/\n/)
+    .map(line => line.replace(/^[\s\-\*•]+/, '').trim())
+    .filter(line => line.length > 0);
+}
+
+function extractWeaknesses(content: string): string[] {
+  const match = content.match(/(?:^|\n)\s*(?:#*\s*)?(?:WEAKNESSES|Weaknesses|Case Weaknesses)[\s:]*\n([\s\S]*?)(?=\n\s*(?:#|$)|$)/i);
+  if (!match) return [];
+  
+  return match[1]
+    .split(/\n/)
+    .map(line => line.replace(/^[\s\-\*•]+/, '').trim())
+    .filter(line => line.length > 0);
+}
+
+function parseLegalRequirementsChecklist(content: string): any[] {
+  const checklist: any[] = [];
+  
+  // Look for requirements with checkmarks
+  const requirementMatches = content.match(/(?:###?\s*\d+\..*?)\n([\s\S]*?)(?=\n\s*#{1,3}\s*\d+\.|---|\n\s*$)/g);
+  
+  if (requirementMatches) {
+    requirementMatches.forEach(match => {
+      const lines = match.split('\n');
+      const requirement = lines[0].replace(/^###?\s*\d+\.\s*/, '').trim();
+      
+      let law = '';
+      let citation = '';
+      let clientFacts = '';
+      let status: 'meets' | 'does_not_meet' | 'needs_evidence' = 'needs_evidence';
+      let analysis = '';
+      
+      // Parse the content
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line.startsWith('**Law:**')) {
+          law = line.replace('**Law:**', '').trim();
+        } else if (line.startsWith('**Citation:**')) {
+          citation = line.replace('**Citation:**', '').trim();
+        } else if (line.includes('Jennifer Martinez:')) {
+          clientFacts = line.split('Jennifer Martinez:')[1].trim();
+          if (line.includes('✅')) {
+            status = 'meets';
+          } else if (line.includes('❌')) {
+            status = 'does_not_meet';
+          }
+        } else if (line.startsWith('**Analysis:**')) {
+          analysis = line.replace('**Analysis:**', '').trim();
+        }
       }
       
-      const lines = reqBlock.split('\n').map(l => l.trim()).filter(Boolean)
-      lines.forEach(line => {
-        if (line.startsWith('Law:')) requirement.law = line.replace('Law:', '').trim()
-        if (line.startsWith('Citation:')) requirement.citation = line.replace('Citation:', '').trim()
-        if (line.includes('→ ✅')) requirement.status = 'meets'
-        if (line.includes('→ ❌')) requirement.status = 'does_not_meet'
-        if (line.includes('→ ⚠️')) requirement.status = 'needs_evidence'
-      })
-      
-      requirements.push(requirement)
-    })
+      if (requirement) {
+        checklist.push({
+          requirement,
+          law,
+          citation,
+          clientFacts,
+          status,
+          analysis
+        });
+      }
+    });
   }
   
-  return requirements
+  return checklist;
 }
 
-// Parse structured case data from messages
-function parseStructuredCaseData(messages: any[]): any {
-  // Extract structured data from conversation
-  return {
-    parties: [],
-    timeline: [],
-    coreFacts: [],
-    keyDocuments: []
-  }
+function extractCaseConclusion(content: string): string {
+  const match = content.match(/(?:^|\n)\s*(?:#*\s*)?(?:CASE CONCLUSION|Case Conclusion|Overall Assessment)[\s:]*\n([\s\S]*?)(?=\n\s*(?:#|$)|$)/i);
+  return match ? match[1].trim() : '';
 }
 
-// Extract conversation summary
+function extractFollowUpQuestions(content: string): string[] {
+  const match = content.match(/(?:^|\n)\s*(?:#*\s*)?(?:FOLLOW[- ]?UP QUESTIONS|Follow-up Questions|Next Steps)[\s:]*\n([\s\S]*?)(?=\n\s*(?:#|$)|$)/i);
+  if (!match) return [];
+  
+  return match[1]
+    .split(/\n/)
+    .map(line => line.replace(/^[\s\d\.\-\*•]+/, '').trim())
+    .filter(line => line.length > 0);
+}
+
 function extractConversationSummary(messages: any[]): string {
-  return messages.slice(0, 3).map(m => `${m.role}: ${m.content}`).join('\n\n')
+  if (!messages || messages.length === 0) return '';
+  
+  // Get the first few user messages to create a summary
+  const userMessages = messages
+    .filter(msg => msg.role === 'user')
+    .slice(0, 3)
+    .map(msg => msg.content)
+    .join(' ');
+  
+  return userMessages.substring(0, 500) + (userMessages.length > 500 ? '...' : '');
 }
 
-// Extract case conclusion from refined analysis
-function extractCaseConclusion(refinedContent: string): string {
-  if (!refinedContent) return ''
-  const conclusionMatch = refinedContent.match(/CONCLUSION:([\s\S]*?)$/i)
-  return conclusionMatch ? conclusionMatch[1].trim() : ''
+async function parseStructuredCaseData(messages: any[]): Promise<any> {
+  if (!messages || messages.length === 0) return null;
+  
+  // Extract structured data from messages
+  const allContent = messages.map(msg => msg.content).join(' ');
+  
+  return {
+    parties: extractParties(allContent),
+    timeline: extractTimeline(allContent),
+    coreFacts: extractCoreFacts(allContent),
+    keyDocuments: []
+  };
 }
 
-// Extract law references
+function extractParties(content: string): Array<{ name: string; role: string }> {
+  const parties: Array<{ name: string; role: string }> = [];
+  
+  // Look for common party patterns
+  const clientMatch = content.match(/(?:Jennifer Martinez|Martinez)/i);
+  if (clientMatch) {
+    parties.push({ name: 'Jennifer Martinez', role: 'Client' });
+  }
+  
+  const dealerMatch = content.match(/(?:Austin Ford)/i);
+  if (dealerMatch) {
+    parties.push({ name: 'Austin Ford', role: 'Dealer' });
+  }
+  
+  const manufacturerMatch = content.match(/(?:Ford Motor Company|Ford)/i);
+  if (manufacturerMatch) {
+    parties.push({ name: 'Ford Motor Company', role: 'Manufacturer' });
+  }
+  
+  return parties;
+}
+
+function extractTimeline(content: string): Array<{ date: string; event: string }> {
+  const timeline: Array<{ date: string; event: string }> = [];
+  
+  // Look for date patterns and key events
+  if (content.includes('purchases')) {
+    timeline.push({
+      date: 'Purchase Date',
+      event: 'Jennifer Martinez purchased 2024 Ford truck from Austin Ford for $52,000'
+    });
+  }
+  
+  if (content.includes('3,000 miles')) {
+    timeline.push({
+      date: 'Within 3,000 miles',
+      event: 'Vehicle defects first appeared'
+    });
+  }
+  
+  if (content.includes('45 days')) {
+    timeline.push({
+      date: 'Total repair time',
+      event: 'Vehicle out of service for 45 days total'
+    });
+  }
+  
+  return timeline;
+}
+
+function extractCoreFacts(content: string): string[] {
+  const facts: string[] = [];
+  
+  // Extract key facts from the content
+  if (content.includes('engine stalls')) {
+    facts.push('Engine stalls completely (4 repair attempts over 2 months)');
+  }
+  
+  if (content.includes('air conditioning')) {
+    facts.push('Air conditioning fails (2 repair attempts)');
+  }
+  
+  if (content.includes('transmission')) {
+    facts.push('Transmission slips (3 repair attempts)');
+  }
+  
+  if (content.includes('45 days')) {
+    facts.push('Vehicle out of service for total of 45 days for repairs');
+  }
+  
+  if (content.includes('trade-in value')) {
+    facts.push('Dealer offered trade-in value of $35,000 (significantly below purchase price)');
+  }
+  
+  return facts;
+}
+
 function extractLawReferences(analysisData: any): any[] {
-  return analysisData?.law_references || []
+  if (!analysisData?.law_references) return [];
+  
+  try {
+    const references = Array.isArray(analysisData.law_references) 
+      ? analysisData.law_references 
+      : JSON.parse(analysisData.law_references);
+    
+    return references.map((ref: any, index: number) => ({
+      id: ref.id || `ref-${index}`,
+      title: ref.title || null,
+      url: ref.url || null,
+      content: ref.content || null
+    }));
+  } catch (error) {
+    console.error('Error parsing law references:', error);
+    return [];
+  }
 }

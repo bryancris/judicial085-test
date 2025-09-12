@@ -1,184 +1,240 @@
-import { PDFDocument, StandardFonts } from 'npm:pdf-lib';
-import type { CaseAnalysisData } from './types.ts';
-import {
-  initPdf,
-  drawTitle,
-  drawSectionTitle,
-  drawParagraph,
-  drawKeyValue,
+import { PDFDocument } from 'pdf-lib';
+import { CaseAnalysisData } from './types.ts';
+import { 
+  initPdf, 
+  drawTitle, 
+  drawStepHeader, 
+  drawSectionTitle, 
+  drawSubsectionTitle, 
+  drawKeyValue, 
+  drawParagraph, 
   drawBulletList,
+  drawChecklistItem,
+  drawPartyInfo,
+  drawTimelineEvent,
+  ensureSpace
 } from './pdfLayout.ts';
 
-// Modern 9-Step Case Analysis PDF Generator
 export async function generatePDF(data: CaseAnalysisData): Promise<Uint8Array> {
-  const { doc, ctx } = await initPdf();
-
-  // Header
-  drawTitle(ctx, 'Case Analysis Report');
-  const generatedOn = new Date().toLocaleString();
-  drawParagraph(ctx, `Generated on: ${generatedOn}`);
-
-  // Client Information
-  if (data.client) {
-    drawSectionTitle(ctx, 'Client Information');
-    drawKeyValue(ctx, 'Name', `${data.client.first_name ?? ''} ${data.client.last_name ?? ''}`.trim());
-    const contact = [data.client.email, data.client.phone].filter(Boolean).join(' | ');
-    drawKeyValue(ctx, 'Contact', contact || 'N/A');
-    const addressParts = [data.client.address, data.client.city, data.client.state, data.client.zip_code]
-      .filter(Boolean)
-      .join(', ');
-    if (addressParts) drawKeyValue(ctx, 'Address', addressParts);
+  console.log('📄 Starting PDF generation with 9-step structure');
+  
+  const { pdfDoc, ctx } = await initPdf();
+  
+  // Header with proper client name
+  const clientName = data.client ? `${data.client.first_name} ${data.client.last_name}` : 'Unknown Client';
+  drawTitle(ctx, `Case Analysis Report: ${clientName}`);
+  ctx.y -= 20;
+  
+  drawKeyValue(ctx, 'Generated:', new Date().toLocaleDateString());
+  drawKeyValue(ctx, 'Client:', clientName);
+  if (data.client?.email) {
+    drawKeyValue(ctx, 'Email:', data.client.email);
   }
-
-  // Case Information
-  if (data.case) {
-    drawSectionTitle(ctx, 'Case Details');
-    drawKeyValue(ctx, 'Case Title', data.case.case_title || data.case.title || 'N/A');
-    drawKeyValue(ctx, 'Case Number', data.case.case_number || 'N/A');
-    if (data.case.case_description) drawParagraph(ctx, `Description: ${data.case.case_description}`);
-    if (data.case.case_notes) drawParagraph(ctx, `Notes: ${data.case.case_notes}`);
+  if (data.client?.phone) {
+    drawKeyValue(ctx, 'Phone:', data.client.phone);
   }
-
-  // 9-Step Analysis Structure
-  drawTitle(ctx, 'Legal Analysis (9-Step Method)');
+  ctx.y -= 20;
 
   // Step 1: Case Summary (Organized Fact Pattern)
+  ensureSpace(ctx, 200);
   drawStepHeader(ctx, 1, 'Case Summary (Organized Fact Pattern)');
+  
+  if (data.conversationSummary) {
+    drawParagraph(ctx, data.conversationSummary);
+    ctx.y -= 10;
+  }
+  
   if (data.structuredCaseData) {
-    if (data.structuredCaseData.parties?.length) {
+    // Parties
+    if (data.structuredCaseData.parties && data.structuredCaseData.parties.length > 0) {
       drawSubsectionTitle(ctx, 'Parties');
-      const partyLines = data.structuredCaseData.parties.map(p => `${p.role}: ${p.name}`);
-      drawBulletList(ctx, partyLines);
+      data.structuredCaseData.parties.forEach(party => {
+        drawPartyInfo(ctx, party.name, party.role);
+      });
+      ctx.y -= 10;
     }
-    if (data.structuredCaseData.timeline?.length) {
+    
+    // Timeline
+    if (data.structuredCaseData.timeline && data.structuredCaseData.timeline.length > 0) {
       drawSubsectionTitle(ctx, 'Timeline');
-      const timelineLines = data.structuredCaseData.timeline.map(t => `${t.date}: ${t.event}`);
-      drawBulletList(ctx, timelineLines);
+      data.structuredCaseData.timeline.forEach(event => {
+        drawTimelineEvent(ctx, event.date, event.event);
+      });
+      ctx.y -= 10;
     }
-    if (data.structuredCaseData.coreFacts?.length) {
+    
+    // Core Facts
+    if (data.structuredCaseData.coreFacts && data.structuredCaseData.coreFacts.length > 0) {
       drawSubsectionTitle(ctx, 'Core Facts');
       drawBulletList(ctx, data.structuredCaseData.coreFacts);
+      ctx.y -= 10;
     }
-  } else if (data.conversationSummary) {
-    drawParagraph(ctx, data.conversationSummary);
   }
 
   // Step 2: Preliminary Analysis
+  ensureSpace(ctx, 200);
   drawStepHeader(ctx, 2, 'Preliminary Analysis (AI-assisted broad issue spotting)');
-  if (data.preliminaryAnalysis || data.parsedAnalysis?.preliminaryAnalysis) {
-    drawParagraph(ctx, data.preliminaryAnalysis || data.parsedAnalysis?.preliminaryAnalysis || '');
+  if (data.preliminaryAnalysis) {
+    drawParagraph(ctx, data.preliminaryAnalysis);
+  } else {
+    drawParagraph(ctx, 'No preliminary analysis available.');
   }
+  ctx.y -= 20;
 
   // Step 3: Relevant Texas Laws
+  ensureSpace(ctx, 200);
   drawStepHeader(ctx, 3, 'Relevant Texas Laws (Targeted legal research)');
-  if (data.relevantLaw || data.parsedAnalysis?.relevantLaw) {
-    drawParagraph(ctx, data.relevantLaw || data.parsedAnalysis?.relevantLaw || '');
+  if (data.relevantLaw) {
+    drawParagraph(ctx, data.relevantLaw);
+  } else {
+    drawParagraph(ctx, 'No relevant law analysis available.');
   }
+  ctx.y -= 20;
 
   // Step 4: Additional Case Law
+  ensureSpace(ctx, 200);
   drawStepHeader(ctx, 4, 'Additional Case Law (Precedent research)');
-  if (Array.isArray(data.additionalCaseLaw) && data.additionalCaseLaw.length > 0) {
-    const caseLines = data.additionalCaseLaw.map((c: any, idx: number) => {
-      const title = c.case_name || c.title || 'Untitled';
-      const citation = c.citation ? ` — ${c.citation}` : '';
-      const court = c.court || '';
-      return `${idx + 1}. ${title}${citation}${court ? ` (${court})` : ''}`;
+  
+  if (data.additionalCaseLaw && data.additionalCaseLaw.length > 0) {
+    data.additionalCaseLaw.forEach((caselaw, index) => {
+      ensureSpace(ctx, 100);
+      drawSubsectionTitle(ctx, `Case ${index + 1}: ${caselaw.case_name || 'Unnamed Case'}`);
+      
+      if (caselaw.citation) {
+        drawKeyValue(ctx, 'Citation:', caselaw.citation);
+      }
+      if (caselaw.court) {
+        drawKeyValue(ctx, 'Court:', caselaw.court);
+      }
+      if (caselaw.relevant_facts) {
+        drawKeyValue(ctx, 'Relevant Facts:', caselaw.relevant_facts);
+      }
+      if (caselaw.outcome) {
+        drawKeyValue(ctx, 'Outcome:', caselaw.outcome);
+      }
+      
+      ctx.y -= 15;
     });
-    drawBulletList(ctx, caseLines);
+  } else {
+    drawParagraph(ctx, 'No additional case law research available.');
   }
+  ctx.y -= 20;
 
   // Step 5: IRAC Legal Analysis
+  ensureSpace(ctx, 200);
   drawStepHeader(ctx, 5, 'IRAC Legal Analysis (Comprehensive deep analysis)');
-  if (data.iracAnalysis?.legalIssues?.length) {
-    data.iracAnalysis.legalIssues.forEach((issue, idx) => {
-      drawSubsectionTitle(ctx, `Issue ${idx + 1}: ${issue.category || 'Legal Issue'}`);
-      drawKeyValue(ctx, 'Issue Statement', issue.issueStatement);
-      drawKeyValue(ctx, 'Rule', issue.rule);
-      drawKeyValue(ctx, 'Application', issue.application);
-      drawKeyValue(ctx, 'Conclusion', issue.conclusion);
-      if (issue.strength) {
-        drawKeyValue(ctx, 'Strength Assessment', issue.strength.toUpperCase());
+  
+  if (data.iracAnalysis && data.iracAnalysis.legalIssues && data.iracAnalysis.legalIssues.length > 0) {
+    data.iracAnalysis.legalIssues.forEach((issue, index) => {
+      ensureSpace(ctx, 150);
+      drawParagraph(ctx, `Issue ${index + 1}: ${issue.issueStatement}`, { boldLabel: 'Issue:' });
+      if (issue.rule) {
+        drawParagraph(ctx, issue.rule, { boldLabel: 'Rule:' });
       }
+      if (issue.application) {
+        drawParagraph(ctx, issue.application, { boldLabel: 'Application:' });
+      }
+      if (issue.conclusion) {
+        drawParagraph(ctx, issue.conclusion, { boldLabel: 'Conclusion:' });
+      }
+      ctx.y -= 15;
     });
+  } else {
+    drawParagraph(ctx, 'No IRAC analysis available.');
   }
+  ctx.y -= 20;
 
   // Step 6: Case Strengths & Weaknesses
-  drawStepHeader(ctx, 6, 'Case Strengths & Weaknesses (Combined risk assessment)');
-  if (data.strengths?.length) {
+  ensureSpace(ctx, 200);
+  drawStepHeader(ctx, 6, 'Case Strengths & Weaknesses (Risk assessment)');
+  
+  if (data.strengths && data.strengths.length > 0) {
     drawSubsectionTitle(ctx, 'Strengths');
     drawBulletList(ctx, data.strengths);
+    ctx.y -= 10;
   }
-  if (data.weaknesses?.length) {
+  
+  if (data.weaknesses && data.weaknesses.length > 0) {
     drawSubsectionTitle(ctx, 'Weaknesses');
     drawBulletList(ctx, data.weaknesses);
+    ctx.y -= 10;
   }
+  
+  if ((!data.strengths || data.strengths.length === 0) && (!data.weaknesses || data.weaknesses.length === 0)) {
+    drawParagraph(ctx, 'No strengths and weaknesses analysis available.');
+  }
+  ctx.y -= 20;
 
   // Step 7: Legal Requirements Verification & Case Conclusion
+  ensureSpace(ctx, 300);
   drawStepHeader(ctx, 7, 'Legal Requirements Verification & Case Conclusion');
-  if (data.legalRequirementsChecklist?.length) {
-    data.legalRequirementsChecklist.forEach((req, idx) => {
-      drawSubsectionTitle(ctx, `${idx + 1}. ${req.requirement}`);
-      drawKeyValue(ctx, 'Law', req.law);
-      drawKeyValue(ctx, 'Citation', req.citation);
-      drawKeyValue(ctx, 'Client Facts', req.clientFacts);
-      const statusSymbol = req.status === 'meets' ? '✅' : req.status === 'does_not_meet' ? '❌' : '⚠️';
-      drawKeyValue(ctx, 'Status', `${statusSymbol} ${req.status.replace('_', ' ')}`);
-      if (req.analysis) drawKeyValue(ctx, 'Analysis', req.analysis);
+  
+  if (data.legalRequirementsChecklist && data.legalRequirementsChecklist.length > 0) {
+    drawSubsectionTitle(ctx, 'Legal Requirements Checklist');
+    
+    data.legalRequirementsChecklist.forEach((item, index) => {
+      ensureSpace(ctx, 120);
+      drawChecklistItem(ctx, {
+        requirement: item.requirement,
+        law: item.law,
+        citation: item.citation,
+        clientFacts: item.clientFacts,
+        status: item.status,
+        analysis: item.analysis
+      });
+      ctx.y -= 10;
     });
   }
+  
   if (data.caseConclusion) {
-    drawSubsectionTitle(ctx, 'CONCLUSION');
+    ensureSpace(ctx, 100);
+    drawSubsectionTitle(ctx, 'Case Conclusion');
     drawParagraph(ctx, data.caseConclusion);
   } else if (data.refinedAnalysis) {
+    ensureSpace(ctx, 100);
+    drawSubsectionTitle(ctx, 'Refined Analysis');
     drawParagraph(ctx, data.refinedAnalysis);
+  } else {
+    drawParagraph(ctx, 'No legal requirements verification available.');
   }
+  ctx.y -= 20;
 
   // Step 8: Recommended Follow-up Questions
+  ensureSpace(ctx, 200);
   drawStepHeader(ctx, 8, 'Recommended Follow-up Questions');
-  if (data.followUpQuestions?.length) {
+  
+  if (data.followUpQuestions && data.followUpQuestions.length > 0) {
     drawBulletList(ctx, data.followUpQuestions);
+  } else {
+    drawParagraph(ctx, 'No follow-up questions available.');
   }
+  ctx.y -= 20;
 
   // Step 9: Law References
-  drawStepHeader(ctx, 9, 'Relevant Texas Law References (Vectorized Legal Documents)');
-  if (Array.isArray(data.lawReferences) && data.lawReferences.length > 0) {
-    const refLines = data.lawReferences.map((r: any, idx: number) => {
-      const title = r.title || 'Legal Reference';
-      const url = r.url ? ` — ${r.url}` : '';
-      return `${idx + 1}. ${title}${url}`;
+  ensureSpace(ctx, 200);
+  drawStepHeader(ctx, 9, 'Law References (Vectorized Legal Documents)');
+  
+  if (data.lawReferences && data.lawReferences.length > 0) {
+    data.lawReferences.forEach((ref, index) => {
+      ensureSpace(ctx, 80);
+      drawSubsectionTitle(ctx, `Reference ${index + 1}`);
+      
+      if (ref.title) {
+        drawKeyValue(ctx, 'Title:', ref.title);
+      }
+      if (ref.url) {
+        drawKeyValue(ctx, 'URL:', ref.url);
+      }
+      if (ref.content) {
+        drawParagraph(ctx, ref.content.substring(0, 200) + (ref.content.length > 200 ? '...' : ''));
+      }
+      
+      ctx.y -= 15;
     });
-    drawBulletList(ctx, refLines);
+  } else {
+    drawParagraph(ctx, 'No law references available.');
   }
 
-  // Additional Supporting Information
-  if (Array.isArray(data.similarCases) && data.similarCases.length > 0) {
-    drawSectionTitle(ctx, 'Similar Cases (Reference)');
-    const lines = data.similarCases.map((c: any, idx: number) => {
-      const title = c.case_name || c.title || 'Untitled';
-      const citation = c.citation ? ` — ${c.citation}` : '';
-      const court = c.court_name || c.court || '';
-      return `${idx + 1}. ${title}${citation}${court ? ` (${court})` : ''}`;
-    });
-    drawBulletList(ctx, lines);
-  }
-
-  // Attorney Notes
-  if (Array.isArray(data.notes) && data.notes.length > 0) {
-    drawSectionTitle(ctx, 'Attorney Notes');
-    const lines = data.notes.map((n: any, i: number) => `${i + 1}. ${n.content ?? ''}`.trim()).filter(Boolean);
-    drawBulletList(ctx, lines);
-  }
-
-  // Documents
-  if (Array.isArray(data.documents) && data.documents.length > 0) {
-    drawSectionTitle(ctx, 'Case Documents');
-    const lines = data.documents.map((d: any) => `${d.title || 'Document'}${d.url ? ` — ${d.url}` : ''}`);
-    drawBulletList(ctx, lines);
-  }
-
-  // Footer note
-  drawParagraph(ctx, '— End of Report —');
-
-  const pdfBytes = await doc.save();
-  return pdfBytes;
+  console.log('✅ PDF generation completed');
+  return await pdfDoc.save();
 }
