@@ -1,7 +1,52 @@
 project_id = "ghpljdgecjmhkwkfctgy"
 
-[functions.generate-refined-analysis]
+[functions.ai-agent-coordinator]
+verify_jwt = false
+
+[functions.contextBuilders]
+verify_jwt = false
+
+[functions.create-user]
+verify_jwt = false
+
+[functions.generate-case-discussion-response]
+verify_jwt = false
+
+[functions.generate-chat-completion]
+verify_jwt = false
+
+[functions.generate-contract-review-response]
 verify_jwt = false
 
 [functions.generate-followup-questions]
+verify_jwt = false
+
+[functions.generate-legal-analysis]
+verify_jwt = false
+
+[functions.generate-refined-analysis]
+verify_jwt = false
+
+[functions.openai-legal-step-processor]
+verify_jwt = false
+
+[functions.process-pdf-document]
+verify_jwt = false
+
+[functions.quick-consult-ai]
+verify_jwt = false
+
+[functions.realtime-voice-chat]
+verify_jwt = false
+
+[functions.search-court-listener]
+verify_jwt = false
+
+[functions.search-google-scholar]
+verify_jwt = false
+
+[functions.search-similar-cases]
+verify_jwt = false
+
+[functions.validate-and-save-legal-analysis]
 verify_jwt = false

@@ -135,9 +135,9 @@ async function executeSequentialWorkflow(
   // Enhanced step execution with updated 9-step alignment
   const stepTypes = ['CASE_SUMMARY', 'PRELIMINARY_ANALYSIS', 'TEXAS_LAWS', 'CASE_LAW', 'IRAC_ANALYSIS', 'STRENGTHS_WEAKNESSES', 'REFINED_ANALYSIS', 'FOLLOW_UP', 'LAW_REFERENCES'];
   
-  // Step 1: CASE SUMMARY (Organized Fact Pattern)
-  console.log('📝 Step 1: CASE SUMMARY - Gemini organizing fact pattern...');
-  workflowState.stepResults.step1 = await executeStep1CaseSummary(workflowState, existingContext, geminiApiKey);
+  // Step 1: CASE SUMMARY (Organized Fact Pattern) - OpenAI
+  console.log('📝 Step 1: CASE SUMMARY - OpenAI organizing fact pattern...');
+  workflowState.stepResults.step1 = await executeStepWithOpenAI(1, 'CASE_SUMMARY', workflowState, existingContext, authHeader);
   workflowState.stepResults.step1.stepType = 'CASE_SUMMARY';
   const validation1 = await validateStepCompletion(1, workflowState.stepResults.step1, 'CASE_SUMMARY', { CASE_SUMMARY: workflowState.stepResults.step1 });
   if (!validation1.isValid) {
@@ -145,9 +145,9 @@ async function executeSequentialWorkflow(
   }
   workflowState.completedSteps.add(1);
 
-  // Step 2: PRELIMINARY ANALYSIS (AI-assisted broad issue spotting)
-  console.log('🔍 Step 2: PRELIMINARY ANALYSIS - Gemini coordinating with OpenAI...');
-  workflowState.stepResults.step2 = await executeStep2PreliminaryAnalysis(workflowState, authHeader, geminiApiKey);
+  // Step 2: PRELIMINARY ANALYSIS (AI-assisted broad issue spotting) - OpenAI
+  console.log('🔍 Step 2: PRELIMINARY ANALYSIS - OpenAI conducting issue spotting...');
+  workflowState.stepResults.step2 = await executeStepWithOpenAI(2, 'PRELIMINARY_ANALYSIS', workflowState, existingContext, authHeader);
   workflowState.stepResults.step2.stepType = 'PRELIMINARY_ANALYSIS';
   const validation2 = await validateStepCompletion(2, workflowState.stepResults.step2, 'PRELIMINARY_ANALYSIS', { 
     CASE_SUMMARY: workflowState.stepResults.step1, 
@@ -163,9 +163,9 @@ async function executeSequentialWorkflow(
   }
   workflowState.completedSteps.add(2);
 
-  // Step 3: RELEVANT TEXAS LAWS (Targeted legal research)
-  console.log('⚖️ Step 3: RELEVANT TEXAS LAWS - Perplexity researching statutes...');
-  workflowState.stepResults.step3 = await executeStep3TexasLaws(workflowState, authHeader, geminiApiKey);
+  // Step 3: RELEVANT TEXAS LAWS (Targeted legal research) - OpenAI + Perplexity
+  console.log('⚖️ Step 3: RELEVANT TEXAS LAWS - OpenAI formatting Perplexity research...');
+  workflowState.stepResults.step3 = await executeStepWithOpenAI(3, 'TEXAS_LAWS', workflowState, existingContext, authHeader);
   workflowState.stepResults.step3.stepType = 'TEXAS_LAWS';
   const validation3 = await validateStepCompletion(3, workflowState.stepResults.step3, 'TEXAS_LAWS', {
     CASE_SUMMARY: workflowState.stepResults.step1,
@@ -182,9 +182,9 @@ async function executeSequentialWorkflow(
   }
   workflowState.completedSteps.add(3);
 
-  // Step 4: ADDITIONAL CASE LAW (Precedent research)
-  console.log('📚 Step 4: ADDITIONAL CASE LAW - Perplexity researching precedents...');
-  workflowState.stepResults.step4 = await executeStep4CaseLaw(workflowState, authHeader, geminiApiKey);
+  // Step 4: ADDITIONAL CASE LAW (Precedent research) - OpenAI + Perplexity
+  console.log('📚 Step 4: ADDITIONAL CASE LAW - OpenAI formatting Perplexity research...');
+  workflowState.stepResults.step4 = await executeStepWithOpenAI(4, 'CASE_LAW', workflowState, existingContext, authHeader);
   workflowState.stepResults.step4.stepType = 'CASE_LAW';
   const validation4 = await validateStepCompletion(4, workflowState.stepResults.step4, 'CASE_LAW', {
     CASE_SUMMARY: workflowState.stepResults.step1,
@@ -197,9 +197,9 @@ async function executeSequentialWorkflow(
   }
   workflowState.completedSteps.add(4);
 
-  // Step 5: IRAC LEGAL ANALYSIS (Comprehensive deep analysis)
+  // Step 5: IRAC LEGAL ANALYSIS (Comprehensive deep analysis) - OpenAI
   console.log('🧮 Step 5: IRAC LEGAL ANALYSIS - OpenAI conducting systematic analysis...');
-  workflowState.stepResults.step5 = await executeStep5IracAnalysis(workflowState, authHeader, geminiApiKey);
+  workflowState.stepResults.step5 = await executeStepWithOpenAI(5, 'IRAC_ANALYSIS', workflowState, existingContext, authHeader);
   workflowState.stepResults.step5.stepType = 'IRAC_ANALYSIS';
   const validation5 = await validateStepCompletion(5, workflowState.stepResults.step5, 'IRAC_ANALYSIS', {
     CASE_SUMMARY: workflowState.stepResults.step1,
@@ -213,9 +213,9 @@ async function executeSequentialWorkflow(
   }
   workflowState.completedSteps.add(5);
 
-  // Step 6: CASE STRENGTHS & WEAKNESSES (Combined from old Steps 6+7)
-  console.log('⚡ Step 6: CASE STRENGTHS & WEAKNESSES - Combining risk assessment and strengths...');
-  workflowState.stepResults.step6 = await executeStep6StrengthsWeaknesses(workflowState, authHeader, geminiApiKey);
+  // Step 6: CASE STRENGTHS & WEAKNESSES (Combined from old Steps 6+7) - OpenAI
+  console.log('⚡ Step 6: CASE STRENGTHS & WEAKNESSES - OpenAI conducting risk assessment...');
+  workflowState.stepResults.step6 = await executeStepWithOpenAI(6, 'STRENGTHS_WEAKNESSES', workflowState, existingContext, authHeader);
   workflowState.stepResults.step6.stepType = 'STRENGTHS_WEAKNESSES';
   console.log(`📝 Step 6 generated content length: ${workflowState.stepResults.step6.content?.length || 0}`);
   const validation6 = await validateStepCompletion(6, workflowState.stepResults.step6, 'STRENGTHS_WEAKNESSES', {
@@ -288,9 +288,9 @@ async function executeSequentialWorkflow(
     console.warn('⚠️ Failed to eager-save Step 7 (non-blocking):', e);
   }
 
-  // Step 8: RECOMMENDED FOLLOW-UP QUESTIONS
-  console.log('❓ Step 8: FOLLOW-UP QUESTIONS - Gemini identifying information gaps...');
-  workflowState.stepResults.step8 = await executeStep8FollowUpQuestions(workflowState, geminiApiKey);
+  // Step 8: RECOMMENDED FOLLOW-UP QUESTIONS - OpenAI
+  console.log('❓ Step 8: FOLLOW-UP QUESTIONS - OpenAI identifying information gaps...');
+  workflowState.stepResults.step8 = await executeStepWithOpenAI(8, 'FOLLOW_UP', workflowState, existingContext, authHeader);
   workflowState.stepResults.step8.stepType = 'FOLLOW_UP';
   const validation8 = await validateStepCompletion(8, workflowState.stepResults.step8, 'FOLLOW_UP', {
     CASE_SUMMARY: workflowState.stepResults.step1,
@@ -307,9 +307,9 @@ async function executeSequentialWorkflow(
   }
   workflowState.completedSteps.add(8);
 
-  // Step 9: RELEVANT TEXAS LAW REFERENCES (Vectorized Legal Documents)
-  console.log('📚 Step 9: LAW REFERENCES - Retrieving vectorized legal documents...');
-  workflowState.stepResults.step9 = await executeStep9LawReferences(workflowState, geminiApiKey);
+  // Step 9: RELEVANT TEXAS LAW REFERENCES (Vectorized Legal Documents) - OpenAI
+  console.log('📚 Step 9: LAW REFERENCES - OpenAI compiling legal references...');
+  workflowState.stepResults.step9 = await executeStepWithOpenAI(9, 'LAW_REFERENCES', workflowState, existingContext, authHeader);
   workflowState.stepResults.step9.stepType = 'LAW_REFERENCES';
   const validation9 = await validateStepCompletion(9, workflowState.stepResults.step9, 'LAW_REFERENCES', {
     CASE_SUMMARY: workflowState.stepResults.step1,
@@ -350,6 +350,57 @@ async function executeSequentialWorkflow(
     overallQualityScore: averageScore,
     researchSources: extractResearchSources(workflowState)
   };
+}
+
+// New OpenAI step executor
+async function executeStepWithOpenAI(
+  stepNumber: number, 
+  stepType: string, 
+  workflowState: WorkflowState, 
+  existingContext: any, 
+  authHeader?: string | null
+): Promise<any> {
+  try {
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.38.0');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Supabase configuration missing for OpenAI step processor');
+    }
+    
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    console.log(`🤖 Calling OpenAI processor for Step ${stepNumber}: ${stepType}`);
+    
+    const response = await supabase.functions.invoke('openai-legal-step-processor', {
+      body: {
+        stepNumber,
+        stepType,
+        workflowState,
+        context: JSON.stringify(existingContext),
+        authHeader
+      },
+      headers: authHeader ? { Authorization: authHeader } : {}
+    });
+    
+    if (response.error) {
+      console.error(`OpenAI Step ${stepNumber} failed:`, response.error);
+      throw new Error(`OpenAI Step ${stepNumber} failed: ${response.error.message}`);
+    }
+    
+    if (!response.data?.success) {
+      console.error(`OpenAI Step ${stepNumber} unsuccessful:`, response.data);
+      throw new Error(`OpenAI Step ${stepNumber} unsuccessful`);
+    }
+    
+    console.log(`✅ OpenAI Step ${stepNumber} completed successfully`);
+    return response.data.result;
+    
+  } catch (error) {
+    console.error(`Error in OpenAI Step ${stepNumber}:`, error);
+    throw error;
+  }
 }
 
 // Step 1: CASE SUMMARY (Organized Fact Pattern)

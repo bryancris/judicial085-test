@@ -176,9 +176,64 @@ console.log("Fact sufficiency check:", {
   documentCount: 0 // Will be set later after document fetch
 });
 
-// 🛡️ Prevent recursion or force-skip for preliminary analysis
-const forceSkipForPreliminary = (stepType === 'preliminary-analysis');
-const skipCoordinator = forceSkipForPreliminary || payload?.skipCoordinator === true;
+    // 🛡️ Route preliminary analysis to OpenAI directly
+    const forceSkipForPreliminary = (stepType === 'preliminary-analysis');
+    const skipCoordinator = forceSkipForPreliminary || payload?.skipCoordinator === true;
+    
+    // For preliminary analysis, use OpenAI directly instead of Gemini
+    if (stepType === 'preliminary-analysis') {
+      console.log('🤖 Routing preliminary analysis to OpenAI processor...');
+      
+      try {
+        const openaiResponse = await supabase.functions.invoke('openai-legal-step-processor', {
+          body: {
+            stepNumber: 2,
+            stepType: 'PRELIMINARY_ANALYSIS',
+            workflowState: {
+              context: { query: conversationText, clientId, caseId },
+              stepResults: { step1: { content: conversationText } }
+            },
+            context: JSON.stringify({ documents: [], analysis: null }),
+            authHeader
+          },
+          headers: authHeader ? { Authorization: authHeader } : {}
+        });
+        
+        if (openaiResponse.data?.success) {
+          console.log('✅ OpenAI preliminary analysis successful');
+          const result = openaiResponse.data.result;
+          
+          const factSources = hasConversation
+            ? [{ type: 'conversation', source: 'Client intake and conversation' }]
+            : [];
+          
+          const citations = extractLegalCitations(result.content || '');
+          
+          return new Response(
+            JSON.stringify({
+              analysis: result.content,
+              lawReferences: [],
+              documentsUsed: [],
+              factSources,
+              citations,
+              caseType: detectCaseType(result.content || ''),
+              analysisSource: 'openai-preliminary',
+              metadata: {
+                provider: 'openai',
+                model: result.model,
+                stepType: 'preliminary-analysis',
+                factBasedAnalysis: true
+              }
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } else {
+          console.warn('⚠️ OpenAI preliminary analysis failed, falling back to Gemini');
+        }
+      } catch (openaiError: any) {
+        console.warn('⚠️ OpenAI preliminary analysis error, falling back to Gemini:', openaiError.message);
+      }
+    }
 
 if (!skipCoordinator) {
       console.log('🎯 Starting 3-agent coordination for client:', clientId);
