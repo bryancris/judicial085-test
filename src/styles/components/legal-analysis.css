@@ -255,58 +255,58 @@ html body div.legal-analysis-content strong[data-forced-size="true"] {
 
 /* Step 7 Compact Override - Override the large margins for tight spacing like Step 2 */
 .step7-compact {
-  line-height: 1.5;
-  color: hsl(var(--foreground));
-  overflow: visible;
-  max-width: none;
-  font-size: inherit;
-  contain: style;
+  line-height: 1.5 !important;
+  color: hsl(var(--foreground)) !important;
+  overflow: visible !important;
+  max-width: none !important;
+  font-size: inherit !important;
+  contain: style !important;
 }
 
 /* Compact headings with reduced margins */
 .step7-compact h2 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: hsl(var(--primary));
-  margin: 0.5rem 0 0.25rem 0;
+  font-size: 1.25rem !important;
+  font-weight: 600 !important;
+  color: hsl(var(--primary)) !important;
+  margin: 0.5rem 0 0.25rem 0 !important;
 }
 
 .step7-compact h3 {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: hsl(var(--primary));
-  margin: 0.5rem 0 0.25rem 0;
+  font-size: 1.125rem !important;
+  font-weight: 600 !important;
+  color: hsl(var(--primary)) !important;
+  margin: 0.5rem 0 0.25rem 0 !important;
 }
 
 .step7-compact h4 {
-  font-size: 1rem;
-  font-weight: 500;
-  color: hsl(var(--primary));
-  margin: 0.25rem 0;
+  font-size: 1rem !important;
+  font-weight: 500 !important;
+  color: hsl(var(--primary)) !important;
+  margin: 0.25rem 0 !important;
 }
 
 /* Compact paragraphs with minimal spacing */
 .step7-compact p {
-  font-size: 0.875rem;
-  line-height: 1.5;
-  color: hsl(var(--foreground));
-  margin: 0.25rem 0;
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
+  color: hsl(var(--foreground)) !important;
+  margin: 0.25rem 0 !important;
 }
 
 /* Compact lists */
 .step7-compact ul,
 .step7-compact ol {
-  margin: 0.25rem 0;
-  padding-left: 1rem;
+  margin: 0.25rem 0 !important;
+  padding-left: 1rem !important;
 }
 
 .step7-compact li {
-  margin: 0.125rem 0;
-  line-height: 1.4;
+  margin: 0.125rem 0 !important;
+  line-height: 1.4 !important;
 }
 
 /* Compact strong elements */
 .step7-compact strong {
-  font-weight: 600;
-  color: hsl(var(--foreground));
+  font-weight: 600 !important;
+  color: hsl(var(--foreground)) !important;
 }
