@@ -59,7 +59,7 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
       
       {/* Step 1: Case Summary (Organized Fact Pattern) */}
       <CaseSummarySection
-        caseSummary={analysisData.rawContent || analysisData.conversationSummary}
+        caseSummary={analysisData.conversationSummary}
         isLoading={isLoading}
         clientId={clientId}
       />

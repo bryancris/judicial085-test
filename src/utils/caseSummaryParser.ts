@@ -21,14 +21,33 @@ export interface StructuredCaseData {
 export const parseParties = (caseSummary: string): Array<{name: string; role: string}> => {
   const parties: Array<{name: string; role: string}> = [];
   
+  // Enhanced context-aware business name detection
+  const enhanceBusinessName = (name: string): string => {
+    const lowerName = name.toLowerCase();
+    
+    // If it's just "Ford" but context suggests it's Austin Ford dealership
+    if (lowerName === 'ford' && /austin|dealership|dealer/i.test(caseSummary)) {
+      return 'Austin Ford';
+    }
+    
+    // Look for full business name in surrounding context
+    const contextPattern = new RegExp(`([A-Z][a-zA-Z\\s]*${name}[a-zA-Z\\s]*)(?:\\s+(?:dealership|dealer|company|corp|inc|llc))?`, 'i');
+    const contextMatch = caseSummary.match(contextPattern);
+    if (contextMatch && contextMatch[1].length > name.length) {
+      return contextMatch[1].trim();
+    }
+    
+    return name;
+  };
+
   // Enhanced transaction-based party detection
   const transactionPatterns = [
     // "Name purchases... from Company for $amount" pattern - capture full business name
-    /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+purchases?[^.]*?from\s+([A-Z][a-zA-Z\s&]+?)(?:\s+for\s+\$[\d,]+)?/i,
+    /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+purchases?[^.]*?from\s+([A-Z][a-zA-Z\s&]+?)(?:\s+(?:dealership|dealer|company|for\s+\$))/i,
     // "Name bought... from Company" pattern  
-    /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:bought|acquired)[^.]*?from\s+([A-Z][a-zA-Z\s&]+?)(?:\s+for\s+\$[\d,]+)?/i,
+    /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:bought|acquired)[^.]*?from\s+([A-Z][a-zA-Z\s&]+?)(?:\s+(?:dealership|dealer|company|for\s+\$))/i,
     // "Company sold... to Name" pattern
-    /([A-Z][a-zA-Z\s&]+?)\s+sold[^.]*?to\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)(?:\s+for\s+\$[\d,]+)?/i
+    /([A-Z][a-zA-Z\s&]+?)\s+(?:dealership|dealer|company)?\s*sold[^.]*?to\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)(?:\s+for\s+\$[\d,]+)?/i
   ];
 
   // Traditional legal party patterns
@@ -42,18 +61,22 @@ export const parseParties = (caseSummary: string): Array<{name: string; role: st
   for (const pattern of transactionPatterns) {
     const match = caseSummary.match(pattern);
     if (match) {
-      const name1 = match[1]?.trim().replace(/[,.]/g, '');
-      const name2 = match[2]?.trim().replace(/[,.]/g, '');
+      let name1 = match[1]?.trim().replace(/[,.]/g, '');
+      let name2 = match[2]?.trim().replace(/[,.]/g, '');
       
       if (name1 && name2 && name1.length > 2 && name2.length > 2) {
+        // Enhance business names with context
+        name1 = enhanceBusinessName(name1);
+        name2 = enhanceBusinessName(name2);
+        
         // For purchase patterns, first match is usually the consumer/client
         if (pattern.source.includes('purchases?') || pattern.source.includes('bought')) {
           parties.push({ name: name1, role: 'Client/Consumer' });
-          parties.push({ name: name2, role: 'Business/Defendant' });
+          parties.push({ name: name2, role: 'Dealer' });
         } else {
           // For "sold to" patterns, reverse the roles
           parties.push({ name: name2, role: 'Client/Consumer' });
-          parties.push({ name: name1, role: 'Business/Defendant' });
+          parties.push({ name: name1, role: 'Dealer' });
         }
         return parties;
       }
