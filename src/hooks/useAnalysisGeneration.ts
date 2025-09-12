@@ -90,7 +90,7 @@ export const useAnalysisGeneration = (clientId?: string, caseId?: string) => {
         timestamp,
         {
           caseId,
-          analysisType: caseId ? "case-analysis" : "client-intake",
+          analysisType: "step-2-preliminary", // FIXED: Always use correct Step 2 analysis type
           lawReferences: result.lawReferences || [],
           documentsUsed: result.documentsUsed || [],
           factSources: result.factSources || [],

@@ -103,7 +103,7 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
           .eq("client_id", clientId)
           .eq("case_id", caseId)
           .in("validation_status", ["validated", "pending_review"]) 
-          .neq("analysis_type", "coordinator-research")
+          .in("analysis_type", ["step-2-preliminary", "preliminary-analysis"]) // ONLY fetch Step 2 analysis types
           .order("created_at", { ascending: false })
           .limit(1);
 
@@ -132,7 +132,7 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
           .eq("client_id", clientId)
           .is("case_id", null)
           .in("validation_status", ["validated", "pending_review"]) 
-          .neq("analysis_type", "coordinator-research")
+          .in("analysis_type", ["step-2-preliminary", "preliminary-analysis"]) // ONLY fetch Step 2 analysis types
           .order("created_at", { ascending: false })
           .limit(1);
 

@@ -15,32 +15,38 @@ export function parsePreliminaryAnalysis(analysisContent: string): PreliminaryAn
     };
   }
 
-  // 🚫 STRICT IRAC DETECTION AND BLOCKING FOR STEP 2
-  const upper = analysisContent.toUpperCase();
-  const iracPatterns = [
-    '**ISSUE',
-    '**RULE:',
-    '**APPLICATION:',
-    '**CONCLUSION:',
-    'IRAC LEGAL ANALYSIS',
-    '**ISSUE [',
-    'IRAC ANALYSIS'
+  // 🚫 ABSOLUTE ZERO-TOLERANCE IRAC DETECTION FOR STEP 2
+  const iracDetectionPatterns = [
+    /\*\*ISSUE\s*\[\d+\]\s*:\s*\*\*/i,
+    /\*\*ISSUE\s*\[.*?\]\s*:\s*\*\*/i,
+    /\*\*RULE\s*:\s*\*\*/i,
+    /\*\*APPLICATION\s*:\s*\*\*/i,
+    /\*\*CONCLUSION\s*:\s*\*\*/i,
+    /##\s*IRAC/i,
+    /IRAC\s+LEGAL\s+ANALYSIS/i,
+    /detailed\s+legal\s+analysis/i,
+    /ISSUE\s*\[\d+\]/i,
+    /statutory\s+analysis/i,
+    /case\s+law\s+analysis/i
   ];
   
-  const isIracFormat = iracPatterns.some(pattern => upper.includes(pattern));
-  
-  if (isIracFormat) {
-    console.error('🚫 IRAC format detected in Step 2 preliminary analysis - this should NOT happen!');
-    console.error('Content preview:', analysisContent.substring(0, 200));
-    
-    // Return error state instead of trying to parse IRAC for Step 2
-    return {
-      potentialLegalAreas: ["⚠️ Error: IRAC format detected in Step 2"],
-      preliminaryIssues: ["Step 2 should use preliminary analysis format, not IRAC"],
-      researchPriorities: ["Analysis needs to be regenerated with correct Step 2 format"],
-      strategicNotes: ["Contact support - Step 2 generated incorrect format"]
-    };
+  // Test each pattern individually for better error reporting
+  for (const pattern of iracDetectionPatterns) {
+    if (pattern.test(analysisContent)) {
+      console.error('🚨 STEP 2 IRAC VIOLATION - Pattern found:', pattern);
+      console.error('Analysis content preview:', analysisContent.substring(0, 500));
+      
+      // Return error state that will be displayed to user
+      return {
+        potentialLegalAreas: [`CRITICAL ERROR: Step 2 contains forbidden IRAC format`],
+        preliminaryIssues: [`Pattern found: ${pattern}`, 'Step 2 must use PRELIMINARY ANALYSIS format only'],
+        researchPriorities: ['Regenerate Step 2 analysis with correct format', 'Remove all IRAC headings and structure'],
+        strategicNotes: ['Step 2 validation failed - contains IRAC content', 'System will block any IRAC format in Step 2']
+      };
+    }
   }
+  
+  console.log('✅ Step 2 content passed IRAC validation check');
 
   const isTraditionalFormat = /\*\*PRELIMINARY ANALYSIS:|\*\*POTENTIAL LEGAL AREAS:/i.test(analysisContent);
 
