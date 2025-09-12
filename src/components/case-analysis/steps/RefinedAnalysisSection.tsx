@@ -78,8 +78,8 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
             Refined Analysis (Strategic Synthesis)
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="prose dark:prose-invert max-w-none text-sm" 
+        <CardContent className="space-y-3">
+          <div className="prose dark:prose-invert max-w-none legal-analysis-content" 
                dangerouslySetInnerHTML={{ __html: refinedAnalysisHtml }} />
           {onRegenerateStep7 && (
             <div className="pt-4 border-t border-border">
@@ -164,14 +164,14 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
           Refined Analysis (Comprehensive synthesis + Risk Assessment)
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4">
         {/* Executive Summary */}
         <div>
           <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
             <CheckCircle className="h-4 w-4" />
             Executive Summary
           </h4>
-          <div className="prose dark:prose-invert max-w-none text-sm" dangerouslySetInnerHTML={{ __html: refinedAnalysisHtml }} />
+          <div className="prose dark:prose-invert max-w-none legal-analysis-content" dangerouslySetInnerHTML={{ __html: refinedAnalysisHtml }} />
         </div>
 
         {/* Risk Assessment */}
