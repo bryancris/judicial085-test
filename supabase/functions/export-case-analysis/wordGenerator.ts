@@ -100,7 +100,7 @@ export async function generateWord(data: CaseAnalysisData): Promise<Uint8Array> 
 }
 
 function createWordDocumentContent(data: CaseAnalysisData, docxElements: any) {
-  const { Paragraph, TextRun, HeadingLevel } = docxElements
+  const { Paragraph, TextRun, HeadingLevel, AlignmentType } = docxElements
   
   const clientName = data.client ? `${data.client.first_name || ''} ${data.client.last_name || ''}`.trim() : 'Unknown Client'
   
