@@ -110,16 +110,47 @@ serve(async (req) => {
       console.warn("No base analysis found; proceeding with minimal context");
     }
 
-    // 2) Build prompt for Step 7 (freeform refined analysis)
+    // 2) Build prompt for Step 7 (Legal Requirements Verification & Case Conclusion)
     const contextText = baseAnalysis?.content ?? "";
-    const header = `You are a senior attorney. Produce Step 7: Refined Analysis (Comprehensive synthesis + Risk Assessment + Practical counsel) for client ${clientId}${caseId ? `, case ${caseId}` : ''}.`;
+    const header = `You are a senior attorney. Produce Step 7: Legal Requirements Verification & Case Conclusion for client ${clientId}${caseId ? `, case ${caseId}` : ''}.`;
 
     const defaultInstructions = `
-- Synthesize the fact pattern into the most salient legal issues.
-- Integrate relevant statutes and case law by name (no hallucinations; be conservative where unsure).
-- Provide a structured, practical strategy (1-2 pages) with:
-  1) Issues and likely outcomes, 2) Best arguments for both sides, 3) Key risks and risk ratings, 4) Next actions with timelines, 5) Client-facing plain-language counsel.
-- Keep it actionable, concise, and avoid speculation. Use bullet lists where helpful.
+Create a systematic legal requirements verification checklist that compares statutory/case law requirements against client facts. This should be a definitive, fact-based assessment that provides clear conclusions.
+
+REQUIRED FORMAT:
+
+# Legal Requirements Verification & Case Conclusion
+
+## [Case Type] Requirements vs. [Client Name]'s Case
+
+For each legal requirement, use this structure:
+
+### [Requirement Number]. [Requirement Name]
+
+**Law:** [Clear statement of the legal requirement]
+
+**Citation:** [Specific Texas statute/regulation/case citation]
+
+**[Client Name]:** [Client's specific facts] → ✅ Meets requirement / ❌ Does not meet / ⚠️ Needs more evidence
+
+**Analysis:** [Brief explanation of how facts align with law]
+
+---
+
+## CASE CONCLUSION
+
+**Overall Assessment:** [Clear statement of case viability]
+
+**Strength Rating:** Strong/Moderate/Weak with specific reasoning
+
+**Next Steps:** [Immediate actionable recommendations]
+
+FORMATTING REQUIREMENTS:
+- Use the exact format above with clear checkmarks (✅/❌/⚠️)
+- Include specific Texas statutory citations for each requirement
+- Provide factual, objective analysis without hedging language
+- End with definitive conclusion about case strength
+- Keep analysis concise but complete
 `;
 
     const prompt = `${header}\n\nContext:\n${contextText}\n\nInstructions:\n${instructions || defaultInstructions}`;

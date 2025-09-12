@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Brain, AlertTriangle, CheckCircle, Target } from "lucide-react";
+import { CheckCircle, AlertTriangle, Target } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { RefinedAnalysisData } from "@/utils/refinedAnalysisParser";
 import { Button } from "@/components/ui/button";
@@ -66,9 +66,9 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Brain className="h-5 w-5" />
+            <CheckCircle className="h-5 w-5" />
             <span className="text-muted-foreground">Step 7:</span>
-            Refined Analysis (Strategic Synthesis)
+            Legal Requirements Verification & Case Conclusion
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -108,9 +108,9 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Brain className="h-5 w-5" />
+            <CheckCircle className="h-5 w-5" />
             <span className="text-muted-foreground">Step 7:</span>
-            Refined Analysis (Strategic Synthesis)
+            Legal Requirements Verification & Case Conclusion
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -151,13 +151,13 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Brain className="h-5 w-5" />
-          <span className="text-muted-foreground">Step 7:</span>
-          Refined Analysis (Comprehensive synthesis + Risk Assessment)
-        </CardTitle>
-      </CardHeader>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CheckCircle className="h-5 w-5" />
+            <span className="text-muted-foreground">Step 7:</span>
+            Legal Requirements Verification & Case Conclusion
+          </CardTitle>
+        </CardHeader>
       <CardContent className="space-y-3">
         {/* Executive Summary */}
         <div>
