@@ -348,7 +348,7 @@ function createCaseSummarySection(data: CaseAnalysisData, docxElements: any) {
 }
 
 function createPreliminaryAnalysisSection(data: CaseAnalysisData, docxElements: any) {
-  const { Paragraph } = docxElements
+  const { Paragraph, TextRun } = docxElements
   
   if (data.parsedAnalysis?.preliminaryAnalysis) {
     return processAnalysisContent(data.parsedAnalysis.preliminaryAnalysis, docxElements)
@@ -367,6 +367,8 @@ function createPreliminaryAnalysisSection(data: CaseAnalysisData, docxElements: 
 }
 
 function createRelevantLawSection(data: CaseAnalysisData, docxElements: any) {
+  const { Paragraph, TextRun } = docxElements
+  
   if (data.parsedAnalysis?.relevantLaw) {
     return processAnalysisContent(data.parsedAnalysis.relevantLaw, docxElements)
   }
