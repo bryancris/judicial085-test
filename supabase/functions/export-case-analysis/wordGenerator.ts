@@ -530,7 +530,7 @@ function createStrengthsWeaknessesSection(data: CaseAnalysisData, docxElements: 
   const { Paragraph, TextRun, HeadingLevel } = docxElements
   const content = []
   
-  if (data.parsedAnalysis?.strengths && data.parsedAnalysis.strengths.length > 0) {
+  if (data.strengths && data.strengths.length > 0) {
     content.push(
       new Paragraph({
         text: "Case Strengths",
@@ -538,7 +538,7 @@ function createStrengthsWeaknessesSection(data: CaseAnalysisData, docxElements: 
         spacing: { before: 200 }
       })
     )
-    data.parsedAnalysis.strengths.forEach((strength: string) => {
+    data.strengths.forEach((strength: string) => {
       content.push(
         new Paragraph({
           children: [
@@ -552,7 +552,7 @@ function createStrengthsWeaknessesSection(data: CaseAnalysisData, docxElements: 
     })
   }
   
-  if (data.parsedAnalysis?.weaknesses && data.parsedAnalysis.weaknesses.length > 0) {
+  if (data.weaknesses && data.weaknesses.length > 0) {
     content.push(
       new Paragraph({
         text: "Case Weaknesses",
@@ -560,7 +560,7 @@ function createStrengthsWeaknessesSection(data: CaseAnalysisData, docxElements: 
         spacing: { before: 200 }
       })
     )
-    data.parsedAnalysis.weaknesses.forEach((weakness: string) => {
+    data.weaknesses.forEach((weakness: string) => {
       content.push(
         new Paragraph({
           children: [
@@ -645,14 +645,14 @@ function createLegalRequirementsSection(data: CaseAnalysisData, docxElements: an
   }
   
   // Case Conclusion
-  if (data.parsedAnalysis?.caseConclusion) {
+  if (data.caseConclusion) {
     content.push(
       new Paragraph({
         text: "Case Conclusion",
         heading: HeadingLevel.HEADING_2,
         spacing: { before: 300 }
       }),
-      ...processAnalysisContent(data.parsedAnalysis.caseConclusion, docxElements)
+      ...processAnalysisContent(data.caseConclusion, docxElements)
     )
   }
   
@@ -676,8 +676,8 @@ function createFollowUpQuestionsSection(data: CaseAnalysisData, docxElements: an
   const { Paragraph, TextRun } = docxElements
   const content = []
   
-  if (data.parsedAnalysis?.followUpQuestions && data.parsedAnalysis.followUpQuestions.length > 0) {
-    data.parsedAnalysis.followUpQuestions.forEach((question: string, index: number) => {
+  if (data.followUpQuestions && data.followUpQuestions.length > 0) {
+    data.followUpQuestions.forEach((question: string, index: number) => {
       content.push(
         new Paragraph({
           children: [
