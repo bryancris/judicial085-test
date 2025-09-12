@@ -231,9 +231,9 @@ async function executeSequentialWorkflow(
   }
   workflowState.completedSteps.add(6);
 
-  // Step 7: REFINED ANALYSIS (Requirements vs. Case Comparison)
-  console.log('🎯 Step 7: REFINED ANALYSIS - Gemini generating requirements comparison...');
-  workflowState.stepResults.step7 = await executeStep7RefinedAnalysis(workflowState, authHeader, geminiApiKey);
+  // Step 7: REFINED ANALYSIS (Requirements vs. Case Comparison) - OpenAI
+  console.log('🎯 Step 7: REFINED ANALYSIS - OpenAI generating requirements comparison...');
+  workflowState.stepResults.step7 = await executeStepWithOpenAI(7, 'REFINED_ANALYSIS', workflowState, existingContext, authHeader);
   workflowState.stepResults.step7.stepType = 'REFINED_ANALYSIS';
   const step7Len = workflowState.stepResults.step7.content?.length || 0;
   console.log(`📝 Step 7 generated content length: ${step7Len}`);
@@ -834,46 +834,7 @@ Organize the OpenAI analysis into the required format above.`;
   return await callGeminiOrchestrator(prompt, geminiApiKey, 'STRENGTHS_WEAKNESSES');
 }
 
-// Step 7: REFINED ANALYSIS (Requirements vs. Case Comparison)
-async function executeStep7RefinedAnalysis(workflowState: WorkflowState, authHeader: string | null, geminiApiKey: string) {
-  console.log('🎯 Step 7: Gemini generating requirements vs. case comparison...');
-  
-  const comprehensiveAnalysis = combineStepsForAnalysis(workflowState, [1, 2, 3, 4, 5, 6]);
-  
-  // Extract case type and client name from context
-  const caseType = workflowState.context.caseType || 'Legal';
-  const clientName = workflowState.context.clientName || 'Client';
-  
-  const prompt = `You are GEMINI, the final orchestrator. This is STEP 7: REFINED ANALYSIS - the most critical step.
-
-MISSION: Act as 3 seasoned attorneys providing their collective expertise. Synthesize all previous steps into practical, honest counsel. This is the "prize at the end of the tunnel" - the real analysis the client needs.
-
-COMPREHENSIVE FOUNDATION (Steps 1-6):
-${comprehensiveAnalysis}
-
-==== FREEFORM ANALYSIS DIRECTIVE ====
-
-You are now THREE experienced legal minds working together:
-
-1. **SENIOR PARTNER**: Provides strategic overview and risk assessment
-2. **SPECIALIST**: Applies deep domain expertise to the specific legal area  
-3. **TRIAL ATTORNEY**: Focuses on practical outcomes and court realities
-
-COLLABORATE to deliver comprehensive counsel on:
-- What this case is REALLY about (cut through the noise)
-- Honest assessment of strengths vs. weaknesses
-- Practical legal strategy recommendations
-- Risk factors and mitigation approaches
-- Settlement vs. litigation considerations
-- Client expectations management
-- Next steps and timeline
-
-USE NATURAL LEGAL WRITING - no rigid structures. Apply your collective judgment freely. Be direct, practical, and honest about the case realities.
-
-Format as natural legal counsel - like a memo from seasoned attorneys to their client. Include specific citations where relevant, but prioritize substance over form.`;
-
-  return await callGeminiOrchestrator(prompt, geminiApiKey, 'REFINED_ANALYSIS');
-}
+// Step 7: Now handled by OpenAI processor - removed Gemini function
 
 // Step 8: RECOMMENDED FOLLOW-UP QUESTIONS
 async function executeStep8FollowUpQuestions(workflowState: WorkflowState, geminiApiKey: string) {

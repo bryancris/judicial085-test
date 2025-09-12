@@ -50,6 +50,9 @@ serve(async (req) => {
       case 6:
         result = await executeStep6StrengthsWeaknesses(workflowState, context, openaiApiKey);
         break;
+      case 7:
+        result = await executeStep7RefinedAnalysis(workflowState, context, openaiApiKey);
+        break;
       case 8:
         result = await executeStep8FollowUpQuestions(workflowState, context, openaiApiKey);
         break;
@@ -220,7 +223,7 @@ REQUIRED OUTPUT FORMAT:
 
 Do NOT conduct detailed legal analysis or IRAC format analysis. Keep this at a preliminary, issue-spotting level.`;
 
-  return await callOpenAI(prompt, systemPrompt, 'gpt-4.1-2025-04-14');
+  return await callOpenAI(prompt, systemPrompt, 'gpt-5-mini-2025-08-07');
 }
 
 // Step 3: Texas Laws Research
@@ -429,6 +432,90 @@ REQUIRED OUTPUT FORMAT:
 - [Factors that favor settlement vs. litigation]
 
 Provide balanced, realistic assessment based on the legal analysis.`;
+
+  return await callOpenAI(prompt, systemPrompt, 'gpt-4.1-2025-04-14');
+}
+
+// Step 7: Refined Analysis - Requirements vs Case Comparison
+async function executeStep7RefinedAnalysis(workflowState: any, context: string, openaiApiKey: string) {
+  const systemPrompt = `You are a legal AI assistant specializing in refined case analysis and requirements comparison. Conduct a sophisticated analysis comparing legal requirements against case facts.
+
+CRITICAL: This is Step 7 of a 9-step workflow. Provide a refined analysis that synthesizes all previous steps into a comprehensive assessment.`;
+
+  const prompt = `STEP 7 TASK: Conduct refined analysis comparing legal requirements against case facts.
+
+CASE SUMMARY:
+${workflowState.stepResults?.step1?.content || 'No case summary available'}
+
+IRAC ANALYSIS:
+${workflowState.stepResults?.step5?.content || 'No IRAC analysis available'}
+
+STRENGTHS & WEAKNESSES:
+${workflowState.stepResults?.step6?.content || 'No strengths/weaknesses analysis available'}
+
+TEXAS LAWS:
+${workflowState.stepResults?.step3?.content || 'No Texas law research available'}
+
+CASE LAW:
+${workflowState.stepResults?.step4?.content || 'No case law research available'}
+
+REQUIRED OUTPUT FORMAT:
+# REFINED LEGAL ANALYSIS
+
+## Requirements Analysis
+### Legal Requirements Met
+- [Specific requirements that the case facts satisfy]
+
+### Legal Requirements Not Met
+- [Requirements that may not be satisfied and why]
+
+### Requirements Requiring Additional Evidence
+- [Requirements that need more factual development]
+
+## Comparative Analysis
+### Similar Successful Cases
+- [How this case compares to successful precedents]
+
+### Distinguishable Cases
+- [How this case differs from unsuccessful precedents]
+
+### Key Differentiating Factors
+- [What makes this case unique]
+
+## Strategic Assessment
+### Strongest Legal Arguments
+- [Most compelling legal theories to pursue]
+
+### Alternative Legal Theories
+- [Backup arguments if primary theories fail]
+
+### Procedural Considerations
+- [Timing, venue, and procedural strategy factors]
+
+## Outcome Probability Assessment
+### Most Likely Outcomes
+- [Realistic range of possible results]
+
+### Best Case Scenario
+- [Most favorable realistic outcome]
+
+### Worst Case Scenario
+- [Least favorable realistic outcome]
+
+### Factors That Will Determine Outcome
+- [Key variables that will influence the result]
+
+## Recommendations
+### Immediate Actions
+- [Steps to take right now]
+
+### Evidence Development Strategy
+- [How to strengthen the case]
+
+### Settlement vs. Litigation Analysis
+- [Strategic considerations for resolution approach]
+
+Provide comprehensive, sophisticated analysis that synthesizes all previous research and analysis.`;
 
   return await callOpenAI(prompt, systemPrompt, 'gpt-4.1-2025-04-14');
 }
