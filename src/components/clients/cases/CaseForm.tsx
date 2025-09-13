@@ -127,7 +127,11 @@ const CaseForm = ({
                 </FormControl>
                 <SelectContent>
                   {allOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
+                    <SelectItem 
+                      key={opt.value} 
+                      value={opt.value}
+                      className={opt.value === "personal_injury" ? "text-blue-600 hover:bg-blue-50 data-[state=checked]:bg-blue-100" : ""}
+                    >
                       {opt.label}
                     </SelectItem>
                   ))}
