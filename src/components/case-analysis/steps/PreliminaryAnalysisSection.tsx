@@ -20,12 +20,13 @@ const PreliminaryAnalysisSection: React.FC<PreliminaryAnalysisSectionProps> = ({
   
   const { processText, citationMatches, enhancedCitations, isLoading: citationLoading } = useCitationProcessor();
   
-  // Process all text content for citations when data changes
+  // Process only Potential Legal Areas text for citations
   useEffect(() => {
-    if (preliminaryAnalysis && preliminaryAnalysis.trim()) {
-      processText(preliminaryAnalysis);
+    if (parsedData.potentialLegalAreas.length > 0) {
+      const legalAreasText = parsedData.potentialLegalAreas.join(' ');
+      processText(legalAreasText);
     }
-  }, [preliminaryAnalysis, processText]);
+  }, [parsedData.potentialLegalAreas, processText]);
 
   if (isLoading) {
     return (
@@ -100,16 +101,11 @@ const PreliminaryAnalysisSection: React.FC<PreliminaryAnalysisSectionProps> = ({
           <h4 className="font-semibold text-sm">Preliminary Issues</h4>
           {parsedData.preliminaryIssues.length > 0 ? (
             <ul className="space-y-1 ml-4">
-              {parsedData.preliminaryIssues.map((issue, index) => (
-                <li key={index} className="text-sm text-foreground list-disc">
-                  <EnhancedText
-                    text={issue}
-                    citationMatches={citationMatches}
-                    enhancedCitations={enhancedCitations}
-                    className="text-sm text-foreground"
-                  />
-                </li>
-              ))}
+               {parsedData.preliminaryIssues.map((issue, index) => (
+                 <li key={index} className="text-sm text-foreground list-disc">
+                   {issue}
+                 </li>
+               ))}
             </ul>
           ) : (
             <p className="text-muted-foreground text-sm ml-4">No preliminary issues identified.</p>
@@ -121,16 +117,11 @@ const PreliminaryAnalysisSection: React.FC<PreliminaryAnalysisSectionProps> = ({
           <h4 className="font-semibold text-sm">Research Priorities</h4>
           {parsedData.researchPriorities.length > 0 ? (
             <ul className="space-y-1 ml-4">
-              {parsedData.researchPriorities.map((priority, index) => (
-                <li key={index} className="text-sm text-foreground list-disc">
-                  <EnhancedText
-                    text={priority}
-                    citationMatches={citationMatches}
-                    enhancedCitations={enhancedCitations}
-                    className="text-sm text-foreground"
-                  />
-                </li>
-              ))}
+               {parsedData.researchPriorities.map((priority, index) => (
+                 <li key={index} className="text-sm text-foreground list-disc">
+                   {priority}
+                 </li>
+               ))}
             </ul>
           ) : (
             <p className="text-muted-foreground text-sm ml-4">No research priorities identified.</p>
@@ -142,16 +133,11 @@ const PreliminaryAnalysisSection: React.FC<PreliminaryAnalysisSectionProps> = ({
           <h4 className="font-semibold text-sm">Strategic Notes</h4>
           {parsedData.strategicNotes.length > 0 ? (
             <ul className="space-y-1 ml-4">
-              {parsedData.strategicNotes.map((note, index) => (
-                <li key={index} className="text-sm text-foreground list-disc">
-                  <EnhancedText
-                    text={note}
-                    citationMatches={citationMatches}
-                    enhancedCitations={enhancedCitations}
-                    className="text-sm text-foreground"
-                  />
-                </li>
-              ))}
+               {parsedData.strategicNotes.map((note, index) => (
+                 <li key={index} className="text-sm text-foreground list-disc">
+                   {note}
+                 </li>
+               ))}
             </ul>
           ) : (
             <p className="text-muted-foreground text-sm ml-4">No strategic notes available.</p>
