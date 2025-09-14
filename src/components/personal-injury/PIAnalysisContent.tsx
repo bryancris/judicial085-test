@@ -4,6 +4,7 @@ import PIIncidentOverview from "./PIIncidentOverview";
 import PIMedicalStatus from "./PIMedicalStatus";
 import PIFunctionalImpact from "./PIFunctionalImpact";
 import PIFinancialImpact from "./PIFinancialImpact";
+import PITimeline from "./PITimeline";
 import { getMockPIData } from "@/services/personalInjuryMockData";
 import { CaseStrengthMetrics } from "@/services/personalInjury/caseStrengthAnalyzer";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -34,7 +35,8 @@ const PIAnalysisContent: React.FC<PIAnalysisContentProps> = ({
     hasDocuments, 
     hasAnalysisData,
     metrics: loadedMetrics,
-    analysisData
+    analysisData,
+    timelineEvents
   } = useCaseStrengthAnalysis(clientId);
 
   // Use loaded metrics if available, otherwise fall back to prop metrics
@@ -153,6 +155,11 @@ const PIAnalysisContent: React.FC<PIAnalysisContentProps> = ({
         <PIMedicalStatus medical={analysisData.medical || piData.medical} />
         <PIFunctionalImpact functional={analysisData.functional || piData.functional} />
         <PIFinancialImpact financial={analysisData.financial || piData.financial} />
+      </div>
+
+      {/* Timeline Section */}
+      <div className="mt-6">
+        <PITimeline events={timelineEvents} />
       </div>
 
       {currentMetrics && (

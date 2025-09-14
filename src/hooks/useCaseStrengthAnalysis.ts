@@ -22,6 +22,7 @@ export const useCaseStrengthAnalysis = (clientId?: string) => {
     functional: null,
     financial: null,
   });
+  const [timelineEvents, setTimelineEvents] = useState<any[]>([]);
   const { toast } = useToast();
 
   const analyzer = new CaseStrengthAnalyzer();
@@ -194,6 +195,9 @@ export const useCaseStrengthAnalysis = (clientId?: string) => {
         setMetrics(transformedMetrics);
       }
 
+      // Set timeline events
+      setTimelineEvents(timelineResult.data || []);
+
       // Transform analysis data
       const transformedAnalysisData = {
         incident: transformTimelineToIncident(timelineResult.data || []),
@@ -321,6 +325,7 @@ export const useCaseStrengthAnalysis = (clientId?: string) => {
     hasDocuments,
     hasAnalysisData,
     analysisData,
+    timelineEvents,
     // Computed values for easy access
     caseStrength: metrics?.overallStrength ?? 0,
     settlementRange: metrics ? `$${metrics.settlementRangeLow.toLocaleString()} - $${metrics.settlementRangeHigh.toLocaleString()}` : null,
