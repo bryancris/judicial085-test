@@ -1900,6 +1900,13 @@ export type Database = {
         Args: { client_id_param: string }
         Returns: undefined
       }
+      extract_timeline_events_from_medical_analyses: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          client_uuid: string
+          extracted_count: number
+        }[]
+      }
       find_similar_research: {
         Args: {
           client_id_param: string
