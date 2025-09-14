@@ -206,6 +206,26 @@ ${text.substring(0, 2000)}`
   }
 }
 
+function mapDocumentType(openAIType: string): string {
+  if (!openAIType) return 'medical_record';
+  
+  const type = openAIType.toLowerCase();
+  
+  // Map descriptive types to allowed constraint values
+  if (type.includes('diagnostic') || type.includes('diagnosis') || type.includes('report') || type.includes('tbi')) {
+    return 'diagnostic_report';
+  }
+  if (type.includes('imaging') || type.includes('xray') || type.includes('mri') || type.includes('ct scan')) {
+    return 'imaging_result';
+  }
+  if (type.includes('treatment') || type.includes('therapy') || type.includes('chiropractic') || type.includes('notes')) {
+    return 'treatment_note';
+  }
+  
+  // Default fallback
+  return 'medical_record';
+}
+
 async function analyzeMedicalDocument(supabase: any, clientId: string, documentId: string, text: string, apiKey: string) {
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -252,24 +272,31 @@ ${text.substring(0, 3000)}`
 
     try {
       const extractedData = parseJSONResponse(data.choices[0].message.content);
+      const mappedDocumentType = mapDocumentType(extractedData.document_type);
 
-    const { error } = await supabase
-      .from('medical_document_analyses')
-      .insert({
-        client_id: clientId,
-        document_id: documentId,
-        document_type: extractedData.document_type || 'medical_record',
-        extracted_data: extractedData,
-        authenticity_score: 0.85, // Default high score for processed documents
-        timeline_events: extractedData.dates?.map((date: string, index: number) => ({
-          date,
-          event_type: 'treatment',
-          description: extractedData.treatments?.[index] || 'Medical treatment'
-        })) || []
-      });
+      console.log(`🔄 Mapping document type: "${extractedData.document_type}" → "${mappedDocumentType}"`);
+
+      const { error } = await supabase
+        .from('medical_document_analyses')
+        .insert({
+          client_id: clientId,
+          document_id: documentId,
+          document_type: mappedDocumentType,
+          extracted_data: extractedData,
+          authenticity_score: 0.85, // Default high score for processed documents
+          timeline_events: extractedData.dates?.map((date: string, index: number) => ({
+            date,
+            event_type: 'treatment',
+            description: extractedData.treatments?.[index] || 'Medical treatment'
+          })) || []
+        });
 
       if (error) {
-        console.error('Error saving medical analysis:', error);
+        console.error('❌ Error saving medical analysis:', error);
+        console.error('Failed document type:', mappedDocumentType);
+        console.error('Original document type:', extractedData.document_type);
+      } else {
+        console.log('✅ Successfully saved medical analysis for document:', documentId);
       }
     } catch (parseError) {
       console.error('Error parsing medical analysis response:', parseError);
