@@ -32,33 +32,27 @@ const CASE_CITATION_PATTERNS = [
 ];
 
 /**
- * Texas statute citation patterns
+ * Texas statute citation patterns - Ordered by specificity (most specific first)
  */
 const STATUTE_CITATION_PATTERNS = [
-  // Natural language patterns for common legal references
-  /Texas\s+Lemon\s+Law\s*\([^)]*Chapter\s+573[^)]*\)/gi,
-  /Magnuson-?Moss\s+Warranty\s+Act/gi,
-  /Deceptive\s+Trade\s+Practices\s+Act\s*\(DTPA\)/gi,
-  /(?:DTPA|Deceptive\s+Trade\s+Practices\s+Act)/gi,
-  /Implied\s+Warranties?\s*\([^)]*Texas\s+Business[^)]*\)/gi,
-  /Express\s+Warranties?\s*\([^)]*Texas\s+Business[^)]*\)/gi,
-  /Breach\s+of\s+Warranty\s*\([^)]*\)/gi,
-  /Texas\s+Motor\s+Vehicle\s+Commission\s+Code/gi,
+  // Complete legal concepts with full context (highest priority)
+  /Texas\s+Lemon\s+Law\s*\([^)]*Chapter\s+573[^)]*Texas\s+Business[^)]*\)/gi,
+  /Implied\s+Warranties?\s*\([^)]*Texas\s+Business\s+(?:&|and)\s+Commerce\s+Code[^)]*\)/gi,
+  /Express\s+Warranties?\s*\([^)]*Texas\s+Business\s+(?:&|and)\s+Commerce\s+Code[^)]*\)/gi,
+  /Breach\s+of\s+Warranty\s*\([^)]*Texas\s+Business[^)]*\)/gi,
+  /Deceptive\s+Trade\s+Practices\s+Act\s*\([^)]*DTPA[^)]*\)/gi,
   
-  // Texas codes: "Tex. Occ. Code § 2301.003", "Texas Occupations Code Section 2301.003"
-  /\b(?:Tex\.|Texas)\s+(?:Occ\.|Occupations?)\s+Code\s+(?:§|[Ss]ec(?:tion)?\.?)\s*\d+\.\d+(?:\.\d+)?(?:\([a-z]\)(?:\(\d+\))?)?/gi,
+  // Texas codes with sections (medium priority)
   /\b(?:Tex\.|Texas)\s+(?:Bus\.|Business)\s+(?:&|and)\s+(?:Com\.|Commerce)\s+Code\s+(?:§|[Ss]ec(?:tion)?\.?)\s*\d+\.\d+(?:\.\d+)?(?:\([a-z]\)(?:\(\d+\))?)?/gi,
+  /\b(?:Tex\.|Texas)\s+(?:Occ\.|Occupations?)\s+Code\s+(?:§|[Ss]ec(?:tion)?\.?)\s*\d+\.\d+(?:\.\d+)?(?:\([a-z]\)(?:\(\d+\))?)?/gi,
   /\b(?:Tex\.|Texas)\s+(?:Civ\.|Civil)\s+(?:Prac\.|Practice)\s+(?:&|and)\s+(?:Rem\.|Remedies)\s+Code\s+(?:§|[Ss]ec(?:tion)?\.?)\s*\d+\.\d+(?:\.\d+)?(?:\([a-z]\)(?:\(\d+\))?)?/gi,
-  /\b(?:Tex\.|Texas)\s+(?:Gov't|Government)\s+Code\s+(?:§|[Ss]ec(?:tion)?\.?)\s*\d+\.\d+(?:\.\d+)?(?:\([a-z]\)(?:\(\d+\))?)?/gi,
-  /\b(?:Tex\.|Texas)\s+(?:Penal|Pen\.)\s+Code\s+(?:§|[Ss]ec(?:tion)?\.?)\s*\d+\.\d+(?:\.\d+)?(?:\([a-z]\)(?:\(\d+\))?)?/gi,
   
-  // Chapter references: "Chapter 573", "(Chapter 573, Texas Business & Commerce Code)"
-  /\(Chapter\s+\d+[^)]*Texas\s+Business[^)]*\)/gi,
-  /\(Chapter\s+\d+[^)]*\)/gi,
-  /Chapter\s+\d+\s+of\s+(?:the\s+)?Texas\s+(?:Business|Occupations|Civil)/gi,
-  
-  // Short form: "§ 17.50", "Section 2301.003"
-  /\b(?:§|[Ss]ec(?:tion)?\.?)\s*\d{1,4}\.\d{1,4}(?:\.\d+)?(?:\([a-z]\)(?:\(\d+\))?)?/g,
+  // General legal references (lower priority)
+  /Texas\s+Lemon\s+Law/gi,
+  /Magnuson-?Moss\s+Warranty\s+Act/gi,
+  /Deceptive\s+Trade\s+Practices\s+Act|DTPA(?!\s*\()/gi,
+  /Texas\s+Motor\s+Vehicle\s+Commission\s+Code/gi,
+  /Texas\s+Business\s+(?:&|and)\s+Commerce\s+Code/gi,
 ];
 
 /**
@@ -97,36 +91,39 @@ export const extractCitations = (text: string): CitationMatch[] => {
     }
   });
   
-  // Remove duplicates and overlapping matches
+  // Remove duplicates and overlapping matches using greedy longest match
   return citations
-    .filter((citation, index, array) => {
-      // Remove duplicates
-      const isDuplicate = array.findIndex(c => c.citation === citation.citation) !== index;
+    .sort((a, b) => {
+      // Sort by start index first, then by length (longest first)
+      if (a.startIndex !== b.startIndex) {
+        return a.startIndex - b.startIndex;
+      }
+      return b.citation.length - a.citation.length;
+    })
+    .filter((citation, index, sortedArray) => {
+      // Skip duplicates
+      const isDuplicate = sortedArray.findIndex(c => c.citation === citation.citation) !== index;
       if (isDuplicate) return false;
       
-      // Remove overlapping matches (keep the longer one)
-      const hasOverlap = array.some((other, otherIndex) => {
+      // Check for overlaps with any other citation
+      const hasOverlap = sortedArray.some((other, otherIndex) => {
         if (index === otherIndex) return false;
-        return (
-          (citation.startIndex >= other.startIndex && citation.startIndex < other.endIndex) ||
-          (citation.endIndex > other.startIndex && citation.endIndex <= other.endIndex)
-        );
+        
+        // Check if citations overlap
+        const overlap = !(citation.endIndex <= other.startIndex || citation.startIndex >= other.endIndex);
+        
+        if (overlap) {
+          // Keep the longer citation, or if same length, keep the first one
+          if (citation.citation.length !== other.citation.length) {
+            return citation.citation.length < other.citation.length;
+          }
+          return index > otherIndex;
+        }
+        
+        return false;
       });
       
-      if (hasOverlap) {
-        const overlapping = array.filter((other, otherIndex) => {
-          if (index === otherIndex) return false;
-          return (
-            (citation.startIndex >= other.startIndex && citation.startIndex < other.endIndex) ||
-            (citation.endIndex > other.startIndex && citation.endIndex <= other.endIndex)
-          );
-        });
-        
-        // Keep the longest citation
-        return overlapping.every(other => citation.citation.length >= other.citation.length);
-      }
-      
-      return true;
+      return !hasOverlap;
     })
     .sort((a, b) => a.startIndex - b.startIndex);
 };

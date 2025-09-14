@@ -3,56 +3,32 @@
  * Common Texas law citation patterns used for detecting legal references in text
  */
 
-// Common Texas law citation patterns
+// Common Texas law citation patterns - Ordered by specificity (most specific first)
 export const CITATION_PATTERNS = [
-  // Natural language patterns for common legal references (prioritize these)
-  /Texas\s+Lemon\s+Law\s*\([^)]*Chapter\s+573[^)]*\)/gi,
-  /Magnuson-?Moss\s+Warranty\s+Act\s*\([^)]*Federal[^)]*\)?/gi,
-  /Deceptive\s+Trade\s+Practices\s+Act\s*\(DTPA\)/gi,
-  /(?:DTPA|Deceptive\s+Trade\s+Practices\s+Act)(?!\s*\()/gi,
-  /Implied\s+Warranties?\s*\([^)]*Texas\s+Business[^)]*\)/gi,
-  /Express\s+Warranties?\s*\([^)]*Texas\s+Business[^)]*\)/gi,
-  /Breach\s+of\s+Warranty\s*\([^)]*\)/gi,
-  /Texas\s+Motor\s+Vehicle\s+Commission\s+Code/gi,
+  // Complete legal concepts with full context (highest priority)
+  /Texas\s+Lemon\s+Law\s*\([^)]*Chapter\s+573[^)]*Texas\s+Business[^)]*\)/gi,
+  /Implied\s+Warranties?\s*\([^)]*Texas\s+Business\s+(?:&|and)\s+Commerce\s+Code[^)]*\)/gi,
+  /Express\s+Warranties?\s*\([^)]*Texas\s+Business\s+(?:&|and)\s+Commerce\s+Code[^)]*\)/gi,
+  /Breach\s+of\s+Warranty\s*\([^)]*Texas\s+Business[^)]*\)/gi,
+  /Deceptive\s+Trade\s+Practices\s+Act\s*\([^)]*DTPA[^)]*\)/gi,
   
-  // Chapter references in parentheses
-  /\(Chapter\s+\d+[^)]*Texas\s+Business[^)]*\)/gi,
-  /\(Chapter\s+\d+[^)]*Texas\s+Occupations[^)]*\)/gi,
-  /Chapter\s+\d+\s+of\s+(?:the\s+)?Texas\s+(?:Business|Occupations|Civil)/gi,
-  
-  // Texas Business & Commerce Code (DTPA) sections - prioritize full format
+  // Texas codes with sections (medium priority)
   /Texas\s+Business\s+(?:and|&)\s+Commerce\s+Code\s+(?:Section|§)\s+(\d+\.\d+)/gi,
-  // DTPA Section references with full context
-  /(?:DTPA\s+)?(?:Section|§)\s+(17\.\d+)/gi,
-  // Texas Civil Practice and Remedies Code § 75.001
   /Texas\s+Civil\s+Practice\s+and\s+Remedies\s+Code\s+§\s+(\d+\.\d+)/gi,
-  // Section with full number (prevent partial matching)
-  /Section\s+(\d+\.\d+)(?!\d)/gi,
-  // § with full number (prevent partial matching)
-  /§\s+(\d+\.\d+)(?!\d)/gi,
-  // Texas Civil Practice & Remedies Code
+  
+  // General legal references (lower priority)
+  /Texas\s+Lemon\s+Law/gi,
+  /Magnuson-?Moss\s+Warranty\s+Act/gi,
+  /Deceptive\s+Trade\s+Practices\s+Act|DTPA(?!\s*\()/gi,
+  /Texas\s+Motor\s+Vehicle\s+Commission\s+Code/gi,
+  /Texas\s+Business\s+(?:&|and)\s+Commerce\s+Code/gi,
   /Texas\s+Civil\s+Practice\s+(?:and|&)\s+Remedies\s+Code/gi,
-  // Texas Business & Commerce Code
-  /Texas\s+Business\s+(?:and|&)\s+Commerce\s+Code/gi,
-  // Texas Penal Code Section 123
-  /Texas\s+([A-Za-z]+)\s+Code\s+(?:Section|§)\s+(\d+)/gi,
-  // Case law citations like *Wal-Mart Stores, Inc. v. Gonzalez*
-  /\*([^*]+v\.\s+[^*]+)\*/gi,
-  // Wal-Mart Stores, Inc. v. Wright (without asterisks)
+  
+  // Case law citations (specific cases first)
   /Wal-Mart\s+Stores,\s+Inc\.\s+v\.\s+Wright/gi,
-  // Wal-Mart Stores, Inc. v. Gonzalez (without asterisks)
   /Wal-Mart\s+Stores,\s+Inc\.\s+v\.\s+Gonzalez/gi,
-  // Citations with § symbol followed by numbers (like § 101.021)
-  /§\s+\d+\.\d+/gi,
-  // Case law citations: "Plaintiff v. Defendant" 
-  /\b([A-Z][a-zA-Z\s&,.''-]+)\s+v\.\s+([A-Z][a-zA-Z\s&,.''-]+)\b/g,
-  // Case citations with full reference: "Case v. Case, 123 F.3d 456 (5th Cir. 2000)"
-  /\b([A-Z][a-zA-Z\s&,.''-]+)\s+v\.\s+([A-Z][a-zA-Z\s&,.''-]+),?\s*\d+\s+[A-Za-z\.]+\d*\s+\d+\s*\([^)]+\)/g,
-  // Citation only: "123 S.W.2d 456 (Tex. 1985)"
-  /\b\d+\s+[A-Za-z\.]+\d*\s+\d+\s*\([^)]+\)/g,
-  // Specific Texas Supreme Court citations
-  /Logan\s+v\.\s+Mullis/gi,
-  /Fless\s+v\.\s+Fless/gi,
+  /\*([^*]+v\.\s+[^*]+)\*/gi, // Case citations in asterisks
+  /\b([A-Z][a-zA-Z\s&,.''-]+)\s+v\.\s+([A-Z][a-zA-Z\s&,.''-]+),?\s*\d+\s+[A-Za-z\.]+\d*\s+\d+\s*\([^)]+\)/g, // Full case citations
 ];
 
 // A mapping of known case citations to their direct URLs
