@@ -18,6 +18,7 @@ import CaseAnalysisLoadingSkeleton from "@/components/case-analysis/CaseAnalysis
 import CaseAnalysisErrorState from "@/components/case-analysis/CaseAnalysisErrorState";
 import CaseAnalysisHeader from "@/components/case-analysis/CaseAnalysisHeader";
 import TabsContainer from "@/components/case-analysis/tabs/TabsContainer";
+import PIAnalysisContent from "@/components/personal-injury/PIAnalysisContent";
 import { supabase } from "@/integrations/supabase/client";
 
 
@@ -177,6 +178,18 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
       case "case-analysis":
         console.log("✅ Entering case-analysis case");
         
+        // Check if this is a Personal Injury case
+        if (currentCase?.case_type === "Personal Injury") {
+          console.log("🏥 Rendering Personal Injury module");
+          return (
+            <PIAnalysisContent 
+              clientId={client.id}
+              caseId={currentCase?.id}
+            />
+          );
+        }
+        
+        // Default analysis flow for other case types
         if (isAnalysisLoading) {
           console.log("📊 Showing loading skeleton");
           return <CaseAnalysisLoadingSkeleton />;
