@@ -1,7 +1,9 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Search, AlertTriangle, Target, StickyNote } from "lucide-react";
 import { parsePreliminaryAnalysis, PreliminaryAnalysisData } from "@/utils/preliminaryAnalysisParser";
+import { useCitationProcessor } from "@/hooks/useCitationProcessor";
+import { EnhancedText } from "@/components/ui/EnhancedText";
 
 interface PreliminaryAnalysisSectionProps {
   preliminaryAnalysis: string;
@@ -15,6 +17,15 @@ const PreliminaryAnalysisSection: React.FC<PreliminaryAnalysisSectionProps> = ({
   const parsedData = useMemo(() => {
     return parsePreliminaryAnalysis(preliminaryAnalysis || "");
   }, [preliminaryAnalysis]);
+  
+  const { processText, citationMatches, enhancedCitations, isLoading: citationLoading } = useCitationProcessor();
+  
+  // Process all text content for citations when data changes
+  useEffect(() => {
+    if (preliminaryAnalysis && preliminaryAnalysis.trim()) {
+      processText(preliminaryAnalysis);
+    }
+  }, [preliminaryAnalysis, processText]);
 
   if (isLoading) {
     return (
@@ -70,7 +81,12 @@ const PreliminaryAnalysisSection: React.FC<PreliminaryAnalysisSectionProps> = ({
             <ul className="space-y-1 ml-4">
               {parsedData.potentialLegalAreas.map((area, index) => (
                 <li key={index} className="text-sm text-foreground list-disc">
-                  {area}
+                  <EnhancedText
+                    text={area}
+                    citationMatches={citationMatches}
+                    enhancedCitations={enhancedCitations}
+                    className="text-sm text-foreground"
+                  />
                 </li>
               ))}
             </ul>
@@ -86,7 +102,12 @@ const PreliminaryAnalysisSection: React.FC<PreliminaryAnalysisSectionProps> = ({
             <ul className="space-y-1 ml-4">
               {parsedData.preliminaryIssues.map((issue, index) => (
                 <li key={index} className="text-sm text-foreground list-disc">
-                  {issue}
+                  <EnhancedText
+                    text={issue}
+                    citationMatches={citationMatches}
+                    enhancedCitations={enhancedCitations}
+                    className="text-sm text-foreground"
+                  />
                 </li>
               ))}
             </ul>
@@ -102,7 +123,12 @@ const PreliminaryAnalysisSection: React.FC<PreliminaryAnalysisSectionProps> = ({
             <ul className="space-y-1 ml-4">
               {parsedData.researchPriorities.map((priority, index) => (
                 <li key={index} className="text-sm text-foreground list-disc">
-                  {priority}
+                  <EnhancedText
+                    text={priority}
+                    citationMatches={citationMatches}
+                    enhancedCitations={enhancedCitations}
+                    className="text-sm text-foreground"
+                  />
                 </li>
               ))}
             </ul>
@@ -118,7 +144,12 @@ const PreliminaryAnalysisSection: React.FC<PreliminaryAnalysisSectionProps> = ({
             <ul className="space-y-1 ml-4">
               {parsedData.strategicNotes.map((note, index) => (
                 <li key={index} className="text-sm text-foreground list-disc">
-                  {note}
+                  <EnhancedText
+                    text={note}
+                    citationMatches={citationMatches}
+                    enhancedCitations={enhancedCitations}
+                    className="text-sm text-foreground"
+                  />
                 </li>
               ))}
             </ul>
