@@ -127,6 +127,28 @@ serve(async (req) => {
   }
 });
 
+function parseJSONResponse(content: string): any {
+  try {
+    // First try to parse directly
+    return JSON.parse(content);
+  } catch (error) {
+    // If direct parsing fails, try to extract JSON from markdown code blocks
+    const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[1].trim());
+    }
+    
+    // If no code blocks, try to find JSON-like content
+    const jsonStart = content.indexOf('{');
+    const jsonEnd = content.lastIndexOf('}');
+    if (jsonStart !== -1 && jsonEnd !== -1) {
+      return JSON.parse(content.substring(jsonStart, jsonEnd + 1));
+    }
+    
+    throw new Error(`Unable to parse JSON from response: ${content.substring(0, 200)}...`);
+  }
+}
+
 async function determineDocumentType(text: string, apiKey: string): Promise<string> {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -184,7 +206,9 @@ ${text.substring(0, 3000)}`
   });
 
   const data = await response.json();
-  const extractedData = JSON.parse(data.choices[0].message.content);
+  
+  try {
+    const extractedData = parseJSONResponse(data.choices[0].message.content);
 
   const { error } = await supabase
     .from('medical_document_analyses')
@@ -201,8 +225,12 @@ ${text.substring(0, 3000)}`
       })) || []
     });
 
-  if (error) {
-    console.error('Error saving medical analysis:', error);
+    if (error) {
+      console.error('Error saving medical analysis:', error);
+    }
+  } catch (parseError) {
+    console.error('Error parsing medical analysis response:', parseError);
+    console.error('Raw OpenAI response:', data.choices[0].message.content);
   }
 }
 
@@ -245,7 +273,9 @@ ${text.substring(0, 3000)}`
   });
 
   const data = await response.json();
-  const extractedData = JSON.parse(data.choices[0].message.content);
+  
+  try {
+    const extractedData = parseJSONResponse(data.choices[0].message.content);
 
   const { error } = await supabase
     .from('legal_document_analyses')
@@ -263,8 +293,12 @@ ${text.substring(0, 3000)}`
       arguments_analysis: extractedData.case_strength || {}
     });
 
-  if (error) {
-    console.error('Error saving legal analysis:', error);
+    if (error) {
+      console.error('Error saving legal analysis:', error);
+    }
+  } catch (parseError) {
+    console.error('Error parsing legal analysis response:', parseError);
+    console.error('Raw OpenAI response:', data.choices[0].message.content);
   }
 }
 
@@ -299,7 +333,9 @@ ${text.substring(0, 3000)}`
   });
 
   const data = await response.json();
-  const events = JSON.parse(data.choices[0].message.content);
+  
+  try {
+    const events = parseJSONResponse(data.choices[0].message.content);
 
   if (!Array.isArray(events) || events.length === 0) {
     return 0;
@@ -319,5 +355,10 @@ ${text.substring(0, 3000)}`
       });
   }
 
-  return events.length;
+    return events.length;
+  } catch (parseError) {
+    console.error('Error parsing timeline events response:', parseError);
+    console.error('Raw OpenAI response:', data.choices[0].message.content);
+    return 0;
+  }
 }
