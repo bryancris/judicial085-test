@@ -54,7 +54,7 @@ const RelevantTexasLawsSection: React.FC<RelevantTexasLawsSectionProps> = ({
       </CardHeader>
       <CardContent>
         <div 
-          className="prose dark:prose-invert max-w-none text-sm [&>ul]:!space-y-1 [&>li]:!mb-1 [&>p]:!mb-1 [&>ul>li]:!mb-1 [&>ul>li>p]:!mb-1 [&_ul]:!my-0 [&_li]:!my-0 [&_p]:!my-0" 
+          className="compact-legal-text prose dark:prose-invert max-w-none text-sm" 
           dangerouslySetInnerHTML={{ __html: relevantLawHtml }} 
         />
       </CardContent>

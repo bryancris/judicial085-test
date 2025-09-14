@@ -124,3 +124,28 @@
   background-color: rgba(59, 130, 246, 0.3);
   color: inherit;
 }
+
+/* Compact legal text styling for Step 3 - Higher specificity overrides */
+.compact-legal-text.prose ul {
+  margin: 0.25rem 0 !important;
+}
+
+.compact-legal-text.prose ul > li {
+  margin: 0.125rem 0 !important;
+}
+
+.compact-legal-text.prose li p {
+  margin: 0.125rem 0 !important;
+}
+
+.compact-legal-text.prose p {
+  margin: 0.25rem 0 !important;
+}
+
+.compact-legal-text.prose ul ul {
+  margin: 0.125rem 0 !important;
+}
+
+.compact-legal-text.prose ul > li > ul > li {
+  margin: 0.125rem 0 !important;
+}
