@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import PIMetricsHeader from "./PIMetricsHeader";
 import PIIncidentOverview from "./PIIncidentOverview";
 import PIMedicalStatus from "./PIMedicalStatus";
@@ -7,7 +7,9 @@ import PIFinancialImpact from "./PIFinancialImpact";
 import { getMockPIData } from "@/services/personalInjuryMockData";
 import { CaseStrengthMetrics } from "@/services/personalInjury/caseStrengthAnalyzer";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, FileText, AlertCircle } from "lucide-react";
+import { useCaseStrengthAnalysis } from "@/hooks/useCaseStrengthAnalysis";
 
 interface PIAnalysisContentProps {
   clientId: string;
@@ -24,6 +26,17 @@ const PIAnalysisContent: React.FC<PIAnalysisContentProps> = ({
   isAnalyzing, 
   analysisError 
 }) => {
+  const { 
+    analyzeDocuments, 
+    checkDocumentStatus, 
+    isAnalyzingDocuments, 
+    hasDocuments, 
+    hasAnalysisData 
+  } = useCaseStrengthAnalysis(clientId);
+
+  useEffect(() => {
+    checkDocumentStatus();
+  }, [clientId]);
   // Use real analysis data if available, otherwise fall back to mock data
   const piData = getMockPIData();
   
@@ -58,6 +71,42 @@ const PIAnalysisContent: React.FC<PIAnalysisContentProps> = ({
         <Alert variant="destructive" className="mb-6">
           <AlertDescription>
             {analysisError}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {hasDocuments && !hasAnalysisData && (
+        <Alert className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between">
+            <span>Documents are ready for analysis. Click "Analyze Documents" to extract case data.</span>
+            <Button 
+              onClick={analyzeDocuments}
+              disabled={isAnalyzingDocuments}
+              size="sm"
+              className="ml-4"
+            >
+              {isAnalyzingDocuments ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Analyze Documents
+                </>
+              )}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!hasDocuments && (
+        <Alert className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            No documents found for analysis. Please upload and process documents first.
           </AlertDescription>
         </Alert>
       )}

@@ -1,1 +1,4 @@
 project_id = "ghpljdgecjmhkwkfctgy"
+
+[functions.analyze-pi-documents]
+verify_jwt = false
