@@ -145,28 +145,44 @@ function parseTraditionalFormat(analysisContent: string): PreliminaryAnalysisDat
   const researchPriorities: string[] = [];
   const strategicNotes: string[] = [];
 
+  // Helper function to split content into items while preserving sentence integrity
+  const splitIntoItems = (content: string): string[] => {
+    // Split on bullet points, numbered lists, or double newlines, but preserve sentences with commas
+    const items = content
+      .split(/\n\s*[-•*]\s*|\n\s*\d+\.\s*|\n\s*\([a-z]\)\s*|\n\n+/)
+      .map(item => item.trim())
+      .filter(item => item.length > 0);
+    
+    // If no structured list found, treat the whole content as a single item
+    if (items.length === 1 && !content.includes('\n-') && !content.includes('\n•') && !content.match(/\n\s*\d+\./)) {
+      return [content.trim()];
+    }
+    
+    return items;
+  };
+
   // Extract from traditional sections
   const areasMatch = analysisContent.match(/\*\*POTENTIAL LEGAL AREAS:\*\*(.*?)(?=\*\*|$)/is);
   if (areasMatch) {
-    const areas = areasMatch[1].split(/[,\n]/).map(a => a.trim()).filter(a => a.length > 0);
+    const areas = splitIntoItems(areasMatch[1]).filter(a => a.length > 0);
     potentialLegalAreas.push(...areas);
   }
 
   const issuesMatch = analysisContent.match(/\*\*PRELIMINARY ISSUES:\*\*(.*?)(?=\*\*|$)/is);
   if (issuesMatch) {
-    const issues = issuesMatch[1].split(/[,\n]/).map(i => i.trim()).filter(i => i.length > 10);
+    const issues = splitIntoItems(issuesMatch[1]).filter(i => i.length > 10);
     preliminaryIssues.push(...issues);
   }
 
   const researchMatch = analysisContent.match(/\*\*RESEARCH PRIORITIES:\*\*(.*?)(?=\*\*|$)/is);
   if (researchMatch) {
-    const priorities = researchMatch[1].split(/[,\n]/).map(r => r.trim()).filter(r => r.length > 10);
+    const priorities = splitIntoItems(researchMatch[1]).filter(r => r.length > 10);
     researchPriorities.push(...priorities);
   }
 
   const notesMatch = analysisContent.match(/\*\*STRATEGIC NOTES:\*\*(.*?)(?=\*\*|$)/is);
   if (notesMatch) {
-    const notes = notesMatch[1].split(/[,\n]/).map(n => n.trim()).filter(n => n.length > 10);
+    const notes = splitIntoItems(notesMatch[1]).filter(n => n.length > 10);
     strategicNotes.push(...notes);
   }
 
