@@ -20,6 +20,7 @@ import CaseAnalysisHeader from "@/components/case-analysis/CaseAnalysisHeader";
 import TabsContainer from "@/components/case-analysis/tabs/TabsContainer";
 import PIAnalysisContent from "@/components/personal-injury/PIAnalysisContent";
 import { supabase } from "@/integrations/supabase/client";
+import { useCaseStrengthAnalysis } from "@/hooks/useCaseStrengthAnalysis";
 
 
 interface ClientDetailTabContentProps {
@@ -34,6 +35,13 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
   const { currentCase } = useCase();
   const [analysisRefreshTrigger, setAnalysisRefreshTrigger] = useState(0);
   const [analysisTab, setAnalysisTab] = useState("analysis");
+  
+  // Use case strength analysis hook for Personal Injury cases
+  const { 
+    metrics: piMetrics, 
+    isAnalyzing: isPIAnalyzing, 
+    error: piError 
+  } = useCaseStrengthAnalysis(client.id);
   
   
   // Use case analysis hook
@@ -186,6 +194,9 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
             <PIAnalysisContent 
               clientId={client.id}
               caseId={currentCase?.id}
+              analysisMetrics={piMetrics}
+              isAnalyzing={isPIAnalyzing}
+              analysisError={piError}
             />
           );
         }
