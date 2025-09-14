@@ -41,7 +41,7 @@ const enhanceDescription = (description: string, eventType: string): string => {
   }
 
   // Clean up and enhance common treatment descriptions
-  if (eventType === 'treatment') {
+  if (eventType === 'treatment' || description === 'Medical treatment') {
     // Handle VR assessments
     if (description.toLowerCase().includes('vr assessment')) {
       return description.replace(/^VR Assessment:\s*/i, 'VR Assessment: ');
@@ -73,6 +73,17 @@ const enhanceDescription = (description: string, eventType: string): string => {
     // Handle photobiomodulation
     if (description.toLowerCase().includes('photobiomodulation')) {
       return 'Photobiomodulation (Light Therapy)';
+    }
+    
+    // Handle heat therapy variations
+    if (description.toLowerCase().includes('heat')) {
+      return 'Heat Therapy Application';
+    }
+    
+    // Handle therapeutic exercise variations
+    if (description.toLowerCase().includes('therapeutic exercise') || 
+        description.toLowerCase().includes('exercise therapy')) {
+      return 'Therapeutic Exercise Program';
     }
   }
 

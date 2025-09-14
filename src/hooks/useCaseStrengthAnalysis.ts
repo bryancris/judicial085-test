@@ -195,8 +195,32 @@ export const useCaseStrengthAnalysis = (clientId?: string) => {
         setMetrics(transformedMetrics);
       }
 
-      // Set timeline events
-      setTimelineEvents(timelineResult.data || []);
+      // Set timeline events with enhanced descriptions
+      const enhancedEvents = (timelineResult.data || []).map((event: any) => {
+        // Skip if already enhanced (has specific description)
+        if (event.description !== 'Medical treatment') {
+          return event;
+        }
+        
+        // Find matching medical analysis to enhance description
+        const matchingAnalysis = medicalResult.data?.find((analysis: any) => 
+          analysis.document_id === event.source_document
+        );
+        
+        if (matchingAnalysis?.extracted_data && typeof matchingAnalysis.extracted_data === 'object') {
+          const extractedData = matchingAnalysis.extracted_data as any;
+          if (extractedData.treatments?.length > 0) {
+            return {
+              ...event,
+              description: extractedData.treatments[0] // Use the first treatment as enhanced description
+            };
+          }
+        }
+        
+        return event;
+      });
+      
+      setTimelineEvents(enhancedEvents);
 
       // Transform analysis data
       const transformedAnalysisData = {
