@@ -125,27 +125,58 @@
   color: inherit;
 }
 
-/* Compact legal text styling for Step 3 - Higher specificity overrides */
-.compact-legal-text.prose ul {
-  margin: 0.25rem 0 !important;
+/* Custom legal text styling - bypassing prose entirely */
+.legal-text-compact {
+  @apply text-sm max-w-none;
+  line-height: 1.5;
+  color: hsl(var(--foreground));
+  font-family: ui-sans-serif, system-ui, sans-serif;
 }
 
-.compact-legal-text.prose ul > li {
-  margin: 0.125rem 0 !important;
+.legal-text-compact ul {
+  list-style-type: disc;
+  list-style-position: outside;
+  padding-left: 1.25rem;
+  margin: 0.125rem 0;
 }
 
-.compact-legal-text.prose li p {
-  margin: 0.125rem 0 !important;
+.legal-text-compact ol {
+  list-style-type: decimal;
+  list-style-position: outside;
+  padding-left: 1.25rem;
+  margin: 0.125rem 0;
 }
 
-.compact-legal-text.prose p {
-  margin: 0.25rem 0 !important;
+.legal-text-compact li {
+  margin: 0.0625rem 0;
+  padding-left: 0;
 }
 
-.compact-legal-text.prose ul ul {
-  margin: 0.125rem 0 !important;
+.legal-text-compact p {
+  margin: 0.125rem 0;
 }
 
-.compact-legal-text.prose ul > li > ul > li {
-  margin: 0.125rem 0 !important;
+.legal-text-compact li p {
+  margin: 0.0625rem 0;
+}
+
+.legal-text-compact ul ul,
+.legal-text-compact ol ol {
+  margin: 0.0625rem 0;
+}
+
+.legal-text-compact strong {
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.legal-text-compact h1,
+.legal-text-compact h2,
+.legal-text-compact h3,
+.legal-text-compact h4,
+.legal-text-compact h5,
+.legal-text-compact h6 {
+  font-weight: 600;
+  margin: 0.25rem 0 0.125rem 0;
+  line-height: 1.3;
 }
