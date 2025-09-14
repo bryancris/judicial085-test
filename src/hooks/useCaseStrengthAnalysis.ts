@@ -140,6 +140,37 @@ export const useCaseStrengthAnalysis = (clientId?: string) => {
     }
   };
 
+  const loadExistingMetrics = async () => {
+    if (!clientId) return;
+
+    try {
+      const { data: existingMetrics } = await supabase
+        .from('pi_case_metrics')
+        .select('*')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingMetrics) {
+        // Transform database data to CaseStrengthMetrics format
+        const transformedMetrics: CaseStrengthMetrics = {
+          overallStrength: existingMetrics.case_strength_score || 0,
+          settlementRangeLow: existingMetrics.settlement_range_low || 0,
+          settlementRangeHigh: existingMetrics.settlement_range_high || 0,
+          confidenceLevel: (existingMetrics.incident_data as any)?.confidence_level || 0,
+          riskFactors: [], // TODO: Extract from analysis data if needed
+          strengths: [], // TODO: Extract from analysis data if needed  
+          recommendations: [] // TODO: Extract from analysis data if needed
+        };
+        
+        setMetrics(transformedMetrics);
+      }
+    } catch (error) {
+      console.error("Error loading existing metrics:", error);
+    }
+  };
+
   const clearResults = () => {
     setMetrics(null);
     setError(null);
@@ -149,6 +180,7 @@ export const useCaseStrengthAnalysis = (clientId?: string) => {
     analyzeCase,
     analyzeDocuments,
     checkDocumentStatus,
+    loadExistingMetrics,
     clearResults,
     isAnalyzing,
     isAnalyzingDocuments,

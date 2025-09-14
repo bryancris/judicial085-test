@@ -29,24 +29,30 @@ const PIAnalysisContent: React.FC<PIAnalysisContentProps> = ({
   const { 
     analyzeDocuments, 
     checkDocumentStatus, 
+    loadExistingMetrics,
     isAnalyzingDocuments, 
     hasDocuments, 
-    hasAnalysisData 
+    hasAnalysisData,
+    metrics: loadedMetrics
   } = useCaseStrengthAnalysis(clientId);
+
+  // Use loaded metrics if available, otherwise fall back to prop metrics
+  const currentMetrics = loadedMetrics || analysisMetrics;
 
   useEffect(() => {
     checkDocumentStatus();
+    loadExistingMetrics();
   }, [clientId]);
-  // Use real analysis data if available, otherwise fall back to mock data
+  // Get mock data as fallback
   const piData = getMockPIData();
   
-  // Convert analysis metrics to display format if available
-  const displayMetrics = analysisMetrics ? {
-    caseStrength: analysisMetrics.overallStrength * 10,
-    settlementRangeLow: analysisMetrics.settlementRangeLow,
-    settlementRangeHigh: analysisMetrics.settlementRangeHigh,
-    daysSinceIncident: piData.metrics.daysSinceIncident, // Keep mock data for now
-    medicalRecordCompletion: piData.metrics.medicalRecordCompletion // Keep mock data for now
+  // Use real metrics if available, otherwise use mock data
+  const displayMetrics = currentMetrics ? {
+    caseStrength: currentMetrics.overallStrength * 10, // Convert 0-1 to 0-10 scale
+    settlementRangeLow: currentMetrics.settlementRangeLow,
+    settlementRangeHigh: currentMetrics.settlementRangeHigh,
+    daysSinceIncident: piData.metrics.daysSinceIncident, // TODO: Calculate from incident data
+    medicalRecordCompletion: piData.metrics.medicalRecordCompletion // TODO: Get from medical analysis
   } : piData.metrics;
 
   return (
@@ -54,7 +60,7 @@ const PIAnalysisContent: React.FC<PIAnalysisContentProps> = ({
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-foreground mb-2">Personal Injury Case Dashboard</h1>
         <p className="text-muted-foreground">
-          {analysisMetrics ? 'Real-time case analysis results' : 'Comprehensive overview of case status and key metrics'}
+          {currentMetrics ? 'Real-time case analysis results' : 'Comprehensive overview of case status and key metrics'}
         </p>
       </div>
 
@@ -148,25 +154,29 @@ const PIAnalysisContent: React.FC<PIAnalysisContentProps> = ({
         <PIFinancialImpact financial={piData.financial} />
       </div>
 
-      {analysisMetrics && (
+      {currentMetrics && (
         <div className="mt-6 space-y-4">
           <div className="bg-card p-6 rounded-lg border">
             <h3 className="text-lg font-semibold mb-4">Analysis Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <h4 className="font-medium mb-2">Strengths ({analysisMetrics.strengths.length})</h4>
+                <h4 className="font-medium mb-2">Strengths ({currentMetrics.strengths.length})</h4>
                 <ul className="text-sm space-y-1">
-                  {analysisMetrics.strengths.slice(0, 3).map((strength, index) => (
+                  {currentMetrics.strengths.length > 0 ? currentMetrics.strengths.slice(0, 3).map((strength, index) => (
                     <li key={index} className="text-green-600">• {strength}</li>
-                  ))}
+                  )) : (
+                    <li className="text-muted-foreground text-sm">Analysis complete - detailed strengths will be populated in future updates</li>
+                  )}
                 </ul>
               </div>
               <div>
-                <h4 className="font-medium mb-2">Risk Factors ({analysisMetrics.riskFactors.length})</h4>
+                <h4 className="font-medium mb-2">Risk Factors ({currentMetrics.riskFactors.length})</h4>
                 <ul className="text-sm space-y-1">
-                  {analysisMetrics.riskFactors.slice(0, 3).map((risk, index) => (
+                  {currentMetrics.riskFactors.length > 0 ? currentMetrics.riskFactors.slice(0, 3).map((risk, index) => (
                     <li key={index} className="text-red-600">• {risk}</li>
-                  ))}
+                  )) : (
+                    <li className="text-muted-foreground text-sm">Analysis complete - detailed risk factors will be populated in future updates</li>
+                  )}
                 </ul>
               </div>
             </div>
