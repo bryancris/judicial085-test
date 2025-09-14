@@ -35,12 +35,28 @@ const CASE_CITATION_PATTERNS = [
  * Texas statute citation patterns
  */
 const STATUTE_CITATION_PATTERNS = [
+  // Natural language patterns for common legal references
+  /Texas\s+Lemon\s+Law\s*\([^)]*Chapter\s+573[^)]*\)/gi,
+  /Magnuson-?Moss\s+Warranty\s+Act/gi,
+  /Deceptive\s+Trade\s+Practices\s+Act\s*\(DTPA\)/gi,
+  /(?:DTPA|Deceptive\s+Trade\s+Practices\s+Act)/gi,
+  /Implied\s+Warranties?\s*\([^)]*Texas\s+Business[^)]*\)/gi,
+  /Express\s+Warranties?\s*\([^)]*Texas\s+Business[^)]*\)/gi,
+  /Breach\s+of\s+Warranty\s*\([^)]*\)/gi,
+  /Texas\s+Motor\s+Vehicle\s+Commission\s+Code/gi,
+  
   // Texas codes: "Tex. Occ. Code § 2301.003", "Texas Occupations Code Section 2301.003"
   /\b(?:Tex\.|Texas)\s+(?:Occ\.|Occupations?)\s+Code\s+(?:§|[Ss]ec(?:tion)?\.?)\s*\d+\.\d+(?:\.\d+)?(?:\([a-z]\)(?:\(\d+\))?)?/gi,
   /\b(?:Tex\.|Texas)\s+(?:Bus\.|Business)\s+(?:&|and)\s+(?:Com\.|Commerce)\s+Code\s+(?:§|[Ss]ec(?:tion)?\.?)\s*\d+\.\d+(?:\.\d+)?(?:\([a-z]\)(?:\(\d+\))?)?/gi,
   /\b(?:Tex\.|Texas)\s+(?:Civ\.|Civil)\s+(?:Prac\.|Practice)\s+(?:&|and)\s+(?:Rem\.|Remedies)\s+Code\s+(?:§|[Ss]ec(?:tion)?\.?)\s*\d+\.\d+(?:\.\d+)?(?:\([a-z]\)(?:\(\d+\))?)?/gi,
   /\b(?:Tex\.|Texas)\s+(?:Gov't|Government)\s+Code\s+(?:§|[Ss]ec(?:tion)?\.?)\s*\d+\.\d+(?:\.\d+)?(?:\([a-z]\)(?:\(\d+\))?)?/gi,
   /\b(?:Tex\.|Texas)\s+(?:Penal|Pen\.)\s+Code\s+(?:§|[Ss]ec(?:tion)?\.?)\s*\d+\.\d+(?:\.\d+)?(?:\([a-z]\)(?:\(\d+\))?)?/gi,
+  
+  // Chapter references: "Chapter 573", "(Chapter 573, Texas Business & Commerce Code)"
+  /\(Chapter\s+\d+[^)]*Texas\s+Business[^)]*\)/gi,
+  /\(Chapter\s+\d+[^)]*\)/gi,
+  /Chapter\s+\d+\s+of\s+(?:the\s+)?Texas\s+(?:Business|Occupations|Civil)/gi,
+  
   // Short form: "§ 17.50", "Section 2301.003"
   /\b(?:§|[Ss]ec(?:tion)?\.?)\s*\d{1,4}\.\d{1,4}(?:\.\d+)?(?:\([a-z]\)(?:\(\d+\))?)?/g,
 ];
