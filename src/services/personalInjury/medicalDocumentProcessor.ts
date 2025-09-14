@@ -445,7 +445,8 @@ export class MedicalDocumentProcessor {
    */
   private async storeMedicalAnalysis(analysisData: any) {
     try {
-      const { error } = await supabase
+      // Use dynamic table access since types haven't been updated yet
+      const { error } = await (supabase as any)
         .from('medical_document_analyses')
         .insert({
           document_id: analysisData.documentId,

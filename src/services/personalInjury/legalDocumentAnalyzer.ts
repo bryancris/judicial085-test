@@ -329,7 +329,7 @@ export class LegalDocumentAnalyzer {
    * Apply cross-examination mindset to test credibility
    */
   private generateArgumentsAndCounterArguments(elements: LegalElement[]): any {
-    const arguments = {
+    const argumentsAnalysis = {
       plaintiff_arguments: [] as string[],
       defense_arguments: [] as string[],
       evidence_gaps: [] as string[],
@@ -338,27 +338,27 @@ export class LegalDocumentAnalyzer {
     
     elements.forEach(element => {
       if (element.present && element.evidence_strength > 0.6) {
-        arguments.plaintiff_arguments.push(
+        argumentsAnalysis.plaintiff_arguments.push(
           `Strong evidence for ${element.element}: ${element.supporting_facts.join('; ')}`
         );
       } else {
-        arguments.evidence_gaps.push(
+        argumentsAnalysis.evidence_gaps.push(
           `Weak evidence for ${element.element} - need additional documentation`
         );
       }
       
       // Add counter-arguments from defense perspective
-      arguments.defense_arguments.push(...element.counter_arguments);
+      argumentsAnalysis.defense_arguments.push(...element.counter_arguments);
     });
     
-    return arguments;
+    return argumentsAnalysis;
   }
 
   /**
    * Step 6: Assess Case Strength (Apply Zealous Advocacy)
    * Exert utmost learning and ability while maintaining ethical boundaries
    */
-  private assessCaseStrength(elements: LegalElement[], arguments: any): CaseStrengthAssessment {
+  private assessCaseStrength(elements: LegalElement[], argumentsAnalysis: any): CaseStrengthAssessment {
     const completeness = elements.filter(e => e.present).length / elements.length;
     const avgEvidenceQuality = elements.reduce((sum, e) => sum + e.evidence_strength, 0) / elements.length;
     const overallStrength = (completeness + avgEvidenceQuality) / 2;
@@ -371,13 +371,13 @@ export class LegalDocumentAnalyzer {
     ];
     
     // Generate next steps with client's best interest in mind
-    const nextSteps = this.generateZealousNextSteps(elements, arguments);
+    const nextSteps = this.generateZealousNextSteps(elements, argumentsAnalysis);
     
     return {
       overall_strength: overallStrength,
       legal_elements_completeness: completeness,
       evidence_quality: avgEvidenceQuality,
-      potential_defenses: arguments.defense_arguments,
+      potential_defenses: argumentsAnalysis.defense_arguments,
       recommended_next_steps: nextSteps,
       zealous_advocacy_notes: zealousAdvocacyNotes
     };
@@ -564,7 +564,7 @@ export class LegalDocumentAnalyzer {
     return counterArgs;
   }
 
-  private generateZealousNextSteps(elements: LegalElement[], arguments: any): string[] {
+  private generateZealousNextSteps(elements: LegalElement[], argumentsAnalysis: any): string[] {
     const steps = [];
     
     // Evidence gathering based on weak elements
@@ -588,7 +588,8 @@ export class LegalDocumentAnalyzer {
    */
   private async storeLegalAnalysis(analysisData: any) {
     try {
-      const { error } = await supabase
+      // Use dynamic table access since types haven't been updated yet
+      const { error } = await (supabase as any)
         .from('legal_document_analyses')
         .insert({
           document_id: analysisData.documentId,

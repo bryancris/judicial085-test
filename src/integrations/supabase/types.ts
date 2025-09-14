@@ -1238,6 +1238,93 @@ export type Database = {
           },
         ]
       }
+      legal_document_analyses: {
+        Row: {
+          analyzed_at: string
+          arguments_analysis: Json
+          case_strength: Json
+          client_id: string
+          created_at: string
+          document_id: string
+          document_type: string
+          id: string
+          information_classification: Json
+          key_issues: string[]
+          legal_elements: Json
+          source_credibility: number
+          updated_at: string
+        }
+        Insert: {
+          analyzed_at?: string
+          arguments_analysis?: Json
+          case_strength?: Json
+          client_id: string
+          created_at?: string
+          document_id: string
+          document_type: string
+          id?: string
+          information_classification?: Json
+          key_issues?: string[]
+          legal_elements?: Json
+          source_credibility?: number
+          updated_at?: string
+        }
+        Update: {
+          analyzed_at?: string
+          arguments_analysis?: Json
+          case_strength?: Json
+          client_id?: string
+          created_at?: string
+          document_id?: string
+          document_type?: string
+          id?: string
+          information_classification?: Json
+          key_issues?: string[]
+          legal_elements?: Json
+          source_credibility?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      medical_document_analyses: {
+        Row: {
+          authenticity_score: number
+          client_id: string
+          created_at: string
+          document_id: string
+          document_type: string
+          extracted_data: Json
+          id: string
+          processed_at: string
+          timeline_events: Json
+          updated_at: string
+        }
+        Insert: {
+          authenticity_score?: number
+          client_id: string
+          created_at?: string
+          document_id: string
+          document_type: string
+          extracted_data?: Json
+          id?: string
+          processed_at?: string
+          timeline_events?: Json
+          updated_at?: string
+        }
+        Update: {
+          authenticity_score?: number
+          client_id?: string
+          created_at?: string
+          document_id?: string
+          document_type?: string
+          extracted_data?: Json
+          id?: string
+          processed_at?: string
+          timeline_events?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       n8n_chat_histories: {
         Row: {
           id: number
@@ -1336,6 +1423,102 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pi_case_metrics: {
+        Row: {
+          case_id: string | null
+          case_strength_score: number
+          client_id: string
+          created_at: string
+          days_since_incident: number | null
+          financial_data: Json | null
+          functional_data: Json | null
+          id: string
+          incident_data: Json | null
+          last_updated: string
+          medical_data: Json | null
+          medical_record_completion: number | null
+          settlement_range_high: number | null
+          settlement_range_low: number | null
+          updated_at: string
+        }
+        Insert: {
+          case_id?: string | null
+          case_strength_score?: number
+          client_id: string
+          created_at?: string
+          days_since_incident?: number | null
+          financial_data?: Json | null
+          functional_data?: Json | null
+          id?: string
+          incident_data?: Json | null
+          last_updated?: string
+          medical_data?: Json | null
+          medical_record_completion?: number | null
+          settlement_range_high?: number | null
+          settlement_range_low?: number | null
+          updated_at?: string
+        }
+        Update: {
+          case_id?: string | null
+          case_strength_score?: number
+          client_id?: string
+          created_at?: string
+          days_since_incident?: number | null
+          financial_data?: Json | null
+          functional_data?: Json | null
+          id?: string
+          incident_data?: Json | null
+          last_updated?: string
+          medical_data?: Json | null
+          medical_record_completion?: number | null
+          settlement_range_high?: number | null
+          settlement_range_low?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pi_timeline_events: {
+        Row: {
+          client_id: string
+          created_at: string
+          description: string
+          event_date: string
+          event_type: string
+          id: string
+          provider: string | null
+          reliability_score: number
+          source_document: string | null
+          source_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          description: string
+          event_date: string
+          event_type: string
+          id?: string
+          provider?: string | null
+          reliability_score?: number
+          source_document?: string | null
+          source_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          description?: string
+          event_date?: string
+          event_type?: string
+          id?: string
+          provider?: string | null
+          reliability_score?: number
+          source_document?: string | null
+          source_type?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
