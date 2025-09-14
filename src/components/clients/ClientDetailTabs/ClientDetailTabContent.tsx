@@ -179,7 +179,8 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
         console.log("✅ Entering case-analysis case");
         
         // Check if this is a Personal Injury case
-        if (currentCase?.case_type === "Personal Injury") {
+        console.log("🔍 Current case type:", currentCase?.case_type);
+        if (currentCase?.case_type === "personal_injury") {
           console.log("🏥 Rendering Personal Injury module");
           return (
             <PIAnalysisContent 
