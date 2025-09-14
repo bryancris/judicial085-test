@@ -1,0 +1,1604 @@
+-----------------------------------------------------------------------------
+/**
+ * MEDICAL DOCUMENT EXTRACTION FRAMEWORK - VERSION 2
+ * Editable Comprehensive Medical Data Extraction System
+ * 
+ * Purpose: Enhanced medical information extraction for legal case analysis
+ * Usage: Attorney evaluation, physician review, ICD-10 cross-referencing
+ * Integration: Judicial Junction medical analysis system
+ * 
+ * Version 2 Features:
+ * - Editable field configurations
+ * - Dynamic extraction rules
+ * - Customizable scoring weights
+ * - Practice area specialization
+ * - Enhanced legal significance mapping
+ */
+
+interface MedicalExtractionFrameworkV2 {
+  // CONFIGURATION SETTINGS
+  extraction_config: {
+    version: "2.0.0"
+    last_updated: string
+    practice_area_focus: 'personal_injury' | 'medical_malpractice' | 'workers_compensation' | 'product_liability' | 'all'
+    extraction_depth: 'basic' | 'standard' | 'comprehensive' | 'expert_level'
+    physician_specialty_focus: string[]  // Pain management, radiology, orthopedics, etc.
+    custom_terminology: string[]         // User-defined medical terms to prioritize
+    scoring_weights: {
+      functional_impact: number          // 0.0-1.0 weight for functional limitations
+      permanency_factor: number          // Weight for permanent impairments
+      treatment_complexity: number       // Weight for extensive medical care
+      causation_strength: number         // Weight for clear injury causation
+    }
+  }
+
+  // SECTION A: ENHANCED PATIENT IDENTIFICATION (12 items)
+  patient_identification: {
+    full_legal_name: {
+      value: string
+      extraction_confidence: number      // 0.0-1.0 confidence score
+      source_document_pages: number[]    // Pages where found
+      verification_status: 'confirmed' | 'needs_review' | 'conflicting'
+    }
+    date_of_birth: {
+      value: string                      // YYYY-MM-DD format
+      age_at_injury: number
+      age_at_current_eval: number
+      extraction_confidence: number
+      source_document_pages: number[]
+    }
+    medical_record_identifiers: {
+      primary_mrn: string
+      alternate_mrns: string[]           // Multiple hospital MRNs
+      social_security_number?: string
+      extraction_confidence: number
+    }
+    demographic_factors: {
+      gender: 'M' | 'F' | 'Other'
+      ethnicity?: string
+      primary_language: string
+      interpreter_needs: boolean
+      extraction_confidence: number
+    }
+    contact_information: {
+      addresses: Array<{
+        address: string
+        type: 'home' | 'work' | 'billing'
+        dates_of_residence: string
+      }>
+      phone_numbers: string[]
+      emergency_contacts: Array<{
+        name: string
+        relationship: string
+        phone: string
+      }>
+    }
+    occupation_details: {
+      job_title_at_injury: string
+      employer_name: string
+      employment_status: 'full_time' | 'part_time' | 'unemployed' | 'disabled' | 'retired'
+      job_physical_demands: string[]    // Lifting, standing, driving, etc.
+      work_schedule: string
+      union_membership?: string
+      extraction_confidence: number
+    }
+    insurance_coverage: {
+      health_insurance: Array<{
+        carrier_name: string
+        policy_number: string
+        group_number?: string
+        coverage_dates: string
+        primary_secondary: 'primary' | 'secondary'
+      }>
+      auto_insurance?: string
+      workers_compensation?: string
+      disability_insurance?: string
+      extraction_confidence: number
+    }
+    socioeconomic_factors: {
+      education_level: string
+      household_income_range?: string
+      family_composition: string
+      primary_caregiver_responsibilities: string[]
+      transportation_access: string
+    }
+    legal_status_factors: {
+      guardian_conservator?: string
+      power_of_attorney?: string
+      advance_directives: boolean
+      legal_representation: string
+    }
+    cultural_considerations: {
+      religious_beliefs_affecting_care: string[]
+      cultural_practices_relevant: string[]
+      family_involvement_expectations: string
+    }
+  }
+
+  // SECTION B: COMPREHENSIVE INCIDENT ANALYSIS (18 items)
+  incident_injury_analysis: {
+    incident_details: {
+      primary_incident_date: {
+        value: string                    // YYYY-MM-DD
+        time_of_incident: string         // HH:MM if available
+        extraction_confidence: number
+        source_verification: string[]   // Multiple source confirmation
+      }
+      incident_location: {
+        specific_address: string
+        location_type: 'workplace' | 'home' | 'vehicle' | 'public' | 'healthcare' | 'other'
+        environmental_conditions: string[]
+        safety_equipment_present: string[]
+        extraction_confidence: number
+      }
+      mechanism_of_injury: {
+        primary_mechanism: string        // MVA, fall, assault, etc.
+        detailed_description: string
+        force_direction: string          // Anterior, posterior, lateral impact
+        estimated_impact_speed?: string
+        protective_equipment_used: string[]
+        icd10_external_cause_codes: string[]  // V00-Y99 codes
+        extraction_confidence: number
+      }
+      witness_documentation: {
+        witness_names: string[]
+        witness_statements: string[]
+        bystander_assistance: string
+        emergency_responder_names: string[]
+        police_report_number?: string
+      }
+      immediate_post_incident: {
+        consciousness_level: 'alert' | 'confused' | 'unconscious' | 'unknown'
+        ambulatory_status: 'walking' | 'assisted' | 'stretcher' | 'unknown'
+        initial_complaints: string[]
+        first_aid_administered: string[]
+        transport_to_hospital: boolean
+        emergency_room_destination: string
+      }
+    }
+    injury_mechanism_analysis: {
+      biomechanical_forces: string[]    // Acceleration, deceleration, rotation
+      energy_transfer_pattern: string
+      protective_factor_effectiveness: string[]
+      aggravating_factors: string[]     // Pre-existing vulnerability
+      comparative_injury_severity: string  // Compared to typical for mechanism
+    }
+    scene_documentation: {
+      photographs_taken: boolean
+      evidence_preservation: string[]
+      property_damage_assessment: string
+      environmental_hazards: string[]
+      safety_violations_noted: string[]
+    }
+    contributing_factors: {
+      weather_conditions: string
+      lighting_conditions: string
+      road_surface_conditions?: string
+      mechanical_failures?: string[]
+      human_factors: string[]           // Fatigue, distraction, impairment
+      third_party_involvement: string[]
+    }
+    legal_documentation: {
+      police_report_filed: boolean
+      citations_issued: string[]
+      criminal_charges: string[]
+      regulatory_violations: string[]
+      insurance_claims_initiated: string[]
+    }
+  }
+
+  // SECTION C: EXPANDED MEDICAL HISTORY (20 items)
+  comprehensive_medical_history: {
+    prior_injury_history: {
+      same_body_region_injuries: Array<{
+        injury_type: string
+        date: string
+        treatment_received: string
+        resolution_status: string
+        residual_symptoms: string[]
+        medical_records_available: boolean
+      }>
+      other_significant_injuries: Array<{
+        injury_description: string
+        date: string
+        impact_on_current_condition: string
+        icd10_codes: string[]
+      }>
+    }
+    chronic_conditions: {
+      diagnosed_conditions: Array<{
+        condition_name: string
+        diagnosis_date: string
+        treating_physician: string
+        current_status: 'stable' | 'progressive' | 'improving' | 'unknown'
+        medication_management: string[]
+        impact_on_current_injury: 'none' | 'minimal' | 'moderate' | 'significant'
+        icd10_codes: string[]
+      }>
+      undiagnosed_symptoms: string[]   // Symptoms present but not formally diagnosed
+    }
+    surgical_history: {
+      procedures: Array<{
+        procedure_name: string
+        date: string
+        surgeon_name: string
+        hospital_location: string
+        indication: string
+        complications: string[]
+        current_impact: string
+        pathology_results?: string
+        hardware_implanted?: string
+      }>
+      anesthesia_complications: string[]
+      surgical_site_issues: string[]
+    }
+    medication_history: {
+      current_prescriptions: Array<{
+        medication_name: string
+        generic_brand_names: string[]
+        dosage: string
+        frequency: string
+        prescribing_physician: string
+        start_date: string
+        indication: string
+        side_effects_experienced: string[]
+        effectiveness_rating: string
+      }>
+      medication_allergies: Array<{
+        medication_name: string
+        reaction_type: string
+        severity: 'mild' | 'moderate' | 'severe' | 'life_threatening'
+        date_discovered: string
+      }>
+      over_counter_supplements: string[]
+      herbal_remedies: string[]
+      substance_use_medications: string[]  // Methadone, Suboxone, etc.
+    }
+    family_medical_history: {
+      genetic_predispositions: Array<{
+        condition: string
+        affected_relatives: string[]
+        inheritance_pattern?: string
+        relevance_to_current_injury: string
+      }>
+      familial_pain_conditions: string[]
+      psychiatric_family_history: string[]
+    }
+    lifestyle_factors: {
+      tobacco_use: {
+        current_status: 'never' | 'former' | 'current'
+        pack_years?: number
+        quit_date?: string
+        impact_on_healing: string
+      }
+      alcohol_consumption: {
+        frequency: string
+        amount: string
+        history_of_abuse: boolean
+        impact_on_treatment: string
+      }
+      recreational_drug_use: {
+        substances_used: string[]
+        frequency: string
+        impact_on_pain_management: string
+      }
+      exercise_fitness_level: {
+        pre_injury_activity_level: string
+        regular_exercise_routine: string[]
+        fitness_baseline: string
+        sports_participation: string[]
+      }
+      nutritional_status: {
+        dietary_restrictions: string[]
+        nutritional_deficiencies: string[]
+        weight_status: string
+        eating_disorders: string[]
+      }
+      sleep_patterns: {
+        pre_injury_sleep_quality: string
+        sleep_disorders: string[]
+        sleep_medications: string[]
+      }
+    }
+    reproductive_health: {
+      pregnancy_history?: Array<{
+        pregnancy_dates: string
+        complications: string[]
+        impact_on_current_condition: string
+      }>
+      menstrual_history?: string
+      hormonal_treatments?: string[]
+    }
+    mental_health_history: {
+      psychiatric_diagnoses: Array<{
+        diagnosis: string
+        date_diagnosed: string
+        treating_provider: string
+        current_status: string
+        medications: string[]
+        therapy_involvement: string
+        icd10_codes: string[]
+      }>
+      psychological_testing: Array<{
+        test_type: string
+        date_administered: string
+        results_summary: string
+        clinical_implications: string
+      }>
+      substance_abuse_history: Array<{
+        substance: string
+        duration_of_use: string
+        treatment_received: string
+        recovery_status: string
+        impact_on_current_treatment: string
+      }>
+    }
+    disability_ratings: {
+      existing_impairments: Array<{
+        body_system: string
+        impairment_percentage: number
+        rating_physician: string
+        rating_date: string
+        rating_methodology: string
+        impact_on_current_injury: string
+      }>
+      functional_limitations: string[]
+      adaptive_equipment_used: string[]
+    }
+  }
+
+  // SECTION D: DETAILED CURRENT TREATMENT (15 items)
+  current_treatment_regimen: {
+    pain_management: {
+      current_medications: Array<{
+        medication_name: string
+        classification: 'opioid' | 'nsaid' | 'muscle_relaxant' | 'anticonvulsant' | 'antidepressant' | 'other'
+        dosage: string
+        frequency: string
+        route_administration: string
+        prescribing_physician: string
+        start_date: string
+        effectiveness_rating: number     // 1-10 scale
+        side_effects: string[]
+        tolerance_issues: boolean
+        dependency_concerns: boolean
+        extraction_confidence: number
+      }>
+      interventional_procedures: Array<{
+        procedure_type: string           // Injection, nerve block, etc.
+        anatomical_location: string
+        date_performed: string
+        performing_physician: string
+        medications_used: string[]
+        immediate_response: string
+        duration_of_relief: string
+        complications: string[]
+        repeat_procedures: number
+      }>
+      alternative_pain_treatments: Array<{
+        treatment_type: string          // TENS, acupuncture, massage
+        frequency: string
+        provider_name: string
+        patient_response: string
+        integration_with_medical_care: string
+      }>
+    }
+    physical_rehabilitation: {
+      physical_therapy: Array<{
+        therapy_type: string
+        start_date: string
+        frequency: string
+        therapist_name: string
+        facility_name: string
+        initial_evaluation_findings: string
+        treatment_goals: string[]
+        progress_measurements: Array<{
+          date: string
+          measurement_type: string     // ROM, strength, function
+          baseline_value: string
+          current_value: string
+          improvement_percentage: number
+        }>
+        barriers_to_progress: string[]
+        discharge_planning: string
+      }>
+      occupational_therapy: Array<{
+        evaluation_date: string
+        functional_deficits_identified: string[]
+        adaptive_equipment_recommended: string[]
+        work_conditioning_program: string
+        home_safety_assessment: string
+        driving_evaluation: string
+      }>
+      speech_therapy?: Array<{
+        evaluation_findings: string
+        treatment_focus: string[]
+        cognitive_components: string[]
+        swallowing_assessment: string
+      }>
+    }
+    surgical_interventions: {
+      procedures_performed: Array<{
+        procedure_name: string
+        date: string
+        surgeon_name: string
+        hospital_facility: string
+        surgical_approach: string
+        anesthesia_type: string
+        procedure_duration: string
+        complications_intraoperative: string[]
+        hardware_implanted: string[]
+        pathology_findings: string
+        post_operative_course: string
+        infection_complications: string[]
+        reoperation_required: boolean
+      }>
+      planned_future_surgeries: Array<{
+        recommended_procedure: string
+        recommending_surgeon: string
+        indication: string
+        timing_recommendation: string
+        patient_acceptance_status: string
+      }>
+    }
+    specialist_consultations: {
+      consultations_completed: Array<{
+        specialist_type: string
+        physician_name: string
+        consultation_date: string
+        referral_reason: string
+        key_findings: string[]
+        recommendations: string[]
+        follow_up_planned: string
+        diagnostic_tests_ordered: string[]
+      }>
+      pending_consultations: string[]
+    }
+    home_health_services: {
+      nursing_services: Array<{
+        service_type: string
+        agency_name: string
+        frequency: string
+        services_provided: string[]
+        start_date: string
+        duration: string
+        patient_progress: string
+      }>
+      home_therapy_services: string[]
+      personal_care_assistance: string[]
+    }
+  }
+
+  // SECTION E: ADVANCED CLINICAL ASSESSMENTS (25 items)
+  clinical_evaluation_findings: {
+    neurological_assessment: {
+      mental_status_examination: {
+        orientation: string              // Person, place, time, situation
+        attention_concentration: string
+        memory_testing: {
+          immediate_recall: string
+          short_term_memory: string
+          long_term_memory: string
+          working_memory: string
+        }
+        executive_function: string
+        language_assessment: string
+        mood_affect: string
+        thought_process: string
+        insight_judgment: string
+      }
+      cranial_nerve_examination: Array<{
+        nerve_number: number            // CN I-XII
+        nerve_name: string
+        test_performed: string
+        result: 'normal' | 'abnormal'
+        abnormality_description?: string
+      }>
+      motor_system_evaluation: {
+        muscle_strength_testing: Array<{
+          muscle_group: string
+          strength_grade: string        // 0/5 to 5/5
+          side_tested: 'left' | 'right' | 'bilateral'
+          pain_with_testing: boolean
+          fatigue_noted: boolean
+        }>
+        muscle_tone_assessment: string
+        involuntary_movements: string[]
+        coordination_testing: {
+          finger_to_nose: string
+          heel_to_shin: string
+          rapid_alternating_movements: string
+          dysdiadochokinesia: boolean
+        }
+      }
+      sensory_system_evaluation: {
+        light_touch_testing: Array<{
+          body_region: string
+          response: 'normal' | 'decreased' | 'absent' | 'hyperesthetic'
+          side: 'left' | 'right' | 'bilateral'
+        }>
+        pain_sensation: Array<{
+          body_region: string
+          response: string
+          allodynia_present: boolean
+        }>
+        vibration_testing: string[]
+        position_sense: string[]
+        two_point_discrimination: string[]
+      }
+      reflex_examination: Array<{
+        reflex_tested: string
+        response_grade: string          // 0+ to 4+
+        side: 'left' | 'right' | 'bilateral'
+        pathological_reflexes: string[]
+      }>
+      gait_balance_assessment: {
+        gait_pattern: string
+        gait_speed: string
+        balance_testing: string
+        fall_risk_assessment: string
+        assistive_device_needs: string[]
+      }
+    }
+    musculoskeletal_examination: {
+      range_of_motion_testing: Array<{
+        joint: string
+        movement_plane: string
+        degrees_measured: number
+        normal_range: number
+        percentage_limitation: number
+        pain_during_movement: boolean
+        end_feel_assessment: string
+      }>
+      muscle_strength_evaluation: Array<{
+        muscle_group: string
+        manual_muscle_test_grade: string
+        functional_strength_assessment: string
+        endurance_testing: string
+        pain_limiting_factor: boolean
+      }>
+      joint_examination: {
+        inspection_findings: Array<{
+          joint: string
+          swelling: boolean
+          deformity: string
+          skin_changes: string[]
+          muscle_atrophy: boolean
+        }>
+        palpation_findings: Array<{
+          structure: string
+          tenderness: boolean
+          temperature: string
+          crepitus: boolean
+          masses_noted: string
+        }>
+        stability_testing: Array<{
+          joint: string
+          ligament_tested: string
+          test_result: 'stable' | 'lax' | 'unstable'
+          grade_of_laxity?: string
+        }>
+      }
+      special_orthopedic_tests: Array<{
+        test_name: string
+        body_region: string
+        result: 'positive' | 'negative' | 'equivocal'
+        clinical_significance: string
+        sensitivity_specificity: string
+      }>
+      functional_movement_assessment: {
+        activities_daily_living: Array<{
+          activity: string
+          independence_level: string
+          assistive_devices_needed: string[]
+          time_to_complete: string
+          pain_level_during: number
+        }>
+        work_related_activities: Array<{
+          activity: string
+          capacity_percentage: number
+          limitations_noted: string[]
+          modifications_needed: string[]
+        }>
+      }
+    }
+    pain_assessment_comprehensive: {
+      pain_scales_administered: Array<{
+        scale_type: string              // VAS, numeric, faces, etc.
+        date_administered: string
+        score: number
+        body_region: string
+        activity_context: string
+      }>
+      pain_characterization: {
+        quality_descriptors: string[]   // Sharp, dull, burning, etc.
+        temporal_pattern: string        // Constant, intermittent, episodic
+        aggravating_factors: string[]
+        alleviating_factors: string[]
+        radiation_pattern: string
+        associated_symptoms: string[]
+      }
+      functional_impact_assessment: {
+        sleep_disruption: {
+          frequency: string
+          sleep_position_limitations: string[]
+          sleep_medications_needed: string[]
+          sleep_quality_rating: number
+        }
+        activity_limitations: Array<{
+          activity: string
+          limitation_severity: string
+          adaptation_strategies: string[]
+        }>
+        mood_impact: {
+          depression_screening_score?: number
+          anxiety_assessment?: number
+          pain_catastrophizing_score?: number
+          coping_strategies: string[]
+        }
+      }
+      pain_medication_response: Array<{
+        medication: string
+        effectiveness_percentage: number
+        side_effects: string[]
+        functional_improvement: string
+        quality_of_life_impact: string
+      }>
+    }
+    cognitive_assessment: {
+      attention_testing: {
+        sustained_attention: string
+        divided_attention: string
+        selective_attention: string
+      }
+      memory_evaluation: {
+        verbal_memory: string
+        visual_memory: string
+        procedural_memory: string
+        prospective_memory: string
+      }
+      executive_function_testing: {
+        planning_organization: string
+        problem_solving: string
+        cognitive_flexibility: string
+        impulse_control: string
+      }
+      processing_speed: string
+      academic_skills_impact: string[]
+    }
+    psychological_evaluation: {
+      mood_assessment: {
+        depression_indicators: string[]
+        anxiety_symptoms: string[]
+        mood_stability: string
+        suicidal_ideation: boolean
+      }
+      personality_assessment: {
+        coping_style: string
+        stress_response: string
+        social_functioning: string
+        personality_changes: string[]
+      }
+      behavioral_observations: {
+        pain_behaviors: string[]
+        medication_seeking_behaviors: string[]
+        functional_inconsistencies: string[]
+        effort_testing_results: string
+      }
+    }
+  }
+
+  // SECTION F: COMPREHENSIVE DIAGNOSTIC STUDIES (18 items)
+  diagnostic_studies_analysis: {
+    imaging_studies_comprehensive: {
+      radiographic_studies: Array<{
+        study_type: string
+        body_region: string
+        date_performed: string
+        ordering_physician: string
+        radiologist_interpreter: string
+        technical_quality: string
+        normal_findings: string[]
+        abnormal_findings: Array<{
+          finding_description: string
+          anatomical_location: string
+          severity_grading: string
+          clinical_correlation: string
+          comparison_to_prior: string
+          icd10_correlation: string[]
+        }>
+        incidental_findings: string[]
+        recommendations: string[]
+        limitations_noted: string[]
+      }>
+      advanced_imaging: Array<{
+        modality: string                // CT, MRI, ultrasound, bone scan
+        contrast_used: boolean
+        sequences_performed: string[]
+        image_quality: string
+        findings_detailed: Array<{
+          structure_examined: string
+          signal_characteristics: string
+          enhancement_pattern: string
+          measurements: string
+          pathological_changes: string[]
+        }>
+        radiologist_impression: string
+        clinical_recommendations: string[]
+      }>
+      functional_imaging: Array<{
+        study_type: string              // fMRI, PET, SPECT
+        indication: string
+        findings: string[]
+        functional_significance: string
+      }>
+    }
+    laboratory_studies_comprehensive: {
+      routine_laboratory_work: Array<{
+        test_category: string           // CBC, CMP, lipid panel
+        date_collected: string
+        individual_results: Array<{
+          test_name: string
+          result_value: string
+          reference_range: string
+          units: string
+          flag_status: 'normal' | 'high' | 'low' | 'critical'
+        }>
+        clinical_interpretation: string
+        trending_analysis: string
+      }>
+      specialized_testing: Array<{
+        test_type: string              // Inflammatory markers, tumor markers
+        indication: string
+        results: string[]
+        clinical_significance: string
+      }>
+      toxicology_screening: Array<{
+        specimen_type: string
+        substances_tested: string[]
+        results: string[]
+        chain_of_custody: boolean
+      }>
+    }
+    electrodiagnostic_studies: {
+      nerve_conduction_studies: Array<{
+        nerve_tested: string
+        study_type: 'sensory' | 'motor' | 'mixed'
+        distal_latency: string
+        amplitude: string
+        conduction_velocity: string
+        abnormalities_noted: string[]
+      }>
+      electromyography: Array<{
+        muscle_tested: string
+        insertional_activity: string
+        spontaneous_activity: string
+        motor_unit_analysis: string
+        recruitment_pattern: string
+        interpretation: string
+      }>
+      clinical_correlation: string
+      prognosis_based_on_findings: string
+    }
+    cardiac_studies: Array<{
+      study_type: string
+      date_performed: string
+      indications: string[]
+      findings: string[]
+      functional_assessment: string
+      risk_stratification: string
+    }>
+    pulmonary_function_testing: Array<{
+      test_type: string
+      results_summary: string
+      severity_classification: string
+      reversibility_testing: string
+      clinical_implications: string
+    }>
+    pathology_reports: Array<{
+      specimen_source: string
+      date_obtained: string
+      pathologist: string
+      gross_description: string
+      microscopic_findings: string
+      special_stains: string[]
+      diagnosis: string
+      staging_grading: string
+      prognostic_factors: string[]
+    }>
+    functional_studies: Array<{
+      study_type: string              // FCE, work capacity, driving eval
+      date_performed: string
+      evaluator_credentials: string
+      methodology: string
+      results_summary: string
+      limitations_identified: string[]
+      recommendations: string[]
+    }>
+  }
+
+  // SECTION G: DETAILED TREATMENT CHRONOLOGY (20 items)
+  treatment_timeline_comprehensive: {
+    emergency_care_sequence: {
+      pre_hospital_care: Array<{
+        responder_type: string          // EMS, fire, police, bystander
+        arrival_time: string
+        initial_assessment: string
+        interventions_performed: string[]
+        medications_administered: string[]
+        transport_decisions: string
+        receiving_facility: string
+      }>
+      emergency_department_care: Array<{
+        arrival_time: string
+        triage_assessment: {
+          acuity_level: string          // ESI 1-5
+          chief_complaint: string
+          vital_signs: string
+          initial_pain_score: number
+        }
+        physician_evaluation: {
+          attending_physician: string
+          resident_involvement: string
+          specialist_consultations: string[]
+          diagnostic_workup: string[]
+          treatment_interventions: string[]
+        }
+        disposition_planning: {
+          discharge_diagnosis: string[]
+          discharge_instructions: string[]
+          medications_prescribed: string[]
+          follow_up_arrangements: string[]
+          work_school_restrictions: string[]
+        }
+        length_of_stay: string
+        complications_noted: string[]
+      }>
+    }
+    inpatient_hospitalization: Array<{
+      admission_details: {
+        admission_date_time: string
+        admitting_diagnosis: string[]
+        admitting_physician: string
+        admission_source: 'ED' | 'direct' | 'transfer'
+        room_assignment: string
+        initial_orders: string[]
+      }
+      daily_progress_notes: Array<{
+        date: string
+        service: string
+        subjective_assessment: string
+        objective_findings: string
+        assessment: string
+        plan: string
+        consultant_recommendations: string[]
+      }>
+      procedures_during_stay: Array<{
+        procedure_name: string
+        date_time: string
+        performing_physician: string
+        indication: string
+        technique: string
+        complications: string[]
+        results: string
+      }>
+      discharge_planning: {
+        discharge_date: string
+        discharge_disposition: string
+        discharge_diagnoses: string[]
+        discharge_medications: string[]
+        discharge_instructions: string[]
+        follow_up_appointments: string[]
+        durable_medical_equipment: string[]
+      }
+    }>
+    outpatient_treatment_progression: {
+      primary_care_follow_up: Array<{
+        visit_date: string
+        provider_name: string
+        visit_type: string
+        chief_complaint: string
+        physical_examination: string
+        assessment_plan: string
+        medication_adjustments: string[]
+        referrals_made: string[]
+        work_status_assessment: string
+      }>
+      specialist_care_sequence: Array<{
+        specialty: string
+        provider_name: string
+        initial_consultation_date: string
+        follow_up_visits: Array<{
+          date: string
+          findings: string[]
+          treatment_adjustments: string[]
+          prognosis_updates: string
+        }>
+        treatment_goals: string[]
+        outcome_measures: string[]
+      }>
+    }
+    rehabilitation_progression: {
+      physical_therapy_timeline: Array<{
+        evaluation_date: string
+        therapist_name: string
+        initial_findings: string[]
+        treatment_plan: string[]
+        session_notes: Array<{
+          date: string
+          interventions: string[]
+          patient_response: string
+          progress_measures: string[]
+          home_exercise_compliance: string
+        }>
+        discharge_summary: {
+          final_evaluation: string
+          goals_achieved: string[]
+          remaining_deficits: string[]
+          recommendations: string[]
+        }
+      }>
+      occupational_therapy_progression: Array<{
+        evaluation_findings: string[]
+        treatment_focus: string[]
+        adaptive_equipment_trials: string[]
+        work_conditioning_results: string[]
+        functional_capacity_improvements: string[]
+      }>
+    }
+    medication_management_timeline: Array<{
+      medication_name: string
+      prescriber: string
+      indication: string
+      dosing_history: Array<{
+        date: string
+        dosage: string
+        frequency: string
+        reason_for_change: string
+      }>
+      efficacy_tracking: Array<{
+        date: string
+        effectiveness_rating: number
+        side_effects: string[]
+        functional_improvement: string
+      }>
+      discontinuation_details: {
+        date_stopped?: string
+        reason: string
+        taper_schedule?: string
+        withdrawal_symptoms?: string[]
+      }
+    }>
+    surgical_care_timeline: Array<{
+      pre_operative_phase: {
+        surgical_consultation_date: string
+        surgeon_name: string
+        indication_for_surgery: string
+        alternative_treatments_discussed: string[]
+        informed_consent_details: string[]
+        pre_operative_testing: string[]
+        medical_clearance: string[]
+      }
+      operative_phase: {
+        surgery_date: string
+        procedure_performed: string
+        surgical_approach: string
+        anesthesia_details: string
+        operative_findings: string[]
+        complications_intraoperative: string[]
+        estimated_blood_loss: string
+        duration: string
+      }
+      post_operative_phase: {
+        immediate_recovery: string
+        post_op_complications: string[]
+        length_of_stay: string
+        discharge_planning: string[]
+        follow_up_schedule: string[]
+      }
+      surgical_outcomes: {
+        wound_healing: string
+        functional_improvement: string
+        pain_relief_achieved: string
+        patient_satisfaction: string
+        return_to_activities: string
+      }
+    }>
+  }
+
+  // SECTION H: EXPANDED FUNCTIONAL IMPACT (15 items)
+  functional_impact_comprehensive: {
+    activities_daily_living_detailed: {
+      self_care_activities: Array<{
+        activity: string
+        independence_level: 'independent' | 'supervision' | 'assistance' | 'dependent'
+        assistive_devices: string[]
+        time_to_complete: string
+        energy_expenditure: string
+        pain_level_during: number
+        modifications_needed: string[]
+      }>
+      mobility_assessment: {
+        ambulation_capacity: {
+          distance_tolerance: string
+          speed_limitations: string
+          terrain_restrictions: string[]
+          assistive_device_needs: string[]
+          fall_risk_factors: string[]
+        }
+        transfer_abilities: {
+          bed_mobility: string
+          chair_transfers: string
+          toilet_transfers: string
+          car_transfers: string
+          shower_bathtub_access: string
+        }
+        stair_navigation: {
+          ascent_ability: string
+          descent_ability: string
+          handrail_dependence: boolean
+          step_height_limitations: string
+        }
+      }
+    }
+    instrumental_activities_expanded: {
+      household_management: Array<{
+        task: string
+        capacity_level: string
+        frequency_possible: string
+        assistance_required: string
+        safety_concerns: string[]
+      }>
+      community_integration: {
+        shopping_ability: string
+        public_transportation_use: string
+        banking_financial_management: string
+        medical_appointment_attendance: string
+        social_participation_level: string
+      }
+      technology_interaction: {
+        computer_usage: string
+        smartphone_operation: string
+        assistive_technology_needs: string[]
+      }
+    }
+    occupational_capacity_analysis: {
+      work_related_functions: Array<{
+        function: string
+        pre_injury_capacity: string
+        current_capacity: string
+        percentage_limitation: number
+        accommodations_needed: string[]
+      }>
+      cognitive_work_demands: {
+        concentration_duration: string
+        memory_requirements: string
+        problem_solving_capacity: string
+        multitasking_ability: string
+        stress_tolerance: string
+      }
+      physical_work_demands: {
+        lifting_carrying: {
+          occasional_maximum: string
+          frequent_maximum: string
+          constant_maximum: string
+          overhead_limitations: string
+        }
+        postural_tolerances: {
+          sitting_duration: string
+          standing_duration: string
+          walking_endurance: string
+          bending_stooping_frequency: string
+          reaching_limitations: string[]
+        }
+        environmental_tolerances: {
+          temperature_extremes: string
+          noise_levels: string
+          vibration_exposure: string
+          chemical_exposures: string[]
+        }
+      }
+      return_to_work_analysis: {
+        same_job_capacity: string
+        modified_duty_options: string[]
+        alternative_employment_consideration: string
+        vocational_retraining_needs: string[]
+        timeline_estimates: string
+      }
+    }
+    recreational_lifestyle_impact: {
+      sports_activities_affected: Array<{
+        activity: string
+        participation_level_change: string
+        modifications_possible: string[]
+        safety_considerations: string[]
+      }>
+      hobbies_interests_impact: string[]
+      social_relationship_changes: {
+        family_role_modifications: string[]
+        friendship_impact: string
+        intimate_relationship_effects: string
+        social_isolation_factors: string[]
+      }
+      travel_recreation_limitations: string[]
+    }
+    quality_of_life_assessment: {
+      life_satisfaction_measures: Array<{
+        domain: string
+        pre_injury_rating: number
+        current_rating: number
+        change_attribution: string
+      }>
+      emotional_psychological_impact: {
+        mood_changes: string[]
+        anxiety_levels: string
+        self_esteem_effects: string
+        body_image_concerns: string[]
+        future_outlook: string
+      }
+      financial_lifestyle_impact: {
+        income_changes: string
+        expense_increases: string[]
+        lifestyle_modifications: string[]
+        financial_stress_level: string
+      }
+    }
+  }
+
+  // SECTION I: ENHANCED PROGNOSIS ASSESSMENT (12 items)
+  prognosis_recovery_comprehensive: {
+    medical_prognosis: {
+      short_term_outlook: {
+        timeframe: "0-6 months"
+        expected_improvements: string[]
+        anticipated_complications: string[]
+        treatment_milestones: string[]
+        functional_recovery_expectations: string[]
+      }
+      intermediate_prognosis: {
+        timeframe: "6-24 months"
+        continued_improvement_likelihood: string
+        plateau_expectations: string
+        additional_treatment_needs: string[]
+        functional_optimization_potential: string
+      }
+      long_term_outlook: {
+        timeframe: "2+ years"
+        permanent_limitations_expected: string[]
+        degenerative_changes_risk: string
+        late_complications_potential: string[]
+        aging_interaction_effects: string
+      }
+    }
+    functional_prognosis: {
+      maximum_medical_improvement: {
+        estimated_timeline: string
+        physician_consensus: string
+        factors_affecting_timeline: string[]
+        monitoring_requirements: string[]
+      }
+      work_capacity_prognosis: {
+        return_to_work_likelihood: string
+        timeline_estimates: string
+        capacity_level_expectations: string
+        permanent_restrictions_anticipated: string[]
+        career_impact_assessment: string
+      }
+      independence_level_prognosis: {
+        self_care_independence: string
+        mobility_independence: string
+        community_independence: string
+        driving_capacity_outlook: string
+      }
+    }
+    treatment_response_prognosis: {
+      conservative_treatment_potential: {
+        physical_therapy_response: string
+        medication_management_outlook: string
+        pain_control_expectations: string
+      }
+      surgical_intervention_prognosis: {
+        surgical_candidacy: string
+        expected_surgical_outcomes: string[]
+        surgical_risks_specific: string[]
+        post_surgical_recovery_timeline: string
+      }
+      alternative_treatment_potential: string[]
+    }
+    complications_risk_assessment: {
+      medical_complications_risk: Array<{
+        complication_type: string
+        risk_level: 'low' | 'moderate' | 'high'
+        prevention_strategies: string[]
+        monitoring_requirements: string[]
+      }>
+      functional_decline_risk: {
+        factors_contributing: string[]
+        prevention_interventions: string[]
+        early_warning_signs: string[]
+      }
+    }
+    quality_of_life_prognosis: {
+      pain_management_outlook: string
+      functional_capacity_trajectory: string
+      psychological_adaptation_prognosis: string
+      social_reintegration_expectations: string
+      overall_life_satisfaction_outlook: string
+    }
+  }
+
+  // SECTION J: ENHANCED LEGAL SIGNIFICANCE (20 items)
+  legal_significance_comprehensive: {
+    causation_analysis_detailed: {
+      direct_causation_assessment: {
+        temporal_relationship: 'immediate' | 'delayed' | 'remote'
+        mechanism_consistency: string
+        force_magnitude_correlation: string
+        anatomical_plausibility: string
+        physician_causation_opinions: Array<{
+          physician_name: string
+          specialty: string
+          opinion_type: 'treating' | 'consulting' | 'IME' | 'expert'
+          causation_certainty: 'definite' | 'probable' | 'possible' | 'unlikely'
+          supporting_rationale: string[]
+          conflicting_opinions: string[]
+        }>
+      }
+      aggravation_analysis: {
+        pre_existing_condition_impact: Array<{
+          condition: string
+          pre_incident_status: string
+          post_incident_changes: string
+          apportionment_analysis: string
+        }>
+        natural_progression_vs_incident: string
+        acceleration_of_degenerative_changes: string
+      }
+      alternative_causation_factors: {
+        intervening_causes: string[]
+        concurrent_causes: string[]
+        superseding_causes: string[]
+      }
+    }
+    damages_assessment_comprehensive: {
+      economic_damages_detailed: {
+        medical_expenses: {
+          past_medical_costs: Array<{
+            provider: string
+            service_type: string
+            date_of_service: string
+            amount: number
+            necessity_rating: string
+          }>
+          future_medical_projections: Array<{
+            treatment_type: string
+            frequency: string
+            estimated_annual_cost: number
+            duration_years: number
+            total_projected_cost: number
+            medical_basis: string
+          }>
+        }
+        lost_income_analysis: {
+          pre_injury_earnings: {
+            annual_salary: number
+            benefits_value: number
+            overtime_potential: number
+            bonus_commission: number
+          }
+          work_capacity_loss: {
+            percentage_capacity_remaining: number
+            hours_per_week_capable: number
+            job_modification_costs: number
+          }
+          lost_earning_capacity: {
+            annual_loss_estimate: number
+            working_years_remaining: number
+            present_value_calculation: number
+            career_advancement_impact: string
+          }
+        }
+        life_care_planning: {
+          medical_care_needs: string[]
+          assistive_equipment: string[]
+          home_modifications: string[]
+          attendant_care_requirements: string[]
+          transportation_needs: string[]
+          total_life_care_cost: number
+        }
+      }
+      non_economic_damages: {
+        pain_suffering_evidence: {
+          pain_documentation: string[]
+          functional_limitation_impact: string[]
+          medication_side_effects: string[]
+          sleep_disruption_evidence: string[]
+          activity_restriction_documentation: string[]
+        }
+        emotional_distress_indicators: {
+          depression_anxiety_documentation: string[]
+          PTSD_symptoms: string[]
+          relationship_impact_evidence: string[]
+          social_isolation_factors: string[]
+        }
+        loss_of_enjoyment: {
+          recreational_activities_lost: string[]
+          hobby_participation_changes: string[]
+          travel_limitations: string[]
+          social_participation_reduction: string[]
+        }
+        disfigurement_scarring: {
+          visible_scarring: string[]
+          functional_deformity: string[]
+          psychological_impact: string[]
+        }
+      }
+    }
+    liability_assessment: {
+      standard_of_care_analysis: {
+        applicable_standards: string[]
+        deviations_identified: Array<{
+          deviation_type: string
+          severity: 'minor' | 'moderate' | 'major'
+          impact_on_outcome: string
+          expert_opinion_support: string[]
+        }>
+        industry_custom_compliance: string
+        regulatory_compliance_issues: string[]
+      }
+      negligence_elements: {
+        duty_of_care: string
+        breach_of_duty: string[]
+        proximate_cause: string
+        damages_causation_link: string
+      }
+      comparative_fault_analysis: {
+        plaintiff_contributory_actions: string[]
+        percentage_fault_allocation: number
+        assumption_of_risk_factors: string[]
+        mitigation_of_damages_issues: string[]
+      }
+    }
+    expert_witness_considerations: {
+      medical_expert_needs: Array<{
+        specialty_required: string
+        opinion_focus: string[]
+        credentials_needed: string[]
+        litigation_experience: boolean
+      }>
+      economic_expert_requirements: {
+        lost_earnings_analysis: boolean
+        life_care_planning: boolean
+        present_value_calculations: boolean
+      }
+      vocational_expert_needs: {
+        work_capacity_assessment: boolean
+        job_market_analysis: boolean
+        retraining_evaluation: boolean
+      }
+    }
+    case_valuation_factors: {
+      jurisdiction_considerations: {
+        venue_advantages: string[]
+        jury_pool_characteristics: string
+        damage_cap_limitations: string[]
+        comparative_fault_laws: string
+      }
+      settlement_considerations: {
+        early_settlement_value: number
+        trial_value_estimate: number
+        litigation_cost_factors: number
+        time_value_considerations: string
+      }
+      trial_presentation_factors: {
+        demonstrative_evidence_needs: string[]
+        day_in_life_video_value: string
+        medical_animation_potential: string
+        jury_sympathy_factors: string[]
+      }
+    }
+  }
+}
+
+/**
+ * ICD-10 CROSS-REFERENCE SYSTEM V2
+ * Enhanced diagnostic code mapping with legal significance weighting
+ */
+
+interface ICD10CrossReferenceV2 {
+  injury_categories: {
+    [key: string]: {
+      primary_codes: string[]
+      related_codes: string[]
+      legal_significance_base_score: number
+      severity_multipliers: {
+        mild: number
+        moderate: number
+        severe: number
+        catastrophic: number
+      }
+      functional_impact_weights: {
+        mobility: number
+        cognitive: number
+        sensory: number
+        psychological: number
+      }
+      extraction_keywords: string[]
+      common_complications: string[]
+      treatment_cost_factors: number
+      permanency_likelihood: number
+    }
+  }
+  
+  // Comprehensive injury mapping
+  traumatic_brain_injury: {
+    primary_codes: ['S06.0X0A', 'S06.1X0A', 'S06.2X0A', 'S06.9X0A']
+    related_codes: ['F07.81', 'G93.1', 'Z87.820']
+    legal_significance_base_score: 95
+    severity_multipliers: { mild: 1.0, moderate: 1.5, severe: 2.0, catastrophic: 3.0 }
+    functional_impact_weights: { mobility: 0.3, cognitive: 0.5, sensory: 0.1, psychological: 0.1 }
+    extraction_keywords: ['concussion', 'brain injury', 'TBI', 'loss of consciousness', 'post-concussive', 'cognitive impairment']
+    common_complications: ['post-concussive syndrome', 'cognitive dysfunction', 'personality changes']
+    treatment_cost_factors: 2.5
+    permanency_likelihood: 0.7
+  }
+
+  spinal_cord_injury: {
+    primary_codes: ['S14.101A', 'S24.101A', 'S34.101A']
+    related_codes: ['G82.20', 'G82.21', 'G82.22']
+    legal_significance_base_score: 100
+    severity_multipliers: { mild: 1.2, moderate: 2.0, severe: 3.0, catastrophic: 4.0 }
+    functional_impact_weights: { mobility: 0.6, cognitive: 0.1, sensory: 0.2, psychological: 0.1 }
+    extraction_keywords: ['spinal cord', 'paralysis', 'quadriplegia', 'paraplegia', 'neurological deficit']
+    common_complications: ['autonomic dysreflexia', 'neurogenic bladder', 'chronic pain']
+    treatment_cost_factors: 4.0
+    permanency_likelihood: 0.9
+  }
+
+  amputation_traumatic: {
+    primary_codes: ['S58.011A', 'S68.011A', 'S78.011A', 'S88.011A']
+    related_codes: ['Z89.011', 'Z89.021', 'Z89.111']
+    legal_significance_base_score: 90
+    severity_multipliers: { mild: 1.5, moderate: 2.0, severe: 2.5, catastrophic: 3.0 }
+    functional_impact_weights: { mobility: 0.5, cognitive: 0.1, sensory: 0.2, psychological: 0.2 }
+    extraction_keywords: ['amputation', 'traumatic loss', 'severed', 'avulsion', 'digit loss']
+    common_complications: ['phantom pain', 'prosthetic complications', 'infection']
+    treatment_cost_factors: 3.0
+    permanency_likelihood: 1.0
+  }
+
+  burns_severe: {
+    primary_codes: ['T20.30XA', 'T21.30XA', 'T22.30XA', 'T31.30']
+    related_codes: ['L90.5', 'Z87.891']
+    legal_significance_base_score: 85
+    severity_multipliers: { mild: 0.8, moderate: 1.2, severe: 2.0, catastrophic: 3.0 }
+    functional_impact_weights: { mobility: 0.3, cognitive: 0.1, sensory: 0.1, psychological: 0.5 }
+    extraction_keywords: ['burn', 'thermal injury', 'chemical burn', 'electrical burn', 'skin graft']
+    common_complications: ['contractures', 'scarring', 'keloid formation', 'infection']
+    treatment_cost_factors: 2.8
+    permanency_likelihood: 0.8
+  }
+}
+
+/**
+ * ATTORNEY EVALUATION FRAMEWORK V2
+ * Enhanced legal assessment tools
+ */
+
+interface AttorneyEvaluationFrameworkV2 {
+  case_intake_evaluation: {
+    liability_strength: {
+      clear_negligence: boolean
+      multiple_defendants: boolean
+      insurance_coverage_adequate: boolean
+      statute_limitations_compliance: boolean
+      venue_advantages: string[]
+    }
+    damages_potential: {
+      economic_damages_estimate: number
+      non_economic_multiplier: number
+      pain_suffering_documentation_strength: 'weak' | 'moderate' | 'strong' | 'excellent'
+      future_medical_needs_supported: boolean
+    }
+    client_factors: {
+      credibility_assessment: 'poor' | 'fair' | 'good' | 'excellent'
+      compliance_history: string
+      litigation_readiness: boolean
+      settlement_expectations_realistic: boolean
+    }
+  }
+  
+  case_development_tracking: {
+    medical_record_completeness: number    // Percentage complete
+    expert_witness_secured: string[]
+    discovery_completion_status: string
+    deposition_scheduling: string[]
+    trial_preparation_timeline: string
+  }
+  
+  settlement_evaluation: {
+    demand_calculation: {
+      medical_expenses_multiplier: number
+      lost_wages_calculation: number
+      pain_suffering_formula: string
+      total_demand_amount: number
+    }
+    negotiation_strategy: {
+      initial_demand_percentage: number
+      minimum_acceptable_settlement: number
+      trial_cost_considerations: number
+    }
+  }
+}
+
+/**
+ * PHYSICIAN REVIEW FRAMEWORK V2
+ * Comprehensive medical validation system
+ */
+
+interface PhysicianReviewFrameworkV2 {
+  clinical_accuracy_validation: {
+    diagnosis_appropriateness: {
+      primary_diagnosis_accuracy: boolean
+      differential_diagnosis_complete: boolean
+      diagnostic_criteria_met: boolean
+      ICD10_coding_accurate: boolean
+    }
+    treatment_standard_assessment: {
+      initial_treatment_appropriate: boolean
+      follow_up_care_adequate: boolean
+      specialist_referrals_timely: boolean
+      medication_management_optimal: boolean
+    }
+    causation_medical_opinion: {
+      incident_injury_relationship: 'definite' | 'probable' | 'possible' | 'unlikely'
+      biomechanical_plausibility: boolean
+      temporal_relationship_appropriate: boolean
+      alternative_explanations_considered: boolean
+    }
+  }
+  
+  legal_medicine_assessment: {
+    impairment_rating_validation: {
+      AMA_guides_compliance: boolean
+      rating_methodology_appropriate: boolean
+      maximum_medical_improvement_reached: boolean
+      functional_capacity_assessment_accurate: boolean
+    }
+    future_medical_needs: {
+      recommendations_medically_necessary: boolean
+      cost_estimates_reasonable: boolean
+      frequency_duration_appropriate: boolean
+    }
+    expert_testimony_readiness: {
+      opinion_confidence_level: 'low' | 'moderate' | 'high'
+      literature_support_available: boolean
+      cross_examination_preparation_needed: string[]
+    }
+  }
+  
+  red_flag_identification: {
+    inconsistency_detection: {
+      subjective_objective_mismatch: boolean
+      symptom_magnification_indicators: string[]
+      functional_inconsistencies: string[]
+    }
+    secondary_gain_assessment: {
+      litigation_influence_factors: string[]
+      disability_benefit_considerations: string[]
+      malingering_indicators: string[]
+    }
+  }
+}
+
+export { 
+  MedicalExtractionFrameworkV2, 
+  ICD10CrossReferenceV2, 
+  AttorneyEvaluationFrameworkV2, 
+  PhysicianReviewFrameworkV2,
+  ExtractedField,
+  Citation,
+  MedicalBill,
+  BillSummary,
+  BillingExtraction
+}
