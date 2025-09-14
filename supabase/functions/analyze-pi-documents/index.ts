@@ -77,28 +77,46 @@ serve(async (req) => {
     };
 
     for (const [documentId, documentChunks] of Object.entries(documentGroups)) {
-      console.log(`🔬 Analyzing document: ${documentId} (${documentChunks.length} chunks)`);
+      try {
+        console.log(`🔬 Analyzing document: ${documentId} (${documentChunks.length} chunks)`);
 
-      // Combine chunks into full document text
-      const fullText = documentChunks
-        .sort((a, b) => a.chunk_index - b.chunk_index)
-        .map(chunk => chunk.content)
-        .join(' ');
+        // Combine chunks into full document text
+        const fullText = documentChunks
+          .sort((a, b) => a.chunk_index - b.chunk_index)
+          .map(chunk => chunk.content)
+          .join(' ');
 
-      // Determine document type and analyze accordingly
-      const documentType = await determineDocumentType(fullText, openAIApiKey);
-      
-      if (documentType === 'medical') {
-        await analyzeMedicalDocument(supabase, clientId, documentId, fullText, openAIApiKey);
-        analysisResults.medicalAnalyses++;
-      } else if (documentType === 'legal') {
-        await analyzeLegalDocument(supabase, clientId, documentId, fullText, openAIApiKey);
-        analysisResults.legalAnalyses++;
+        // Add delay to prevent rate limiting (500ms between documents)
+        if (analysisResults.medicalAnalyses + analysisResults.legalAnalyses > 0) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        // Determine document type and analyze accordingly
+        const documentType = await determineDocumentType(fullText, openAIApiKey);
+        
+        // Add small delay between API calls
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        if (documentType === 'medical') {
+          await analyzeMedicalDocument(supabase, clientId, documentId, fullText, openAIApiKey);
+          analysisResults.medicalAnalyses++;
+        } else if (documentType === 'legal') {
+          await analyzeLegalDocument(supabase, clientId, documentId, fullText, openAIApiKey);
+          analysisResults.legalAnalyses++;
+        }
+
+        // Add delay before timeline extraction
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // Extract timeline events from any document
+        const timelineEvents = await extractTimelineEvents(supabase, clientId, documentId, fullText, openAIApiKey);
+        analysisResults.timelineEvents += timelineEvents;
+
+        console.log(`✅ Successfully processed document ${documentId}`);
+      } catch (error) {
+        console.error(`❌ Error processing document ${documentId}:`, error);
+        // Continue processing other documents even if one fails
       }
-
-      // Extract timeline events from any document
-      const timelineEvents = await extractTimelineEvents(supabase, clientId, documentId, fullText, openAIApiKey);
-      analysisResults.timelineEvents += timelineEvents;
     }
 
     console.log('✅ Document analysis complete:', analysisResults);
@@ -150,41 +168,57 @@ function parseJSONResponse(content: string): any {
 }
 
 async function determineDocumentType(text: string, apiKey: string): Promise<string> {
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [{
-        role: 'user',
-        content: `Analyze this document text and determine if it's primarily a MEDICAL document (medical records, treatment notes, bills) or LEGAL document (incident reports, legal filings, contracts). Respond with only "medical" or "legal":
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{
+          role: 'user',
+          content: `Analyze this document text and determine if it's primarily a MEDICAL document (medical records, treatment notes, bills) or LEGAL document (incident reports, legal filings, contracts). Respond with only "medical" or "legal":
 
 ${text.substring(0, 2000)}`
-      }],
-      temperature: 0
-    }),
-  });
+        }],
+        temperature: 0
+      }),
+    });
 
-  const data = await response.json();
-  const result = data.choices[0].message.content.toLowerCase().trim();
-  return result.includes('medical') ? 'medical' : 'legal';
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    if (!data.choices || data.choices.length === 0 || !data.choices[0].message) {
+      console.error('Invalid OpenAI response structure:', data);
+      return 'medical'; // Default fallback
+    }
+
+    const result = data.choices[0].message.content.toLowerCase().trim();
+    return result.includes('medical') ? 'medical' : 'legal';
+  } catch (error) {
+    console.error('Error determining document type:', error);
+    return 'medical'; // Default fallback to continue processing
+  }
 }
 
 async function analyzeMedicalDocument(supabase: any, clientId: string, documentId: string, text: string, apiKey: string) {
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [{
-        role: 'user',
-        content: `Analyze this medical document and extract key information in JSON format:
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{
+          role: 'user',
+          content: `Analyze this medical document and extract key information in JSON format:
 
 {
   "document_type": "type of medical document",
@@ -200,52 +234,65 @@ async function analyzeMedicalDocument(supabase: any, clientId: string, documentI
 
 Document text:
 ${text.substring(0, 3000)}`
-      }],
-      temperature: 0
-    }),
-  });
-
-  const data = await response.json();
-  
-  try {
-    const extractedData = parseJSONResponse(data.choices[0].message.content);
-
-  const { error } = await supabase
-    .from('medical_document_analyses')
-    .insert({
-      client_id: clientId,
-      document_id: documentId,
-      document_type: extractedData.document_type || 'medical_record',
-      extracted_data: extractedData,
-      authenticity_score: 0.85, // Default high score for processed documents
-      timeline_events: extractedData.dates?.map((date: string, index: number) => ({
-        date,
-        event_type: 'treatment',
-        description: extractedData.treatments?.[index] || 'Medical treatment'
-      })) || []
+        }],
+        temperature: 0
+      }),
     });
 
-    if (error) {
-      console.error('Error saving medical analysis:', error);
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
     }
-  } catch (parseError) {
-    console.error('Error parsing medical analysis response:', parseError);
-    console.error('Raw OpenAI response:', data.choices[0].message.content);
+
+    const data = await response.json();
+    
+    if (!data.choices || data.choices.length === 0 || !data.choices[0].message) {
+      console.error('Invalid OpenAI response structure for medical document:', data);
+      return;
+    }
+
+    try {
+      const extractedData = parseJSONResponse(data.choices[0].message.content);
+
+    const { error } = await supabase
+      .from('medical_document_analyses')
+      .insert({
+        client_id: clientId,
+        document_id: documentId,
+        document_type: extractedData.document_type || 'medical_record',
+        extracted_data: extractedData,
+        authenticity_score: 0.85, // Default high score for processed documents
+        timeline_events: extractedData.dates?.map((date: string, index: number) => ({
+          date,
+          event_type: 'treatment',
+          description: extractedData.treatments?.[index] || 'Medical treatment'
+        })) || []
+      });
+
+      if (error) {
+        console.error('Error saving medical analysis:', error);
+      }
+    } catch (parseError) {
+      console.error('Error parsing medical analysis response:', parseError);
+      console.error('Raw OpenAI response:', data.choices[0].message.content);
+    }
+  } catch (error) {
+    console.error('Error in analyzeMedicalDocument:', error);
   }
 }
 
 async function analyzeLegalDocument(supabase: any, clientId: string, documentId: string, text: string, apiKey: string) {
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [{
-        role: 'user',
-        content: `Analyze this legal document for personal injury case elements in JSON format:
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{
+          role: 'user',
+          content: `Analyze this legal document for personal injury case elements in JSON format:
 
 {
   "document_type": "type of legal document",
@@ -267,53 +314,66 @@ async function analyzeLegalDocument(supabase: any, clientId: string, documentId:
 
 Document text:
 ${text.substring(0, 3000)}`
-      }],
-      temperature: 0
-    }),
-  });
-
-  const data = await response.json();
-  
-  try {
-    const extractedData = parseJSONResponse(data.choices[0].message.content);
-
-  const { error } = await supabase
-    .from('legal_document_analyses')
-    .insert({
-      client_id: clientId,
-      document_id: documentId,
-      document_type: extractedData.document_type || 'legal_document',
-      legal_elements: extractedData.legal_elements || [],
-      case_strength: extractedData.case_strength || {},
-      key_issues: extractedData.key_issues || [],
-      source_credibility: 0.8, // Default score for processed documents
-      information_classification: {
-        liability_factors: extractedData.liability_factors || []
-      },
-      arguments_analysis: extractedData.case_strength || {}
+        }],
+        temperature: 0
+      }),
     });
 
-    if (error) {
-      console.error('Error saving legal analysis:', error);
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
     }
-  } catch (parseError) {
-    console.error('Error parsing legal analysis response:', parseError);
-    console.error('Raw OpenAI response:', data.choices[0].message.content);
+
+    const data = await response.json();
+    
+    if (!data.choices || data.choices.length === 0 || !data.choices[0].message) {
+      console.error('Invalid OpenAI response structure for legal document:', data);
+      return;
+    }
+    
+    try {
+      const extractedData = parseJSONResponse(data.choices[0].message.content);
+
+    const { error } = await supabase
+      .from('legal_document_analyses')
+      .insert({
+        client_id: clientId,
+        document_id: documentId,
+        document_type: extractedData.document_type || 'legal_document',
+        legal_elements: extractedData.legal_elements || [],
+        case_strength: extractedData.case_strength || {},
+        key_issues: extractedData.key_issues || [],
+        source_credibility: 0.8, // Default score for processed documents
+        information_classification: {
+          liability_factors: extractedData.liability_factors || []
+        },
+        arguments_analysis: extractedData.case_strength || {}
+      });
+
+      if (error) {
+        console.error('Error saving legal analysis:', error);
+      }
+    } catch (parseError) {
+      console.error('Error parsing legal analysis response:', parseError);
+      console.error('Raw OpenAI response:', data.choices[0].message.content);
+    }
+  } catch (error) {
+    console.error('Error in analyzeLegalDocument:', error);
   }
 }
 
 async function extractTimelineEvents(supabase: any, clientId: string, documentId: string, text: string, apiKey: string): Promise<number> {
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [{
-        role: 'user',
-        content: `Extract chronological events from this document for a personal injury timeline in JSON format:
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{
+          role: 'user',
+          content: `Extract chronological events from this document for a personal injury timeline in JSON format:
 
 [
   {
@@ -327,38 +387,51 @@ async function extractTimelineEvents(supabase: any, clientId: string, documentId
 
 Only include events with specific dates. Document text:
 ${text.substring(0, 3000)}`
-      }],
-      temperature: 0
-    }),
-  });
+        }],
+        temperature: 0
+      }),
+    });
 
-  const data = await response.json();
-  
-  try {
-    const events = parseJSONResponse(data.choices[0].message.content);
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+    }
 
-  if (!Array.isArray(events) || events.length === 0) {
-    return 0;
-  }
+    const data = await response.json();
+    
+    if (!data.choices || data.choices.length === 0 || !data.choices[0].message) {
+      console.error('Invalid OpenAI response structure for timeline events:', data);
+      return 0;
+    }
+    
+    try {
+      const events = parseJSONResponse(data.choices[0].message.content);
 
-  for (const event of events) {
-    await supabase
-      .from('pi_timeline_events')
-      .insert({
-        client_id: clientId,
-        event_date: event.event_date,
-        event_type: event.event_type,
-        description: event.description,
-        reliability_score: event.reliability_score || 0.7,
-        source_reference: event.source_reference,
-        document_id: documentId
-      });
-  }
+    if (!Array.isArray(events) || events.length === 0) {
+      return 0;
+    }
 
-    return events.length;
-  } catch (parseError) {
-    console.error('Error parsing timeline events response:', parseError);
-    console.error('Raw OpenAI response:', data.choices[0].message.content);
+    for (const event of events) {
+      await supabase
+        .from('pi_timeline_events')
+        .insert({
+          client_id: clientId,
+          event_date: event.event_date,
+          event_type: event.event_type,
+          description: event.description,
+          reliability_score: event.reliability_score || 0.7,
+          source_reference: event.source_reference,
+          document_id: documentId
+        });
+    }
+
+      return events.length;
+    } catch (parseError) {
+      console.error('Error parsing timeline events response:', parseError);
+      console.error('Raw OpenAI response:', data.choices[0].message.content);
+      return 0;
+    }
+  } catch (error) {
+    console.error('Error in extractTimelineEvents:', error);
     return 0;
   }
 }
