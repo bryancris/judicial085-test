@@ -79,7 +79,7 @@ const PIAnalysisContent: React.FC<PIAnalysisContentProps> = ({
         <Alert className="mb-6">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="flex items-center justify-between">
-            <span>Documents are ready for analysis. Click "Analyze Documents" to extract case data.</span>
+            <span>Documents are ready for analysis. Click "Analyze Documents" to extract case data and timeline events.</span>
             <Button 
               onClick={analyzeDocuments}
               disabled={isAnalyzingDocuments}
@@ -95,6 +95,34 @@ const PIAnalysisContent: React.FC<PIAnalysisContentProps> = ({
                 <>
                   <FileText className="h-4 w-4 mr-2" />
                   Analyze Documents
+                </>
+              )}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {hasDocuments && hasAnalysisData && (
+        <Alert className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between">
+            <span>Analysis complete. You can re-analyze documents if new documents have been added or to refresh the data.</span>
+            <Button 
+              onClick={analyzeDocuments}
+              disabled={isAnalyzingDocuments}
+              variant="outline"
+              size="sm"
+              className="ml-4"
+            >
+              {isAnalyzingDocuments ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Re-analyzing...
+                </>
+              ) : (
+                <>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Re-analyze Documents
                 </>
               )}
             </Button>

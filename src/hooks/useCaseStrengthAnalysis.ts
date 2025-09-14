@@ -122,18 +122,19 @@ export const useCaseStrengthAnalysis = (clientId?: string) => {
     if (!clientId) return;
 
     try {
-      const [medicalData, legalData, timelineData] = await Promise.all([
+      const [medicalData, timelineData, caseMetrics] = await Promise.all([
         supabase.from('medical_document_analyses').select('id').eq('client_id', clientId).limit(1),
-        supabase.from('legal_document_analyses').select('id').eq('client_id', clientId).limit(1),
-        supabase.from('pi_timeline_events').select('id').eq('client_id', clientId).limit(1)
+        supabase.from('pi_timeline_events').select('id').eq('client_id', clientId).limit(1),
+        supabase.from('pi_case_metrics').select('id').eq('client_id', clientId).limit(1)
       ]);
 
-      const hasAnyAnalysis = 
-        (medicalData.data?.length ?? 0) > 0 || 
-        (legalData.data?.length ?? 0) > 0 || 
-        (timelineData.data?.length ?? 0) > 0;
+      // Analysis is complete only when ALL required components are present
+      const hasCompleteAnalysis = 
+        (medicalData.data?.length ?? 0) > 0 && 
+        (timelineData.data?.length ?? 0) > 0 && 
+        (caseMetrics.data?.length ?? 0) > 0;
 
-      setHasAnalysisData(hasAnyAnalysis);
+      setHasAnalysisData(hasCompleteAnalysis);
     } catch (error) {
       console.error("Error checking analysis data status:", error);
     }

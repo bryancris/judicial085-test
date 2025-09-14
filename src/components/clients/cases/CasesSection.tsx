@@ -8,8 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import NewCaseDialog from "./NewCaseDialog";
 import { Button } from "@/components/ui/button";
 import { useClientCases } from "@/hooks/useClientCases";
-import { FileText, RefreshCw } from "lucide-react";
-import { useCaseStrengthAnalysis } from "@/hooks/useCaseStrengthAnalysis";
+import { FileText } from "lucide-react";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 
 interface CasesSectionProps {
@@ -20,7 +19,6 @@ const CasesSection = ({ clientId }: CasesSectionProps) => {
   const [activeTab, setActiveTab] = useState<string>("cases");
   const { currentCase, setCurrentCase } = useCase();
   const { cases, loading, error } = useClientCases(clientId);
-  const { analyzeCase, isAnalyzing } = useCaseStrengthAnalysis(clientId);
   
   console.log("CasesSection rendering with clientId:", clientId);
   console.log("Cases in CasesSection:", cases);
@@ -45,11 +43,6 @@ const CasesSection = ({ clientId }: CasesSectionProps) => {
     setActiveTab("details");
   };
 
-  const handleRefreshCase = () => {
-    if (currentCase?.case_type === "personal_injury") {
-      analyzeCase();
-    }
-  };
 
   return (
     <div>
@@ -60,18 +53,6 @@ const CasesSection = ({ clientId }: CasesSectionProps) => {
               Cases
             </AccordionTrigger>
             <div className="flex gap-2">
-              {currentCase?.case_type === "personal_injury" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRefreshCase}
-                  disabled={isAnalyzing}
-                  className="flex items-center gap-2"
-                >
-                  <RefreshCw className={`h-4 w-4 ${isAnalyzing ? 'animate-spin' : ''}`} />
-                  {isAnalyzing ? 'Analyzing...' : 'Refresh Case'}
-                </Button>
-              )}
               <NewCaseDialog clientId={clientId} onCaseCreated={handleNewCase} />
             </div>
           </div>
