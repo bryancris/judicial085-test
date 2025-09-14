@@ -1,6 +1,7 @@
 import { Calendar, Clock, Activity, Stethoscope, Pill, FileText, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { differenceInDays } from "date-fns";
 
 interface TimelineEvent {
   id: string;
@@ -58,7 +59,12 @@ const getEventTypeLabel = (eventType: string) => {
   }
 };
 
-const getEventTypeColor = (eventType: string) => {
+const getEventTypeColor = (eventType: string, hasGap?: boolean) => {
+  // If this is a treatment event that follows a 30+ day gap, show as red
+  if (hasGap && (eventType === 'treatment' || eventType === 'therapy' || eventType === 'medication')) {
+    return 'destructive';
+  }
+  
   switch (eventType) {
     case 'injury':
       return 'destructive';
@@ -79,6 +85,38 @@ const getEventTypeColor = (eventType: string) => {
   }
 };
 
+const detectTreatmentGaps = (events: TimelineEvent[]) => {
+  // Sort events by date to ensure chronological order
+  const sortedEvents = [...events].sort((a, b) => 
+    new Date(a.event_date).getTime() - new Date(b.event_date).getTime()
+  );
+  
+  const treatmentTypes = ['treatment', 'therapy', 'medication'];
+  const eventsWithGaps: Set<string> = new Set();
+  
+  // Track the last treatment date
+  let lastTreatmentDate: Date | null = null;
+  
+  for (const event of sortedEvents) {
+    if (treatmentTypes.includes(event.event_type)) {
+      const currentDate = new Date(event.event_date);
+      
+      if (lastTreatmentDate) {
+        const daysBetween = differenceInDays(currentDate, lastTreatmentDate);
+        
+        // If there's a gap of more than 30 days, mark this event
+        if (daysBetween > 30) {
+          eventsWithGaps.add(event.id);
+        }
+      }
+      
+      lastTreatmentDate = currentDate;
+    }
+  }
+  
+  return eventsWithGaps;
+};
+
 export function PITimeline({ events }: PITimelineProps) {
   if (!events || events.length === 0) {
     return (
@@ -96,6 +134,12 @@ export function PITimeline({ events }: PITimelineProps) {
     );
   }
 
+  // Sort events chronologically and detect treatment gaps
+  const sortedEvents = [...events].sort((a, b) => 
+    new Date(b.event_date).getTime() - new Date(a.event_date).getTime()
+  );
+  const eventsWithGaps = detectTreatmentGaps(events);
+
   return (
     <Card>
       <CardHeader>
@@ -109,10 +153,10 @@ export function PITimeline({ events }: PITimelineProps) {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {events.map((event, index) => (
+          {sortedEvents.map((event, index) => (
             <div key={event.id} className="relative">
               {/* Timeline line */}
-              {index < events.length - 1 && (
+              {index < sortedEvents.length - 1 && (
                 <div className="absolute left-6 top-8 w-px h-8 bg-border" />
               )}
               
@@ -126,7 +170,7 @@ export function PITimeline({ events }: PITimelineProps) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center space-x-2">
-                      <Badge variant={getEventTypeColor(event.event_type)} className="text-xs">
+                      <Badge variant={getEventTypeColor(event.event_type, eventsWithGaps.has(event.id))} className="text-xs">
                         {getEventTypeLabel(event.event_type)}
                       </Badge>
                       <span className="text-sm text-muted-foreground">
