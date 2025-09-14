@@ -13,6 +13,72 @@ interface TimelineEvent {
   reliability_score: number;
 }
 
+const enhanceDescription = (description: string, eventType: string): string => {
+  // Medical code mappings for common treatments
+  const medicalCodes: Record<string, string> = {
+    '92060': 'Therapeutic Exercise',
+    '92541': 'Vestibular Testing',
+    '92542': 'Positional Nystagmus Testing',
+    '97110': 'Therapeutic Exercise',
+    '97112': 'Neuromuscular Re-education',
+    '97140': 'Manual Therapy',
+    '97035': 'Ultrasound Therapy',
+    '97032': 'Electrical Stimulation',
+    '97010': 'Hot/Cold Packs',
+    '97026': 'Infrared Therapy',
+    '97016': 'Vasopneumatic Compression',
+    '97018': 'Paraffin Bath',
+    '97022': 'Whirlpool',
+    '97024': 'Diathermy',
+    '97028': 'Ultraviolet Light'
+  };
+
+  // If description contains a medical code, enhance it
+  for (const [code, name] of Object.entries(medicalCodes)) {
+    if (description.includes(code)) {
+      return `${name} (${code})`;
+    }
+  }
+
+  // Clean up and enhance common treatment descriptions
+  if (eventType === 'treatment') {
+    // Handle VR assessments
+    if (description.toLowerCase().includes('vr assessment')) {
+      return description.replace(/^VR Assessment:\s*/i, 'VR Assessment: ');
+    }
+    
+    // Handle specific treatment types
+    if (description.toLowerCase().includes('smooth pursuit')) {
+      return 'Smooth Pursuit Eye Movement Assessment';
+    }
+    
+    if (description.toLowerCase().includes('vor assessment')) {
+      return 'Vestibulo-Ocular Reflex (VOR) Assessment';
+    }
+    
+    if (description.toLowerCase().includes('saccades')) {
+      return description.replace(/saccades/i, 'Saccadic Eye Movement Assessment');
+    }
+
+    // Handle interferential therapy
+    if (description.toLowerCase().includes('interferential')) {
+      return 'Interferential/Electrical Stimulation Therapy';
+    }
+
+    // Handle manual therapies
+    if (description.toLowerCase().includes('manual')) {
+      return 'Manual Therapy Techniques';
+    }
+
+    // Handle photobiomodulation
+    if (description.toLowerCase().includes('photobiomodulation')) {
+      return 'Photobiomodulation (Light Therapy)';
+    }
+  }
+
+  return description;
+}
+
 interface PITimelineProps {
   events: TimelineEvent[];
 }
@@ -188,9 +254,9 @@ export function PITimeline({ events }: PITimelineProps) {
                     )}
                   </div>
                   
-                  <p className="text-sm font-medium text-foreground mb-1">
-                    {event.description}
-                  </p>
+                   <p className="text-sm font-medium text-foreground mb-1">
+                     {enhanceDescription(event.description, event.event_type)}
+                   </p>
                   
                   {event.provider && (
                     <p className="text-xs text-muted-foreground mb-1">

@@ -89,11 +89,27 @@ export class TimelineReconstructionService {
       if (medicalAnalyses) {
         medicalAnalyses.forEach((analysis: any) => {
           if (analysis.timeline_events && Array.isArray(analysis.timeline_events)) {
-            analysis.timeline_events.forEach((event: any) => {
+            analysis.timeline_events.forEach((event: any, index: number) => {
+              // Enhanced description logic - use detailed treatments when available
+              let enhancedDescription = event.description;
+              
+              if (event.description === 'Medical treatment' && analysis.extracted_data?.treatments?.length > 0) {
+                // Try to match treatment with timeline event by date or index
+                const treatments = analysis.extracted_data.treatments;
+                if (treatments[index]) {
+                  enhancedDescription = treatments[index];
+                } else if (treatments.length === 1) {
+                  enhancedDescription = treatments[0];
+                } else {
+                  // Use the first available treatment as fallback
+                  enhancedDescription = treatments[0] || event.description;
+                }
+              }
+              
               events.push({
                 event_date: event.date,
                 event_type: event.event_type,
-                description: event.description,
+                description: enhancedDescription,
                 provider: event.provider,
                 reliability_score: event.reliability_score || 0.5,
                 source_document: analysis.document_id,
