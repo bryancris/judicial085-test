@@ -17,7 +17,12 @@ const RelevantTexasLawsSection: React.FC<RelevantTexasLawsSectionProps> = ({
     const md = relevantLaw || "No relevant law analysis available.";
     try {
       const html = marked.parse(md, { breaks: true });
-      return DOMPurify.sanitize(typeof html === "string" ? html : String(html));
+      const htmlString = typeof html === "string" ? html : String(html);
+      
+      // Remove empty list items that create blank bullet points
+      const cleanedHtml = htmlString.replace(/<li>\s*<\/li>/g, '').replace(/<li><\/li>/g, '');
+      
+      return DOMPurify.sanitize(cleanedHtml);
     } catch (e) {
       return DOMPurify.sanitize(`<p>${md.replace(/\n/g, "<br/>")}</p>`);
     }
