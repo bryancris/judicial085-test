@@ -200,26 +200,64 @@ function parseGenericFormat(analysisContent: string): PreliminaryAnalysisData {
   const researchPriorities: string[] = [];
   const strategicNotes: string[] = [];
 
-  const content = analysisContent.toLowerCase();
-
-  // Enhanced legal area detection
-  const legalAreaPatterns = [
-    /(?:contract law|breach of contract|warranty|express warranty|implied warranty)/gi,
-    /(?:texas lemon law|magnuson-moss|deceptive trade practices|dtpa)/gi,
-    /(?:premises liability|negligence|tort law|personal injury|property damage)/gi,
-    /(?:consumer protection|breach of duty|duty of care|reasonable care)/gi,
-    /(?:liability|damages|compensation|restitution|punitive damages)/gi
-  ];
+  // Extract complete legal concept sentences for legal areas
+  const sentences = analysisContent.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 0);
   
-  legalAreaPatterns.forEach(pattern => {
-    const matches = analysisContent.match(pattern) || [];
-    matches.forEach(match => {
-      const formatted = match.charAt(0).toUpperCase() + match.slice(1).toLowerCase();
-      if (!potentialLegalAreas.includes(formatted)) {
-        potentialLegalAreas.push(formatted);
+  // Legal area keywords that indicate legal concepts
+  const legalKeywords = [
+    'texas lemon law', 'magnuson-moss', 'deceptive trade practices', 'dtpa',
+    'warranty', 'contract law', 'breach of contract', 'premises liability',
+    'negligence', 'tort law', 'consumer protection', 'liability',
+    'business & commerce code', 'chapter 573', 'implied warranty'
+  ];
+
+  // Extract complete sentences that contain legal concepts
+  sentences.forEach(sentence => {
+    const lowerSentence = sentence.toLowerCase();
+    
+    // Check if sentence contains legal keywords
+    const containsLegalConcept = legalKeywords.some(keyword => 
+      lowerSentence.includes(keyword.toLowerCase())
+    );
+    
+    if (containsLegalConcept && sentence.length > 15 && sentence.length < 300) {
+      // Clean and format the sentence
+      const cleanSentence = sentence.trim().replace(/^(the\s+|this\s+|these\s+)/i, '');
+      
+      // Check for duplicates using similarity
+      const isDuplicate = potentialLegalAreas.some(existing => 
+        areSimilarLegalConcepts(existing, cleanSentence)
+      );
+      
+      if (!isDuplicate) {
+        potentialLegalAreas.push(cleanSentence);
       }
-    });
+    }
   });
+
+  // If no legal areas found, fallback to basic extraction
+  if (potentialLegalAreas.length === 0) {
+    const fallbackPatterns = [
+      /[^.]*(?:texas lemon law|magnuson-moss|deceptive trade practices)[^.]*/gi,
+      /[^.]*(?:warranty|contract law|premises liability)[^.]*/gi,
+      /[^.]*(?:consumer protection|negligence|liability)[^.]*/gi
+    ];
+    
+    fallbackPatterns.forEach(pattern => {
+      const matches = analysisContent.match(pattern) || [];
+      matches.forEach(match => {
+        const cleaned = match.trim().replace(/\n+/g, ' ');
+        if (cleaned.length > 15 && cleaned.length < 300) {
+          const isDuplicate = potentialLegalAreas.some(existing => 
+            areSimilarLegalConcepts(existing, cleaned)
+          );
+          if (!isDuplicate) {
+            potentialLegalAreas.push(cleaned);
+          }
+        }
+      });
+    });
+  }
 
   // Enhanced issue detection
   const issuePatterns = [
@@ -280,13 +318,49 @@ function parseGenericFormat(analysisContent: string): PreliminaryAnalysisData {
   }, analysisContent);
 }
 
+// Helper function to detect similar legal concepts and prevent duplicates
+function areSimilarLegalConcepts(concept1: string, concept2: string): boolean {
+  const c1 = concept1.toLowerCase().trim();
+  const c2 = concept2.toLowerCase().trim();
+  
+  // Exact match
+  if (c1 === c2) return true;
+  
+  // Check if one is contained in the other (with significant overlap)
+  const shorterLength = Math.min(c1.length, c2.length);
+  if (shorterLength > 20) {
+    if (c1.includes(c2) || c2.includes(c1)) return true;
+  }
+  
+  // Check for significant word overlap in legal concepts
+  const words1 = c1.split(/\s+/).filter(w => w.length > 3);
+  const words2 = c2.split(/\s+/).filter(w => w.length > 3);
+  
+  if (words1.length > 0 && words2.length > 0) {
+    const commonWords = words1.filter(w => words2.includes(w));
+    const overlapRatio = commonWords.length / Math.min(words1.length, words2.length);
+    
+    // If 60% or more of the shorter concept's words are in the longer one
+    if (overlapRatio >= 0.6) return true;
+  }
+  
+  return false;
+}
+
 function applyQualityControl(
   data: PreliminaryAnalysisData,
   originalContent: string
 ): PreliminaryAnalysisData {
-  // No fallbacks: preserve exactly what the model produced; only clean and bound sizes
+  // Apply additional deduplication and prioritize longer, more complete concepts
+  const deduplicatedLegalAreas = data.potentialLegalAreas
+    .sort((a, b) => b.length - a.length) // Prioritize longer descriptions
+    .filter((area, index, arr) => {
+      // Keep if no previous item is similar
+      return !arr.slice(0, index).some(prevArea => areSimilarLegalConcepts(prevArea, area));
+    });
+
   return {
-    potentialLegalAreas: data.potentialLegalAreas.slice(0, 8).map(cleanText),
+    potentialLegalAreas: deduplicatedLegalAreas.slice(0, 6).map(cleanText),
     preliminaryIssues: data.preliminaryIssues.slice(0, 6).map(cleanText),
     researchPriorities: data.researchPriorities.slice(0, 6).map(cleanText),
     strategicNotes: data.strategicNotes.slice(0, 6).map(cleanText),
