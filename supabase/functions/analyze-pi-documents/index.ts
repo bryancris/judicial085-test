@@ -438,7 +438,7 @@ ${text.substring(0, 3000)}`
     }
 
     for (const event of events) {
-      await supabase
+      const { error } = await supabase
         .from('pi_timeline_events')
         .insert({
           client_id: clientId,
@@ -446,9 +446,14 @@ ${text.substring(0, 3000)}`
           event_type: event.event_type,
           description: event.description,
           reliability_score: event.reliability_score || 0.7,
-          source_reference: event.source_reference,
-          document_id: documentId
+          source_document: event.source_reference || documentId,
+          source_type: 'document_analysis'
         });
+        
+      if (error) {
+        console.error('❌ Error saving timeline event:', error);
+        console.error('Event data:', event);
+      }
     }
 
       return events.length;
