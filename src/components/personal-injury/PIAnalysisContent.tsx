@@ -33,7 +33,8 @@ const PIAnalysisContent: React.FC<PIAnalysisContentProps> = ({
     isAnalyzingDocuments, 
     hasDocuments, 
     hasAnalysisData,
-    metrics: loadedMetrics
+    metrics: loadedMetrics,
+    analysisData
   } = useCaseStrengthAnalysis(clientId);
 
   // Use loaded metrics if available, otherwise fall back to prop metrics
@@ -148,10 +149,10 @@ const PIAnalysisContent: React.FC<PIAnalysisContentProps> = ({
       <PIMetricsHeader metrics={displayMetrics} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <PIIncidentOverview incident={piData.incident} />
-        <PIMedicalStatus medical={piData.medical} />
-        <PIFunctionalImpact functional={piData.functional} />
-        <PIFinancialImpact financial={piData.financial} />
+        <PIIncidentOverview incident={analysisData.incident || piData.incident} />
+        <PIMedicalStatus medical={analysisData.medical || piData.medical} />
+        <PIFunctionalImpact functional={analysisData.functional || piData.functional} />
+        <PIFinancialImpact financial={analysisData.financial || piData.financial} />
       </div>
 
       {currentMetrics && (
