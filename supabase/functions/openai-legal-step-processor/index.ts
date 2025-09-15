@@ -90,7 +90,7 @@ serve(async (req) => {
 });
 
 // OpenAI API helper function
-async function callOpenAI(prompt: string, systemPrompt: string, model: string = 'gpt-4.1-2025-04-14'): Promise<any> {
+async function callOpenAI(prompt: string, systemPrompt: string, model: string = 'gpt-4o'): Promise<any> {
   const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
   
   const messages = [
@@ -380,7 +380,7 @@ REQUIRED OUTPUT FORMAT:
 
 Provide thorough analysis for each identified legal issue using proper IRAC structure.`;
 
-  return await callOpenAI(prompt, systemPrompt, 'gpt-4.1-2025-04-14');
+  return await callOpenAI(prompt, systemPrompt, 'gpt-4o');
 }
 
 // Step 6: Strengths and Weaknesses
@@ -414,7 +414,7 @@ CRITICAL: Use exactly the format above with **CASE STRENGTHS:** and **CASE WEAKN
 
 Provide balanced, realistic assessment based on the legal analysis.`;
 
-  return await callOpenAI(prompt, systemPrompt, 'gpt-4.1-2025-04-14');
+  return await callOpenAI(prompt, systemPrompt, 'gpt-4o');
 }
 
 // Step 7: Refined Analysis - Requirements vs Case Comparison
@@ -498,7 +498,7 @@ REQUIRED OUTPUT FORMAT:
 
 Provide comprehensive, sophisticated analysis that synthesizes all previous research and analysis.`;
 
-  return await callOpenAI(prompt, systemPrompt, 'gpt-4.1-2025-04-14');
+  return await callOpenAI(prompt, systemPrompt, 'gpt-4o');
 }
 
 // Step 8: Follow-up Questions

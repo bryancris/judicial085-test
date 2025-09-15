@@ -7,7 +7,7 @@ import { buildSystemPrompt } from "./prompts/systemPromptBuilder.ts";
 import { extractLegalCitations } from "./services/citationExtractionService.ts";
 import { mapCitationsToKnowledgeBase } from "./services/knowledgeBaseMappingService.ts";
 import { generateStrengthsWeaknesses } from "./services/strengthsWeaknessesGenerator.ts";
-import { generateLegalAnalysis } from "../shared/openAiService.ts";
+import { generateLegalAnalysis as openAIGenerateLegalAnalysis } from "../shared/openAiService.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -578,7 +578,7 @@ console.log(`🎯 STEP TYPE ROUTING: stepType='${stepType}' → effectiveStepTyp
 
     try {
       // Use OpenAI's advanced language processing to analyze legal content
-      const openaiResponse = await generateLegalAnalysis(
+      const openaiResponse = await openAIGenerateLegalAnalysis(
         userContent,
         systemPrompt
       );
@@ -590,7 +590,7 @@ console.log(`🎯 STEP TYPE ROUTING: stepType='${stepType}' → effectiveStepTyp
       if (openaiResponse.usage) {
         console.log('📈 OpenAI Usage:', openaiResponse.usage);
         console.log('💰 Estimated cost:', 
-          `$${((openaiResponse.usage.totalTokens / 1000000) * 7.5).toFixed(4)}`);
+          `$${((openaiResponse.usage.totalTokens / 1000000) * 5.0).toFixed(4)}`); // GPT-4o pricing
       }
 
       console.log('✅ Successfully generated analysis from OpenAI');
@@ -611,7 +611,7 @@ console.log(`🎯 STEP TYPE ROUTING: stepType='${stepType}' → effectiveStepTyp
         if (containsProperty && !containsConsumer) {
           console.warn('⚠️ DOMAIN VIOLATION: Generated property/premises content for consumer-protection case. Retrying with hard constraint...');
           const strongConstraint = `\n\nCRITICAL DOMAIN CONSTRAINT: This is a consumer protection/debt collection matter (DTPA/FDCPA). You MUST NOT include real estate/property law content (e.g., Texas Property Code, trespass to try title, encroachment, adverse possession, easements, premises liability) under any circumstances. Focus EXCLUSIVELY on DTPA (Bus. & Com. Code § 17.41 et seq.), Texas Finance Code Ch. 392 (TDCA), and FDCPA. If the facts mention property or premises, ignore those aspects and focus only on consumer protection violations.`;
-          const retryResponse = await generateLegalAnalysis(
+          const retryResponse = await openAIGenerateLegalAnalysis(
             userContent,
             systemPrompt + strongConstraint
           );

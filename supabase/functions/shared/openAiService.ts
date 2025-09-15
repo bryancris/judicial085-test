@@ -25,9 +25,9 @@ export interface OpenAIRequestOptions {
  * Default configuration for OpenAI API calls
  */
 const DEFAULT_CONFIG = {
-  model: 'gpt-5-2025-08-07', // Flagship GPT-5 model
+  model: 'gpt-4o', // Use real OpenAI model
   maxTokens: 4096,
-  retries: 3,
+  retries: 2, // Reduce retries to speed up
   baseUrl: 'https://api.openai.com/v1/chat/completions'
 };
 
@@ -65,22 +65,13 @@ async function makeOpenAIRequest(
     { role: 'user' as const, content: prompt }
   ];
 
-  // Build payload - use different parameter names based on model
-  const isGPT5OrNewer = config.model.startsWith('gpt-5') || config.model.startsWith('o3') || config.model.startsWith('o4');
-  
+  // Build payload - use standard OpenAI parameters
   const payload: any = {
     model: config.model,
     messages,
-    ...(isGPT5OrNewer 
-      ? { max_completion_tokens: config.maxTokens }  // GPT-5+ uses max_completion_tokens
-      : { max_tokens: config.maxTokens }             // Legacy models use max_tokens
-    )
+    max_tokens: config.maxTokens,
+    ...(config.temperature !== undefined && { temperature: config.temperature })
   };
-
-  // Only add temperature for legacy models (GPT-5+ doesn't support it)
-  if (!isGPT5OrNewer && config.temperature !== undefined) {
-    payload.temperature = config.temperature;
-  }
 
   let lastError: Error;
 
@@ -89,10 +80,10 @@ async function makeOpenAIRequest(
     try {
       console.log(`🤖 OpenAI API Request (attempt ${attempt}/${config.retries}):`, {
         model: config.model,
-        temperature: isGPT5OrNewer ? 'N/A (GPT-5+)' : config.temperature,
+        temperature: config.temperature,
         promptLength: prompt.length,
         hasSystemPrompt: !!config.systemPrompt,
-        tokenParam: isGPT5OrNewer ? 'max_completion_tokens' : 'max_tokens'
+        maxTokens: config.maxTokens
       });
 
       const response = await fetch(config.baseUrl, {
@@ -151,8 +142,8 @@ async function makeOpenAIRequest(
 
       if (usage) {
         // Estimate cost for different models
-        const costPer1MTokens = config.model.startsWith('gpt-5') ? 7.5 : // GPT-5 pricing
-                              config.model.startsWith('gpt-4') ? 10.0 : // GPT-4 pricing  
+        const costPer1MTokens = config.model === 'gpt-4o' ? 5.0 :
+                              config.model === 'gpt-4o-mini' ? 0.15 :
                               2.5; // Default pricing
         const estimatedCost = (usage.totalTokens / 1000000) * costPer1MTokens;
         console.log('💰 Estimated cost:', `$${estimatedCost.toFixed(4)}`);
@@ -204,10 +195,11 @@ export async function generateLegalAnalysis(
     throw new OpenAIError('OPENAI_API_KEY environment variable is not set');
   }
 
-  // Use GPT-5 for legal analysis with high token limit
+  // Use GPT-4o for legal analysis with optimized settings
   const legalOptions: OpenAIRequestOptions = {
-    model: 'gpt-5-2025-08-07',
-    maxTokens: 8192,
+    model: 'gpt-4o',
+    maxTokens: 4096, // Reduce for faster response
+    temperature: 0.1, // Lower temperature for legal analysis
     systemPrompt,
     retries: 2,
     ...options
@@ -233,8 +225,9 @@ export async function generateContractReview(
   const prompt = `${documentContent}\n\n---\n\n${reviewPrompt}`;
   
   const contractOptions: OpenAIRequestOptions = {
-    model: 'gpt-5-2025-08-07',
-    maxTokens: 8192,
+    model: 'gpt-4o',
+    maxTokens: 4096,
+    temperature: 0.2,
     systemPrompt,
     retries: 2,
     ...options
@@ -260,8 +253,9 @@ export async function generateCaseDiscussion(
   const prompt = `${conversationHistory}\n\nCurrent Message: ${newMessage}`;
   
   const discussionOptions: OpenAIRequestOptions = {
-    model: 'gpt-5-2025-08-07',
-    maxTokens: 4096,
+    model: 'gpt-4o-mini', // Use faster model for discussions
+    maxTokens: 2048,
+    temperature: 0.7,
     systemPrompt,
     retries: 2,
     ...options
@@ -286,8 +280,9 @@ export async function processDocument(
   const prompt = `Document Content:\n${documentContent}\n\nAnalysis Request:\n${analysisPrompt}`;
   
   const documentOptions: OpenAIRequestOptions = {
-    model: 'gpt-5-2025-08-07',
-    maxTokens: 6144,
+    model: 'gpt-4o',
+    maxTokens: 3072,
+    temperature: 0.1,
     retries: 2,
     ...options
   };
@@ -316,28 +311,20 @@ export async function checkOpenAIHealth(): Promise<boolean> {
  */
 export function getAvailableModels(): string[] {
   return [
-    'gpt-5-2025-08-07',
-    'gpt-5-mini-2025-08-07', 
-    'gpt-5-nano-2025-08-07',
-    'gpt-4.1-2025-04-14',
-    'o3-2025-04-16',
-    'o4-mini-2025-04-16',
-    'gpt-4.1-mini-2025-04-14',
+    'gpt-4o',
     'gpt-4o-mini',
-    'gpt-4o'
+    'gpt-3.5-turbo'
   ];
 }
 
 /**
  * Estimate token cost based on usage and model
  */
-export function estimateTokenCost(usage: OpenAIResponse['usage'], model = 'gpt-5-2025-08-07'): number {
+export function estimateTokenCost(usage: OpenAIResponse['usage'], model = 'gpt-4o'): number {
   if (!usage) return 0;
   
-  const costPer1MTokens = model.startsWith('gpt-5') ? 7.5 :
-                         model.startsWith('gpt-4') ? 10.0 :
-                         model.startsWith('o3') ? 15.0 :
-                         model.startsWith('o4') ? 8.0 :
+  const costPer1MTokens = model === 'gpt-4o' ? 5.0 :
+                         model === 'gpt-4o-mini' ? 0.15 :
                          2.5;
   
   return (usage.totalTokens / 1000000) * costPer1MTokens;

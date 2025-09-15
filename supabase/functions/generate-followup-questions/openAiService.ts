@@ -21,10 +21,10 @@ export async function generateLegalAnalysis(
   ];
 
   const payload = {
-    model: 'gpt-5-2025-08-07', // Use GPT-5 for better analysis
+    model: 'gpt-4o-mini', // Use real OpenAI model
     messages,
-    max_completion_tokens: 4096, // GPT-5 uses max_completion_tokens
-    // Note: GPT-5 doesn't support temperature parameter
+    max_tokens: 2048,
+    temperature: 0.7
   };
 
   const response = await fetch(url, {

@@ -474,7 +474,7 @@ Remember: Professional legal writing with proper structure and formatting is req
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4.1-2025-04-14', // Switched to flagship model for better performance
+        model: 'gpt-4o-mini', // Use faster model for quick consults
         messages: [systemPrompt, ...messages],
         temperature: 0.1, // Lowered further for strict instruction following
         max_tokens: 3000, // Increased for comprehensive multi-case responses

@@ -36,12 +36,13 @@ async function makeOpenAIContractRequest(
 
   // Build the request payload optimized for contract review
   const payload = {
-    model: 'gpt-5-2025-08-07', // Use GPT-5 for comprehensive contract analysis
+    model: 'gpt-4o', // Use real OpenAI model  
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userMessage }
     ],
-    max_completion_tokens: 8192, // High token limit for comprehensive contract reviews
+    max_tokens: 4096,
+    temperature: 0.1
   };
 
   try {
@@ -96,8 +97,7 @@ async function makeOpenAIContractRequest(
     });
 
     if (usage) {
-      console.log('💰 Estimated cost:', 
-        `$${((usage.totalTokens / 1000000) * 7.5).toFixed(4)}`);
+        console.log('💰 Estimated cost:', `$${((usage.totalTokens / 1000000) * 5.0).toFixed(4)}`); // GPT-4o pricing
     }
 
     return { text, usage };

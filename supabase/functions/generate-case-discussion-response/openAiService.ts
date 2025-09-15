@@ -60,10 +60,10 @@ async function makeOpenAICaseDiscussionRequest(messages: any[]): Promise<OpenAIR
 
   // Build the request payload for case discussion
   const payload = {
-    model: 'gpt-5-2025-08-07', // Use GPT-5 for high-quality case discussions
+    model: 'gpt-4o', // Use real OpenAI model
     messages,
-    max_completion_tokens: 4096, // GPT-5 uses max_completion_tokens
-    // Note: GPT-5 doesn't support temperature parameter
+    max_tokens: 2048,
+    temperature: 0.7
   };
 
   try {
@@ -118,8 +118,7 @@ async function makeOpenAICaseDiscussionRequest(messages: any[]): Promise<OpenAIR
     });
 
     if (usage) {
-      console.log('💰 Estimated cost:', 
-        `$${((usage.totalTokens / 1000000) * 7.5).toFixed(4)}`);
+        console.log('💰 Estimated cost:', `$${((usage.totalTokens / 1000000) * 5.0).toFixed(4)}`); // GPT-4o pricing
     }
 
     return { text, usage };

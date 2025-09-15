@@ -165,22 +165,22 @@ FORMATTING REQUIREMENTS:
     let modelUsed = "";
     let usageData: any = null;
 
-    // Try GPT-5 first
-    console.log("🤖 Attempting OpenAI API Request (gpt-5-2025-08-07):", {
-      model: "gpt-5-2025-08-07",
+    // Try GPT-4o first
+    console.log("🤖 Attempting OpenAI API Request (gpt-4o):", {
+      model: "gpt-4o",
       promptLength: prompt.length,
       hasSystemPrompt: true
     });
 
     try {
-      const gpt5Response = await fetch("https://api.openai.com/v1/chat/completions", {
+      const gpt4oResponse = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${openAIApiKey}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model: "gpt-5-2025-08-07",
+          model: "gpt-4o",
           messages: [
             {
               role: "system",
@@ -199,7 +199,7 @@ FORMATTING REQUIREMENTS:
       console.log("📡 GPT-5 Response Status:", gpt5Response.status);
 
       if (gpt5Response.ok) {
-        const gpt5Data = await gpt5Response.json();
+        const gpt4oData = await gpt4oResponse.json();
         console.log("📥 GPT-5 Raw Response:", {
           hasChoices: !!gpt5Data.choices,
           choicesLength: gpt5Data.choices?.length || 0,
@@ -215,12 +215,12 @@ FORMATTING REQUIREMENTS:
           usageData = gpt5Data.usage;
 
           if (contentLength > 200) {
-            console.log("✅ GPT-5 Success:", {
+            console.log("✅ GPT-4o Success:", {
               responseLength: contentLength,
               usage: usageData
             });
           } else {
-            console.warn("⚠️ GPT-5 returned short content, will try fallback. Length:", contentLength);
+            console.warn("⚠️ GPT-4o returned short content, will try fallback. Length:", contentLength);
             content = "";
           }
         } else {
@@ -319,10 +319,10 @@ FORMATTING REQUIREMENTS:
       provenance: {
         source: "individual-step-refresh",
         model: modelUsed,
-        aiProvider: modelUsed.includes("gpt-5") ? "openai-gpt-5" : "openai-gpt-4o-mini",
+        aiProvider: modelUsed.includes("gpt-4o") ? "openai-gpt-4o" : "openai-gpt-4o-mini",
         usage: usageData,
         contentLength,
-        originalModelAttempted: "gpt-5-2025-08-07",
+        originalModelAttempted: "gpt-4o",
         fallbackUsed: modelUsed.includes("fallback")
       }
     };

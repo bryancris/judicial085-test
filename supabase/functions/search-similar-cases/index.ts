@@ -384,7 +384,7 @@ Context: ${contextText.substring(0, 1500)}`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4.1-2025-04-14',
+        model: 'gpt-4o',
         messages: [
           { role: 'system', content: 'You are a legal AI that extracts structured case context. Return only valid JSON.' },
           { role: 'user', content: prompt }
