@@ -107,33 +107,45 @@ export function extractStrengthsWeaknesses(content: string): { strengths: string
 
 // Helper function to extract explicit strengths/weaknesses sections
 function extractExplicitSection(content: string, sectionType: string): string[] {
+  console.log(`🔍 Extracting ${sectionType} from content (length: ${content.length})`);
+  
+  // Updated patterns to match the actual format: **CASE STRENGTHS:** and **CASE WEAKNESSES:**
   const patterns = [
-    new RegExp(`\\*\\*CASE ${sectionType}:\\*\\*(.*?)(?=\\*\\*|$)`, 'is'),
-    new RegExp(`\\*\\*${sectionType}:\\*\\*(.*?)(?=\\*\\*|$)`, 'is'),
-    new RegExp(`(?:^|\\n)\\s*CASE ${sectionType}:\\s*(.*?)(?=\\n[A-Z][A-Z \\-()&\\/]+:\\s*|$)`, 'is'),
-    new RegExp(`(?:^|\\n)\\s*${sectionType}:\\s*(.*?)(?=\\n[A-Z][A-Z \\-()&\\/]+:\\s*|$)`, 'is')
+    new RegExp(`\\*\\*CASE ${sectionType}:\\*\\*\\s*(.*?)(?=\\*\\*[A-Z][A-Z ]+:|$)`, 'is'),
+    new RegExp(`\\*\\*${sectionType}:\\*\\*\\s*(.*?)(?=\\*\\*[A-Z][A-Z ]+:|$)`, 'is'),
   ];
   
   for (const pattern of patterns) {
     const match = content.match(pattern);
     if (match) {
-      console.log(`✅ Found ${sectionType} section`);
-      const sectionText = match[1];
-      const items = sectionText.match(/(?:^\d+\.|^[-•*]|^-)\s*(.+?)$/gm) || 
-                    sectionText.split('\n').filter(line => line.trim().length > 10);
+      console.log(`✅ Found ${sectionType} section with pattern`);
+      const sectionText = match[1].trim();
+      console.log(`📝 Section text preview: ${sectionText.substring(0, 200)}...`);
       
-      const cleanedItems: string[] = [];
-      items.forEach(item => {
-        const cleaned = item.replace(/^\d+\.|^[-•*-]\s*/, '').trim();
-        if (cleaned && cleaned.length > 10) {
-          cleanedItems.push(cleaned);
-        }
-      });
+      // Extract bullet points - handle both - and • bullets
+      const bulletMatches = sectionText.match(/^[-•]\s*(.+?)$/gm);
       
-      return cleanedItems;
+      if (bulletMatches && bulletMatches.length > 0) {
+        const cleanedItems = bulletMatches
+          .map(item => item.replace(/^[-•]\s*/, '').trim())
+          .filter(item => item.length > 10 && !isGenericStrengthWeakness(item));
+        
+        console.log(`📊 Extracted ${cleanedItems.length} ${sectionType.toLowerCase()} items`);
+        return cleanedItems;
+      } else {
+        // Fallback: split by lines and filter
+        const lines = sectionText.split('\n')
+          .map(line => line.trim())
+          .filter(line => line.length > 10 && !line.startsWith('**'))
+          .filter(line => !isGenericStrengthWeakness(line));
+        
+        console.log(`📊 Fallback extraction: ${lines.length} ${sectionType.toLowerCase()} items`);
+        return lines;
+      }
     }
   }
   
+  console.log(`❌ No ${sectionType} section found`);
   return [];
 }
 
