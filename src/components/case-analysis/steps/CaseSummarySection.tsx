@@ -104,6 +104,26 @@ const CaseSummarySection: React.FC<CaseSummarySectionProps> = ({
           </div>
         </div>
 
+        {/* Quick Case Summary Section */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-primary" />
+            <h4 className="font-medium">Quick Case Summary</h4>
+          </div>
+          <div className="pl-6">
+            {isDataLoading ? (
+              <div className="space-y-2">
+                <div className="h-4 bg-muted animate-pulse rounded w-full"></div>
+                <div className="h-4 bg-muted animate-pulse rounded w-4/5"></div>
+              </div>
+            ) : structuredData?.quickSummary ? (
+              <p className="text-sm leading-relaxed">{structuredData.quickSummary}</p>
+            ) : (
+              <p className="text-muted-foreground text-sm">No quick summary available</p>
+            )}
+          </div>
+        </div>
+
         {/* Timeline Section */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">

@@ -5,6 +5,7 @@ export interface StructuredCaseData {
     name: string;
     role: string;
   }>;
+  quickSummary: string;
   timeline: Array<{
     date: string;
     event: string;
@@ -246,6 +247,45 @@ export const parseTimeline = (caseSummary: string): Array<{date: string; event: 
   return sortedTimeline;
 };
 
+// Parse quick case summary for overview
+export const parseQuickSummary = (caseSummary: string): string => {
+  // Extract first 2-3 sentences that provide case overview
+  const sentences = caseSummary.split(/[.!?]+/).filter(s => s.trim().length > 15);
+  
+  // Look for key introductory patterns that establish the case context
+  const contextPatterns = [
+    /^[^.]*(?:purchases?|bought|acquired)[^.]*\./i,
+    /^[^.]*(?:case|matter|dispute)[^.]*\./i,
+    /^[^.]*(?:client|consumer|plaintiff)[^.]*\./i
+  ];
+  
+  let summary = '';
+  let sentenceCount = 0;
+  
+  // Try to find the most contextual opening sentences
+  for (const sentence of sentences.slice(0, 5)) {
+    const trimmed = sentence.trim();
+    if (trimmed.length < 20) continue;
+    
+    // Add sentence if it matches context patterns or if we need more content
+    const isContextual = contextPatterns.some(pattern => pattern.test(trimmed));
+    if (isContextual || (summary.length < 100 && sentenceCount < 3)) {
+      summary += (summary ? ' ' : '') + trimmed + '.';
+      sentenceCount++;
+      
+      // Stop if we have enough content
+      if (sentenceCount >= 3 || summary.length > 200) break;
+    }
+  }
+  
+  // Fallback: use first 2 sentences if no contextual patterns found
+  if (summary.length < 50 && sentences.length > 0) {
+    summary = sentences.slice(0, 2).map(s => s.trim()).join('. ') + '.';
+  }
+  
+  return summary || 'No case summary available.';
+};
+
 // Parse core facts from case summary
 export const parseCoreFacts = (caseSummary: string): string[] => {
   const facts: string[] = [];
@@ -353,12 +393,14 @@ export const fetchKeyDocuments = async (clientId: string): Promise<Array<{title:
 // Main function to parse structured case data
 export const parseStructuredCaseData = async (caseSummary: string, clientId: string): Promise<StructuredCaseData> => {
   const parties = parseParties(caseSummary);
+  const quickSummary = parseQuickSummary(caseSummary);
   const timeline = parseTimeline(caseSummary);
   const coreFacts = parseCoreFacts(caseSummary);
   const keyDocuments = await fetchKeyDocuments(clientId);
   
   return {
     parties,
+    quickSummary,
     timeline,
     coreFacts,
     keyDocuments
