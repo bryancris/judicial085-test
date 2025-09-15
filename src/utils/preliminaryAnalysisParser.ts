@@ -325,61 +325,129 @@ function parseGenericFormat(analysisContent: string): PreliminaryAnalysisData {
 }
 
 /**
- * Extract individual legal concepts using targeted patterns
+ * Extract individual legal concepts using Content-First Extraction approach
+ * This prevents duplicate extraction from concatenated AI output
  */
 function extractLegalConcepts(content: string): string[] {
-  const concepts: string[] = [];
+  // Step 1: Identify legal concept boundaries using keyword positions
+  const legalKeywords = ['Act', 'Law', 'Code', 'DTPA', 'Warranty', 'Warranties', 'Chapter'];
+  const boundaries = findLegalConceptBoundaries(content, legalKeywords);
   
-  // First, split any concatenated content to ensure we process individual concepts
-  const splitContent = detectAndSplitConcatenatedLegalAreas(content);
-  const lines = splitContent.split('\n').filter(line => line.trim());
+  // Step 2: Extract each concept exactly once based on boundaries
+  const concepts = extractConceptsByBoundaries(content, boundaries);
   
-  // Patterns for common legal concepts
-  const legalPatterns = [
-    // Texas-specific laws with citations
-    /Texas\s+[A-Za-z\s]+(?:Law|Act|Code)(?:\s*\([^)]+\))?/gi,
-    // Federal acts
-    /(?:Magnuson-Moss|Fair Credit|Truth in Lending|Americans with Disabilities)\s+[A-Za-z\s]*Act/gi,
-    // DTPA variations
-    /(?:Deceptive Trade Practices?|DTPA)(?:\s*Act)?(?:\s*\([^)]+\))?/gi,
-    // General legal concepts
-    /(?:Implied|Express)\s+Warrant(?:y|ies)/gi,
-    /Breach\s+of\s+(?:Contract|Warranty)/gi,
-    /(?:Negligence|Fraud|Misrepresentation)/gi,
-    /(?:Damages|Remedies|Relief)/gi,
-    // Generic laws and codes - more specific pattern to avoid matching entire concatenated strings
-    /^[A-Za-z\s]+(?:Law|Act|Code)(?:\s*\([^)]+\))?$/gi,
-  ];
+  // Step 3: Emergency fallback if boundary detection failed
+  if (concepts.length === 0) {
+    return emergencyFallbackExtraction(content);
+  }
   
-  // Process each line individually to prevent extracting concatenated strings
-  lines.forEach(line => {
-    const trimmedLine = line.trim();
-    if (!trimmedLine) return;
+  // Step 4: Clean and validate each concept
+  return concepts
+    .map(concept => cleanLegalConcept(concept))
+    .filter(concept => concept.length > 3 && isValidLegalConcept(concept));
+}
+
+/**
+ * Find the start and end positions of legal concepts in the text
+ */
+function findLegalConceptBoundaries(content: string, keywords: string[]): Array<{start: number, end: number}> {
+  const boundaries: Array<{start: number, end: number}> = [];
+  
+  // Find all keyword positions
+  const keywordPositions: Array<{pos: number, keyword: string}> = [];
+  
+  keywords.forEach(keyword => {
+    let pos = 0;
+    while ((pos = content.indexOf(keyword, pos)) !== -1) {
+      keywordPositions.push({pos, keyword});
+      pos += keyword.length;
+    }
+  });
+  
+  // Sort by position
+  keywordPositions.sort((a, b) => a.pos - b.pos);
+  
+  // Create boundaries between keywords
+  for (let i = 0; i < keywordPositions.length; i++) {
+    const current = keywordPositions[i];
+    const next = keywordPositions[i + 1];
     
-    // Try to match the entire line as a single legal concept first
-    if (/^[A-Za-z\s]+(?:Law|Act|Code|DTPA|Warrant(?:y|ies))(?:\s*\([^)]+\))?$/i.test(trimmedLine)) {
-      const cleaned = cleanLegalConcept(trimmedLine);
-      if (cleaned.length > 3) {
-        concepts.push(cleaned);
-        return;
-      }
+    // Start from beginning of word containing the keyword
+    let start = Math.max(0, content.lastIndexOf(' ', current.pos));
+    if (start > 0) start++; // Skip the space
+    
+    // End at the start of next keyword or end of content
+    let end = next ? next.pos : content.length;
+    
+    // Extend to include complete legal reference
+    while (end < content.length && /[a-zA-Z0-9\s(),-]/.test(content[end])) {
+      end++;
     }
     
-    // If that doesn't work, try individual patterns
-    legalPatterns.forEach(pattern => {
-      const matches = trimmedLine.match(pattern);
-      if (matches) {
-        matches.forEach(match => {
-          const cleaned = cleanLegalConcept(match);
-          if (cleaned.length > 3) {
-            concepts.push(cleaned);
-          }
-        });
-      }
-    });
+    if (end > start) {
+      boundaries.push({start, end});
+    }
+  }
+  
+  return boundaries;
+}
+
+/**
+ * Extract legal concepts based on identified boundaries
+ */
+function extractConceptsByBoundaries(content: string, boundaries: Array<{start: number, end: number}>): string[] {
+  const concepts: string[] = [];
+  const usedPositions = new Set<number>();
+  
+  boundaries.forEach(boundary => {
+    // Skip if this position was already used
+    if (usedPositions.has(boundary.start)) return;
+    
+    const concept = content.substring(boundary.start, boundary.end).trim();
+    
+    // Mark this position as used
+    for (let i = boundary.start; i < boundary.end; i++) {
+      usedPositions.add(i);
+    }
+    
+    if (concept.length > 10) { // Only meaningful concepts
+      concepts.push(concept);
+    }
   });
   
   return concepts;
+}
+
+/**
+ * Emergency fallback: simple splitting when boundary detection fails
+ */
+function emergencyFallbackExtraction(content: string): string[] {
+  // Try common separators first
+  const separators = ['\n', ';', ',', ' - ', ' – '];
+  
+  for (const separator of separators) {
+    if (content.includes(separator)) {
+      const parts = content.split(separator)
+        .map(part => part.trim())
+        .filter(part => part.length > 5);
+      
+      if (parts.length > 1) {
+        return parts;
+      }
+    }
+  }
+  
+  // Last resort: return the whole content as one concept
+  return [content.trim()];
+}
+
+/**
+ * Validate if extracted text is a proper legal concept
+ */
+function isValidLegalConcept(concept: string): boolean {
+  // Must contain at least one meaningful legal keyword
+  const legalWords = /\b(act|law|code|dtpa|warranty|warranties|chapter|protection|commerce|business|implied|express|magnuson|moss)\b/i;
+  return legalWords.test(concept);
 }
 
 /**
