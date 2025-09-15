@@ -34,7 +34,10 @@ serve(async (req) => {
   }
 
   try {
-    const { query, clientId, caseId, researchTypes, requestContext, context } = await req.json();
+    console.log('📥 Incoming request method:', req.method);
+    
+    const requestBody = await req.json();
+    const { query, clientId, caseId, researchTypes, requestContext, context } = requestBody;
     
     console.log('🎯 AI Agent Coordinator - 9-Step Sequential Workflow Starting:', { 
       query: query.substring(0, 200) + '...',
@@ -76,9 +79,16 @@ serve(async (req) => {
       documentsCount: existingContext.documents?.length || 0
     });
 
-    // Execute 9-step sequential workflow
+    // Execute 9-step sequential workflow with timeout
     console.log('🔄 Executing 9-Step Sequential Workflow with Gemini Orchestration...');
-    const workflowResult = await executeSequentialWorkflow(workflowState, existingContext, req.headers.get('authorization'));
+    
+    // Set a 4-minute timeout for the entire workflow
+    const workflowPromise = executeSequentialWorkflow(workflowState, existingContext, req.headers.get('authorization'));
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Workflow execution timeout after 4 minutes')), 240000)
+    );
+    
+    const workflowResult = await Promise.race([workflowPromise, timeoutPromise]);
 
     // Save comprehensive analysis to database
     console.log('💾 Saving 9-step analysis to database...');
@@ -104,13 +114,30 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in 9-Step AI Agent Coordinator:', error);
+    
+    // Determine error type and message
+    let errorMessage = 'Failed to execute 9-step workflow';
+    let statusCode = 500;
+    
+    if (error.message?.includes('timeout')) {
+      errorMessage = 'Workflow execution timed out. Please try again.';
+      statusCode = 504;
+    } else if (error.message?.includes('JSON')) {
+      errorMessage = 'Invalid request format';
+      statusCode = 400;
+    }
+    
+    const errorResponse = {
+      error: errorMessage,
+      details: error.message,
+      success: false,
+      timestamp: new Date().toISOString()
+    };
+    
     return new Response(
-      JSON.stringify({ 
-        error: 'Failed to execute 9-step workflow', 
-        details: error.message 
-      }),
+      JSON.stringify(errorResponse),
       { 
-        status: 500, 
+        status: statusCode, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
