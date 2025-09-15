@@ -328,19 +328,11 @@ function parseGenericFormat(analysisContent: string): PreliminaryAnalysisData {
  * Extract individual legal concepts using targeted patterns
  */
 function extractLegalConcepts(content: string): string[] {
-  console.log('⚡ === EXTRACTION DEBUG START ===');
-  console.log('📥 Input to extraction:', JSON.stringify(content));
-  
   const concepts: string[] = [];
   
   // First, split any concatenated content to ensure we process individual concepts
   const splitContent = detectAndSplitConcatenatedLegalAreas(content);
   const lines = splitContent.split('\n').filter(line => line.trim());
-  
-  console.log('📋 Processing', lines.length, 'lines after split:');
-  lines.forEach((line, index) => {
-    console.log(`  Line ${index + 1}: "${line}"`);
-  });
   
   // Patterns for common legal concepts
   const legalPatterns = [
@@ -387,10 +379,6 @@ function extractLegalConcepts(content: string): string[] {
     });
   });
   
-  console.log('📤 Final extracted concepts:', concepts);
-  console.log('📊 Extracted', concepts.length, 'total concepts');
-  console.log('⚡ === EXTRACTION DEBUG END ===');
-  
   return concepts;
 }
 
@@ -407,64 +395,26 @@ function cleanLegalConcept(concept: string): string {
 
 // Function to detect and split concatenated legal areas
 function detectAndSplitConcatenatedLegalAreas(content: string): string {
-  console.log('🔍 === SPLITTING DEBUG START ===');
-  console.log('📥 Original content:', JSON.stringify(content));
-  console.log('📏 Content length:', content.length);
-  console.log('🔤 First 200 chars:', content.substring(0, 200));
-  
-  // Extremely aggressive patterns for splitting concatenated legal concepts
+  // Target patterns like "Chapter 17Implied", "ActTexas", "LawMagnuson"
   const patterns = [
-    { pattern: /(\([^)]+\))([A-Z])/g, name: 'Parenthesis->Capital' },
-    { pattern: /(Act)([A-Z])/g, name: 'Act->Capital' },
-    { pattern: /(Law)([A-Z])/g, name: 'Law->Capital' },
-    { pattern: /(Code)([A-Z])/g, name: 'Code->Capital' },
-    { pattern: /(DTPA)([A-Z])/g, name: 'DTPA->Capital' },
-    { pattern: /(Warranties)([A-Z])/g, name: 'Warranties->Capital' },
-    { pattern: /(Warranty)([A-Z])/g, name: 'Warranty->Capital' },
-    { pattern: /((?:Act|Law|Code|DTPA|Warranties?)(?:\s*\([^)]+\))?)\s*([A-Z][A-Za-z\s]+)/g, name: 'Legal boundary' },
-    { pattern: /((?:Implied|Express)\s+Warrant(?:y|ies))\s*([A-Z][A-Za-z\s]+)/g, name: 'Warranty boundary' },
+    /(Chapter\s+\d+)([A-Z])/g,    // "Chapter 17Implied"
+    /(Code)([A-Z])/g,             // "CodeImplied" 
+    /(Act)([A-Z])/g,              // "ActTexas"
+    /(Law)([A-Z])/g,              // "LawMagnuson" 
+    /(\))([A-Z])/g,               // ")Texas", ")Implied"
+    /(DTPA)([A-Z])/g,             // "DTPATexas"
+    /(Warranties)([A-Z])/g,       // "WarrantiesTexas"
+    /(Warranty)([A-Z])/g,         // "WarrantyTexas"
   ];
   
-  let processedContent = content;
+  let result = content;
   
-  // Apply patterns sequentially for maximum splitting
-  patterns.forEach(({ pattern, name }) => {
-    const beforeSplit = processedContent;
-    processedContent = processedContent.replace(pattern, '$1\n$2');
-    if (beforeSplit !== processedContent) {
-      console.log(`✅ Pattern "${name}" made changes`);
-      console.log('📝 New content:', JSON.stringify(processedContent));
-    } else {
-      console.log(`❌ Pattern "${name}" made NO changes`);
-    }
+  // Apply each pattern to split concatenated text
+  patterns.forEach(pattern => {
+    result = result.replace(pattern, '$1\n$2');
   });
   
-  // Additional fallback: if we still have a very long line with multiple legal keywords, try more aggressive splitting
-  const lines = processedContent.split('\n');
-  const enhancedLines = lines.flatMap(line => {
-    if (line.length > 100 && (line.match(/(Act|Law|Code|DTPA)/g) || []).length > 1) {
-      // Try to split on common legal ending + capital letter patterns
-      return line
-        .replace(/(Protection)\s*([A-Z])/g, '$1\n$2')
-        .replace(/(Business)\s*([A-Z])/g, '$1\n$2')
-        .replace(/(Commerce)\s*([A-Z])/g, '$1\n$2')
-        .split('\n')
-        .filter(l => l.trim());
-    }
-    return line;
-  });
-  
-  const finalResult = enhancedLines.join('\n');
-  
-  console.log('📤 Final split result:', JSON.stringify(finalResult));
-  const finalLines = finalResult.split('\n').filter(line => line.trim());
-  console.log('📊 Split into', finalLines.length, 'lines:');
-  finalLines.forEach((line, index) => {
-    console.log(`  ${index + 1}: "${line}"`);
-  });
-  console.log('🔍 === SPLITTING DEBUG END ===');
-  
-  return finalResult;
+  return result;
 }
 
 // Helper function to detect similar legal concepts and prevent duplicates
