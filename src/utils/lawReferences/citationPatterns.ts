@@ -5,13 +5,18 @@
 
 // Common Texas law citation patterns - Ordered by specificity (parenthetical citations ONLY)
 export const CITATION_PATTERNS = [
-  // ONLY Parenthetical citations (highest priority - most specific)
-  /\(Tex\.\s+Bus\.\s+&\s+Com\.\s+Code\s+§\s+(\d+\.\d+)(?:\s+et\s+seq\.)?\)/gi,
-  /\(Tex\.\s+Civ\.\s+Prac\.\s+&\s+Rem\.\s+Code\s+Chapter\s+(\d+)\)/gi,
-  /\(Tex\.\s+Civ\.\s+Prac\.\s+&\s+Rem\.\s+Code\s+§\s+(\d+\.\d+)\)/gi,
-  /\(Tex\.\s+Gov't\s+Code\s+§\s+(\d+\.\d+)\)/gi,
-  /\(Tex\.\s+Occ\.\s+Code\s+§\s+(\d+\.\d+)\)/gi,
-  /\(Tex\.\s+Bus\.\s+&\s+Com\.\s+Code\s+Chapter\s+(\d+)\)/gi,
+  // ONLY Parenthetical citations - Handle both raw text and HTML-encoded versions
+  /\(Tex\.\s*Bus\.\s*&amp;\s*Com\.\s*Code\s*§\s*(\d+\.\d+)(?:\s*et\s*seq\.)?\)/gi, // HTML encoded &
+  /\(Tex\.\s*Bus\.\s*&\s*Com\.\s*Code\s*§\s*(\d+\.\d+)(?:\s*et\s*seq\.)?\)/gi, // Regular &
+  /\(Tex\.\s*Bus\.\s*&amp;\s*Com\.\s*Code\s*Chapter\s*(\d+)\)/gi,
+  /\(Tex\.\s*Bus\.\s*&\s*Com\.\s*Code\s*Chapter\s*(\d+)\)/gi,
+  /\(Tex\.\s*Civ\.\s*Prac\.\s*&amp;\s*Rem\.\s*Code\s*Chapter\s*(\d+)\)/gi,
+  /\(Tex\.\s*Civ\.\s*Prac\.\s*&\s*Rem\.\s*Code\s*Chapter\s*(\d+)\)/gi,
+  /\(Tex\.\s*Civ\.\s*Prac\.\s*&amp;\s*Rem\.\s*Code\s*§\s*(\d+\.\d+)\)/gi,
+  /\(Tex\.\s*Civ\.\s*Prac\.\s*&\s*Rem\.\s*Code\s*§\s*(\d+\.\d+)\)/gi,
+  /\(Tex\.\s*Gov&#x27;t\s*Code\s*§\s*(\d+\.\d+)\)/gi, // HTML encoded apostrophe
+  /\(Tex\.\s*Gov't\s*Code\s*§\s*(\d+\.\d+)\)/gi, // Regular apostrophe
+  /\(Tex\.\s*Occ\.\s*Code\s*§\s*(\d+\.\d+)\)/gi,
   
   // Parenthetical case law citations
   /\*([^*]+v\.\s+[^*]+)\*/gi, // Case citations in asterisks

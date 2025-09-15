@@ -78,41 +78,68 @@ export const processLawReferences = async (text: string): Promise<string> => {
  * @returns The processed text with law references converted to links (without direct URLs)
  */
 export const processLawReferencesSync = (text: string): string => {
+  console.log('🔄 Processing law references in text:', text.substring(0, 200) + '...');
   let processedText = text;
+  
+  // Extract citations first to see what we're working with
+  const extractedCitations = extractCitations(text);
+  console.log('📊 Extracted citations:', extractedCitations);
   
   // Apply hardcoded URLs first
   Object.entries(HARDCODED_URLS).forEach(([citation, url]) => {
     const regex = new RegExp(citation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    const matchesBefore = processedText.match(regex);
+    if (matchesBefore) {
+      console.log(`🔗 Applying hardcoded URL for: ${citation} -> ${url}`);
+      console.log(`Found matches:`, matchesBefore);
+    }
     processedText = processedText.replace(regex, (match) => {
       const formattedMatch = formatCitationWithContext(match);
+      console.log(`✅ Hardcoded replacement: ${match} -> ${formattedMatch}`);
       return createLawLink(formattedMatch, url);
     });
   });
   
   // Then process remaining citations
-  CITATION_PATTERNS.forEach(pattern => {
+  CITATION_PATTERNS.forEach((pattern, index) => {
+    console.log(`🎯 Processing pattern ${index}:`, pattern.toString());
+    const matchesBefore = [...processedText.matchAll(new RegExp(pattern))];
+    if (matchesBefore.length > 0) {
+      console.log(`Found ${matchesBefore.length} matches for pattern ${index}:`, matchesBefore.map(m => m[0]));
+    }
+    
     processedText = processedText.replace(pattern, (match) => {
+      console.log(`🔍 Pattern ${index} processing match: ${match}`);
+      
       // Check if this citation already has a hardcoded URL
       for (const [citation, _] of Object.entries(HARDCODED_URLS)) {
         if (match.includes(citation)) {
-          // Skip this match as it was already processed
+          console.log(`⚠️ Match already processed by hardcoded URL: ${citation}`);
           return match;
         }
       }
       
       // Format citation with proper context
       const formattedMatch = formatCitationWithContext(match);
+      console.log(`📝 Formatted match: ${match} -> ${formattedMatch}`);
       
       // Check for known direct URLs
       const directUrl = getDirectUrlForCitation(match);
+      console.log(`🔍 Direct URL for ${match}:`, directUrl);
+      
       if (directUrl) {
-        return createLawLink(formattedMatch, directUrl);
+        const result = createLawLink(formattedMatch, directUrl);
+        console.log(`✅ Created direct link:`, result);
+        return result;
       }
       
       // Process this citation with a standard link
-      return createLawLink(formattedMatch);
+      const result = createLawLink(formattedMatch);
+      console.log(`✅ Created standard link:`, result);
+      return result;
     });
   });
   
+  console.log('🎉 Final processed text:', processedText.substring(0, 300) + '...');
   return processedText;
 };
