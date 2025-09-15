@@ -203,43 +203,25 @@ function parseGenericFormat(analysisContent: string): PreliminaryAnalysisData {
   // Pre-process to detect and split concatenated legal areas
   const preprocessedContent = detectAndSplitConcatenatedLegalAreas(analysisContent);
   
-  // Extract complete legal concept sentences for legal areas
-  const sentences = preprocessedContent.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 0);
+  // Extract individual legal concepts instead of full sentences
+  const extractedConcepts = extractLegalConcepts(preprocessedContent);
   
-  // Legal area keywords that indicate legal concepts
-  const legalKeywords = [
-    'texas lemon law', 'magnuson-moss', 'deceptive trade practices', 'dtpa',
-    'warranty', 'contract law', 'breach of contract', 'premises liability',
-    'negligence', 'tort law', 'consumer protection', 'liability',
-    'business & commerce code', 'chapter 573', 'implied warranty'
-  ];
-
-  // Extract complete sentences that contain legal concepts
-  sentences.forEach(sentence => {
-    const lowerSentence = sentence.toLowerCase();
+  // Add extracted concepts with deduplication
+  extractedConcepts.forEach(concept => {
+    const cleanConcept = cleanLegalConcept(concept);
     
-    // Check if sentence contains legal keywords
-    const containsLegalConcept = legalKeywords.some(keyword => 
-      lowerSentence.includes(keyword.toLowerCase())
+    // Check for exact duplicates first
+    const isExactDuplicate = potentialLegalAreas.some(existing => 
+      existing.toLowerCase().trim() === cleanConcept.toLowerCase().trim()
     );
     
-    if (containsLegalConcept && sentence.length > 15 && sentence.length < 300) {
-      // Clean and format the sentence
-      const cleanSentence = sentence.trim().replace(/^(the\s+|this\s+|these\s+)/i, '');
-      
-      // Check for exact duplicates first, then similarity
-      const isExactDuplicate = potentialLegalAreas.some(existing => 
-        existing.toLowerCase().trim() === cleanSentence.toLowerCase().trim()
+    if (!isExactDuplicate && cleanConcept.length > 3) {
+      const isSimilarDuplicate = potentialLegalAreas.some(existing => 
+        areSimilarLegalConcepts(existing, cleanConcept)
       );
       
-      if (!isExactDuplicate) {
-        const isSimilarDuplicate = potentialLegalAreas.some(existing => 
-          areSimilarLegalConcepts(existing, cleanSentence)
-        );
-        
-        if (!isSimilarDuplicate) {
-          potentialLegalAreas.push(cleanSentence);
-        }
+      if (!isSimilarDuplicate) {
+        potentialLegalAreas.push(cleanConcept);
       }
     }
   });
@@ -257,7 +239,6 @@ function parseGenericFormat(analysisContent: string): PreliminaryAnalysisData {
       matches.forEach(match => {
         const cleaned = match.trim().replace(/\n+/g, ' ');
         if (cleaned.length > 15 && cleaned.length < 300) {
-          // Check for exact duplicates first
           const isExactDuplicate = potentialLegalAreas.some(existing => 
             existing.toLowerCase().trim() === cleaned.toLowerCase().trim()
           );
@@ -334,34 +315,76 @@ function parseGenericFormat(analysisContent: string): PreliminaryAnalysisData {
   }, analysisContent);
 }
 
+/**
+ * Extract individual legal concepts using targeted patterns
+ */
+function extractLegalConcepts(content: string): string[] {
+  const concepts: string[] = [];
+  
+  // Patterns for common legal concepts
+  const legalPatterns = [
+    // Texas-specific laws with citations
+    /Texas\s+[A-Za-z\s]+(?:Law|Act|Code)(?:\s*\([^)]+\))?/gi,
+    // Federal acts
+    /(?:Magnuson-Moss|Fair Credit|Truth in Lending|Americans with Disabilities)\s+[A-Za-z\s]*Act/gi,
+    // DTPA variations
+    /(?:Deceptive Trade Practices?|DTPA)(?:\s*Act)?(?:\s*\([^)]+\))?/gi,
+    // General legal concepts
+    /(?:Implied|Express)\s+Warrant(?:y|ies)/gi,
+    /Breach\s+of\s+(?:Contract|Warranty)/gi,
+    /(?:Negligence|Fraud|Misrepresentation)/gi,
+    /(?:Damages|Remedies|Relief)/gi,
+    // Generic laws and codes
+    /[A-Za-z\s]+(?:Law|Act|Code)(?:\s*\([^)]+\))?/gi,
+  ];
+  
+  // Extract using each pattern
+  legalPatterns.forEach(pattern => {
+    const matches = content.match(pattern);
+    if (matches) {
+      matches.forEach(match => {
+        const cleaned = cleanLegalConcept(match);
+        if (cleaned.length > 3) { // Avoid very short matches
+          concepts.push(cleaned);
+        }
+      });
+    }
+  });
+  
+  return concepts;
+}
+
+/**
+ * Clean and normalize a legal concept for display
+ */
+function cleanLegalConcept(concept: string): string {
+  return concept
+    .trim()
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .replace(/^[^a-zA-Z]+/, '') // Remove leading non-letters
+    .replace(/[^a-zA-Z0-9\s()&,-]+$/, ''); // Remove trailing punctuation except useful chars
+}
+
 // Function to detect and split concatenated legal areas
 function detectAndSplitConcatenatedLegalAreas(content: string): string {
-  // Pattern to detect concatenated legal areas (e.g., "Texas Lemon LawImplied Warranties")
-  const concatenationPatterns = [
-    // Pattern: "Law Name Act/Code)Other Law Name"
-    /(\([^)]*\))([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:\s+(?:Act|Law|Code))?)/g,
-    // Pattern: "ActOther", "LawOther", "CodeOther"
-    /(Act|Law|Code)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g,
-    // Pattern: Multiple legal terms without spaces
-    /([a-z])([A-Z][a-z]*(?:\s+[A-Z][a-z]*)*(?:\s+(?:Act|Law|Code|DTPA))?)/g
+  // More aggressive patterns for splitting concatenated legal concepts
+  const patterns = [
+    // Split at legal concept boundaries
+    /((?:Act|Law|Code|DTPA|Warranties?)(?:\s*\([^)]+\))?)\s*([A-Z][A-Za-z\s]+)/g,
+    // Split when parenthetical citation is followed by another concept
+    /(\([^)]+\))\s*([A-Z][A-Za-z\s]+(?:Act|Law|Code|DTPA))/g,
+    // Split DTPA from other concepts
+    /(DTPA)\s*([A-Z][a-z])/g,
+    // Split when legal keywords are directly followed by other concepts
+    /((?:Implied|Express)\s+Warrant(?:y|ies))\s*([A-Z][A-Za-z\s]+)/g,
   ];
-
+  
   let processedContent = content;
   
-  concatenationPatterns.forEach(pattern => {
-    processedContent = processedContent.replace(pattern, (match, p1, p2) => {
-      // Add a period and space to separate the legal areas
-      return `${p1}. ${p2}`;
-    });
+  patterns.forEach(pattern => {
+    processedContent = processedContent.replace(pattern, '$1\n$2');
   });
-
-  // Additional cleanup for common concatenation patterns
-  processedContent = processedContent
-    .replace(/([a-z])([A-Z])/g, '$1. $2') // Split camelCase-like patterns
-    .replace(/\.\s*\./g, '.') // Remove double periods
-    .replace(/\s+/g, ' ') // Normalize spaces
-    .trim();
-
+  
   return processedContent;
 }
 
