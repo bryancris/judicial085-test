@@ -6,7 +6,12 @@ export interface PreliminaryAnalysisData {
 }
 
 export function parsePreliminaryAnalysis(analysisContent: string): PreliminaryAnalysisData {
+  console.log('🚀 === PARSE PRELIMINARY ANALYSIS ENTRY ===');
+  console.log('📥 Raw analysisContent:', JSON.stringify(analysisContent));
+  console.log('📏 Content length:', analysisContent?.length || 0);
+  
   if (!analysisContent?.trim()) {
+    console.log('❌ Empty analysis content, returning empty data');
     return {
       potentialLegalAreas: [],
       preliminaryIssues: [],
@@ -49,6 +54,10 @@ export function parsePreliminaryAnalysis(analysisContent: string): PreliminaryAn
   console.log('✅ Step 2 content passed IRAC validation check');
 
   const isTraditionalFormat = /\*\*PRELIMINARY ANALYSIS:|\*\*POTENTIAL LEGAL AREAS:/i.test(analysisContent);
+  
+  console.log('📊 Format detection:');
+  console.log('  isTraditionalFormat:', isTraditionalFormat);
+  console.log('  Will use:', isTraditionalFormat ? 'parseTraditionalFormat' : 'parseGenericFormat');
 
   if (isTraditionalFormat) {
     return parseTraditionalFormat(analysisContent);
@@ -319,11 +328,19 @@ function parseGenericFormat(analysisContent: string): PreliminaryAnalysisData {
  * Extract individual legal concepts using targeted patterns
  */
 function extractLegalConcepts(content: string): string[] {
+  console.log('⚡ === EXTRACTION DEBUG START ===');
+  console.log('📥 Input to extraction:', JSON.stringify(content));
+  
   const concepts: string[] = [];
   
   // First, split any concatenated content to ensure we process individual concepts
   const splitContent = detectAndSplitConcatenatedLegalAreas(content);
   const lines = splitContent.split('\n').filter(line => line.trim());
+  
+  console.log('📋 Processing', lines.length, 'lines after split:');
+  lines.forEach((line, index) => {
+    console.log(`  Line ${index + 1}: "${line}"`);
+  });
   
   // Patterns for common legal concepts
   const legalPatterns = [
@@ -370,6 +387,10 @@ function extractLegalConcepts(content: string): string[] {
     });
   });
   
+  console.log('📤 Final extracted concepts:', concepts);
+  console.log('📊 Extracted', concepts.length, 'total concepts');
+  console.log('⚡ === EXTRACTION DEBUG END ===');
+  
   return concepts;
 }
 
@@ -386,33 +407,36 @@ function cleanLegalConcept(concept: string): string {
 
 // Function to detect and split concatenated legal areas
 function detectAndSplitConcatenatedLegalAreas(content: string): string {
+  console.log('🔍 === SPLITTING DEBUG START ===');
+  console.log('📥 Original content:', JSON.stringify(content));
+  console.log('📏 Content length:', content.length);
+  console.log('🔤 First 200 chars:', content.substring(0, 200));
+  
   // Extremely aggressive patterns for splitting concatenated legal concepts
   const patterns = [
-    // Split when closing parenthesis is immediately followed by capital letter (most common issue)
-    /(\([^)]+\))([A-Z])/g,
-    // Split when "Act" is immediately followed by capital letter
-    /(Act)([A-Z])/g,
-    // Split when "Law" is immediately followed by capital letter
-    /(Law)([A-Z])/g,
-    // Split when "Code" is immediately followed by capital letter
-    /(Code)([A-Z])/g,
-    // Split when "DTPA" is followed by capital letter
-    /(DTPA)([A-Z])/g,
-    // Split when "Warranties" is followed by capital letter
-    /(Warranties)([A-Z])/g,
-    // Split when "Warranty" is followed by capital letter
-    /(Warranty)([A-Z])/g,
-    // Split at legal concept boundaries with optional spacing
-    /((?:Act|Law|Code|DTPA|Warranties?)(?:\s*\([^)]+\))?)\s*([A-Z][A-Za-z\s]+)/g,
-    // Split when legal keywords are directly followed by other concepts
-    /((?:Implied|Express)\s+Warrant(?:y|ies))\s*([A-Z][A-Za-z\s]+)/g,
+    { pattern: /(\([^)]+\))([A-Z])/g, name: 'Parenthesis->Capital' },
+    { pattern: /(Act)([A-Z])/g, name: 'Act->Capital' },
+    { pattern: /(Law)([A-Z])/g, name: 'Law->Capital' },
+    { pattern: /(Code)([A-Z])/g, name: 'Code->Capital' },
+    { pattern: /(DTPA)([A-Z])/g, name: 'DTPA->Capital' },
+    { pattern: /(Warranties)([A-Z])/g, name: 'Warranties->Capital' },
+    { pattern: /(Warranty)([A-Z])/g, name: 'Warranty->Capital' },
+    { pattern: /((?:Act|Law|Code|DTPA|Warranties?)(?:\s*\([^)]+\))?)\s*([A-Z][A-Za-z\s]+)/g, name: 'Legal boundary' },
+    { pattern: /((?:Implied|Express)\s+Warrant(?:y|ies))\s*([A-Z][A-Za-z\s]+)/g, name: 'Warranty boundary' },
   ];
   
   let processedContent = content;
   
   // Apply patterns sequentially for maximum splitting
-  patterns.forEach(pattern => {
+  patterns.forEach(({ pattern, name }) => {
+    const beforeSplit = processedContent;
     processedContent = processedContent.replace(pattern, '$1\n$2');
+    if (beforeSplit !== processedContent) {
+      console.log(`✅ Pattern "${name}" made changes`);
+      console.log('📝 New content:', JSON.stringify(processedContent));
+    } else {
+      console.log(`❌ Pattern "${name}" made NO changes`);
+    }
   });
   
   // Additional fallback: if we still have a very long line with multiple legal keywords, try more aggressive splitting
@@ -430,7 +454,17 @@ function detectAndSplitConcatenatedLegalAreas(content: string): string {
     return line;
   });
   
-  return enhancedLines.join('\n');
+  const finalResult = enhancedLines.join('\n');
+  
+  console.log('📤 Final split result:', JSON.stringify(finalResult));
+  const finalLines = finalResult.split('\n').filter(line => line.trim());
+  console.log('📊 Split into', finalLines.length, 'lines:');
+  finalLines.forEach((line, index) => {
+    console.log(`  ${index + 1}: "${line}"`);
+  });
+  console.log('🔍 === SPLITTING DEBUG END ===');
+  
+  return finalResult;
 }
 
 // Helper function to detect similar legal concepts and prevent duplicates
