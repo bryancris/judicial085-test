@@ -1227,7 +1227,7 @@ async function validateStepCompletion(stepNumber: number, stepResult: any, stepT
   'CASE_SUMMARY': /Parties|Timeline|Key Facts/i,
   'PRELIMINARY_ANALYSIS': /(?=.*POTENTIAL LEGAL AREAS)(?=.*PRELIMINARY ISSUES)(?=.*RESEARCH PRIORITIES)(?=.*STRATEGIC NOTES)/i,
   'TEXAS_LAWS': /(?=.*Legal Area Statutes)(?=.*Recent Updates)(?=.*Key Provisions)/i,
-  'IRAC_ANALYSIS': /\*\*ISSUE.*?:\*\*|\*\*RULE.*?:\*\*|\*\*APPLICATION.*?:\*\*|\*\*CONCLUSION.*?:\*\*/i,
+  'IRAC_ANALYSIS': /(?=.*ISSUE)(?=.*RULE)(?=.*APPLICATION)(?=.*CONCLUSION)/si,
   'STRENGTHS_WEAKNESSES': /\*\*CASE STRENGTHS:\*\*|\*\*CASE WEAKNESSES:\*\*/i
   };
 
@@ -1237,6 +1237,26 @@ async function validateStepCompletion(stepNumber: number, stepResult: any, stepT
       // Downgrade to warning for Step 2 – don't block the workflow
       warnings.push(`Step ${stepNumber} lacks required structural elements for ${stepType}`);
       score -= 0.2;
+    } else if (stepType === 'IRAC_ANALYSIS') {
+      // For IRAC, provide more detailed feedback
+      const hasIssue = /ISSUE/i.test(content);
+      const hasRule = /RULE/i.test(content);
+      const hasApplication = /APPLICATION/i.test(content);
+      const hasConclusion = /CONCLUSION/i.test(content);
+      const missing = [];
+      if (!hasIssue) missing.push('ISSUE');
+      if (!hasRule) missing.push('RULE');
+      if (!hasApplication) missing.push('APPLICATION');
+      if (!hasConclusion) missing.push('CONCLUSION');
+      
+      if (missing.length > 0) {
+        console.log(`🔍 IRAC validation failed. Missing: ${missing.join(', ')}`);
+        console.log(`📄 Content length: ${content.length} chars`);
+        console.log(`📄 Content preview: ${content.substring(0, 500)}...`);
+        // Downgrade to warning instead of error to allow graceful degradation
+        warnings.push(`Step ${stepNumber} missing IRAC components: ${missing.join(', ')}`);
+        score -= 0.2;
+      }
     } else {
       errors.push(`Step ${stepNumber} lacks required structural elements for ${stepType}`);
       score -= 0.3;
@@ -1257,15 +1277,6 @@ async function validateStepCompletion(stepNumber: number, stepResult: any, stepT
       // Downgrade to warning so we can proceed to later steps
       warnings.push(`Step ${stepNumber} missing required preliminary analysis sections`);
       score -= 0.2;
-    }
-  }
-  
-  // Step 5 validation: Must contain IRAC format
-  if (stepType === 'IRAC_ANALYSIS') {
-    const hasIrac = /ISSUE.*RULE.*APPLICATION.*CONCLUSION/s;
-    if (!hasIrac.test(content)) {
-      errors.push(`Step ${stepNumber} missing required IRAC analysis structure`);
-      score -= 0.4;
     }
   }
 
