@@ -1,9 +1,7 @@
-import React, { useMemo, useEffect } from "react";
+import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, AlertTriangle, Target, StickyNote } from "lucide-react";
+import { Search } from "lucide-react";
 import { parsePreliminaryAnalysis, PreliminaryAnalysisData } from "@/utils/preliminaryAnalysisParser";
-import { useCitationProcessor } from "@/hooks/useCitationProcessor";
-import { EnhancedText } from "@/components/ui/EnhancedText";
 
 interface PreliminaryAnalysisSectionProps {
   preliminaryAnalysis: string;
@@ -18,15 +16,16 @@ const PreliminaryAnalysisSection: React.FC<PreliminaryAnalysisSectionProps> = ({
     return parsePreliminaryAnalysis(preliminaryAnalysis || "");
   }, [preliminaryAnalysis]);
   
-  const { processText, citationMatches, enhancedCitations, isLoading: citationLoading } = useCitationProcessor();
+  // Citation processing disabled to prevent delayed corruption of legal areas display
+  // const { processText, citationMatches, enhancedCitations, isLoading: citationLoading } = useCitationProcessor();
   
   // Process only Potential Legal Areas text for citations
-  useEffect(() => {
-    if (parsedData.potentialLegalAreas.length > 0) {
-      const legalAreasText = parsedData.potentialLegalAreas.join(' ');
-      processText(legalAreasText);
-    }
-  }, [parsedData.potentialLegalAreas, processText]);
+  // useEffect(() => {
+  //   if (parsedData.potentialLegalAreas.length > 0) {
+  //     const legalAreasText = parsedData.potentialLegalAreas.join(' ');
+  //     processText(legalAreasText);
+  //   }
+  // }, [parsedData.potentialLegalAreas, processText]);
 
   if (isLoading) {
     return (
@@ -82,12 +81,7 @@ const PreliminaryAnalysisSection: React.FC<PreliminaryAnalysisSectionProps> = ({
             <ul className="space-y-1 ml-4">
               {parsedData.potentialLegalAreas.map((area, index) => (
                 <li key={index} className="text-sm text-foreground list-disc">
-                  <EnhancedText
-                    text={area}
-                    citationMatches={citationMatches}
-                    enhancedCitations={enhancedCitations}
-                    className="text-sm text-foreground"
-                  />
+                  {area}
                 </li>
               ))}
             </ul>
