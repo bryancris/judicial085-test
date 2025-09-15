@@ -82,17 +82,19 @@ serve(async (req) => {
     // Execute 9-step sequential workflow with timeout
     console.log('🔄 Executing 9-Step Sequential Workflow with Gemini Orchestration...');
     
-    // Set a 4-minute timeout for the entire workflow
+    // Set a 90-second timeout for the entire workflow (to stay under client timeout)
     const workflowPromise = executeSequentialWorkflow(workflowState, existingContext, req.headers.get('authorization'));
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Workflow execution timeout after 4 minutes')), 240000)
+      setTimeout(() => reject(new Error('Workflow execution timeout after 90 seconds')), 90000)
     );
     
     const workflowResult = await Promise.race([workflowPromise, timeoutPromise]);
 
     // Save comprehensive analysis to database
     console.log('💾 Saving 9-step analysis to database...');
+    const saveStartTime = Date.now();
     await saveWorkflowToDatabase(workflowResult, clientId, caseId, supabase, req.headers.get('authorization'));
+    console.log(`✅ Database save completed in ${Date.now() - saveStartTime}ms`);
 
     return new Response(
       JSON.stringify({
@@ -125,6 +127,9 @@ serve(async (req) => {
     } else if (error.message?.includes('JSON')) {
       errorMessage = 'Invalid request format';
       statusCode = 400;
+    } else if (error.message?.includes('OpenAI Step')) {
+      errorMessage = 'AI processing step timed out. Please try again.';
+      statusCode = 504;
     }
     
     const errorResponse = {
@@ -158,12 +163,21 @@ async function executeSequentialWorkflow(
   }
 
   console.log('🧠 GEMINI ORCHESTRATOR: Beginning 9-step sequential workflow...');
+  
+  // Add timeout check function
+  const checkTimeout = (startTime: number, stepName: string) => {
+    const elapsed = Date.now() - startTime;
+    if (elapsed > 80000) { // 80 second check
+      throw new Error(`Step ${stepName} timed out after ${elapsed}ms`);
+    }
+  };
 
   // Enhanced step execution with updated 9-step alignment
   const stepTypes = ['CASE_SUMMARY', 'PRELIMINARY_ANALYSIS', 'TEXAS_LAWS', 'CASE_LAW', 'IRAC_ANALYSIS', 'STRENGTHS_WEAKNESSES', 'REFINED_ANALYSIS', 'FOLLOW_UP', 'LAW_REFERENCES'];
   
   // Step 1: CASE SUMMARY (Organized Fact Pattern) - OpenAI
   console.log('📝 Step 1: CASE SUMMARY - OpenAI organizing fact pattern...');
+  checkTimeout(startTime, 'Step 1');
   workflowState.stepResults.step1 = await executeStepWithOpenAI(1, 'CASE_SUMMARY', workflowState, existingContext, authHeader);
   workflowState.stepResults.step1.stepType = 'CASE_SUMMARY';
   const validation1 = await validateStepCompletion(1, workflowState.stepResults.step1, 'CASE_SUMMARY', { CASE_SUMMARY: workflowState.stepResults.step1 });
@@ -176,6 +190,7 @@ async function executeSequentialWorkflow(
 
   // Step 2: PRELIMINARY ANALYSIS (AI-assisted broad issue spotting) - OpenAI
   console.log('🔍 Step 2: PRELIMINARY ANALYSIS - OpenAI conducting issue spotting...');
+  checkTimeout(startTime, 'Step 2');
   workflowState.stepResults.step2 = await executeStepWithOpenAI(2, 'PRELIMINARY_ANALYSIS', workflowState, existingContext, authHeader);
   workflowState.stepResults.step2.stepType = 'PRELIMINARY_ANALYSIS';
   const validation2 = await validateStepCompletion(2, workflowState.stepResults.step2, 'PRELIMINARY_ANALYSIS', { 
@@ -191,6 +206,7 @@ async function executeSequentialWorkflow(
 
   // Step 3: RELEVANT TEXAS LAWS (Targeted legal research) - OpenAI + Perplexity
   console.log('⚖️ Step 3: RELEVANT TEXAS LAWS - OpenAI formatting Perplexity research...');
+  checkTimeout(startTime, 'Step 3');
   workflowState.stepResults.step3 = await executeStepWithOpenAI(3, 'TEXAS_LAWS', workflowState, existingContext, authHeader);
   workflowState.stepResults.step3.stepType = 'TEXAS_LAWS';
   const validation3 = await validateStepCompletion(3, workflowState.stepResults.step3, 'TEXAS_LAWS', {
@@ -352,6 +368,7 @@ async function executeSequentialWorkflow(
 
   // Final synthesis by Gemini orchestrator
   console.log('🎼 FINAL SYNTHESIS: Gemini orchestrating complete 9-step output...');
+  checkTimeout(startTime, 'Final Synthesis');
   const finalSynthesis = await performFinalSynthesis(workflowState, geminiApiKey);
 
   const executionTime = Date.now() - startTime;
