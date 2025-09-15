@@ -1196,6 +1196,7 @@ async function validateStepCompletion(stepNumber: number, stepResult: any, stepT
     'TEXAS_LAWS': 200,
     'CASE_LAW': 200,
     'IRAC_ANALYSIS': 600,
+    'STRENGTHS_WEAKNESSES': 300,
     'RISK_ASSESSMENT': 300,
     'FOLLOW_UP': 150,
     'REMEDIES': 200,
@@ -1226,7 +1227,8 @@ async function validateStepCompletion(stepNumber: number, stepResult: any, stepT
   'CASE_SUMMARY': /Parties|Timeline|Key Facts/i,
   'PRELIMINARY_ANALYSIS': /(?=.*POTENTIAL LEGAL AREAS)(?=.*PRELIMINARY ISSUES)(?=.*RESEARCH PRIORITIES)(?=.*STRATEGIC NOTES)/i,
   'TEXAS_LAWS': /(?=.*Legal Area Statutes)(?=.*Recent Updates)(?=.*Key Provisions)/i,
-  'IRAC_ANALYSIS': /\*\*ISSUE.*?:\*\*|\*\*RULE.*?:\*\*|\*\*APPLICATION.*?:\*\*|\*\*CONCLUSION.*?:\*\*/i
+  'IRAC_ANALYSIS': /\*\*ISSUE.*?:\*\*|\*\*RULE.*?:\*\*|\*\*APPLICATION.*?:\*\*|\*\*CONCLUSION.*?:\*\*/i,
+  'STRENGTHS_WEAKNESSES': /\*\*CASE STRENGTHS:\*\*|\*\*CASE WEAKNESSES:\*\*/i
   };
 
   const requiredStructure = requiredStructures[stepType as keyof typeof requiredStructures];
