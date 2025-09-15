@@ -321,6 +321,10 @@ function parseGenericFormat(analysisContent: string): PreliminaryAnalysisData {
 function extractLegalConcepts(content: string): string[] {
   const concepts: string[] = [];
   
+  // First, split any concatenated content to ensure we process individual concepts
+  const splitContent = detectAndSplitConcatenatedLegalAreas(content);
+  const lines = splitContent.split('\n').filter(line => line.trim());
+  
   // Patterns for common legal concepts
   const legalPatterns = [
     // Texas-specific laws with citations
@@ -334,21 +338,36 @@ function extractLegalConcepts(content: string): string[] {
     /Breach\s+of\s+(?:Contract|Warranty)/gi,
     /(?:Negligence|Fraud|Misrepresentation)/gi,
     /(?:Damages|Remedies|Relief)/gi,
-    // Generic laws and codes
-    /[A-Za-z\s]+(?:Law|Act|Code)(?:\s*\([^)]+\))?/gi,
+    // Generic laws and codes - more specific pattern to avoid matching entire concatenated strings
+    /^[A-Za-z\s]+(?:Law|Act|Code)(?:\s*\([^)]+\))?$/gi,
   ];
   
-  // Extract using each pattern
-  legalPatterns.forEach(pattern => {
-    const matches = content.match(pattern);
-    if (matches) {
-      matches.forEach(match => {
-        const cleaned = cleanLegalConcept(match);
-        if (cleaned.length > 3) { // Avoid very short matches
-          concepts.push(cleaned);
-        }
-      });
+  // Process each line individually to prevent extracting concatenated strings
+  lines.forEach(line => {
+    const trimmedLine = line.trim();
+    if (!trimmedLine) return;
+    
+    // Try to match the entire line as a single legal concept first
+    if (/^[A-Za-z\s]+(?:Law|Act|Code|DTPA|Warrant(?:y|ies))(?:\s*\([^)]+\))?$/i.test(trimmedLine)) {
+      const cleaned = cleanLegalConcept(trimmedLine);
+      if (cleaned.length > 3) {
+        concepts.push(cleaned);
+        return;
+      }
     }
+    
+    // If that doesn't work, try individual patterns
+    legalPatterns.forEach(pattern => {
+      const matches = trimmedLine.match(pattern);
+      if (matches) {
+        matches.forEach(match => {
+          const cleaned = cleanLegalConcept(match);
+          if (cleaned.length > 3) {
+            concepts.push(cleaned);
+          }
+        });
+      }
+    });
   });
   
   return concepts;
