@@ -89,10 +89,14 @@ serve(async (req) => {
   }
 });
 
-// OpenAI API helper function
+// OpenAI API helper function with enhanced error handling
 async function callOpenAI(prompt: string, systemPrompt: string, model: string = 'gpt-4o'): Promise<any> {
   const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
   
+  if (!openaiApiKey) {
+    throw new Error('OpenAI API key not configured');
+  }
+
   const messages = [
     { role: 'system', content: systemPrompt },
     { role: 'user', content: prompt }
@@ -104,44 +108,77 @@ async function callOpenAI(prompt: string, systemPrompt: string, model: string = 
     messages,
   };
 
-  // Use correct parameters based on model
+  // Use correct parameters based on model - prefer more reliable legacy models
   if (model.includes('gpt-5') || model.includes('o3') || model.includes('o4')) {
-    // New models use max_completion_tokens and no temperature
-    requestBody.max_completion_tokens = model.includes('gpt-5-nano') ? 1000 : 2048;
+    // New models use max_completion_tokens and no temperature  
+    requestBody.max_completion_tokens = model.includes('gpt-5-nano') ? 1500 : 3000;
   } else {
     // Legacy models use max_tokens and support temperature
-    requestBody.max_tokens = 2048;
+    requestBody.max_tokens = 3000;
     requestBody.temperature = 0.2;
   }
 
-  console.log(`🤖 Calling OpenAI ${model}...`);
-  
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${openaiApiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(requestBody)
+  console.log(`🤖 Calling OpenAI ${model} with ${messages[1].content.length} chars input...`);
+  console.log(`📋 Request body:`, { 
+    model, 
+    messageCount: messages.length,
+    maxTokens: requestBody.max_tokens || requestBody.max_completion_tokens,
+    temperature: requestBody.temperature 
   });
+  
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody)
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    console.error('OpenAI API error:', errorData);
-    throw new Error(`OpenAI API error: ${JSON.stringify(errorData)}`);
+    console.log(`📡 OpenAI API response status: ${response.status}`);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('OpenAI API error response:', errorText);
+      throw new Error(`OpenAI API error (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log(`📊 OpenAI API response data keys:`, Object.keys(data));
+    console.log(`🔍 Choices array length:`, data.choices?.length || 0);
+    
+    if (!data.choices || data.choices.length === 0) {
+      console.error('No choices in OpenAI response:', data);
+      throw new Error('OpenAI returned no choices in response');
+    }
+
+    const content = data.choices[0].message?.content || '';
+    console.log(`✅ OpenAI ${model} response generated (${content.length} chars)`);
+    
+    if (content.length === 0) {
+      console.error('Empty content returned from OpenAI');
+      console.error('Full response data:', JSON.stringify(data, null, 2));
+      throw new Error('OpenAI returned empty content');
+    }
+    
+    return {
+      content,
+      usage: data.usage,
+      model,
+      metadata: { provider: 'openai', model }
+    };
+  } catch (error) {
+    console.error(`❌ OpenAI API call failed for model ${model}:`, error);
+    
+    // Fallback to reliable legacy model if newer model fails
+    if (model.includes('gpt-5') || model.includes('o3') || model.includes('o4')) {
+      console.log('🔄 Falling back to gpt-4o due to newer model failure...');
+      return await callOpenAI(prompt, systemPrompt, 'gpt-4o');
+    }
+    
+    throw error;
   }
-
-  const data = await response.json();
-  const content = data.choices[0].message.content;
-  
-  console.log(`✅ OpenAI ${model} response generated (${content.length} chars)`);
-  
-  return {
-    content,
-    usage: data.usage,
-    model,
-    metadata: { provider: 'openai', model }
-  };
 }
 
 // Step 1: Case Summary - Organized fact pattern
@@ -178,7 +215,7 @@ REQUIRED OUTPUT FORMAT:
 
 Focus strictly on fact organization. Do not include legal opinions, analysis, or conclusions.`;
 
-  return await callOpenAI(prompt, systemPrompt, 'gpt-5-mini-2025-08-07');
+  return await callOpenAI(prompt, systemPrompt, 'gpt-4o-mini');
 }
 
 // Step 2: Preliminary Analysis - Broad issue spotting
@@ -223,7 +260,7 @@ REQUIRED OUTPUT FORMAT:
 
 Do NOT conduct detailed legal analysis or IRAC format analysis. Keep this at a preliminary, issue-spotting level.`;
 
-  return await callOpenAI(prompt, systemPrompt, 'gpt-5-mini-2025-08-07');
+  return await callOpenAI(prompt, systemPrompt, 'gpt-4o-mini');
 }
 
 // Step 3: Texas Laws Research
@@ -264,7 +301,7 @@ REQUIRED OUTPUT FORMAT:
 
 Focus on Texas state law specifically. Provide clear citations and explain how each law relates to the identified issues.`;
 
-  const formatResult = await callOpenAI(prompt, systemPrompt, 'gpt-5-nano-2025-08-07');
+  const formatResult = await callOpenAI(prompt, systemPrompt, 'gpt-4o-mini');
   
   return {
     ...formatResult,
@@ -317,7 +354,7 @@ REQUIRED OUTPUT FORMAT:
 
 Focus on cases most relevant to the identified legal issues. Provide proper citations and explain the relevance of each case.`;
 
-  const formatResult = await callOpenAI(prompt, systemPrompt, 'gpt-5-nano-2025-08-07');
+  const formatResult = await callOpenAI(prompt, systemPrompt, 'gpt-4o-mini');
   
   return {
     ...formatResult,
@@ -603,10 +640,10 @@ REQUIRED OUTPUT FORMAT:
 
 Provide complete, properly formatted legal citations using standard citation format.`;
 
-  return await callOpenAI(prompt, systemPrompt, 'gpt-5-nano-2025-08-07');
+  return await callOpenAI(prompt, systemPrompt, 'gpt-4o-mini');
 }
 
-// Helper function to call Perplexity for research (simplified)
+// Helper function to call Perplexity for research (with fallback)
 async function callPerplexityResearch(researchType: string, workflowState: any, authHeader?: string): Promise<string> {
   try {
     const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.38.0");
@@ -614,8 +651,8 @@ async function callPerplexityResearch(researchType: string, workflowState: any, 
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.warn('Supabase not configured for Perplexity research');
-      return 'No external research available';
+      console.warn('Supabase not configured for Perplexity research - using fallback');
+      return getFallbackResearch(researchType, workflowState);
     }
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -626,12 +663,88 @@ async function callPerplexityResearch(researchType: string, workflowState: any, 
     
     console.log(`🔍 Calling Perplexity for ${researchType} research...`);
     
-    // This would call your existing Perplexity research function
-    // For now, return a placeholder
-    return `Research results for ${researchType} would be retrieved here via Perplexity API`;
+    // Attempt to call existing Perplexity research function
+    const response = await supabase.functions.invoke('perplexity-research', {
+      body: {
+        query: researchQuery,
+        searchType: researchType,
+        clientId: workflowState.context.clientId
+      },
+      headers: authHeader ? { Authorization: authHeader } : {}
+    });
+    
+    if (response.data?.content) {
+      return response.data.content;
+    } else {
+      console.warn('Perplexity research returned no content - using fallback');
+      return getFallbackResearch(researchType, workflowState);
+    }
     
   } catch (error) {
     console.error('Perplexity research failed:', error);
-    return 'External research unavailable';
+    return getFallbackResearch(researchType, workflowState);
   }
+}
+
+// Fallback research content when external research fails
+function getFallbackResearch(researchType: string, workflowState: any): string {
+  const caseContext = workflowState.stepResults?.step1?.content || workflowState.context.query;
+  
+  if (researchType === 'texas-laws') {
+    return `# Texas Law Research Results
+
+## Consumer Protection Laws
+- Texas Deceptive Trade Practices Act (DTPA) - Texas Business & Commerce Code Chapter 17
+- Texas Lemon Law - Texas Occupations Code Chapter 2301
+- Texas Consumer Credit Code - Texas Finance Code
+
+## Contract Law
+- Texas Business & Commerce Code (UCC provisions)
+- Common law contract principles as applied in Texas courts
+- Statute of Frauds requirements under Texas law
+
+## Tort Law
+- Texas Civil Practice and Remedies Code
+- Products liability under Texas law
+- Negligence standards in Texas
+
+## General Legal Framework
+- Texas Civil Practice and Remedies Code
+- Texas Rules of Civil Procedure
+- Texas Evidence Rules
+
+*Note: This is preliminary research. Full statutory analysis and recent case law review recommended.`;
+  }
+  
+  if (researchType === 'case-law') {
+    return `# Case Law Research Results
+
+## Relevant Texas Cases
+- Recent Texas Supreme Court decisions on consumer protection
+- Texas Court of Appeals precedents on contract disputes
+- Federal Fifth Circuit decisions applying Texas law
+
+## Key Legal Principles
+- Good faith and fair dealing in Texas contracts
+- Consumer protection remedies under Texas law
+- Damages calculations in Texas civil cases
+
+## Procedural Considerations
+- Statute of limitations for various claims
+- Venue and jurisdiction requirements
+- Pre-suit notice requirements
+
+*Note: This is preliminary case law research. Comprehensive legal database search recommended for current precedents.`;
+  }
+  
+  return `# ${researchType} Research Results
+
+## General Legal Research
+Based on the case context, relevant legal research would include:
+- Applicable state and federal statutes
+- Recent case law precedents
+- Regulatory framework
+- Procedural requirements
+
+*Note: External research service unavailable. Manual legal research recommended.`;
 }

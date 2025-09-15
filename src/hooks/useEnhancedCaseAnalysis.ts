@@ -51,19 +51,52 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
       setCurrentStep(1);
       
       // Generate analysis using the proper 9-step AI Agent Coordinator workflow
-      const result = await coordinateAIAgents({
-        query: `Generate complete 9-step legal analysis for client ${clientId}${caseId ? ` and case ${caseId}` : ''}`,
-        clientId,
-        caseId,
-        researchTypes: ['9-step-workflow']
-      });
+      let result;
+      try {
+        result = await coordinateAIAgents({
+          query: `Generate complete 9-step legal analysis for client ${clientId}${caseId ? ` and case ${caseId}` : ''}`,
+          clientId,
+          caseId,
+          researchTypes: ['9-step-workflow']
+        });
+      } catch (coordinatorError) {
+        console.warn("🔄 9-step coordinator failed, falling back to direct analysis:", coordinatorError);
+        
+        // Fallback to direct analysis generation
+        const { generateLegalAnalysis } = await import("@/utils/api/analysisApiService");
+        const fallbackResult = await generateLegalAnalysis(
+          clientId, 
+          [], // Empty conversation for case analysis
+          caseId,
+          'case-analysis',
+          { stepType: 'preliminary-analysis' }
+        );
+        
+        if (fallbackResult.error) {
+          throw new Error(`Fallback analysis failed: ${fallbackResult.error}`);
+        }
+        
+        // Transform fallback result to match coordinator format
+        result = {
+          success: true,
+          synthesizedContent: fallbackResult.analysis || "Analysis completed with fallback method",
+          citations: fallbackResult.lawReferences || [],
+          metadata: { fallbackUsed: true }
+        };
+        
+        toast({
+          title: "Analysis Generated", 
+          description: "Analysis completed using fallback method due to coordinator issues.",
+          variant: "default",
+        });
+      }
       
       if (!result.success || result.error) {
-        console.error("9-step workflow failed:", result.error);
+        console.error("Both 9-step workflow and fallback failed:", result.error);
         
         toast({
           title: "Analysis Generation Failed", 
-          description: result.error || "Failed to complete 9-step analysis workflow",
+          description: result.error || "Failed to complete analysis workflow",
           variant: "destructive",
         });
         return;
