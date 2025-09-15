@@ -341,7 +341,8 @@ async function executeSequentialWorkflow(
   console.log(`🎯 Quality Control Assessment: Score ${averageScore.toFixed(2)}/1.0, Passed: ${qualityControlPassed}`);
   
   console.log('🔚 Returning workflow results...');
-
+  
+  // Ensure clean function closure
   return {
     stepResults: workflowState.stepResults,
     completedSteps: workflowState.completedSteps,
