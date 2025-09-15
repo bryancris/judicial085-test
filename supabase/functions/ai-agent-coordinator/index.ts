@@ -177,9 +177,6 @@ async function executeSequentialWorkflow(
     console.warn('⚠️ Step 3 has validation warnings but proceeding:', validation3);
   }
   workflowState.completedSteps.add(3);
-    console.warn('⚠️ Step 3 validation issues present but proceeding (score >= 0.6, <=1 error).', validation3);
-  }
-  workflowState.completedSteps.add(3);
 
   // Step 4: ADDITIONAL CASE LAW (Precedent research) - OpenAI + Perplexity
   console.log('📚 Step 4: ADDITIONAL CASE LAW - OpenAI formatting Perplexity research...');
