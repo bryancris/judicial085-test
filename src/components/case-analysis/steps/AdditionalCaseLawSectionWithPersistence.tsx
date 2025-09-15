@@ -4,6 +4,7 @@ import { BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { AnalysisData } from "@/hooks/useAnalysisData";
+import LawReferenceLink from "@/components/knowledge/LawReferenceLink";
 
 interface CaseLawItem {
   id: string;
@@ -12,6 +13,7 @@ interface CaseLawItem {
   holding: string;
   relevance: string;
   type: 'favorable' | 'adverse' | 'neutral';
+  url?: string;
 }
 
 interface AdditionalCaseLawSectionProps {
@@ -37,7 +39,7 @@ const AdditionalCaseLawSectionWithPersistence: React.FC<AdditionalCaseLawSection
         // First try to find case law linked to current analysis
         let { data: caseLawData, error } = await supabase
           .from("additional_case_law")
-          .select("*")
+          .select("id, case_name, citation, relevant_facts, outcome, url, created_at")
           .eq("legal_analysis_id", analysisData.id)
           .order("created_at", { ascending: false });
 
@@ -50,7 +52,7 @@ const AdditionalCaseLawSectionWithPersistence: React.FC<AdditionalCaseLawSection
           console.log("🔄 No case law for analysis, falling back to client-level");
           const { data: fallbackData, error: fallbackError } = await supabase
             .from("additional_case_law")
-            .select("*")
+            .select("id, case_name, citation, relevant_facts, outcome, url, created_at")
             .eq("client_id", clientId)
             .order("created_at", { ascending: false })
             .limit(10);
@@ -72,7 +74,8 @@ const AdditionalCaseLawSectionWithPersistence: React.FC<AdditionalCaseLawSection
           citation: item.citation || "",
           holding: item.relevant_facts || "",
           relevance: item.outcome || "",
-          type: 'neutral' as 'favorable' | 'adverse' | 'neutral' // Default to neutral since we don't have this field
+          type: 'neutral' as 'favorable' | 'adverse' | 'neutral', // Default to neutral since we don't have this field
+          url: item.url || undefined
         }));
 
         setCaseLaw(transformedCaseLaw);
@@ -153,7 +156,15 @@ const AdditionalCaseLawSectionWithPersistence: React.FC<AdditionalCaseLawSection
         {cases.map((caseItem) => (
           <div key={caseItem.id} className="border rounded-lg p-4 space-y-2">
             <div className="flex items-start justify-between gap-2">
-              <h5 className="font-medium text-sm">{caseItem.title}</h5>
+              <h5 className="font-medium text-sm">
+                {caseItem.url ? (
+                  <LawReferenceLink citation={caseItem.title} url={caseItem.url}>
+                    {caseItem.title}
+                  </LawReferenceLink>
+                ) : (
+                  caseItem.title
+                )}
+              </h5>
               <Badge className={getTypeColor(caseItem.type)}>
                 {caseItem.type}
               </Badge>
