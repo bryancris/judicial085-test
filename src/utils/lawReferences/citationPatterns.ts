@@ -22,22 +22,17 @@ export const CITATION_PATTERNS = [
   /\*([^*]+v\.\s+[^*]+)\*/gi, // Case citations in asterisks
 ];
 
-// A mapping of known case citations to their direct URLs
+// A mapping of parenthetical citations to their direct URLs (ONLY full parenthetical patterns)
 export const HARDCODED_URLS: Record<string, string> = {
-  "§ 101.021": "https://statutes.capitol.texas.gov/Docs/CP/htm/CP.101.htm",
-  "Texas Civil Practice and Remedies Code": "https://statutes.capitol.texas.gov/Docs/CP/htm/CP.75.htm",
-  "Texas Lemon Law": "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.2301.htm",
-  "Magnuson-Moss Warranty Act": "https://www.law.cornell.edu/uscode/text/15/2301",
-  "Deceptive Trade Practices Act": "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.17.htm",
-  "DTPA": "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.17.htm",
-  "Texas Business & Commerce Code": "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.17.htm",
-  "Tex. Bus. & Com. Code": "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.17.htm",
-  "Texas Motor Vehicle Commission Code": "https://statutes.capitol.texas.gov/Docs/OC/htm/OC.2301.htm",
-  "Chapter 573": "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.2301.htm",
-  "Chapter 541": "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.541.htm",
-  "§ 541.001": "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.541.htm",
-  "§ 541.002": "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.541.htm",
-  "§ 541.003": "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.541.htm",
-  "Wal-Mart Stores, Inc. v. Wright": "https://caselaw.findlaw.com/tx-supreme-court/1372854.html",
-  "Wal-Mart Stores, Inc. v. Gonzalez": "https://caselaw.findlaw.com/tx-supreme-court/1031086.html"
+  // Only map complete parenthetical citations to prevent over-hyperlinking
+  "(Tex. Bus. & Com. Code § 541.001)": "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.541.htm",
+  "(Tex. Bus. & Com. Code § 541.002)": "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.541.htm",
+  "(Tex. Bus. & Com. Code § 541.003)": "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.541.htm",
+  "(Tex. Bus. & Com. Code Chapter 541)": "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.541.htm",
+  "(Tex. Bus. & Com. Code Chapter 2)": "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.2.htm",
+  "(Tex. Civ. Prac. & Rem. Code § 101.021)": "https://statutes.capitol.texas.gov/Docs/CP/htm/CP.101.htm",
+  "(Tex. Civ. Prac. & Rem. Code Chapter 41)": "https://statutes.capitol.texas.gov/Docs/CP/htm/CP.41.htm",
+  "(Tex. Occ. Code Chapter 2301)": "https://statutes.capitol.texas.gov/Docs/OC/htm/OC.2301.htm",
+  "*Wal-Mart Stores, Inc. v. Wright*": "https://caselaw.findlaw.com/tx-supreme-court/1372854.html",
+  "*Wal-Mart Stores, Inc. v. Gonzalez*": "https://caselaw.findlaw.com/tx-supreme-court/1031086.html"
 };
