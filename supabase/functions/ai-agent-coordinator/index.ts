@@ -340,7 +340,6 @@ async function executeSequentialWorkflow(
 
   console.log(`🎯 Quality Control Assessment: Score ${averageScore.toFixed(2)}/1.0, Passed: ${qualityControlPassed}`);
   
-  // Debug: Ensuring clean syntax before return
   console.log('🔚 Returning workflow results...');
 
   return {
