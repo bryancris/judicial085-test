@@ -289,10 +289,24 @@ LEGAL ISSUES ASSESSMENT APPROACH:
     });
   }
 
-  // Risk assessment structure requirements
+  // Risk assessment structure requirements - format for frontend parsing
   systemPrompt += `\n\nCRITICAL: You MUST use this EXACT format with these EXACT headers (including the ** markdown formatting):
 
-**STRONG ISSUES:**
+**CASE STRENGTHS:**
+For each strong legal position, provide bullet points in this format:
+- [Specific strength with clear explanation of why it benefits the case]
+- [Another strength that supports the client's position]
+- [Continue listing concrete advantages and positive factors]
+
+**CASE WEAKNESSES:**
+For each potential challenge or risk, provide bullet points in this format:
+- [Specific weakness or risk factor that could hurt the case]
+- [Another challenge that needs to be addressed]
+- [Continue listing concrete disadvantages and risk factors]
+
+**LEGAL ISSUES ASSESSMENT:**
+
+**Strong Issues (High Success Probability - 70%+):**
 For each strong legal issue, use this format:
 - Issue Title: [Descriptive name]
 - Strength: Strong  
@@ -301,7 +315,7 @@ For each strong legal issue, use this format:
 - Risk Factors: [Potential challenges or weaknesses]
 - Viability Assessment: [High probability of success with specific reasoning]
 
-**MODERATE ISSUES:**
+**Moderate Issues (Reasonable Success - 40-70%):**
 For each moderate legal issue, use this format:
 - Issue Title: [Descriptive name]
 - Strength: Moderate
@@ -310,7 +324,7 @@ For each moderate legal issue, use this format:
 - Risk Factors: [Challenges that make it moderate strength]
 - Viability Assessment: [Moderate probability with conditions for success]
 
-**WEAK ISSUES:**
+**Weak Issues (Low Success - 10-40%):**
 For each weak legal issue, use this format:
 - Issue Title: [Descriptive name]
 - Strength: Weak
@@ -318,15 +332,6 @@ For each weak legal issue, use this format:
 - Strategic Priority: [1-10 ranking]
 - Risk Factors: [Major challenges or legal obstacles]
 - Viability Assessment: [Low probability with explanation]
-
-**ELIMINATED ISSUES:**
-For each eliminated legal issue, use this format:
-- Issue Title: [Descriptive name]
-- Strength: Eliminated
-- Description: [Why this legal theory is not viable]
-- Strategic Priority: [0 or very low]
-- Risk Factors: [Fatal flaws or insurmountable obstacles]
-- Viability Assessment: [Not viable with specific legal reasoning]
 
 **OVERALL STRATEGY:**
 Comprehensive strategic assessment based on the issue prioritization above.
@@ -336,7 +341,7 @@ Comprehensive strategic assessment based on the issue prioritization above.
 2. [Second specific, actionable recommendation]
 3. [Third specific, actionable recommendation]
 
-IMPORTANT: Do NOT use "CASE STRENGTHS" or "CASE WEAKNESSES" - use only the headers shown above for proper parsing.`;
+IMPORTANT: Always include "CASE STRENGTHS" and "CASE WEAKNESSES" sections for frontend parsing, followed by detailed legal issues assessment.`;
 
   // Assessment criteria and quality requirements
   systemPrompt += `\n\nASSESSMENT CRITERIA:
