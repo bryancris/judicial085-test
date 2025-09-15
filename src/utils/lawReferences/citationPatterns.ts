@@ -3,39 +3,18 @@
  * Common Texas law citation patterns used for detecting legal references in text
  */
 
-// Common Texas law citation patterns - Ordered by specificity (most specific first)
+// Common Texas law citation patterns - Ordered by specificity (parenthetical citations ONLY)
 export const CITATION_PATTERNS = [
-  // Parenthetical citations (highest priority - most specific)
+  // ONLY Parenthetical citations (highest priority - most specific)
   /\(Tex\.\s+Bus\.\s+&\s+Com\.\s+Code\s+§\s+(\d+\.\d+)(?:\s+et\s+seq\.)?\)/gi,
   /\(Tex\.\s+Civ\.\s+Prac\.\s+&\s+Rem\.\s+Code\s+Chapter\s+(\d+)\)/gi,
   /\(Tex\.\s+Civ\.\s+Prac\.\s+&\s+Rem\.\s+Code\s+§\s+(\d+\.\d+)\)/gi,
   /\(Tex\.\s+Gov't\s+Code\s+§\s+(\d+\.\d+)\)/gi,
   /\(Tex\.\s+Occ\.\s+Code\s+§\s+(\d+\.\d+)\)/gi,
+  /\(Tex\.\s+Bus\.\s+&\s+Com\.\s+Code\s+Chapter\s+(\d+)\)/gi,
   
-  // Complete legal concepts with full context (high priority)
-  /Texas\s+Lemon\s+Law\s*\([^)]*Chapter\s+573[^)]*Texas\s+Business[^)]*\)/gi,
-  /Implied\s+Warranties?\s*\([^)]*Texas\s+Business\s+(?:&|and)\s+Commerce\s+Code[^)]*\)/gi,
-  /Express\s+Warranties?\s*\([^)]*Texas\s+Business\s+(?:&|and)\s+Commerce\s+Code[^)]*\)/gi,
-  /Breach\s+of\s+Warranty\s*\([^)]*Texas\s+Business[^)]*\)/gi,
-  /Deceptive\s+Trade\s+Practices\s+Act\s*\([^)]*DTPA[^)]*\)/gi,
-  
-  // Texas codes with sections (medium priority)
-  /Texas\s+Business\s+(?:and|&)\s+Commerce\s+Code\s+(?:Section|§)\s+(\d+\.\d+)/gi,
-  /Texas\s+Civil\s+Practice\s+and\s+Remedies\s+Code\s+§\s+(\d+\.\d+)/gi,
-  
-  // General legal references (lower priority)
-  /Texas\s+Lemon\s+Law/gi,
-  /Magnuson-?Moss\s+Warranty\s+Act/gi,
-  /Deceptive\s+Trade\s+Practices\s+Act|DTPA(?!\s*\()/gi,
-  /Texas\s+Motor\s+Vehicle\s+Commission\s+Code/gi,
-  /Texas\s+Business\s+(?:&|and)\s+Commerce\s+Code/gi,
-  /Texas\s+Civil\s+Practice\s+(?:and|&)\s+Remedies\s+Code/gi,
-  
-  // Case law citations (specific cases first)
-  /Wal-Mart\s+Stores,\s+Inc\.\s+v\.\s+Wright/gi,
-  /Wal-Mart\s+Stores,\s+Inc\.\s+v\.\s+Gonzalez/gi,
+  // Parenthetical case law citations
   /\*([^*]+v\.\s+[^*]+)\*/gi, // Case citations in asterisks
-  /\b([A-Z][a-zA-Z\s&,.''-]+)\s+v\.\s+([A-Z][a-zA-Z\s&,.''-]+),?\s*\d+\s+[A-Za-z\.]+\d*\s+\d+\s*\([^)]+\)/g, // Full case citations
 ];
 
 // A mapping of known case citations to their direct URLs
