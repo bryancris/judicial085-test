@@ -290,8 +290,37 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
         console.warn("Client-intake enrichment failed:", e);
       }
 
-      // Extract strengths and weaknesses from analysis content
-      const extractedStrengthsWeaknesses = extractStrengthsWeaknesses(analysis.content || '');
+      // Try to get dedicated Step 6 strengths/weaknesses analysis
+      let step6StrengthsWeaknesses: string | null = null;
+      try {
+        const { data: step6Data } = await supabase
+          .from('legal_analyses')
+          .select('content')
+          .eq('client_id', clientId)
+          .eq('analysis_type', 'step-6-strengths-weaknesses')
+          .or(caseId ? `case_id.eq.${caseId},case_id.is.null` : 'case_id.is.null')
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (step6Data && step6Data.length > 0) {
+          step6StrengthsWeaknesses = step6Data[0].content;
+          console.log('✅ Found dedicated Step 6 strengths/weaknesses record');
+        } else {
+          console.log('📋 No dedicated Step 6 strengths/weaknesses found');
+        }
+      } catch (e) {
+        console.warn("Step 6 strengths/weaknesses lookup failed:", e);
+      }
+
+      // Extract strengths and weaknesses from Step 6 content first, then fallback to main analysis
+      let extractedStrengthsWeaknesses;
+      if (step6StrengthsWeaknesses) {
+        console.log('🎯 Extracting strengths/weaknesses from dedicated Step 6 record');
+        extractedStrengthsWeaknesses = extractStrengthsWeaknesses(step6StrengthsWeaknesses);
+      } else {
+        console.log('📋 Extracting strengths/weaknesses from main analysis (fallback)');
+        extractedStrengthsWeaknesses = extractStrengthsWeaknesses(analysis.content || '');
+      }
       
       // Parse refined analysis from main content
       let refinedAnalysis = parseRefinedAnalysis(analysis.content || '');

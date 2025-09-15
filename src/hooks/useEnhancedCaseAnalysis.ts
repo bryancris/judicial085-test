@@ -8,9 +8,8 @@
  */
 
 import { useState } from "react";
-import { generateLegalAnalysis } from "@/utils/api/analysisApiService";
+import { coordinateAIAgents } from "@/utils/api/aiAgentService";
 import { useToast } from "@/hooks/use-toast";
-import { saveLegalAnalysis } from "@/utils/api/legalContentApiService";
 import { validateStepCompletion, enforceValidationBlocking, enforceStepOrder } from "@/utils/validation/stepValidationService";
 import { assessOverallQuality, enforceQualityStandards } from "@/utils/validation/qualityControlService";
 
@@ -51,127 +50,31 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
 
       setCurrentStep(1);
       
-      // Generate analysis using the enhanced 9-step workflow
-      const result = await generateLegalAnalysis(
+      // Generate analysis using the proper 9-step AI Agent Coordinator workflow
+      const result = await coordinateAIAgents({
+        query: `Generate complete 9-step legal analysis for client ${clientId}${caseId ? ` and case ${caseId}` : ''}`,
         clientId,
-        [],
         caseId,
-        'step-2-preliminary',
-        { stepType: 'preliminary-analysis', skipCoordinator: true }
-      );
+        researchTypes: ['9-step-workflow']
+      });
       
-      if (result.error) {
-        console.error("Analysis generation failed:", result.error);
-        
-        // Handle specific error types
-        if (result.error.includes("Insufficient facts") || result.error.includes("INSUFFICIENT_FACTS")) {
-          toast({
-            title: "Cannot Generate Analysis",
-            description: "Please add more case details or upload documents before generating analysis.",
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        if (result.error.includes("validation failed") || result.error.includes("quality")) {
-          toast({
-            title: "Quality Control Failed",
-            description: "Analysis did not meet quality standards. Please review and try again.",
-            variant: "destructive",
-          });
-          return;
-        }
-        // Handle IRAC blocked for non-Step 5
-        if (result.error.includes("IRAC_NOT_ALLOWED") || result.error.toLowerCase().includes("irac format detected")) {
-          toast({
-            title: "IRAC Blocked for Step 2",
-            description: "IRAC formatting was detected and blocked. The coordinator will enforce Step 2 format on retry.",
-            variant: "destructive",
-          });
-          return;
-        }
+      if (!result.success || result.error) {
+        console.error("9-step workflow failed:", result.error);
         
         toast({
-          title: "Analysis Generation Failed",
-          description: result.error,
+          title: "Analysis Generation Failed", 
+          description: result.error || "Failed to complete 9-step analysis workflow",
           variant: "destructive",
         });
         return;
       }
 
-      console.log("✅ Analysis generation completed with quality control");
-
-      // Save the generated analysis (validated and quality-controlled)
-      const timestamp = new Date().toISOString();
-      const saveResult = await saveLegalAnalysis(
-        clientId,
-        result.analysis,
-        timestamp,
-        {
-          caseId,
-          analysisType: "step-2-preliminary", // FIXED: Always use correct Step 2 analysis type
-          lawReferences: result.lawReferences || [],
-          documentsUsed: result.documentsUsed || [],
-          factSources: result.factSources || [],
-          citations: result.citations || [],
-          provenance: { qualityControlEnabled: true }
-        }
-      );
-
-      if (!saveResult.success) {
-        console.error("❌ Failed to save quality-controlled analysis:", saveResult.error || saveResult.validation);
-        toast({
-          title: "Save Failed",
-          description: saveResult.error || "Validation failed while saving analysis.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      console.log("✅ Quality-controlled analysis validated and saved, id:", saveResult.analysisId);
-      
-      // Step 5: Generate IRAC Analysis if Step 2 was successful
-      console.log("🧮 Starting Step 5: IRAC Analysis generation...");
-      const iracResult = await generateLegalAnalysis(
-        clientId,
-        [],
-        caseId,
-        'step-5-irac',
-        { stepType: 'irac-analysis', skipCoordinator: true }
-      );
-      
-      if (iracResult.error) {
-        console.warn("⚠️ IRAC Analysis (Step 5) failed:", iracResult.error);
-        toast({
-          title: "IRAC Analysis Failed",
-          description: "Step 2 completed but Step 5 (IRAC) failed. Continuing with available analysis.",
-          variant: "destructive",
-        });
-      } else {
-        // Save IRAC analysis as separate record
-        const iracSaveResult = await saveLegalAnalysis(
-          clientId,
-          iracResult.analysis,
-          new Date().toISOString(),
-          {
-            caseId,
-            analysisType: "irac-analysis",
-            lawReferences: iracResult.lawReferences || [],
-            documentsUsed: iracResult.documentsUsed || [],
-            factSources: iracResult.factSources || [],
-            citations: iracResult.citations || [],
-            provenance: { qualityControlEnabled: true, sourceStep: 5 }
-          }
-        );
-        
-        if (iracSaveResult.success) {
-          console.log("✅ IRAC Analysis (Step 5) saved successfully, id:", iracSaveResult.analysisId);
-        } else {
-          console.warn("⚠️ IRAC Analysis save failed:", iracSaveResult.error);
-        }
-      }
-      
-      // REMOVED: Step 6 Risk Assessment - no longer needed to reduce API costs
+      console.log("✅ 9-step analysis workflow completed successfully");
+      console.log("📊 Workflow results:", {
+        synthesizedContentLength: result.synthesizedContent.length,
+        citationsCount: result.citations?.length || 0,
+        hasStep6: !!result.synthesizedContent.includes("CASE STRENGTHS") && !!result.synthesizedContent.includes("CASE WEAKNESSES")
+      });
       
       // Show success message
       toast({
