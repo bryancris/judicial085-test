@@ -26,11 +26,12 @@ const RelevantTexasLawsSection: React.FC<RelevantTexasLawsSectionProps> = ({
         // Remove empty list items that create blank bullet points
         const cleanedHtml = htmlString.replace(/<li>\s*<\/li>/g, '').replace(/<li><\/li>/g, '');
         
-        // Process law references to add clickable links
+        // Process law references - optimized version prioritizes hardcoded URLs
         const enhancedHtml = await processLawReferences(cleanedHtml);
         
         setRelevantLawHtml(DOMPurify.sanitize(enhancedHtml));
       } catch (e) {
+        console.error('Error processing law content:', e);
         const fallbackHtml = `<p>${md.replace(/\n/g, "<br/>")}</p>`;
         const enhancedFallback = await processLawReferences(fallbackHtml);
         setRelevantLawHtml(DOMPurify.sanitize(enhancedFallback));

@@ -10,46 +10,51 @@ import { formatCitationWithContext } from "./consumerProtectionUtils";
 
 /**
  * Process text to identify and convert law references to clickable links
- * This is an asynchronous function that looks up URLs for citations
+ * Optimized version that prioritizes hardcoded URLs to avoid slow database calls
  * @param text The text to process
  * @returns Promise with the processed text with law references converted to links
  */
 export const processLawReferences = async (text: string): Promise<string> => {
-  let processedText = text;
-  const citations = extractCitations(text);
+  // First, try synchronous processing which handles most cases with hardcoded URLs
+  const syncResult = processLawReferencesSync(text);
   
-  console.log("Found citations:", citations);
+  // Check if sync processing already handled all citations
+  const remainingCitations = extractCitations(syncResult).filter(citation => {
+    // Only process citations that don't have hardcoded URLs and weren't already processed
+    return !getDirectUrlForCitation(citation) && !syncResult.includes(`href=`);
+  });
   
-  // For each citation, try to find a direct URL
-  for (const citation of citations) {
+  console.log("Citations needing database lookup:", remainingCitations);
+  
+  // If no citations need database lookup, return sync result immediately
+  if (remainingCitations.length === 0) {
+    console.log("All citations handled by hardcoded URLs, skipping database queries");
+    return syncResult;
+  }
+  
+  let processedText = syncResult;
+  
+  // Only do expensive database lookups for remaining citations with timeout
+  for (const citation of remainingCitations) {
     try {
-      // Format citation with proper context
       const formattedCitation = formatCitationWithContext(citation);
       
-      // First check for known direct URLs
-      let directUrl = getDirectUrlForCitation(citation);
+      // Add timeout to prevent hanging on slow database queries
+      const searchWithTimeout = Promise.race([
+        searchLawDocuments(citation),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Database search timeout')), 5000)
+        )
+      ]);
       
-      // If we have a direct URL already, use it
-      if (directUrl) {
-        const linkHtml = createLawLink(formattedCitation, directUrl);
-        processedText = processedText.replace(
-          new RegExp(citation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), 
-          linkHtml
-        );
-        continue;
-      }
-      
-      // Otherwise search for the document
-      const results = await searchLawDocuments(citation);
+      const results = await searchWithTimeout;
       if (results.length > 0 && results[0].url) {
-        // If we found a direct URL, create a link with it
         const linkHtml = createLawLink(formattedCitation, results[0].url);
         processedText = processedText.replace(
           new RegExp(citation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), 
           linkHtml
         );
       } else {
-        // Otherwise, create a link to the knowledge search page
         const linkHtml = createLawLink(formattedCitation);
         processedText = processedText.replace(
           new RegExp(citation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), 
@@ -57,8 +62,7 @@ export const processLawReferences = async (text: string): Promise<string> => {
         );
       }
     } catch (error) {
-      console.error(`Error processing citation ${citation}:`, error);
-      // If there's an error, still create a link, but to the search page with formatted citation
+      console.log(`Database lookup failed/timeout for ${citation}, using fallback link:`, error.message);
       const formattedCitation = formatCitationWithContext(citation);
       const linkHtml = createLawLink(formattedCitation);
       processedText = processedText.replace(
