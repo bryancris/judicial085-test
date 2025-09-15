@@ -214,20 +214,6 @@ State the precise legal question that must be resolved.
 **OVERALL CONCLUSION:**
 Synthesis of all IRAC analyses with comprehensive case assessment.
 
-**CASE STRENGTHS:**
-Based on your IRAC analysis above, identify the SPECIFIC strengths of this case. These must be:
-- Directly derived from the facts, evidence, and legal analysis you just completed
-- Specific to this case's circumstances (not generic template language)
-- Focused on actual evidence, witnesses, legal precedents, or procedural advantages
-- Strategically relevant for litigation success
-
-**CASE WEAKNESSES:**
-Based on your IRAC analysis above, identify the SPECIFIC weaknesses or challenges in this case. These must be:
-- Directly derived from gaps in evidence, legal obstacles, or procedural hurdles identified in your analysis
-- Specific to this case's circumstances (not generic template language)
-- Focused on actual litigation risks, evidentiary challenges, or legal vulnerabilities
-- Strategically relevant for case preparation and risk management
-
 **RECOMMENDED FOLLOW-UP QUESTIONS:**
 Strategic questions organized by legal issue to advance case development (numbered list).
 
