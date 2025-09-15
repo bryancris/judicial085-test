@@ -367,25 +367,51 @@ function cleanLegalConcept(concept: string): string {
 
 // Function to detect and split concatenated legal areas
 function detectAndSplitConcatenatedLegalAreas(content: string): string {
-  // More aggressive patterns for splitting concatenated legal concepts
+  // Extremely aggressive patterns for splitting concatenated legal concepts
   const patterns = [
-    // Split at legal concept boundaries
+    // Split when closing parenthesis is immediately followed by capital letter (most common issue)
+    /(\([^)]+\))([A-Z])/g,
+    // Split when "Act" is immediately followed by capital letter
+    /(Act)([A-Z])/g,
+    // Split when "Law" is immediately followed by capital letter
+    /(Law)([A-Z])/g,
+    // Split when "Code" is immediately followed by capital letter
+    /(Code)([A-Z])/g,
+    // Split when "DTPA" is followed by capital letter
+    /(DTPA)([A-Z])/g,
+    // Split when "Warranties" is followed by capital letter
+    /(Warranties)([A-Z])/g,
+    // Split when "Warranty" is followed by capital letter
+    /(Warranty)([A-Z])/g,
+    // Split at legal concept boundaries with optional spacing
     /((?:Act|Law|Code|DTPA|Warranties?)(?:\s*\([^)]+\))?)\s*([A-Z][A-Za-z\s]+)/g,
-    // Split when parenthetical citation is followed by another concept
-    /(\([^)]+\))\s*([A-Z][A-Za-z\s]+(?:Act|Law|Code|DTPA))/g,
-    // Split DTPA from other concepts
-    /(DTPA)\s*([A-Z][a-z])/g,
     // Split when legal keywords are directly followed by other concepts
     /((?:Implied|Express)\s+Warrant(?:y|ies))\s*([A-Z][A-Za-z\s]+)/g,
   ];
   
   let processedContent = content;
   
+  // Apply patterns sequentially for maximum splitting
   patterns.forEach(pattern => {
     processedContent = processedContent.replace(pattern, '$1\n$2');
   });
   
-  return processedContent;
+  // Additional fallback: if we still have a very long line with multiple legal keywords, try more aggressive splitting
+  const lines = processedContent.split('\n');
+  const enhancedLines = lines.flatMap(line => {
+    if (line.length > 100 && (line.match(/(Act|Law|Code|DTPA)/g) || []).length > 1) {
+      // Try to split on common legal ending + capital letter patterns
+      return line
+        .replace(/(Protection)\s*([A-Z])/g, '$1\n$2')
+        .replace(/(Business)\s*([A-Z])/g, '$1\n$2')
+        .replace(/(Commerce)\s*([A-Z])/g, '$1\n$2')
+        .split('\n')
+        .filter(l => l.trim());
+    }
+    return line;
+  });
+  
+  return enhancedLines.join('\n');
 }
 
 // Helper function to detect similar legal concepts and prevent duplicates
