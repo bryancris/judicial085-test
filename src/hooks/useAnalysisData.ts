@@ -290,21 +290,21 @@ export const useAnalysisData = (clientId?: string, caseId?: string) => {
         console.warn("Client-intake enrichment failed:", e);
       }
 
-      // Try to get dedicated Step 6 strengths/weaknesses analysis
+      // Try to get dedicated Step 6 strengths/weaknesses analysis (stored as risk-assessment)
       let step6StrengthsWeaknesses: string | null = null;
       try {
         const { data: step6Data } = await supabase
           .from('legal_analyses')
           .select('content')
           .eq('client_id', clientId)
-          .eq('analysis_type', 'step-6-strengths-weaknesses')
+          .eq('analysis_type', 'risk-assessment')
           .or(caseId ? `case_id.eq.${caseId},case_id.is.null` : 'case_id.is.null')
           .order('created_at', { ascending: false })
           .limit(1);
 
         if (step6Data && step6Data.length > 0) {
           step6StrengthsWeaknesses = step6Data[0].content;
-          console.log('✅ Found dedicated Step 6 strengths/weaknesses record');
+          console.log('✅ Found dedicated Step 6 strengths/weaknesses record (risk-assessment)');
         } else {
           console.log('📋 No dedicated Step 6 strengths/weaknesses found');
         }
