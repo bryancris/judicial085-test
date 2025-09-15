@@ -200,8 +200,11 @@ function parseGenericFormat(analysisContent: string): PreliminaryAnalysisData {
   const researchPriorities: string[] = [];
   const strategicNotes: string[] = [];
 
+  // Pre-process to detect and split concatenated legal areas
+  const preprocessedContent = detectAndSplitConcatenatedLegalAreas(analysisContent);
+  
   // Extract complete legal concept sentences for legal areas
-  const sentences = analysisContent.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 0);
+  const sentences = preprocessedContent.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 0);
   
   // Legal area keywords that indicate legal concepts
   const legalKeywords = [
@@ -224,13 +227,19 @@ function parseGenericFormat(analysisContent: string): PreliminaryAnalysisData {
       // Clean and format the sentence
       const cleanSentence = sentence.trim().replace(/^(the\s+|this\s+|these\s+)/i, '');
       
-      // Check for duplicates using similarity
-      const isDuplicate = potentialLegalAreas.some(existing => 
-        areSimilarLegalConcepts(existing, cleanSentence)
+      // Check for exact duplicates first, then similarity
+      const isExactDuplicate = potentialLegalAreas.some(existing => 
+        existing.toLowerCase().trim() === cleanSentence.toLowerCase().trim()
       );
       
-      if (!isDuplicate) {
-        potentialLegalAreas.push(cleanSentence);
+      if (!isExactDuplicate) {
+        const isSimilarDuplicate = potentialLegalAreas.some(existing => 
+          areSimilarLegalConcepts(existing, cleanSentence)
+        );
+        
+        if (!isSimilarDuplicate) {
+          potentialLegalAreas.push(cleanSentence);
+        }
       }
     }
   });
@@ -244,15 +253,22 @@ function parseGenericFormat(analysisContent: string): PreliminaryAnalysisData {
     ];
     
     fallbackPatterns.forEach(pattern => {
-      const matches = analysisContent.match(pattern) || [];
+      const matches = preprocessedContent.match(pattern) || [];
       matches.forEach(match => {
         const cleaned = match.trim().replace(/\n+/g, ' ');
         if (cleaned.length > 15 && cleaned.length < 300) {
-          const isDuplicate = potentialLegalAreas.some(existing => 
-            areSimilarLegalConcepts(existing, cleaned)
+          // Check for exact duplicates first
+          const isExactDuplicate = potentialLegalAreas.some(existing => 
+            existing.toLowerCase().trim() === cleaned.toLowerCase().trim()
           );
-          if (!isDuplicate) {
-            potentialLegalAreas.push(cleaned);
+          
+          if (!isExactDuplicate) {
+            const isSimilarDuplicate = potentialLegalAreas.some(existing => 
+              areSimilarLegalConcepts(existing, cleaned)
+            );
+            if (!isSimilarDuplicate) {
+              potentialLegalAreas.push(cleaned);
+            }
           }
         }
       });
@@ -318,6 +334,37 @@ function parseGenericFormat(analysisContent: string): PreliminaryAnalysisData {
   }, analysisContent);
 }
 
+// Function to detect and split concatenated legal areas
+function detectAndSplitConcatenatedLegalAreas(content: string): string {
+  // Pattern to detect concatenated legal areas (e.g., "Texas Lemon LawImplied Warranties")
+  const concatenationPatterns = [
+    // Pattern: "Law Name Act/Code)Other Law Name"
+    /(\([^)]*\))([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:\s+(?:Act|Law|Code))?)/g,
+    // Pattern: "ActOther", "LawOther", "CodeOther"
+    /(Act|Law|Code)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g,
+    // Pattern: Multiple legal terms without spaces
+    /([a-z])([A-Z][a-z]*(?:\s+[A-Z][a-z]*)*(?:\s+(?:Act|Law|Code|DTPA))?)/g
+  ];
+
+  let processedContent = content;
+  
+  concatenationPatterns.forEach(pattern => {
+    processedContent = processedContent.replace(pattern, (match, p1, p2) => {
+      // Add a period and space to separate the legal areas
+      return `${p1}. ${p2}`;
+    });
+  });
+
+  // Additional cleanup for common concatenation patterns
+  processedContent = processedContent
+    .replace(/([a-z])([A-Z])/g, '$1. $2') // Split camelCase-like patterns
+    .replace(/\.\s*\./g, '.') // Remove double periods
+    .replace(/\s+/g, ' ') // Normalize spaces
+    .trim();
+
+  return processedContent;
+}
+
 // Helper function to detect similar legal concepts and prevent duplicates
 function areSimilarLegalConcepts(concept1: string, concept2: string): boolean {
   const c1 = concept1.toLowerCase().trim();
@@ -351,16 +398,39 @@ function applyQualityControl(
   data: PreliminaryAnalysisData,
   originalContent: string
 ): PreliminaryAnalysisData {
-  // Apply additional deduplication and prioritize longer, more complete concepts
-  const deduplicatedLegalAreas = data.potentialLegalAreas
-    .sort((a, b) => b.length - a.length) // Prioritize longer descriptions
-    .filter((area, index, arr) => {
-      // Keep if no previous item is similar
-      return !arr.slice(0, index).some(prevArea => areSimilarLegalConcepts(prevArea, area));
-    });
+  // Apply strong deduplication with exact matching first, then similarity
+  const uniqueLegalAreas = [];
+  const seenExact = new Set();
+  
+  for (const area of data.potentialLegalAreas) {
+    const normalizedArea = area.toLowerCase().trim();
+    
+    // Skip if exact duplicate
+    if (seenExact.has(normalizedArea)) {
+      console.log('🔄 Skipping exact duplicate:', area);
+      continue;
+    }
+    
+    // Skip if similar to existing
+    const hasSimilar = uniqueLegalAreas.some(existing => 
+      areSimilarLegalConcepts(existing, area)
+    );
+    
+    if (!hasSimilar) {
+      uniqueLegalAreas.push(area);
+      seenExact.add(normalizedArea);
+    } else {
+      console.log('🔄 Skipping similar duplicate:', area);
+    }
+  }
+  
+  // Sort by length and quality (longer descriptions first)
+  const sortedLegalAreas = uniqueLegalAreas
+    .sort((a, b) => b.length - a.length)
+    .filter(area => area.length > 10); // Ensure meaningful content
 
   return {
-    potentialLegalAreas: deduplicatedLegalAreas.slice(0, 6).map(cleanText),
+    potentialLegalAreas: sortedLegalAreas.slice(0, 6).map(cleanText),
     preliminaryIssues: data.preliminaryIssues.slice(0, 6).map(cleanText),
     researchPriorities: data.researchPriorities.slice(0, 6).map(cleanText),
     strategicNotes: data.strategicNotes.slice(0, 6).map(cleanText),
