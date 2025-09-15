@@ -37,15 +37,13 @@ export const useCaseAnalysis = (clientId?: string, caseId?: string) => {
     await fetchAnalysisData();
   };
 
-  // Auto-fetch disabled to prevent expensive API calls on every page load/refresh/navigation
-  // Analysis data will only be loaded when "Generate Real-Time Analysis" or regeneration buttons are clicked
-  // Uncomment below to re-enable auto-fetch:
-  // useEffect(() => {
-  //   if (clientId) {
-  //     console.log("useCaseAnalysis: Loading analysis data for client:", clientId, "case:", caseId);
-  //     fetchAnalysisData();
-  //   }
-  // }, [clientId, caseId, fetchAnalysisData]);
+  // Auto-fetch existing analysis data to display previously generated analysis
+  useEffect(() => {
+    if (clientId) {
+      console.log("useCaseAnalysis: Loading analysis data for client:", clientId, "case:", caseId);
+      fetchAnalysisData();
+    }
+  }, [clientId, caseId, fetchAnalysisData]);
 
   // Function to search for similar cases after analysis is complete
   const searchSimilarCasesAfterAnalysis = async () => {
