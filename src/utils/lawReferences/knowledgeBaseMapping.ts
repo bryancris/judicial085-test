@@ -35,6 +35,7 @@ export const KNOWLEDGE_BASE_LAW_DOCS: KnowledgeBaseLawDocument[] = [
     citations: [
       "Texas Business & Commerce Code",
       "Business & Commerce Code",
+      "Tex. Bus. & Com. Code",
       "DTPA",
       "Texas Deceptive Trade Practices Act",
       "Deceptive Trade Practices-Consumer Protection Act",
@@ -42,9 +43,13 @@ export const KNOWLEDGE_BASE_LAW_DOCS: KnowledgeBaseLawDocument[] = [
       "§ 17.46", 
       "§ 17.50",
       "§ 17.505",
-      "Chapter 17"
+      "§ 541.001",
+      "§ 541.002",
+      "§ 541.003",
+      "Chapter 17",
+      "Chapter 541"
     ],
-    searchTerms: ["consumer protection", "deceptive trade practices", "false advertising", "misleading practices"]
+    searchTerms: ["consumer protection", "deceptive trade practices", "false advertising", "misleading practices", "motor vehicle sales", "vehicle warranties"]
   },
   {
     id: "texas-civil-practice-remedies-code",

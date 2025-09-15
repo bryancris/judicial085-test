@@ -5,7 +5,14 @@
 
 // Common Texas law citation patterns - Ordered by specificity (most specific first)
 export const CITATION_PATTERNS = [
-  // Complete legal concepts with full context (highest priority)
+  // Parenthetical citations (highest priority - most specific)
+  /\(Tex\.\s+Bus\.\s+&\s+Com\.\s+Code\s+§\s+(\d+\.\d+)(?:\s+et\s+seq\.)?\)/gi,
+  /\(Tex\.\s+Civ\.\s+Prac\.\s+&\s+Rem\.\s+Code\s+Chapter\s+(\d+)\)/gi,
+  /\(Tex\.\s+Civ\.\s+Prac\.\s+&\s+Rem\.\s+Code\s+§\s+(\d+\.\d+)\)/gi,
+  /\(Tex\.\s+Gov't\s+Code\s+§\s+(\d+\.\d+)\)/gi,
+  /\(Tex\.\s+Occ\.\s+Code\s+§\s+(\d+\.\d+)\)/gi,
+  
+  // Complete legal concepts with full context (high priority)
   /Texas\s+Lemon\s+Law\s*\([^)]*Chapter\s+573[^)]*Texas\s+Business[^)]*\)/gi,
   /Implied\s+Warranties?\s*\([^)]*Texas\s+Business\s+(?:&|and)\s+Commerce\s+Code[^)]*\)/gi,
   /Express\s+Warranties?\s*\([^)]*Texas\s+Business\s+(?:&|and)\s+Commerce\s+Code[^)]*\)/gi,
@@ -40,8 +47,13 @@ export const HARDCODED_URLS: Record<string, string> = {
   "Deceptive Trade Practices Act": "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.17.htm",
   "DTPA": "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.17.htm",
   "Texas Business & Commerce Code": "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.17.htm",
+  "Tex. Bus. & Com. Code": "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.17.htm",
   "Texas Motor Vehicle Commission Code": "https://statutes.capitol.texas.gov/Docs/OC/htm/OC.2301.htm",
   "Chapter 573": "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.2301.htm",
+  "Chapter 541": "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.541.htm",
+  "§ 541.001": "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.541.htm",
+  "§ 541.002": "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.541.htm",
+  "§ 541.003": "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.541.htm",
   "Wal-Mart Stores, Inc. v. Wright": "https://caselaw.findlaw.com/tx-supreme-court/1372854.html",
   "Wal-Mart Stores, Inc. v. Gonzalez": "https://caselaw.findlaw.com/tx-supreme-court/1031086.html"
 };

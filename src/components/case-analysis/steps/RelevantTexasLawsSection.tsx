@@ -1,8 +1,9 @@
-import React, { useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Scale } from "lucide-react";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
+import { processLawReferences } from "@/utils/lawReferences/processor";
 
 interface RelevantTexasLawsSectionProps {
   relevantLaw: string;
@@ -13,19 +14,30 @@ const RelevantTexasLawsSection: React.FC<RelevantTexasLawsSectionProps> = ({
   relevantLaw,
   isLoading = false
 }) => {
-  const relevantLawHtml = useMemo(() => {
-    const md = relevantLaw || "No relevant law analysis available.";
-    try {
-      const html = marked.parse(md, { breaks: true });
-      const htmlString = typeof html === "string" ? html : String(html);
-      
-      // Remove empty list items that create blank bullet points
-      const cleanedHtml = htmlString.replace(/<li>\s*<\/li>/g, '').replace(/<li><\/li>/g, '');
-      
-      return DOMPurify.sanitize(cleanedHtml);
-    } catch (e) {
-      return DOMPurify.sanitize(`<p>${md.replace(/\n/g, "<br/>")}</p>`);
-    }
+  const [relevantLawHtml, setRelevantLawHtml] = useState<string>("");
+
+  useEffect(() => {
+    const processLawContent = async () => {
+      const md = relevantLaw || "No relevant law analysis available.";
+      try {
+        const html = marked.parse(md, { breaks: true });
+        const htmlString = typeof html === "string" ? html : String(html);
+        
+        // Remove empty list items that create blank bullet points
+        const cleanedHtml = htmlString.replace(/<li>\s*<\/li>/g, '').replace(/<li><\/li>/g, '');
+        
+        // Process law references to add clickable links
+        const enhancedHtml = await processLawReferences(cleanedHtml);
+        
+        setRelevantLawHtml(DOMPurify.sanitize(enhancedHtml));
+      } catch (e) {
+        const fallbackHtml = `<p>${md.replace(/\n/g, "<br/>")}</p>`;
+        const enhancedFallback = await processLawReferences(fallbackHtml);
+        setRelevantLawHtml(DOMPurify.sanitize(enhancedFallback));
+      }
+    };
+
+    processLawContent();
   }, [relevantLaw]);
 
   if (isLoading) {
