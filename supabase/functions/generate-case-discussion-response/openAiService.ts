@@ -1,95 +1,153 @@
+/**
+ * OpenAI service for case discussion - replaces expensive Gemini service
+ */
 
-import { getEnvVars } from "./config.ts";
+const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') || '';
 
-// Format messages for OpenAI API
-export const formatMessages = (contextText: string, previousMessages: any[] = [], currentMessage: string) => {
+interface OpenAIResponse {
+  text: string;
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+}
+
+class OpenAIError extends Error {
+  constructor(
+    message: string,
+    public statusCode?: number,
+    public response?: any
+  ) {
+    super(message);
+    this.name = 'OpenAIError';
+  }
+}
+
+export const formatMessagesForOpenAI = (contextText: string, previousMessages: any[] = [], currentMessage: string): any[] => {
   const messages = [
-    {
-      role: "system",
-      content: contextText
-    }
+    { role: 'system', content: contextText }
   ];
 
-  // Add previous case discussion messages - critical for continuity
+  // Add previous messages to maintain conversation context
   if (previousMessages && previousMessages.length > 0) {
-    console.log(`Including ${previousMessages.length} previous messages for context`);
+    // Keep last 10 messages to stay within token limits
+    const recentMessages = previousMessages.slice(-10);
     
-    // If we have many previous messages, prioritize the most recent ones to stay within token limits
-    let messagesToInclude = previousMessages;
-    if (previousMessages.length > 10) {
-      // Keep first message for context and last 9 for recent conversation
-      messagesToInclude = [
-        previousMessages[0],
-        ...previousMessages.slice(-9)
-      ];
-      console.log(`Limited to ${messagesToInclude.length} previous messages due to token constraints`);
-    }
-    
-    messagesToInclude.forEach((msg: any) => {
+    recentMessages.forEach((msg: any) => {
       messages.push({
-        role: msg.role === "attorney" ? "user" : "assistant",
+        role: msg.role === 'attorney' ? 'user' : 'assistant',
         content: msg.content
       });
     });
-  } else {
-    console.log("No previous messages to include");
   }
 
-  // Add the current message
+  // Add current message
   messages.push({
-    role: "user",
+    role: 'user',
     content: currentMessage
   });
 
   return messages;
 };
 
-// Call OpenAI API
-export const generateOpenAiResponse = async (messages: any[]) => {
-  const { OPENAI_API_KEY } = getEnvVars();
-  
+async function makeOpenAICaseDiscussionRequest(messages: any[]): Promise<OpenAIResponse> {
   if (!OPENAI_API_KEY) {
-    console.error("OpenAI API key is missing");
-    return "I'm sorry, there was an issue with the AI configuration. Please contact support.";
+    throw new OpenAIError('OPENAI_API_KEY environment variable is not set');
   }
-  
-  console.log("Calling OpenAI API with gpt-4o model...");
-  
+
+  const url = 'https://api.openai.com/v1/chat/completions';
+
+  // Build the request payload for case discussion
+  const payload = {
+    model: 'gpt-5-2025-08-07', // Use GPT-5 for high-quality case discussions
+    messages,
+    max_completion_tokens: 4096, // GPT-5 uses max_completion_tokens
+    // Note: GPT-5 doesn't support temperature parameter
+  };
+
   try {
-    const openAIResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "gpt-4o",  // Using gpt-4o for better context understanding and retention
-        messages,
-        temperature: 0.2, // Lower temperature for more focused, consistent responses
-        max_tokens: 1000  // Maintain token limit to ensure response fits
-      })
+    console.log('🤖 OpenAI Case Discussion Request:', {
+      messageCount: messages.length,
+      model: payload.model,
+      totalContext: messages.reduce((acc, msg) => acc + msg.content.length, 0)
     });
 
-    if (!openAIResponse.ok) {
-      const errorData = await openAIResponse.json();
-      console.error('OpenAI API returned an error:', errorData);
-      throw new Error(`OpenAI API error: ${JSON.stringify(errorData)}`);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      throw new OpenAIError(
+        `OpenAI API error: ${response.status} ${response.statusText}`,
+        response.status,
+        errorData
+      );
     }
 
-    const openAIData = await openAIResponse.json();
+    const data = await response.json();
 
-    if (!openAIData.choices || openAIData.choices.length === 0) {
-      console.error('OpenAI API error:', openAIData);
-      throw new Error('Failed to generate response');
+    // Parse the OpenAI response format
+    if (!data.choices || data.choices.length === 0) {
+      throw new OpenAIError('No choices returned from OpenAI API', undefined, data);
     }
 
-    const aiResponse = openAIData.choices[0].message.content;
-    console.log(`Generated AI response of length: ${aiResponse.length} characters`);
-    console.log(`Response begins with: "${aiResponse.substring(0, 50)}..."`);
+    const choice = data.choices[0];
+    if (!choice.message || !choice.message.content) {
+      throw new OpenAIError('No content in OpenAI API response', undefined, data);
+    }
+
+    const text = choice.message.content;
     
-    return aiResponse;
+    // Extract usage information if available
+    const usage = data.usage ? {
+      promptTokens: data.usage.prompt_tokens || 0,
+      completionTokens: data.usage.completion_tokens || 0,
+      totalTokens: data.usage.total_tokens || 0
+    } : undefined;
+
+    console.log('✅ OpenAI Case Discussion Success:', {
+      responseLength: text.length,
+      usage: usage || 'not available'
+    });
+
+    if (usage) {
+      console.log('💰 Estimated cost:', 
+        `$${((usage.totalTokens / 1000000) * 7.5).toFixed(4)}`);
+    }
+
+    return { text, usage };
+
   } catch (error) {
-    console.error('Error calling OpenAI:', error);
-    return "I'm sorry, I encountered an error processing your request. Please try again or contact support if the issue persists.";
+    console.error('❌ OpenAI Case Discussion Error:', error);
+    throw error instanceof OpenAIError ? error : new OpenAIError(String(error));
   }
-};
+}
+
+export async function generateOpenAICaseDiscussion(
+  contextText: string, 
+  previousMessages: any[] = [], 
+  currentMessage: string
+): Promise<string> {
+  console.log("Generating OpenAI case discussion with context length:", contextText.length);
+  
+  try {
+    // Format messages for OpenAI
+    const messages = formatMessagesForOpenAI(contextText, previousMessages, currentMessage);
+    
+    // Generate response using OpenAI
+    const openaiResponse = await makeOpenAICaseDiscussionRequest(messages);
+    const generatedContent = openaiResponse.text;
+    
+    return generatedContent;
+  } catch (error) {
+    console.error("Error calling OpenAI for case discussion:", error);
+    throw error;
+  }
+}

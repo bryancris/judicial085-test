@@ -7,7 +7,7 @@ import { buildSystemPrompt } from "./prompts/systemPromptBuilder.ts";
 import { extractLegalCitations } from "./services/citationExtractionService.ts";
 import { mapCitationsToKnowledgeBase } from "./services/knowledgeBaseMappingService.ts";
 import { generateStrengthsWeaknesses } from "./services/strengthsWeaknessesGenerator.ts";
-import { generateLegalAnalysis } from "../shared/geminiService.ts";
+import { generateLegalAnalysis } from "../shared/openAiService.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -376,14 +376,14 @@ if (!skipCoordinator) {
       console.log('🛡️ Skipping coordinator to prevent recursion - direct analysis mode');
     }
 
-    // 🔄 FALLBACK: Direct Gemini analysis (existing logic)
-    console.log('🔄 Falling back to direct Gemini analysis');
+    // 🔄 FALLBACK: Direct OpenAI analysis (replacing expensive Gemini)
+    console.log('🔄 Falling back to direct OpenAI analysis');
     
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!geminiApiKey) {
-      console.error('Gemini API key is not configured for fallback');
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openaiApiKey) {
+      console.error('OpenAI API key is not configured for fallback');
       return new Response(
-        JSON.stringify({ error: 'Both 3-agent coordination and fallback analysis failed: Gemini API key missing' }),
+        JSON.stringify({ error: 'Both 3-agent coordination and fallback analysis failed: OpenAI API key missing' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -570,36 +570,30 @@ console.log(`🎯 STEP TYPE ROUTING: stepType='${stepType}' → effectiveStepTyp
       { role: "user", content: userContent }
     ];
 
-    console.log(`🚀 Sending request to Gemini with ${analysisSource} context and ${relevantResearchUpdates.length} relevant research updates`);
+    console.log(`🚀 Sending request to OpenAI with ${analysisSource} context and ${relevantResearchUpdates.length} relevant research updates`);
     console.log(`📊 Context size: ${userContent.length} characters, System prompt: ${systemPrompt.length} characters`);
 
     // Initialize analysis variable outside try block
     let analysis = '';
 
     try {
-      // Use Gemini's 2M token context to process entire case files without chunking
-      const geminiResponse = await generateLegalAnalysis(
+      // Use OpenAI's advanced language processing to analyze legal content
+      const openaiResponse = await generateLegalAnalysis(
         userContent,
-        systemPrompt,
-        geminiApiKey,
-        {
-          temperature: 0.3, // Lower temperature for consistent legal analysis
-          maxTokens: 8192   // Increased for comprehensive analysis
-        }
+        systemPrompt
       );
 
-      // Extract the analysis from Gemini response
-      analysis = geminiResponse.text || '';
+      // Extract the analysis from OpenAI response
+      analysis = openaiResponse.text || '';
       
       // Log token usage for cost tracking
-      if (geminiResponse.usage) {
-        console.log('📈 Gemini Usage:', geminiResponse.usage);
+      if (openaiResponse.usage) {
+        console.log('📈 OpenAI Usage:', openaiResponse.usage);
         console.log('💰 Estimated cost:', 
-          `$${((geminiResponse.usage.totalTokens / 1000000) * 1.25).toFixed(4)}`);
+          `$${((openaiResponse.usage.totalTokens / 1000000) * 7.5).toFixed(4)}`);
       }
 
-      console.log('✅ Successfully generated analysis from Gemini');
-      console.log('💰 Estimated cost: $' + (geminiResponse.usage?.totalTokens * 0.00000125 || 0).toFixed(4));
+      console.log('✅ Successfully generated analysis from OpenAI');
       console.log('Starting enhanced citation extraction from analysis...');
 
       
@@ -619,9 +613,7 @@ console.log(`🎯 STEP TYPE ROUTING: stepType='${stepType}' → effectiveStepTyp
           const strongConstraint = `\n\nCRITICAL DOMAIN CONSTRAINT: This is a consumer protection/debt collection matter (DTPA/FDCPA). You MUST NOT include real estate/property law content (e.g., Texas Property Code, trespass to try title, encroachment, adverse possession, easements, premises liability) under any circumstances. Focus EXCLUSIVELY on DTPA (Bus. & Com. Code § 17.41 et seq.), Texas Finance Code Ch. 392 (TDCA), and FDCPA. If the facts mention property or premises, ignore those aspects and focus only on consumer protection violations.`;
           const retryResponse = await generateLegalAnalysis(
             userContent,
-            systemPrompt + strongConstraint,
-            geminiApiKey,
-            { temperature: 0.2, maxTokens: 8192 }
+            systemPrompt + strongConstraint
           );
           if (retryResponse?.text) {
             analysis = retryResponse.text;
@@ -633,7 +625,7 @@ console.log(`🎯 STEP TYPE ROUTING: stepType='${stepType}' → effectiveStepTyp
       }
 
     } catch (error: any) {
-      console.error('❌ Gemini API error:', error);
+      console.error('❌ OpenAI API error:', error);
       const status = error?.statusCode || 500;
       const rawDetails = typeof error?.response === 'string' 
         ? error.response 
@@ -646,7 +638,7 @@ console.log(`🎯 STEP TYPE ROUTING: stepType='${stepType}' → effectiveStepTyp
       if (msg.includes('429')) {
         errorMessage = 'API rate limit exceeded. Please wait a few minutes and try again.';
       } else if (msg.includes('401')) {
-        errorMessage = 'API authentication failed. Please check your Gemini API key configuration.';
+        errorMessage = 'API authentication failed. Please check your OpenAI API key configuration.';
       } else if (msg.toLowerCase().includes('quota')) {
         errorMessage = 'API quota exceeded. Please check your Gemini API usage limits.';
       }

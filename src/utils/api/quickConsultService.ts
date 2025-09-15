@@ -43,7 +43,7 @@ export const sendQuickConsultMessage = async (
       return { text: "", error: "No query provided" };
     }
 
-    console.log('🎯 Quick Consult using 3-Agent System:', { 
+    console.log('🎯 Quick Consult using OpenAI Direct Analysis:', { 
       query: userQuery.substring(0, 100) + '...', 
       clientId, 
       userId,
@@ -53,44 +53,28 @@ export const sendQuickConsultMessage = async (
     const startTime = Date.now();
     
     const { data, error } = await invokeFunction<{
+      analysis?: string;
       text?: string;
-      synthesizedContent?: string;
-      content?: string;
+      lawReferences?: any[];
       citations?: any[];
-      hasKnowledgeBase?: boolean;
-      documentsFound?: number;
-      verifiedCases?: number;
-      courtListenerCitations?: number;
-      courtListenerStatus?: string;
-      success: boolean;
-      researchSources?: Array<{
-        source: string;
-        type: string;
-        available: boolean;
-      }>;
-      metadata?: {
-        totalResearchAgents: number;
-        synthesisEngine: string;
-        verificationEngine: string;
-        timestamp: string;
-      };
-    }>("ai-agent-coordinator", {
-      query: userQuery,
+      factSources?: any[];
+      success?: boolean;
+      analysisSource?: string;
+      metadata?: any;
+    }>("generate-legal-analysis", {
       clientId,
-      userId,
-      messages: messages.map(msg => ({
+      conversation: messages.map(msg => ({
         role: msg.role,
         content: msg.content,
         timestamp: msg.timestamp
-      })),
-      researchTypes: ['legal-research', 'current-research'] // Enable all 3 agents
+      }))
     });
 
     const elapsed = Date.now() - startTime;
-    console.log(`🕐 AI Agent Coordinator took ${elapsed}ms`);
+    console.log(`🕐 OpenAI Legal Analysis took ${elapsed}ms`);
 
     if (error) {
-      console.error('3-Agent Quick Consult error:', error);
+      console.error('OpenAI Quick Consult error:', error);
       
       // Provide more specific error messages
       if (typeof error === 'string') {
@@ -107,63 +91,37 @@ export const sendQuickConsultMessage = async (
     }
 
     if (!data) {
-      console.error('3-Agent Quick Consult: No data returned');
+      console.error('OpenAI Quick Consult: No data returned');
       return { text: "", error: "No response from AI service" };
     }
 
-    if (!data.success) {
-      console.error('3-Agent Quick Consult failed:', data);
-      return { text: "", error: data.text || "Failed to coordinate AI agents" };
-    }
-
-    // Map synthesizedContent to text for compatibility
-    const finalText = data.text || data.synthesizedContent || data.content || '';
-    console.log(`🔄 Response mapping - text: ${data.text ? 'present' : 'missing'}, synthesizedContent: ${data.synthesizedContent ? `present (${data.synthesizedContent.length} chars)` : 'missing'}`);
+    // Map analysis to text for compatibility
+    const finalText = data.analysis || data.text || '';
+    console.log(`🔄 Response mapping - analysis: ${data.analysis ? `present (${data.analysis.length} chars)` : 'missing'}, text: ${data.text ? 'present' : 'missing'}`);
     
     if (!finalText || finalText.trim().length === 0) {
-      console.error('3-Agent Quick Consult: Empty response text after mapping');
+      console.error('OpenAI Quick Consult: Empty response text after mapping');
       return { text: "", error: "NO_RESULTS" };
     }
 
-    // Handle CourtListener verification status gracefully
-    if (data.courtListenerStatus) {
-      switch (data.courtListenerStatus) {
-        case 'success':
-          console.log(`⚖️ ${data.verifiedCases || 0} legal cases verified with CourtListener`);
-          break;
-        case 'token_missing':
-          console.warn('⚠️ CourtListener verification unavailable - API token not configured');
-          break;
-        case 'failed':
-          console.warn('⚠️ CourtListener verification temporarily unavailable');
-          break;
-        case 'not_attempted':
-          // No cases to verify, this is normal
-          break;
-        default:
-          console.log(`CourtListener status: ${data.courtListenerStatus}`);
-      }
-    }
-
-    console.log('✅ 3-Agent Quick Consult completed successfully:', {
-      agentsUsed: data.metadata?.totalResearchAgents || 0,
-      verifiedCases: data.verifiedCases || 0,
-      documentsFound: data.documentsFound || 0,
-      courtListenerStatus: data.courtListenerStatus || 'unknown',
+    console.log('✅ OpenAI Quick Consult completed successfully:', {
       responseLength: finalText.length,
+      citations: data.citations?.length || 0,
+      lawReferences: data.lawReferences?.length || 0,
+      analysisSource: data.analysisSource || 'unknown',
       elapsed: `${elapsed}ms`
     });
 
     return { 
       text: finalText,
       citations: data.citations || [],
-      hasKnowledgeBase: data.hasKnowledgeBase || false,
-      documentsFound: data.documentsFound || 0,
-      verifiedCases: data.verifiedCases || 0,
-      courtListenerCitations: data.courtListenerCitations || 0
+      hasKnowledgeBase: (data.lawReferences?.length || 0) > 0,
+      documentsFound: data.lawReferences?.length || 0,
+      verifiedCases: 0, // OpenAI analysis doesn't verify cases
+      courtListenerCitations: 0
     };
   } catch (err: any) {
-    console.error("Error in 3-agent quick consult:", err);
+    console.error("Error in OpenAI quick consult:", err);
     
     // Provide more specific error handling
     let errorMessage = err.message || "Unknown error occurred";

@@ -12,7 +12,7 @@ import {
 } from "./clientDataService.ts";
 import { fetchClientDocuments } from "./services/clientDocumentsService.ts";
 import { buildCompleteContext } from "./contextBuilders/index.ts";
-import { generateGeminiCaseDiscussion } from "./geminiService.ts";
+import { generateOpenAICaseDiscussion } from "./openAiService.ts";
 import { detectResearchNeed, formatResearchQuery } from "./researchDetection.ts";
 import { performPerplexityResearch } from "./perplexityService.ts";
 import { formatEnhancedResearchResponse } from "./responseFormatter.ts";
@@ -162,8 +162,8 @@ serve(async (req) => {
       }
     }
 
-    // Generate AI response using Gemini's 2M context window
-    const aiResponse = await generateGeminiCaseDiscussion(contextText, previousMessages, message);
+    // Generate AI response using OpenAI's advanced language processing
+    const aiResponse = await generateOpenAICaseDiscussion(contextText, previousMessages, message);
 
     // Enhanced response with research if available
     if (researchResult) {

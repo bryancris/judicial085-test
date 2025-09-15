@@ -1,7 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { generateLegalAnalysis } from "./geminiService.ts";
+import { generateLegalAnalysis } from "./openAiService.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,7 +34,7 @@ serve(async (req) => {
     // Environment validation
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const geminiKey = Deno.env.get("GEMINI_API_KEY");
+    const geminiKey = Deno.env.get("OPENAI_API_KEY");
 
     if (!supabaseUrl || !supabaseServiceKey || !geminiKey) {
       throw new Error("Missing required environment variables");
@@ -140,9 +140,9 @@ Please generate 6-10 strategic follow-up questions that are SPECIFIC to this cas
 
 Format your response in clear, readable markdown. Each question should be actionable and directly relevant to the case details provided above. Avoid generic legal questions.`;
 
-    console.log("🧠 Generating follow-up questions with Gemini. Context length:", contextText.length);
+    console.log("🧠 Generating follow-up questions with OpenAI. Context length:", contextText.length);
 
-    // 4) Generate with Gemini using shared service
+    // 4) Generate with OpenAI using shared service
     const systemPrompt = "You are a senior legal strategist. Generate practical, actionable follow-up questions that help identify case strengths, weaknesses, and missing information. Focus on questions that would genuinely improve case preparation and strategy.";
     const { text: contentText } = await generateLegalAnalysis(prompt, systemPrompt, geminiKey);
     const content = (contentText || "").trim();
@@ -179,7 +179,7 @@ Format your response in clear, readable markdown. Each question should be action
       law_references: lawReferences,
       provenance: {
         source: "individual-step-refresh",
-        aiProvider: "gemini-1.5-pro",
+        aiProvider: "openai-gpt5",
         step: 8,
         generatedAt: new Date().toISOString(),
         contentLength,

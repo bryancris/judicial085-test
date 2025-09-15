@@ -2,7 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "./corsUtils.ts";
 import { buildCompleteContext } from "./contextBuilders/index.ts";
-import { generateGeminiContractReview } from "./geminiService.ts";
+import { generateOpenAIContractReview } from "./openAiService.ts";
 import { supabase } from "./supabaseClient.ts";
 import { SEVERITY_LEVELS, ISSUE_SEVERITY_MAP } from "./contextBuilders/texasLawContextBuilder.ts";
 import { validateAllCitations, getValidationStyles } from "./texasStatuteValidator.ts";
@@ -66,10 +66,10 @@ serve(async (req) => {
       message
     );
 
-    console.log("Generating contract review response with Gemini for client:", clientId);
+    console.log("Generating contract review response with OpenAI for client:", clientId);
 
-    // Generate AI response using Gemini's 2M context window
-    const aiResponse = await generateGeminiContractReview(contextText, message);
+    // Generate AI response using OpenAI's advanced language processing
+    const aiResponse = await generateOpenAIContractReview(contextText, message);
     
     // Add CSS styles for validated citations
     const validationStyles = getValidationStyles();
