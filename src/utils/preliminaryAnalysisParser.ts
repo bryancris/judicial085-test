@@ -156,15 +156,93 @@ function parseTraditionalFormat(analysisContent: string): PreliminaryAnalysisDat
 
   // Helper function to split content into items while preserving sentence integrity
   const splitIntoItems = (content: string): string[] => {
+    console.log('🔍 Splitting content into items:', content.substring(0, 200) + '...');
+    
     // Split on bullet points, numbered lists, or double newlines, but preserve sentences with commas
     const items = content
       .split(/\n\s*[-•*]\s*|\n\s*\d+\.\s*|\n\s*\([a-z]\)\s*|\n\n+/)
       .map(item => item.trim())
       .filter(item => item.length > 0);
     
-    // If no structured list found, treat the whole content as a single item
+    console.log(`📝 Initial split result: ${items.length} items`);
+    
+    // Handle concatenated legal areas - detect patterns like "ActSection" without spaces
     if (items.length === 1 && !content.includes('\n-') && !content.includes('\n•') && !content.match(/\n\s*\d+\./)) {
-      return [content.trim()];
+      console.log('⚠️ Detected potential concatenated content, attempting to split...');
+      
+      const concatenated = items[0];
+      const splitItems: string[] = [];
+      
+      // Split on common legal patterns that indicate separate areas
+      const legalPatterns = [
+        /(?=Deceptive Trade Practices Act)/g,
+        /(?=Implied Warranties)/g,
+        /(?=Texas Lemon Law)/g,
+        /(?=Magnuson-Moss Warranty Act)/g,
+        /(?=Consumer Protection)/g,
+        /(?=Breach of Contract)/g,
+        /(?=Chapter \d+)/g,
+        /(?=Texas Business & Commerce Code)/g,
+        /(?=Business & Commerce Code)/g
+      ];
+      
+      // Try to split using legal patterns
+      let remainingText = concatenated;
+      for (const pattern of legalPatterns) {
+        const matches = [...remainingText.matchAll(pattern)];
+        if (matches.length > 1) {
+          console.log(`🎯 Found ${matches.length} matches for pattern:`, pattern.source);
+          
+          const parts = remainingText.split(pattern).filter(part => part.trim().length > 10);
+          if (parts.length > 1) {
+            // Reconstruct the split parts with the pattern text
+            const splitResult: string[] = [];
+            const allMatches = [...concatenated.matchAll(pattern)];
+            
+            for (let i = 0; i < allMatches.length; i++) {
+              const match = allMatches[i];
+              const nextMatch = allMatches[i + 1];
+              const start = match.index!;
+              const end = nextMatch ? nextMatch.index! : concatenated.length;
+              const part = concatenated.substring(start, end).trim();
+              
+              if (part.length > 10) {
+                splitResult.push(part);
+              }
+            }
+            
+            if (splitResult.length > 1) {
+              splitItems.push(...splitResult);
+              break;
+            }
+          }
+        }
+      }
+      
+      // Fallback: split on capital letters followed by common legal terms
+      if (splitItems.length === 0) {
+        const capitalPattern = /(?=[A-Z][a-z]+ (?:Act|Law|Code|Section|Chapter|Title|Warranties))/g;
+        const capitalMatches = [...concatenated.matchAll(capitalPattern)];
+        
+        if (capitalMatches.length > 1) {
+          console.log(`📚 Split by capital + legal terms: ${capitalMatches.length} parts`);
+          
+          for (let i = 0; i < capitalMatches.length; i++) {
+            const match = capitalMatches[i];
+            const nextMatch = capitalMatches[i + 1];
+            const start = match.index!;
+            const end = nextMatch ? nextMatch.index! : concatenated.length;
+            const part = concatenated.substring(start, end).trim();
+            
+            if (part.length > 10) {
+              splitItems.push(part);
+            }
+          }
+        }
+      }
+      
+      console.log(`✅ Final split result: ${splitItems.length > 0 ? splitItems.length : 1} items`);
+      return splitItems.length > 0 ? splitItems : [concatenated];
     }
     
     return items;

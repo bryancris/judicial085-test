@@ -58,6 +58,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
   } = useCaseAnalysis(client.id, currentCase?.id);
 
   const [currentAnalysisId, setCurrentAnalysisId] = useState<string | undefined>();
+  const [hasLoadedAnalysis, setHasLoadedAnalysis] = useState(false);
 
   // Conversation and notes state
   const [conversation, setConversation] = useState<any[]>([]);
@@ -67,11 +68,12 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
 
   // Auto-load existing analysis when case-analysis tab is accessed (one-time only)
   useEffect(() => {
-    if ((activeTab === "analysis" || activeTab === "case-analysis") && !isAnalysisLoading && !analysisData) {
-      console.log("🔄 Auto-loading existing analysis data for tab access...");
+    if ((activeTab === "analysis" || activeTab === "case-analysis") && !isAnalysisLoading && !analysisData && !hasLoadedAnalysis) {
+      console.log("🔄 Auto-loading existing analysis data for tab access... (timestamp:", new Date().toISOString(), ")");
+      setHasLoadedAnalysis(true);
       loadExistingAnalysis();
     }
-  }, [activeTab, loadExistingAnalysis, isAnalysisLoading, analysisData]);
+  }, [activeTab, isAnalysisLoading, analysisData, hasLoadedAnalysis]);
 
   // Get the legal analysis ID from database
   React.useEffect(() => {
