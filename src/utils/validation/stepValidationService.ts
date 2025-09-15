@@ -37,6 +37,8 @@ export const legalWritingValidators = {
         return /## Potential Legal Areas|## Preliminary Issues/i.test(content);
       case 'IRAC_ANALYSIS':
         return /## Issue|## Rule|## Analysis|## Conclusion/i.test(content);
+      case 'STRENGTHS_WEAKNESSES':
+        return /\*\*CASE STRENGTHS:\*\*|\*\*CASE WEAKNESSES:\*\*/i.test(content);
       default:
         return content.includes('##'); // At least some structure
     }
@@ -166,6 +168,7 @@ export const validateStepCompletion = async (stepNumber: number, stepResult: any
     'TEXAS_LAWS': 200,
     'CASE_LAW': 200,
     'IRAC_ANALYSIS': 600,
+    'STRENGTHS_WEAKNESSES': 300,
     'RISK_ASSESSMENT': 300,
     'FOLLOW_UP': 150,
     'REMEDIES': 200,
@@ -194,7 +197,26 @@ export const validateStepCompletion = async (stepNumber: number, stepResult: any
     score -= 0.3;
   }
 
-  // Step 6 specific validation - RISK_ASSESSMENT
+  // Step 6 specific validation - STRENGTHS_WEAKNESSES
+  if (stepType === 'STRENGTHS_WEAKNESSES') {
+    const requiredSections = ['**CASE STRENGTHS:**', '**CASE WEAKNESSES:**'];
+    const missingStructures = requiredSections.filter(section => 
+      !content.includes(section)
+    );
+    
+    if (missingStructures.length > 0) {
+      errors.push(`Step ${stepNumber} missing required sections: ${missingStructures.join(', ')}`);
+      score -= 0.4;
+    }
+
+    // Check for bullet points indicating analysis content
+    if (!content.includes('•') && !content.includes('*') && !content.includes('-')) {
+      errors.push(`Step ${stepNumber} lacks proper bullet point formatting for strengths/weaknesses`);
+      score -= 0.2;
+    }
+  }
+
+  // Legacy Step 6 validation - RISK_ASSESSMENT
   if (stepType === 'RISK_ASSESSMENT') {
     const requiredSections = ['STRONG ISSUES', 'MODERATE ISSUES', 'WEAK ISSUES', 'ELIMINATED ISSUES'];
     const missingStructures = requiredSections.filter(section => 
