@@ -396,40 +396,21 @@ IRAC ANALYSIS:
 ${workflowState.stepResults?.step5?.content || 'No IRAC analysis available'}
 
 REQUIRED OUTPUT FORMAT:
-# CASE STRENGTHS & WEAKNESSES
+**CASE STRENGTHS:**
+• Strong legal arguments supported by precedent
+• Favorable factual circumstances that support claims
+• Clear evidence of legal violations or breaches
+• Procedural advantages or strategic positioning
+• Reliable witness testimony or documentation
 
-## CASE STRENGTHS
-### Legal Strengths
-- [Strong legal arguments and precedents]
+**CASE WEAKNESSES:**
+• Legal challenges or adverse precedent
+• Weak or missing factual evidence
+• Procedural hurdles or timing issues
+• Potential defenses or counterclaims
+• Credibility concerns or gaps in proof
 
-### Factual Strengths
-- [Strong factual evidence and circumstances]
-
-### Procedural Advantages
-- [Any procedural benefits or advantages]
-
-## CASE WEAKNESSES
-### Legal Weaknesses
-- [Weak legal arguments or adverse precedents]
-
-### Factual Weaknesses
-- [Weak evidence or adverse facts]
-
-### Procedural Risks
-- [Procedural challenges or risks]
-
-## RISK ASSESSMENT
-### Likelihood of Success
-- [Overall assessment with percentage if appropriate]
-
-### Key Risk Factors
-- [Primary risks that could impact outcome]
-
-### Mitigating Strategies
-- [Ways to address weaknesses]
-
-## SETTLEMENT CONSIDERATIONS
-- [Factors that favor settlement vs. litigation]
+CRITICAL: Use exactly the format above with **CASE STRENGTHS:** and **CASE WEAKNESSES:** headers and bullet points (•). Each bullet should be a complete, specific strength or weakness based on the legal analysis.
 
 Provide balanced, realistic assessment based on the legal analysis.`;
 
