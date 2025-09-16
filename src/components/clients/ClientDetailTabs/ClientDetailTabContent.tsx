@@ -194,13 +194,13 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
     loadDocumentCount();
   }, [client.id]);
 
-  // Pass generateNewAnalysis function up to parent when activeTab is case-analysis
+  // Set up the refresh function for the parent when on case-analysis tab (one-time only)
   useEffect(() => {
-    if (activeTab === "case-analysis" && onRefreshAnalysis) {
-      // Pass the memoized function reference directly to avoid creating new functions on each render
+    if (activeTab === "case-analysis" && onRefreshAnalysis && generateNewAnalysis) {
+      // Set the function reference once when the tab becomes active
       onRefreshAnalysis(generateNewAnalysis);
     }
-  }, [activeTab, generateNewAnalysis, onRefreshAnalysis]);
+  }, [activeTab]); // Only depend on activeTab to prevent re-execution
 
   // Helper function to generate source summary message
   const getSourceSummary = () => {
