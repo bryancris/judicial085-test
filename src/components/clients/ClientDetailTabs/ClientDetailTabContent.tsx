@@ -197,8 +197,8 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
   // Pass generateNewAnalysis function up to parent when activeTab is case-analysis
   useEffect(() => {
     if (activeTab === "case-analysis" && onRefreshAnalysis) {
-      // Only set the function reference, don't execute it
-      onRefreshAnalysis(() => generateNewAnalysis);
+      // Pass the memoized function reference directly to avoid creating new functions on each render
+      onRefreshAnalysis(generateNewAnalysis);
     }
   }, [activeTab, generateNewAnalysis, onRefreshAnalysis]);
 
