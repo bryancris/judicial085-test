@@ -22,84 +22,120 @@ export function extractStrengthsWeaknesses(content: string): { strengths: string
     };
   }
   
-  // If no explicit sections, extract from analysis structure (requirements, assessments, etc.)
-  console.log('🔄 No explicit sections found, extracting from analysis structure');
+  // Extract from legal requirements format with ✅/❌/⚠️ symbols
+  console.log('🔄 Extracting from legal requirements format');
   
-  // Extract strengths from "✅ Meets requirement" and positive assessments
-  const meetRequirementMatches = content.match(/\*\*[^*]+:\*\*.*?→\s*✅\s*Meets requirement/g);
-  if (meetRequirementMatches) {
-    meetRequirementMatches.forEach(match => {
+  // Extract strengths from ✅ requirements (meets requirement)
+  const meetsRequirements = content.match(/\*\*([^*]+):\*\*[^→]*→\s*✅[^→]*$/gm);
+  if (meetsRequirements) {
+    meetsRequirements.forEach(match => {
       const requirementMatch = match.match(/\*\*([^*]+):\*\*/);
       if (requirementMatch) {
         const requirement = requirementMatch[1].trim();
         if (requirement.length > 5 && !isGenericStrengthWeakness(requirement)) {
-          strengths.push(`Meets ${requirement.toLowerCase()}`);
+          strengths.push(`Client meets ${requirement.toLowerCase()}`);
+        }
+      }
+    });
+    console.log(`✅ Found ${meetsRequirements.length} met requirements`);
+  }
+  
+  // Extract weaknesses from ❌ requirements (doesn't meet requirement)
+  const failsRequirements = content.match(/\*\*([^*]+):\*\*[^→]*→\s*❌[^→]*$/gm);
+  if (failsRequirements) {
+    failsRequirements.forEach(match => {
+      const requirementMatch = match.match(/\*\*([^*]+):\*\*/);
+      if (requirementMatch) {
+        const requirement = requirementMatch[1].trim();
+        if (requirement.length > 5 && !isGenericStrengthWeakness(requirement)) {
+          weaknesses.push(`Does not meet ${requirement.toLowerCase()}`);
+        }
+      }
+    });
+    console.log(`❌ Found ${failsRequirements.length} unmet requirements`);
+  }
+  
+  // Extract concerns from ⚠️ requirements (needs evidence)
+  const needsEvidenceRequirements = content.match(/\*\*([^*]+):\*\*[^→]*→\s*⚠️[^→]*$/gm);
+  if (needsEvidenceRequirements) {
+    needsEvidenceRequirements.forEach(match => {
+      const requirementMatch = match.match(/\*\*([^*]+):\*\*/);
+      if (requirementMatch) {
+        const requirement = requirementMatch[1].trim();
+        if (requirement.length > 5 && !isGenericStrengthWeakness(requirement)) {
+          weaknesses.push(`Needs evidence for ${requirement.toLowerCase()}`);
+        }
+      }
+    });
+    console.log(`⚠️ Found ${needsEvidenceRequirements.length} requirements needing evidence`);
+  }
+  
+  // Extract from CASE CONCLUSION section
+  const conclusionMatch = content.match(/\*\*CASE CONCLUSION\*\*\s*(.*?)(?=\*\*[A-Z][A-Z ]+:|$)/is);
+  if (conclusionMatch) {
+    const conclusionText = conclusionMatch[1].trim();
+    console.log('📝 Found CASE CONCLUSION section');
+    
+    // Extract positive points from conclusion
+    const sentences = conclusionText.split(/[.!]/).map(s => s.trim()).filter(s => s.length > 20);
+    sentences.forEach(sentence => {
+      const lowerSentence = sentence.toLowerCase();
+      if (lowerSentence.includes('strong') || 
+          lowerSentence.includes('evidence supports') ||
+          lowerSentence.includes('likely to succeed') ||
+          lowerSentence.includes('favorable') ||
+          lowerSentence.includes('well-documented')) {
+        if (!isGenericStrengthWeakness(sentence)) {
+          strengths.push(sentence);
+        }
+      } else if (lowerSentence.includes('challenge') || 
+                 lowerSentence.includes('difficult') ||
+                 lowerSentence.includes('weakness') ||
+                 lowerSentence.includes('concern') ||
+                 lowerSentence.includes('need additional')) {
+        if (!isGenericStrengthWeakness(sentence)) {
+          weaknesses.push(sentence);
         }
       }
     });
   }
   
-  // Extract from analysis text that explains why requirements are met
-  const analysisMatches = content.match(/\*\*Analysis:\*\*\s*([^#\n]+)/g);
-  if (analysisMatches) {
-    analysisMatches.forEach(match => {
-      const analysisText = match.replace(/\*\*Analysis:\*\*\s*/, '').trim();
-      if (analysisText.length > 20 && !isGenericStrengthWeakness(analysisText)) {
-        // Extract key positive points from analysis
-        const sentences = analysisText.split('.').map(s => s.trim()).filter(s => s.length > 15);
-        sentences.forEach(sentence => {
-          if (sentence.toLowerCase().includes('support') || 
-              sentence.toLowerCase().includes('fulfill') ||
-              sentence.toLowerCase().includes('demonstrate') ||
-              sentence.toLowerCase().includes('indicates')) {
-            strengths.push(sentence);
+  // Fallback: Extract from overall assessment and next steps if no requirements found
+  if (strengths.length === 0 && weaknesses.length === 0) {
+    console.log('🔄 Using fallback extraction methods');
+    
+    const assessmentMatch = content.match(/\*\*Overall Assessment:\*\*\s*([^*\n]+)/);
+    if (assessmentMatch) {
+      const assessment = assessmentMatch[1].trim();
+      if (assessment.toLowerCase().includes('strong')) {
+        strengths.push('Strong case with solid legal foundation');
+      }
+      if (assessment.length > 20 && !isGenericStrengthWeakness(assessment)) {
+        strengths.push(assessment);
+      }
+    }
+    
+    // Look for potential actions needed as weaknesses
+    const nextStepsMatch = content.match(/\*\*Next Steps:\*\*\s*(.*?)(?=\n#{1,3}|$)/s);
+    if (nextStepsMatch) {
+      const nextStepsText = nextStepsMatch[1];
+      const steps = nextStepsText.split(/\d+\./).filter(step => step.trim().length > 10);
+      steps.forEach(step => {
+        const cleanStep = step.trim();
+        if (cleanStep.toLowerCase().includes('gather') || 
+            cleanStep.toLowerCase().includes('prepare') ||
+            cleanStep.toLowerCase().includes('consider')) {
+          if (cleanStep.length < 100) {
+            weaknesses.push(`Action needed: ${cleanStep.split('\n')[0].trim()}`);
           }
-        });
-      }
-    });
-  }
-  
-  // Extract from overall assessment
-  const assessmentMatch = content.match(/\*\*Overall Assessment:\*\*\s*([^*\n]+)/);
-  if (assessmentMatch) {
-    const assessment = assessmentMatch[1].trim();
-    if (assessment.toLowerCase().includes('strong')) {
-      strengths.push('Strong case with solid legal foundation');
-    }
-    if (assessment.length > 20 && !isGenericStrengthWeakness(assessment)) {
-      strengths.push(assessment);
-    }
-  }
-  
-  // Extract strength rating
-  const strengthRatingMatch = content.match(/\*\*Strength Rating:\*\*\s*([^.]+)/);
-  if (strengthRatingMatch) {
-    const rating = strengthRatingMatch[1].trim();
-    if (rating.toLowerCase().includes('strong')) {
-      strengths.push('Case has strong legal merit with supporting evidence');
-    }
-  }
-  
-  // Look for potential weaknesses in next steps or concerns
-  const nextStepsMatch = content.match(/\*\*Next Steps:\*\*\s*(.*?)(?=\n#{1,3}|$)/s);
-  if (nextStepsMatch) {
-    const nextStepsText = nextStepsMatch[1];
-    const steps = nextStepsText.split(/\d+\./).filter(step => step.trim().length > 10);
-    steps.forEach(step => {
-      const cleanStep = step.trim();
-      if (cleanStep.toLowerCase().includes('gather') || 
-          cleanStep.toLowerCase().includes('prepare') ||
-          cleanStep.toLowerCase().includes('consider')) {
-        if (cleanStep.length < 100) { // Keep it concise
-          weaknesses.push(`Action needed: ${cleanStep.split('\n')[0].trim()}`);
         }
-      }
-    });
+      });
+    }
   }
   
   // Limit results to most relevant items
   const finalStrengths = strengths.slice(0, 4);
-  const finalWeaknesses = weaknesses.slice(0, 3);
+  const finalWeaknesses = weaknesses.slice(0, 4);
   
   console.log(`📊 Final extraction results: ${finalStrengths.length} strengths, ${finalWeaknesses.length} weaknesses`);
   return { strengths: finalStrengths, weaknesses: finalWeaknesses };
