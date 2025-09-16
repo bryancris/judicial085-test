@@ -325,12 +325,14 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
                   <p className="text-sm text-destructive/80">
                     The analysis process encountered an error, but some steps were completed successfully.
                   </p>
-                   <button 
+                   <Button 
                     onClick={generateNewAnalysis}
-                    className="mt-3 mr-3 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90 transition-colors"
+                    disabled={isAnalysisLoading || isEnhancedGenerating}
+                    className="mt-3 mr-3"
+                    size="sm"
                   >
-                    Retry Analysis
-                  </button>
+                    {isAnalysisLoading || isEnhancedGenerating ? "Generating..." : "Refresh Analysis"}
+                  </Button>
                   <button 
                     onClick={() => cleanupStuckWorkflows(client.id)}
                     disabled={isCleaningUp}
@@ -373,14 +375,25 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
               )}
               {isWorkflowCompleted && (
                 <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-emerald-600" />
-                    <div>
-                      <h3 className="font-semibold text-emerald-900 dark:text-emerald-100">Analysis Complete</h3>
-                      <p className="text-sm text-emerald-700 dark:text-emerald-300">
-                        {getSourceSummary()}.
-                      </p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="w-5 h-5 text-emerald-600" />
+                      <div>
+                        <h3 className="font-semibold text-emerald-900 dark:text-emerald-100">Analysis Complete</h3>
+                        <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                          {getSourceSummary()}.
+                        </p>
+                      </div>
                     </div>
+                    <Button
+                      onClick={generateNewAnalysis}
+                      disabled={isAnalysisLoading || isEnhancedGenerating}
+                      variant="outline"
+                      size="sm"
+                      className="border-emerald-300 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:text-emerald-300 dark:hover:bg-emerald-900/50"
+                    >
+                      {isAnalysisLoading || isEnhancedGenerating ? "Generating..." : "Refresh Analysis"}
+                    </Button>
                   </div>
                 </div>
               )}
@@ -416,12 +429,14 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
                   <p className="text-sm text-destructive/80">
                     The analysis process encountered an error, but some steps were completed successfully.
                   </p>
-                  <button 
+                  <Button 
                     onClick={generateNewAnalysis}
-                    className="mt-3 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90 transition-colors"
+                    disabled={isAnalysisLoading || isEnhancedGenerating}
+                    className="mt-3"
+                    size="sm"
                   >
-                    Retry Analysis
-                  </button>
+                    {isAnalysisLoading || isEnhancedGenerating ? "Generating..." : "Refresh Analysis"}
+                  </Button>
                 </div>
                 
                 <div>
