@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Clock, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { processMarkdown } from "@/utils/markdownProcessor";
 
 interface StepResult {
   content: string;
@@ -71,10 +72,13 @@ const StepContentDisplay: React.FC<StepContentDisplayProps> = ({
             </CardHeader>
             
             <CardContent>
-              <div className="prose prose-sm max-w-none">
-                <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                  {result.content}
-                </div>
+              <div className="legal-document prose prose-sm max-w-none">
+                <div 
+                  className="text-sm leading-relaxed"
+                  dangerouslySetInnerHTML={{ 
+                    __html: processMarkdown(result.content) 
+                  }}
+                />
               </div>
             </CardContent>
           </Card>

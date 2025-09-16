@@ -1,7 +1,7 @@
 
 import React, { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Layout } from "lucide-react";
+import { Layout, CheckCircle } from "lucide-react";
 import ClientIntakeChat from "@/components/clients/chat/ClientIntakeChat";
 
 import CaseDiscussionContainer from "@/components/case-discussion/CaseDiscussionContainer";
@@ -274,19 +274,37 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
           
           // If no error but we have step results, show them (analysis in progress or completed)
           console.log("✅ Showing partial results without error");
+          const isWorkflowCompleted = workflowState?.status === 'completed';
+          const isWorkflowRunning = workflowState?.status === 'running';
+          
           return (
             <div className="space-y-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
-                    <span className="text-white text-xs">i</span>
+              {isWorkflowRunning && (
+                <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                    <div>
+                      <h3 className="font-semibold text-blue-900 dark:text-blue-100">Analysis in Progress</h3>
+                      <p className="text-sm text-blue-700 dark:text-blue-300">
+                        Generating comprehensive legal analysis step by step...
+                      </p>
+                    </div>
                   </div>
-                  <h3 className="font-semibold text-blue-800">Analysis In Progress</h3>
                 </div>
-                <p className="text-sm text-blue-700">
-                  Steps are completing successfully. Results will appear below as they're processed.
-                </p>
-              </div>
+              )}
+              {isWorkflowCompleted && (
+                <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-emerald-600" />
+                    <div>
+                      <h3 className="font-semibold text-emerald-900 dark:text-emerald-100">Analysis Complete</h3>
+                      <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                        Comprehensive legal analysis has been generated successfully.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               
               <div>
                 <h3 className="text-lg font-semibold mb-4">Current Progress</h3>
