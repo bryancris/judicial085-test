@@ -17,7 +17,7 @@ interface ClientDetailSidebarProps {
 
 const sidebarItems = [
   { id: "client-intake", label: "Client Intake", icon: MessageSquare },
-  { id: "analysis", label: "Case Analysis", icon: BarChart3 },
+  { id: "case-analysis", label: "Case Analysis", icon: BarChart3 },
   { id: "discussion", label: "Case Discussion", icon: Users },
   { id: "discovery", label: "Discovery", icon: FileText },
   { id: "documents", label: "Document Hub", icon: Upload },
