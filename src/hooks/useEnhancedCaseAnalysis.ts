@@ -255,12 +255,24 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
           return;
         }
 
-        // Update allPreviousContent with the new step result
-        const stepResult = stepResults[`step${step}`];
-        if (stepResult?.content) {
-          allPreviousContent[`step${step}`] = stepResult.content;
-          onStepComplete?.(step, stepResult.content);
-        }
+        // CRITICAL: Update allPreviousContent immediately after step completion
+        // We need to wait for the stepResults state to be updated
+        await new Promise(resolve => setTimeout(resolve, 100)); // Small delay for state update
+        
+        // Get the fresh step result and update allPreviousContent
+        const updatedStepResults = stepResults;
+        const stepResultKey = `step${step}`;
+        
+        // Check if we have the result in current state or need to get it from the latest state
+        setStepResults(currentStepResults => {
+          const stepResult = currentStepResults[stepResultKey];
+          if (stepResult?.content) {
+            allPreviousContent[stepResultKey] = stepResult.content;
+            console.log(`✅ Added Step ${step} content to allPreviousContent for next step`);
+            onStepComplete?.(step, stepResult.content);
+          }
+          return currentStepResults;
+        });
 
         // Small delay between steps to prevent overwhelming the API
         if (step < 9) {

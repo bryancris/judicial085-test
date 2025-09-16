@@ -27,6 +27,17 @@ serve(async (req) => {
     console.log(`📄 previousContent type: ${typeof previousContent}, length: ${previousContent?.length || 0}`);
     console.log(`📝 previousContent preview: ${previousContent?.substring(0, 200)}...`);
     
+    // Additional debugging for Step 2 specific issues
+    console.log('🔧 Step 2 DEBUG INFO:');
+    console.log(`   - Has previousContent: ${!!previousContent}`);
+    console.log(`   - previousContent is string: ${typeof previousContent === 'string'}`);
+    console.log(`   - previousContent trimmed length: ${previousContent?.trim?.()?.length || 0}`);
+    
+    if (previousContent) {
+      console.log(`   - First 100 chars: ${previousContent.substring(0, 100)}`);
+      console.log(`   - Contains case info: ${previousContent.includes('Case') ? 'YES' : 'NO'}`);
+    }
+    
     if (!workflowId || !stepNumber) {
       console.error('❌ Missing required parameters:', { workflowId, stepNumber });
       return new Response(
