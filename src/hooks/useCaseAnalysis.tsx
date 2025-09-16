@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { CaseAnalysisData } from "@/types/caseAnalysis";
 import { useAnalysisData } from "@/hooks/useAnalysisData";
 import { useEnhancedCaseAnalysis } from "@/hooks/useEnhancedCaseAnalysis";
@@ -167,7 +167,7 @@ export const useCaseAnalysis = (clientId?: string, caseId?: string) => {
   };
 
   // Create a wrapper function that matches the expected interface
-  const generateNewAnalysis = async () => {
+  const generateNewAnalysis = useCallback(async () => {
     console.log("useCaseAnalysis: Generating new analysis...");
     await generateRealTimeAnalysisWithQualityControl(
       async () => {
@@ -205,7 +205,7 @@ export const useCaseAnalysis = (clientId?: string, caseId?: string) => {
       },
       undefined // Removed automatic similar cases callback
     );
-  };
+  }, [generateRealTimeAnalysisWithQualityControl, fetchAnalysisData, clientId, caseId, analysisData?.refinedAnalysisRaw]);
 
   // Combine loading states
   const combinedIsLoading = isAnalysisLoading || isGeneratingAnalysis;
