@@ -1,0 +1,115 @@
+/* Unified Step Content System - Consistent formatting for all 9 analysis steps */
+
+.step-content-unified {
+  /* Main content spacing */
+  @apply space-y-4;
+}
+
+.step-content-unified h1,
+.step-content-unified h2,
+.step-content-unified h3,
+.step-content-unified h4,
+.step-content-unified h5,
+.step-content-unified h6 {
+  @apply font-medium text-foreground mb-2;
+}
+
+.step-content-unified h1 { @apply text-base; }
+.step-content-unified h2 { @apply text-sm; }
+.step-content-unified h3 { @apply text-sm; }
+.step-content-unified h4 { @apply text-sm; }
+.step-content-unified h5 { @apply text-xs; }
+.step-content-unified h6 { @apply text-xs; }
+
+.step-content-unified p {
+  @apply text-sm text-foreground leading-relaxed mb-3;
+}
+
+.step-content-unified ul,
+.step-content-unified ol {
+  @apply space-y-1 text-sm text-foreground;
+}
+
+.step-content-unified li {
+  @apply text-foreground leading-relaxed;
+}
+
+/* Step sections with consistent spacing */
+.step-section {
+  @apply space-y-3;
+}
+
+.step-section-header {
+  @apply flex items-center gap-2 font-medium text-sm text-foreground;
+}
+
+.step-section-content {
+  @apply pl-6;
+}
+
+/* Step card title with number */
+.step-card-title {
+  @apply flex items-center gap-2;
+}
+
+.step-number {
+  @apply text-muted-foreground font-normal;
+}
+
+/* Compact text for legal content */
+.step-legal-text {
+  @apply text-sm text-foreground leading-relaxed space-y-2;
+}
+
+.step-legal-text h1,
+.step-legal-text h2,
+.step-legal-text h3,
+.step-legal-text h4 {
+  @apply font-medium text-foreground mb-1 mt-3;
+}
+
+.step-legal-text h1 { @apply text-base; }
+.step-legal-text h2 { @apply text-sm; }
+.step-legal-text h3 { @apply text-sm; }
+.step-legal-text h4 { @apply text-sm; }
+
+.step-legal-text p {
+  @apply text-sm text-foreground mb-2;
+}
+
+.step-legal-text ul,
+.step-legal-text ol {
+  @apply space-y-1 pl-4;
+}
+
+.step-legal-text li {
+  @apply text-sm text-foreground;
+}
+
+/* Badge and status indicators */
+.step-badge {
+  @apply text-xs;
+}
+
+/* Loading state */
+.step-loading {
+  @apply space-y-3;
+}
+
+.step-loading-item {
+  @apply h-4 bg-muted animate-pulse rounded;
+}
+
+/* Empty state */
+.step-empty {
+  @apply text-center py-6 text-muted-foreground;
+}
+
+.step-empty p {
+  @apply text-sm;
+}
+
+/* Regeneration buttons */
+.step-regen-section {
+  @apply pt-4 border-t border-border;
+}

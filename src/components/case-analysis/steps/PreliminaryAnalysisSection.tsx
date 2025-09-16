@@ -67,16 +67,16 @@ const PreliminaryAnalysisSection: React.FC<PreliminaryAnalysisSectionProps> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="step-card-title">
           <Search className="h-5 w-5" />
-          <span className="text-muted-foreground">Step 2:</span>
+          <span className="step-number">Step 2:</span>
           Preliminary Analysis (AI-assisted broad issue spotting)
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="step-content-unified">
         {/* Potential Legal Areas */}
-        <div className="space-y-2">
-          <h4 className="font-semibold text-sm">Potential Legal Areas</h4>
+        <div className="step-section">
+          <h4 className="step-section-header">Potential Legal Areas</h4>
           {parsedData.potentialLegalAreas.length > 0 ? (
             <ul className="space-y-1 ml-4">
               {parsedData.potentialLegalAreas.map((area, index) => (
@@ -86,13 +86,13 @@ const PreliminaryAnalysisSection: React.FC<PreliminaryAnalysisSectionProps> = ({
               ))}
             </ul>
           ) : (
-            <p className="text-muted-foreground text-sm ml-4">No potential legal areas identified.</p>
+            <p className="text-foreground text-sm ml-4">No potential legal areas identified.</p>
           )}
         </div>
 
         {/* Preliminary Issues */}
-        <div className="space-y-2">
-          <h4 className="font-semibold text-sm">Preliminary Issues</h4>
+        <div className="step-section">
+          <h4 className="step-section-header">Preliminary Issues</h4>
           {parsedData.preliminaryIssues.length > 0 ? (
             <ul className="space-y-1 ml-4">
                {parsedData.preliminaryIssues.map((issue, index) => (
@@ -102,13 +102,13 @@ const PreliminaryAnalysisSection: React.FC<PreliminaryAnalysisSectionProps> = ({
                ))}
             </ul>
           ) : (
-            <p className="text-muted-foreground text-sm ml-4">No preliminary issues identified.</p>
+            <p className="text-foreground text-sm ml-4">No preliminary issues identified.</p>
           )}
         </div>
 
         {/* Research Priorities */}
-        <div className="space-y-2">
-          <h4 className="font-semibold text-sm">Research Priorities</h4>
+        <div className="step-section">
+          <h4 className="step-section-header">Research Priorities</h4>
           {parsedData.researchPriorities.length > 0 ? (
             <ul className="space-y-1 ml-4">
                {parsedData.researchPriorities.map((priority, index) => (
@@ -118,13 +118,13 @@ const PreliminaryAnalysisSection: React.FC<PreliminaryAnalysisSectionProps> = ({
                ))}
             </ul>
           ) : (
-            <p className="text-muted-foreground text-sm ml-4">No research priorities identified.</p>
+            <p className="text-foreground text-sm ml-4">No research priorities identified.</p>
           )}
         </div>
 
         {/* Strategic Notes */}
-        <div className="space-y-2">
-          <h4 className="font-semibold text-sm">Strategic Notes</h4>
+        <div className="step-section">
+          <h4 className="step-section-header">Strategic Notes</h4>
           {parsedData.strategicNotes.length > 0 ? (
             <ul className="space-y-1 ml-4">
                {parsedData.strategicNotes.map((note, index) => (
@@ -134,7 +134,7 @@ const PreliminaryAnalysisSection: React.FC<PreliminaryAnalysisSectionProps> = ({
                ))}
             </ul>
           ) : (
-            <p className="text-muted-foreground text-sm ml-4">No strategic notes available.</p>
+            <p className="text-foreground text-sm ml-4">No strategic notes available.</p>
           )}
         </div>
       </CardContent>

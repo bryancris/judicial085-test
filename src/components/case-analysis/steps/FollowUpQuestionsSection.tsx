@@ -126,13 +126,13 @@ const FollowUpQuestionsSection: React.FC<FollowUpQuestionsSectionProps> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="step-card-title">
           <HelpCircle className="h-5 w-5" />
-          <span className="text-muted-foreground">Step 8:</span>
+          <span className="step-number">Step 8:</span>
           Recommended Follow-up Questions
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="step-content-unified">
         {/* Step 8 dedicated content */}
         {hasStep8Data && (
           <div>

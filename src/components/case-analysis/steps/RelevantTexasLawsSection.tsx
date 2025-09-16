@@ -64,15 +64,15 @@ const RelevantTexasLawsSection: React.FC<RelevantTexasLawsSectionProps> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="step-card-title">
           <Scale className="h-5 w-5" />
-          <span className="text-muted-foreground">Step 3:</span>
+          <span className="step-number">Step 3:</span>
           Relevant Texas Laws (Targeted legal research)
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="step-content-unified">
         <div 
-          className="legal-text-compact" 
+          className="step-legal-text" 
           dangerouslySetInnerHTML={{ __html: relevantLawHtml }} 
         />
       </CardContent>

@@ -17,44 +17,43 @@ const CaseStrengthsWeaknesses: React.FC<CaseStrengthsWeaknessesProps> = ({
   caseType
 }) => {
   return (
-    <Card className="mb-6 shadow-sm">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-xl font-semibold flex items-center">
+    <Card>
+      <CardHeader>
+        <CardTitle className="step-card-title">
+          <ShieldCheckIcon className="h-5 w-5" />
+          <span className="step-number">Step 5:</span>
           Case Strengths & Weaknesses
-          {isLoading && (
-            <span className="ml-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
-          )}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="step-content-unified">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Case Strengths */}
-          <div className="border rounded-md p-4">
-            <h3 className="text-lg font-medium mb-3 flex items-center text-green-600">
-              <ShieldCheckIcon className="h-5 w-5 mr-2" />
+          <div className="step-section">
+            <h3 className="step-section-header text-green-600">
+              <ShieldCheckIcon className="h-5 w-5" />
               Case Strengths
             </h3>
             <ul className="space-y-2">
               {strengths.map((strength, index) => (
                 <li key={index} className="flex items-start">
                   <span className="text-green-600 mr-2">•</span>
-                  <span>{strength}</span>
+                  <span className="text-sm text-foreground">{strength}</span>
                 </li>
               ))}
             </ul>
           </div>
 
           {/* Case Weaknesses */}
-          <div className="border rounded-md p-4">
-            <h3 className="text-lg font-medium mb-3 flex items-center text-red-600">
-              <ShieldAlertIcon className="h-5 w-5 mr-2" />
+          <div className="step-section">
+            <h3 className="step-section-header text-red-600">
+              <ShieldAlertIcon className="h-5 w-5" />
               Case Weaknesses
             </h3>
             <ul className="space-y-2">
               {weaknesses.map((weakness, index) => (
                 <li key={index} className="flex items-start">
                   <span className="text-red-600 mr-2">•</span>
-                  <span>{weakness}</span>
+                  <span className="text-sm text-foreground">{weakness}</span>
                 </li>
               ))}
             </ul>

@@ -26,23 +26,21 @@ const LawReferencesSection: React.FC<LawReferencesSectionProps> = ({
   const hasReferences = references && references.length > 0;
 
   return (
-    <Card className="mb-6 shadow-sm">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-xl font-semibold flex items-center">
-          <Scale className="h-5 w-5 mr-2 text-[#0EA5E9]" />
+    <Card>
+      <CardHeader>
+        <CardTitle className="step-card-title">
+          <Scale className="h-5 w-5 text-[#0EA5E9]" />
+          <span className="step-number">Step 9:</span>
           Relevant Texas Law References
-          {isLoading && (
-            <span className="ml-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
-          )}
         </CardTitle>
         <p className="text-sm text-muted-foreground">
           Legal documents relevant to this case analysis
         </p>
       </CardHeader>
-      <CardContent>
+      <CardContent className="step-content-unified">
         {!hasReferences ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <p className="text-sm">No law references found in the current analysis.</p>
+          <div className="step-empty">
+            <p>No law references found in the current analysis.</p>
             <p className="text-xs mt-2">Law references will appear here when they are extracted from the legal analysis content.</p>
           </div>
         ) : (

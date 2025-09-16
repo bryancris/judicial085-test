@@ -68,20 +68,20 @@ const CaseSummarySection: React.FC<CaseSummarySectionProps> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="step-card-title">
           <FileText className="h-5 w-5" />
-          <span className="text-muted-foreground">Step 1:</span>
+          <span className="step-number">Step 1:</span>
           Case Summary (Organized Fact Pattern)
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="step-content-unified">
         {/* Parties Section */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
+        <div className="step-section">
+          <div className="step-section-header">
             <Users className="h-4 w-4 text-primary" />
-            <h4 className="font-medium">Parties</h4>
+            <h4>Parties</h4>
           </div>
-          <div className="pl-6">
+          <div className="step-section-content">
             {isDataLoading ? (
               <div className="space-y-2">
                 <div className="h-4 bg-muted animate-pulse rounded w-48"></div>
@@ -94,43 +94,43 @@ const CaseSummarySection: React.FC<CaseSummarySectionProps> = ({
                     <Badge variant="outline" className="text-xs">
                       {party.role}
                     </Badge>
-                    <span className="text-sm">{party.name}</span>
+                    <span className="text-sm text-foreground">{party.name}</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-muted-foreground text-sm">No party information available</p>
+              <p className="text-foreground text-sm">No party information available</p>
             )}
           </div>
         </div>
 
         {/* Quick Case Summary Section */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
+        <div className="step-section">
+          <div className="step-section-header">
             <FileText className="h-4 w-4 text-primary" />
-            <h4 className="font-medium">Quick Case Summary</h4>
+            <h4>Quick Case Summary</h4>
           </div>
-          <div className="pl-6">
+          <div className="step-section-content">
             {isDataLoading ? (
               <div className="space-y-2">
                 <div className="h-4 bg-muted animate-pulse rounded w-full"></div>
                 <div className="h-4 bg-muted animate-pulse rounded w-4/5"></div>
               </div>
             ) : structuredData?.quickSummary ? (
-              <p className="text-sm leading-relaxed">{structuredData.quickSummary}</p>
+              <p className="text-sm text-foreground leading-relaxed">{structuredData.quickSummary}</p>
             ) : (
-              <p className="text-muted-foreground text-sm">No quick summary available</p>
+              <p className="text-foreground text-sm">No quick summary available</p>
             )}
           </div>
         </div>
 
         {/* Timeline Section */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
+        <div className="step-section">
+          <div className="step-section-header">
             <Calendar className="h-4 w-4 text-primary" />
-            <h4 className="font-medium">Timeline</h4>
+            <h4>Timeline</h4>
           </div>
-          <div className="pl-6">
+          <div className="step-section-content">
             {isDataLoading ? (
               <div className="space-y-2">
                 <div className="h-4 bg-muted animate-pulse rounded w-full"></div>
@@ -142,23 +142,23 @@ const CaseSummarySection: React.FC<CaseSummarySectionProps> = ({
                 {structuredData.timeline.map((event, idx) => (
                   <div key={idx} className="border-l-2 border-muted pl-4">
                     <div className="font-medium text-sm text-primary">{event.date}</div>
-                    <div className="text-sm text-muted-foreground">{event.event}</div>
+                    <div className="text-sm text-foreground">{event.event}</div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-muted-foreground text-sm">No timeline information available</p>
+              <p className="text-foreground text-sm">No timeline information available</p>
             )}
           </div>
         </div>
 
         {/* Core Facts Section */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
+        <div className="step-section">
+          <div className="step-section-header">
             <List className="h-4 w-4 text-primary" />
-            <h4 className="font-medium">Core Facts</h4>
+            <h4>Core Facts</h4>
           </div>
-          <div className="pl-6">
+          <div className="step-section-content">
             {isDataLoading ? (
               <div className="space-y-2">
                 <div className="h-4 bg-muted animate-pulse rounded w-full"></div>
@@ -168,25 +168,25 @@ const CaseSummarySection: React.FC<CaseSummarySectionProps> = ({
             ) : structuredData?.coreFacts && structuredData.coreFacts.length > 0 ? (
               <ul className="space-y-2">
                 {structuredData.coreFacts.map((fact, idx) => (
-                  <li key={idx} className="text-sm flex items-start gap-2">
+                  <li key={idx} className="text-sm text-foreground flex items-start gap-2">
                     <span className="text-primary mt-1">•</span>
                     <span>{fact}</span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-muted-foreground text-sm">No core facts identified</p>
+              <p className="text-foreground text-sm">No core facts identified</p>
             )}
           </div>
         </div>
 
         {/* Key Documents Section */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
+        <div className="step-section">
+          <div className="step-section-header">
             <File className="h-4 w-4 text-primary" />
-            <h4 className="font-medium">Key Documents</h4>
+            <h4>Key Documents</h4>
           </div>
-          <div className="pl-6">
+          <div className="step-section-content">
             {isDataLoading ? (
               <div className="space-y-2">
                 <div className="h-4 bg-muted animate-pulse rounded w-64"></div>
@@ -203,12 +203,12 @@ const CaseSummarySection: React.FC<CaseSummarySectionProps> = ({
                     >
                       {doc.status}
                     </Badge>
-                    <span className="text-sm">{doc.title}</span>
+                    <span className="text-sm text-foreground">{doc.title}</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-muted-foreground text-sm">No documents uploaded for this case</p>
+              <p className="text-foreground text-sm">No documents uploaded for this case</p>
             )}
           </div>
         </div>

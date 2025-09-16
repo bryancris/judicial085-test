@@ -1,5 +1,6 @@
 
-/* Import all component styles - legal-analysis.css MUST load LAST */
+/* Import all component styles - step-unified.css MUST load FIRST for consistency */
+@import './components/step-unified.css';
 @import './components/utils.css';
 @import './components/cards.css';
 @import './components/references.css';

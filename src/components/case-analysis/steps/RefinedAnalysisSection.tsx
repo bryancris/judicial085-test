@@ -65,18 +65,18 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5" />
-            <span className="text-muted-foreground">Step 7:</span>
-            Legal Requirements Verification & Case Conclusion
-          </CardTitle>
+        <CardTitle className="step-card-title">
+          <CheckCircle className="h-5 w-5" />
+          <span className="step-number">Step 7:</span>
+          Legal Requirements Verification & Case Conclusion
+        </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="text-xs space-y-3">
+        <CardContent className="step-content-unified">
+          <div className="step-legal-text">
             {renderParsedContent(parsedContent.sections)}
           </div>
           {onRegenerateStep7 && (
-            <div className="pt-4 border-t border-border">
+            <div className="step-regen-section">
               <Button 
                 onClick={onRegenerateStep7} 
                 disabled={isRegenerating}
@@ -107,20 +107,20 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5" />
-            <span className="text-muted-foreground">Step 7:</span>
-            Legal Requirements Verification & Case Conclusion
-          </CardTitle>
+        <CardTitle className="step-card-title">
+          <CheckCircle className="h-5 w-5" />
+          <span className="step-number">Step 7:</span>
+          Legal Requirements Verification & Case Conclusion
+        </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-muted-foreground text-sm">No refined analysis available.</p>
+        <CardContent className="step-content-unified">
+          <p className="text-foreground text-sm">No refined analysis available.</p>
           {onRegenerateStep7 && (
             <Button 
               onClick={onRegenerateStep7} 
               variant="outline" 
               size="sm"
-              className="text-xs"
+              className="text-xs mt-4"
             >
               Generate Step 7 Analysis
             </Button>
@@ -152,34 +152,34 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
   return (
     <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5" />
-            <span className="text-muted-foreground">Step 7:</span>
-            Legal Requirements Verification & Case Conclusion
-          </CardTitle>
+        <CardTitle className="step-card-title">
+          <CheckCircle className="h-5 w-5" />
+          <span className="step-number">Step 7:</span>
+          Legal Requirements Verification & Case Conclusion
+        </CardTitle>
         </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="step-content-unified">
         {/* Executive Summary */}
-        <div>
-          <h4 className="font-medium text-xs mb-2 flex items-center gap-2">
+        <div className="step-section">
+          <h4 className="step-section-header">
             <CheckCircle className="h-4 w-4" />
             Executive Summary
           </h4>
-          <div className="text-xs space-y-3">
+          <div className="step-legal-text">
             {renderParsedContent(parsedContent.sections)}
           </div>
         </div>
 
         {/* Risk Assessment */}
-        <div>
-          <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
+        <div className="step-section">
+          <h4 className="step-section-header">
             <AlertTriangle className="h-4 w-4" />
             Risk Assessment
           </h4>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Overall Risk Level */}
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium">Overall Risk:</span>
+              <span className="text-sm font-medium text-foreground">Overall Risk:</span>
               <Badge className={getRiskColor(analysisData.riskAssessment.overallRisk)}>
                 {analysisData.riskAssessment.overallRisk.toUpperCase()}
               </Badge>
@@ -188,10 +188,10 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
             {/* High Risk Factors */}
             {highRiskFactors.length > 0 && (
               <div>
-                <h5 className="text-xs font-medium mb-2">High Risk Factors</h5>
+                <h5 className="text-sm font-medium mb-2 text-foreground">High Risk Factors</h5>
                 <ul className="space-y-1">
                   {highRiskFactors.map((factor, index) => (
-                    <li key={index} className="flex items-start gap-2 text-sm">
+                    <li key={index} className="flex items-start gap-2 text-sm text-foreground">
                       <Badge className={getRiskColor('high')}>High</Badge>
                       <span>{factor.description}</span>
                     </li>
@@ -203,10 +203,10 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
             {/* Medium Risk Factors */}
             {mediumRiskFactors.length > 0 && (
               <div>
-                <h5 className="text-xs font-medium mb-2">Medium Risk Factors</h5>
+                <h5 className="text-sm font-medium mb-2 text-foreground">Medium Risk Factors</h5>
                 <ul className="space-y-1">
                   {mediumRiskFactors.map((factor, index) => (
-                    <li key={index} className="flex items-start gap-2 text-sm">
+                    <li key={index} className="flex items-start gap-2 text-sm text-foreground">
                       <Badge className={getRiskColor('medium')}>Medium</Badge>
                       <span>{factor.description}</span>
                     </li>
@@ -218,10 +218,10 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
             {/* Low Risk Factors */}
             {lowRiskFactors.length > 0 && (
               <div>
-                <h5 className="text-xs font-medium mb-2">Low Risk Factors</h5>
+                <h5 className="text-sm font-medium mb-2 text-foreground">Low Risk Factors</h5>
                 <ul className="space-y-1">
                   {lowRiskFactors.map((factor, index) => (
-                    <li key={index} className="flex items-start gap-2 text-sm">
+                    <li key={index} className="flex items-start gap-2 text-sm text-foreground">
                       <Badge className={getRiskColor('low')}>Low</Badge>
                       <span>{factor.description}</span>
                     </li>
@@ -233,12 +233,12 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
         </div>
 
         {/* Strategic Recommendations */}
-        <div>
-          <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
+        <div className="step-section">
+          <h4 className="step-section-header">
             <Target className="h-4 w-4" />
             Strategic Recommendations
           </h4>
-          <ul className="space-y-1 text-sm">
+          <ul className="space-y-1 text-sm text-foreground">
             {analysisData.strategicRecommendations.map((recommendation, index) => (
               <li key={index}>• {recommendation}</li>
             ))}
@@ -246,8 +246,8 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
         </div>
 
         {/* Likelihood of Success */}
-        <div>
-          <h4 className="font-medium text-sm mb-3">Likelihood of Success</h4>
+        <div className="step-section">
+          <h4 className="step-section-header">Likelihood of Success</h4>
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span className={`text-2xl font-bold ${getSuccessColor(analysisData.likelihoodOfSuccess.percentage)}`}>
@@ -256,8 +256,8 @@ const RefinedAnalysisSection: React.FC<RefinedAnalysisSectionProps> = ({
             </div>
             {analysisData.likelihoodOfSuccess.factors.length > 0 && (
               <div>
-                <h5 className="text-xs font-medium mb-2">Supporting Factors</h5>
-                <ul className="space-y-1 text-sm">
+                <h5 className="text-sm font-medium mb-2 text-foreground">Supporting Factors</h5>
+                <ul className="space-y-1 text-sm text-foreground">
                   {analysisData.likelihoodOfSuccess.factors.map((factor, index) => (
                     <li key={index}>• {factor}</li>
                   ))}
