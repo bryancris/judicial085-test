@@ -225,6 +225,7 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
         
         if (!success) {
           console.error(`Step ${step} failed - stopping workflow execution`);
+          console.log('📊 Current stepResults when failure occurred:', Object.keys(stepResults));
           
           // Update workflow state to show failure
           setWorkflowState(prev => ({
@@ -237,13 +238,20 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
             }))
           }));
           
+          // Show how many steps completed before failure
+          const completedSteps = Object.keys(stepResults).length;
+          const failureMessage = completedSteps > 0 
+            ? `${getStepName(step)} failed after ${completedSteps} step${completedSteps > 1 ? 's' : ''} completed successfully.`
+            : `${getStepName(step)} failed. No steps were completed.`;
+          
           toast({
             title: `Analysis Failed at Step ${step}`,
-            description: `${getStepName(step)} failed. Workflow stopped to prevent cascading errors.`,
+            description: failureMessage,
             variant: "destructive",
           });
           
           // Stop execution - don't continue to next steps
+          // Note: stepResults are preserved and will be shown in the UI
           return;
         }
 

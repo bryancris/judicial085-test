@@ -233,6 +233,42 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
           );
         } else if (analysisError) {
           console.log("❌ Showing error state:", analysisError);
+          console.log("📊 Checking for partial results. stepResults keys:", Object.keys(stepResults));
+          
+          // Show partial results if available, even when there's an error
+          if (Object.keys(stepResults).length > 0) {
+            console.log("✅ Showing partial results with error");
+            return (
+              <div className="space-y-6">
+                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-5 h-5 rounded-full bg-destructive flex items-center justify-center">
+                      <span className="text-destructive-foreground text-xs">!</span>
+                    </div>
+                    <h3 className="font-semibold text-destructive">Analysis Failed</h3>
+                  </div>
+                  <p className="text-sm text-destructive/80">
+                    The analysis process encountered an error, but some steps were completed successfully.
+                  </p>
+                  <button 
+                    onClick={generateNewAnalysis}
+                    className="mt-3 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90 transition-colors"
+                  >
+                    Retry Analysis
+                  </button>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Partial Results Available</h3>
+                  <StepContentDisplay 
+                    stepResults={stepResults}
+                    currentStep={enhancedCurrentStep}
+                  />
+                </div>
+              </div>
+            );
+          }
+          
           return (
             <CaseAnalysisErrorState 
               error={analysisError} 

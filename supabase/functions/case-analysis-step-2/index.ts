@@ -18,11 +18,27 @@ serve(async (req) => {
   }
 
   try {
-    const { workflowId, stepNumber, previousContent } = await req.json();
+    const requestBody = await req.json();
+    console.log('🔍 Step 2 received parameters:', JSON.stringify(requestBody, null, 2));
     
-    if (!workflowId || !stepNumber || !previousContent) {
+    const { workflowId, stepNumber, previousContent } = requestBody;
+    
+    console.log(`📋 Parsed parameters - workflowId: ${workflowId}, stepNumber: ${stepNumber}`);
+    console.log(`📄 previousContent type: ${typeof previousContent}, length: ${previousContent?.length || 0}`);
+    console.log(`📝 previousContent preview: ${previousContent?.substring(0, 200)}...`);
+    
+    if (!workflowId || !stepNumber) {
+      console.error('❌ Missing required parameters:', { workflowId, stepNumber });
       return new Response(
-        JSON.stringify({ error: 'Missing required parameters' }),
+        JSON.stringify({ error: 'Missing required parameters: workflowId or stepNumber' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    if (!previousContent || previousContent.trim().length === 0) {
+      console.error('❌ Missing or empty previousContent:', { previousContent });
+      return new Response(
+        JSON.stringify({ error: 'Missing required parameter: previousContent' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
