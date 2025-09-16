@@ -13,6 +13,8 @@ import FollowUpQuestionsSection from "../steps/FollowUpQuestionsSection";
 import LawReferencesSection from "../LawReferencesSection";
 import { AnalysisData } from "@/hooks/useAnalysisData";
 import { parseIracAnalysis, isIracStructured } from "@/utils/iracParser";
+import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
 
 interface AnalysisTabContentProps {
   analysisData: AnalysisData;
@@ -22,6 +24,8 @@ interface AnalysisTabContentProps {
   regenerateStep8?: () => void;
   isRegeneratingStep7?: boolean;
   isRegeneratingStep8?: boolean;
+  generateNewAnalysis?: () => void;
+  isAnalysisLoading?: boolean;
 }
 
 const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
@@ -32,6 +36,8 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
   regenerateStep8,
   isRegeneratingStep7,
   isRegeneratingStep8,
+  generateNewAnalysis,
+  isAnalysisLoading,
 }) => {
   // Parse IRAC analysis - prefer dedicated iracContent, fallback to raw content
   const iracAnalysis = useMemo(() => {
@@ -55,6 +61,21 @@ const AnalysisTabContent: React.FC<AnalysisTabContentProps> = ({
 
   return (
     <div className="space-y-8">
+      {/* Refresh Analysis Button */}
+      {generateNewAnalysis && (
+        <div className="flex justify-center">
+          <Button
+            onClick={generateNewAnalysis}
+            disabled={isAnalysisLoading || isLoading}
+            variant="outline"
+            className="gap-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${isAnalysisLoading ? 'animate-spin' : ''}`} />
+            {isAnalysisLoading ? "Generating..." : "Refresh Analysis"}
+          </Button>
+        </div>
+      )}
+      
       {/* 9-Step Sequential Workflow */}
       
       {/* Step 1: Case Summary (Organized Fact Pattern) */}

@@ -15,6 +15,8 @@ interface TabsContainerProps {
   regenerateStep8?: () => void;
   isRegeneratingStep7?: boolean;
   isRegeneratingStep8?: boolean;
+  generateNewAnalysis?: () => void;
+  isAnalysisLoading?: boolean;
   clientId: string;
   caseId?: string;
   currentAnalysisId?: string;
@@ -39,6 +41,8 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
   regenerateStep8,
   isRegeneratingStep7,
   isRegeneratingStep8,
+  generateNewAnalysis,
+  isAnalysisLoading,
 }) => {
   return (
     <div className="mt-6">
@@ -52,6 +56,8 @@ const TabsContainer: React.FC<TabsContainerProps> = ({
             regenerateStep8={regenerateStep8}
             isRegeneratingStep7={isRegeneratingStep7}
             isRegeneratingStep8={isRegeneratingStep8}
+            generateNewAnalysis={generateNewAnalysis}
+            isAnalysisLoading={isAnalysisLoading}
           />
         </div>
       )}
