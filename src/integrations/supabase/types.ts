@@ -159,6 +159,110 @@ export type Database = {
           },
         ]
       }
+      case_analysis_steps: {
+        Row: {
+          citations: Json | null
+          completed_at: string | null
+          content: string | null
+          created_at: string | null
+          error_message: string | null
+          execution_time_ms: number | null
+          id: string
+          started_at: string | null
+          status: string
+          step_name: string
+          step_number: number
+          updated_at: string | null
+          validation_score: number | null
+          workflow_id: string
+        }
+        Insert: {
+          citations?: Json | null
+          completed_at?: string | null
+          content?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          started_at?: string | null
+          status?: string
+          step_name: string
+          step_number: number
+          updated_at?: string | null
+          validation_score?: number | null
+          workflow_id: string
+        }
+        Update: {
+          citations?: Json | null
+          completed_at?: string | null
+          content?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          started_at?: string | null
+          status?: string
+          step_name?: string
+          step_number?: number
+          updated_at?: string | null
+          validation_score?: number | null
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_analysis_steps_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "case_analysis_workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_analysis_workflows: {
+        Row: {
+          case_id: string | null
+          client_id: string
+          completed_at: string | null
+          created_at: string | null
+          current_step: number | null
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          started_at: string | null
+          status: string
+          total_steps: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          case_id?: string | null
+          client_id: string
+          completed_at?: string | null
+          created_at?: string | null
+          current_step?: number | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          started_at?: string | null
+          status?: string
+          total_steps?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          case_id?: string | null
+          client_id?: string
+          completed_at?: string | null
+          created_at?: string | null
+          current_step?: number | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          started_at?: string | null
+          status?: string
+          total_steps?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       case_discussions: {
         Row: {
           case_id: string | null
@@ -2093,7 +2197,7 @@ export type Database = {
       }
       l2_normalize: {
         Args: { "": string } | { "": unknown } | { "": unknown }
-        Returns: unknown
+        Returns: string
       }
       link_research_to_analysis: {
         Args: { legal_analysis_id_param: string; research_id_param: string }

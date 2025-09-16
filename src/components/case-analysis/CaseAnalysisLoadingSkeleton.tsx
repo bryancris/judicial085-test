@@ -1,118 +1,124 @@
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Brain, FileText, Scale, CheckCircle2 } from "lucide-react";
+import { Brain, FileText, Scale, Search, BookOpen, CheckCircle2 } from "lucide-react";
+import StepProgressIndicator from "./StepProgressIndicator";
 
-const CaseAnalysisLoadingSkeleton: React.FC = () => {
-  const [currentStep, setCurrentStep] = useState(0);
-  
-  const steps = [
-    { icon: FileText, label: "Analyzing case facts and documents..." },
-    { icon: Brain, label: "Generating preliminary analysis..." },
-    { icon: Scale, label: "Creating IRAC legal analysis..." },
-    { icon: CheckCircle2, label: "Finalizing comprehensive analysis..." }
-  ];
+interface CaseAnalysisLoadingSkeletonProps {
+  currentStep?: number;
+  workflowState?: {
+    id: string;
+    status: string;
+    current_step: number;
+    total_steps: number;
+    steps: Array<{
+      step_number: number;
+      step_name: string;
+      status: 'pending' | 'running' | 'completed' | 'failed';
+    }>;
+  };
+}
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentStep((prev) => (prev + 1) % steps.length);
-    }, 3000);
-    
-    return () => clearInterval(interval);
-  }, [steps.length]);
+const CaseAnalysisLoadingSkeleton: React.FC<CaseAnalysisLoadingSkeletonProps> = ({ 
+  currentStep = 0, 
+  workflowState 
+}) => {
 
   return (
-    <div className="space-y-6">
-      {/* Header with AI Analysis Status */}
-      <div className="flex flex-col items-center mb-8 text-center">
-        <div className="flex items-center gap-3 mb-4">
+    <div className="space-y-8 p-6 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="text-center space-y-4">
+        <div className="flex justify-center">
           <div className="relative">
-            <Brain className="h-8 w-8 text-primary animate-pulse" />
-            <div className="absolute -top-1 -right-1 h-3 w-3 bg-primary rounded-full animate-ping"></div>
+            <Brain className="w-12 h-12 text-primary animate-pulse" />
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full animate-ping" />
           </div>
-          <h2 className="text-2xl font-semibold text-foreground">Generating AI Analysis</h2>
         </div>
-        
-        {/* Progress Bar */}
-        <div className="w-full max-w-md mb-6">
-          <div className="bg-muted rounded-full h-2 mb-2">
-            <div 
-              className="bg-gradient-to-r from-primary to-primary/80 h-2 rounded-full transition-all duration-300 ease-out"
-              style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
-            ></div>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Step {currentStep + 1} of {steps.length}
-          </p>
-        </div>
-
-        {/* Current Step Display */}
-        <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg border">
-          {React.createElement(steps[currentStep].icon, { 
-            className: "h-5 w-5 text-primary animate-pulse" 
-          })}
-          <span className="text-foreground font-medium">
-            {steps[currentStep].label}
-          </span>
-        </div>
+        <h2 className="text-2xl font-bold">Generating AI Analysis</h2>
+        <p className="text-muted-foreground">
+          {workflowState ? 
+            `Processing Step ${workflowState.current_step} of ${workflowState.total_steps}` :
+            currentStep > 0 ? `Processing Step ${currentStep} of 9` : "Initializing analysis..."
+          }
+        </p>
       </div>
 
-      {/* Enhanced Loading Skeletons */}
-      <div className="space-y-6">
-        <div className="bg-background border rounded-lg p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Skeleton className="h-5 w-5 rounded-full" />
-            <Skeleton className="h-6 w-48" />
+      {/* Step Progress Indicator */}
+      {(currentStep > 0 || workflowState) && (
+        <div className="bg-card border rounded-lg p-6">
+          <StepProgressIndicator
+            currentStep={workflowState?.current_step || currentStep}
+            totalSteps={workflowState?.total_steps || 9}
+            steps={workflowState?.steps}
+          />
+        </div>
+      )}
+
+      {/* Analysis Content Skeletons */}
+      <div className="grid gap-6">
+        {/* Case Summary Skeleton */}
+        <div className="space-y-4 p-6 border rounded-lg bg-card">
+          <div className="flex items-center gap-2">
+            <FileText className="w-5 h-5 text-primary" />
+            <Skeleton className="h-6 w-32" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-4 w-5/6" />
+          </div>
+        </div>
+
+        {/* Legal Analysis Skeleton */}
+        <div className="space-y-4 p-6 border rounded-lg bg-card">
+          <div className="flex items-center gap-2">
+            <Scale className="w-5 h-5 text-primary" />
+            <Skeleton className="h-6 w-40" />
           </div>
           <div className="space-y-3">
             <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-5/6" />
             <Skeleton className="h-4 w-4/5" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
           </div>
         </div>
 
-        <div className="bg-background border rounded-lg p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Skeleton className="h-5 w-5 rounded-full" />
-            <Skeleton className="h-6 w-56" />
-          </div>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-3/4" />
+        {/* Research Areas Skeleton */}
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="space-y-4 p-6 border rounded-lg bg-card">
+            <div className="flex items-center gap-2">
+              <Search className="w-5 h-5 text-primary" />
+              <Skeleton className="h-5 w-28" />
             </div>
             <div className="space-y-2">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-2/3" />
+              <Skeleton className="h-3 w-4/5" />
             </div>
           </div>
-        </div>
 
-        <div className="bg-background border rounded-lg p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Skeleton className="h-5 w-5 rounded-full" />
-            <Skeleton className="h-6 w-40" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-4/5" />
-              <Skeleton className="h-4 w-3/4" />
+          <div className="space-y-4 p-6 border rounded-lg bg-card">
+            <div className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-primary" />
+              <Skeleton className="h-5 w-32" />
             </div>
             <div className="space-y-2">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-5/6" />
-              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-3/4" />
+              <Skeleton className="h-3 w-5/6" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Estimated Time */}
-      <div className="text-center text-sm text-muted-foreground">
-        <p>AI analysis typically takes 30-60 seconds</p>
-        <p className="mt-1">Please do not refresh the page</p>
+      {/* Processing Message */}
+      <div className="text-center p-6 bg-muted/20 rounded-lg">
+        <p className="text-sm text-muted-foreground mb-2">
+          🤖 AI is analyzing your case using advanced legal reasoning
+        </p>
+        <p className="text-xs text-muted-foreground">
+          This process typically takes 2-3 minutes. Please don't refresh the page.
+        </p>
       </div>
     </div>
   );
