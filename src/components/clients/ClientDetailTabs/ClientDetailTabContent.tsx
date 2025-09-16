@@ -325,13 +325,23 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
                   <p className="text-sm text-destructive/80">
                     The analysis process encountered an error, but some steps were completed successfully.
                   </p>
-                  <button 
-                    onClick={() => cleanupStuckWorkflows(client.id)}
-                    disabled={isCleaningUp}
-                    className="mt-3 px-4 py-2 bg-orange-600 text-white rounded-md text-sm hover:bg-orange-700 transition-colors disabled:opacity-50"
-                  >
-                    {isCleaningUp ? "Cleaning..." : "Clear Stuck Workflows"}
-                  </button>
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      onClick={generateNewAnalysis}
+                      disabled={isAnalysisLoading || isEnhancedGenerating}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {isAnalysisLoading || isEnhancedGenerating ? "Generating..." : "Retry Analysis"}
+                    </Button>
+                    <button 
+                      onClick={() => cleanupStuckWorkflows(client.id)}
+                      disabled={isCleaningUp}
+                      className="px-4 py-2 bg-orange-600 text-white rounded-md text-sm hover:bg-orange-700 transition-colors disabled:opacity-50"
+                    >
+                      {isCleaningUp ? "Cleaning..." : "Clear Stuck Workflows"}
+                    </button>
+                  </div>
                 </div>
                 
                 <div>
@@ -354,27 +364,49 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
             <div className="space-y-6">
               {isWorkflowRunning && (
                 <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                    <div>
-                      <h3 className="font-semibold text-blue-900 dark:text-blue-100">Analysis in Progress</h3>
-                      <p className="text-sm text-blue-700 dark:text-blue-300">
-                        Generating comprehensive legal analysis step by step...
-                      </p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                      <div>
+                        <h3 className="font-semibold text-blue-900 dark:text-blue-100">Analysis in Progress</h3>
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          Generating comprehensive legal analysis step by step...
+                        </p>
+                      </div>
                     </div>
+                    <Button
+                      onClick={generateNewAnalysis}
+                      disabled={isAnalysisLoading || isEnhancedGenerating}
+                      variant="outline"
+                      size="sm"
+                      className="ml-4"
+                    >
+                      {isAnalysisLoading || isEnhancedGenerating ? "Generating..." : "Restart Analysis"}
+                    </Button>
                   </div>
                 </div>
               )}
               {isWorkflowCompleted && (
                 <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-emerald-600" />
-                    <div>
-                      <h3 className="font-semibold text-emerald-900 dark:text-emerald-100">Analysis Complete</h3>
-                      <p className="text-sm text-emerald-700 dark:text-emerald-300">
-                        {getSourceSummary()}.
-                      </p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="w-5 h-5 text-emerald-600" />
+                      <div>
+                        <h3 className="font-semibold text-emerald-900 dark:text-emerald-100">Analysis Complete</h3>
+                        <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                          {getSourceSummary()}.
+                        </p>
+                      </div>
                     </div>
+                    <Button
+                      onClick={generateNewAnalysis}
+                      disabled={isAnalysisLoading || isEnhancedGenerating}
+                      variant="outline"
+                      size="sm"
+                      className="ml-4"
+                    >
+                      {isAnalysisLoading || isEnhancedGenerating ? "Generating..." : "Refresh Analysis"}
+                    </Button>
                   </div>
                 </div>
               )}
@@ -410,6 +442,15 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
                   <p className="text-sm text-destructive/80">
                     The analysis process encountered an error, but some steps were completed successfully.
                   </p>
+                  <Button
+                    onClick={generateNewAnalysis}
+                    disabled={isAnalysisLoading || isEnhancedGenerating}
+                    variant="outline"
+                    size="sm"
+                    className="mt-3"
+                  >
+                    {isAnalysisLoading || isEnhancedGenerating ? "Generating..." : "Retry Analysis"}
+                  </Button>
                 </div>
                 
                 <div>
