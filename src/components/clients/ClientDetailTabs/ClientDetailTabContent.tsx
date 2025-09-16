@@ -23,6 +23,7 @@ import TabsContainer from "@/components/case-analysis/tabs/TabsContainer";
 import PIAnalysisContent from "@/components/personal-injury/PIAnalysisContent";
 import { supabase } from "@/integrations/supabase/client";
 import { useCaseStrengthAnalysis } from "@/hooks/useCaseStrengthAnalysis";
+import { useWorkflowCleanup } from "@/hooks/useWorkflowCleanup";
 
 
 interface ClientDetailTabContentProps {
@@ -39,6 +40,9 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
   const { currentCase } = useCase();
   const [analysisRefreshTrigger, setAnalysisRefreshTrigger] = useState(0);
   const [analysisTab, setAnalysisTab] = useState("analysis");
+  
+  // Workflow cleanup hook
+  const { cleanupStuckWorkflows, isCleaningUp } = useWorkflowCleanup();
   
   // Use case strength analysis hook for Personal Injury cases
   const { 
@@ -274,24 +278,33 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
           );
         }
         
-        // Default analysis flow for other case types
-        if (isAnalysisLoading || isEnhancedGenerating || isLoadingExistingResults) {
-          console.log("📊 Showing loading skeleton");
-          return (
-            <div className="space-y-6">
-              <CaseAnalysisLoadingSkeleton 
-                currentStep={enhancedCurrentStep} 
-                workflowState={workflowState}
-              />
-              {workflowState && Object.keys(stepResults).length > 0 && (
-                <StepContentDisplay 
-                  stepResults={stepResults}
-                  currentStep={enhancedCurrentStep}
-                />
-              )}
-            </div>
-          );
-        }
+         // Default analysis flow for other case types
+         if (isAnalysisLoading || isEnhancedGenerating || isLoadingExistingResults) {
+           console.log("📊 Showing loading skeleton");
+           return (
+             <div className="space-y-6">
+               <CaseAnalysisLoadingSkeleton 
+                 currentStep={enhancedCurrentStep} 
+                 workflowState={workflowState}
+               />
+               {workflowState && Object.keys(stepResults).length > 0 && (
+                 <StepContentDisplay 
+                   stepResults={stepResults}
+                   currentStep={enhancedCurrentStep}
+                 />
+               )}
+               <div className="flex justify-center">
+                 <button 
+                   onClick={() => cleanupStuckWorkflows(client.id)}
+                   disabled={isCleaningUp}
+                   className="px-4 py-2 bg-orange-600 text-white rounded-md text-sm hover:bg-orange-700 transition-colors disabled:opacity-50"
+                 >
+                   {isCleaningUp ? "Cleaning..." : "Stop Analysis & Clear Workflows"}
+                 </button>
+               </div>
+             </div>
+           );
+         }
 
         // PRIORITY 1: Show partial results if available (even without errors)  
         if (Object.keys(stepResults).length > 0) {
@@ -312,11 +325,18 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
                   <p className="text-sm text-destructive/80">
                     The analysis process encountered an error, but some steps were completed successfully.
                   </p>
-                  <button 
+                   <button 
                     onClick={generateNewAnalysis}
-                    className="mt-3 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90 transition-colors"
+                    className="mt-3 mr-3 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90 transition-colors"
                   >
                     Retry Analysis
+                  </button>
+                  <button 
+                    onClick={() => cleanupStuckWorkflows(client.id)}
+                    disabled={isCleaningUp}
+                    className="mt-3 px-4 py-2 bg-orange-600 text-white rounded-md text-sm hover:bg-orange-700 transition-colors disabled:opacity-50"
+                  >
+                    {isCleaningUp ? "Cleaning..." : "Clear Stuck Workflows"}
                   </button>
                 </div>
                 

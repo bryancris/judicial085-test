@@ -3,6 +3,9 @@ project_id = "ghpljdgecjmhkwkfctgy"
 [functions.analyze-pi-documents]
 verify_jwt = false
 
+[functions.cleanup-workflows]
+verify_jwt = false
+
 [functions.case-analysis-workflow-manager]
 verify_jwt = false
 
