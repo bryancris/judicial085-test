@@ -72,9 +72,9 @@ const StepContentDisplay: React.FC<StepContentDisplayProps> = ({
             </CardHeader>
             
             <CardContent className="p-2">
-              <div className="legal-document prose prose-sm max-w-none">
+              <div className="legal-document max-w-none">
                 <div 
-                  className="text-sm leading-relaxed"
+                  className="step-content-unified text-sm"
                   dangerouslySetInnerHTML={{ 
                     __html: processMarkdown(result.content) 
                   }}

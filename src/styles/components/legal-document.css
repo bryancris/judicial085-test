@@ -1,77 +1,77 @@
 
-/* Legal document styling */
+/* Legal document styling - Ultra-compact */
 .legal-document {
   @apply max-w-none;
   font-family: ui-sans-serif, system-ui, sans-serif;
-  line-height: 1.7;
+  line-height: 1.4;
   color: hsl(var(--foreground));
 }
 
 .legal-document h3 {
-  font-size: 1.25rem;
-  margin-top: 1.5rem;
-  margin-bottom: 0.75rem;
+  font-size: 1rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
   border-bottom: 1px solid hsl(var(--border));
-  padding-bottom: 0.5rem;
-  font-weight: 700;
+  padding-bottom: 0.25rem;
+  font-weight: 600;
 }
 
 .legal-document h4 {
-  font-size: 1.125rem;
-  margin-top: 1rem;
-  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.125rem;
   font-weight: 600;
 }
 
 .legal-document ul {
-  @apply my-3 pl-6 list-disc space-y-2;
+  @apply my-1 pl-3 list-disc space-y-0;
 }
 
 .legal-document ol {
-  @apply my-3 pl-6 list-decimal space-y-2;
+  @apply my-1 pl-3 list-decimal space-y-0;
 }
 
 .legal-document p + ul,
 .legal-document p + ol {
-  @apply mt-2;
+  @apply mt-1;
 }
 
 .legal-document li {
-  @apply mb-2;
+  @apply mb-0;
 }
 
 .legal-document li > ul,
 .legal-document li > ol {
-  @apply mt-2 mb-0;
+  @apply mt-0 mb-0;
 }
 
 .legal-document strong {
   @apply font-semibold text-gray-900 dark:text-gray-100;
 }
 
-/* Improved spacing for contract reviews */
+/* Ultra-compact spacing for contract reviews */
 .legal-document h3 + p,
 .legal-document h3 + ul,
 .legal-document h3 + ol {
-  @apply mt-4;
+  @apply mt-1;
 }
 
 .legal-document p + h3,
 .legal-document ul + h3,
 .legal-document ol + h3 {
-  @apply mt-8;
+  @apply mt-2;
 }
 
-/* Better list styling for contract reviews */
+/* Ultra-compact list styling for contract reviews */
 .legal-document li {
-  @apply mb-4 last:mb-0;
+  @apply mb-0 last:mb-0;
 }
 
 .legal-document li p {
-  @apply my-1;
+  @apply my-0;
 }
 
-/* Improved heading visibility */
+/* Ultra-compact heading visibility */
 .legal-document h3 {
-  @apply bg-gray-50 dark:bg-gray-800/50 px-3 py-2 rounded-t-md;
+  @apply bg-gray-50 dark:bg-gray-800/50 px-2 py-1 rounded-t-md;
 }
