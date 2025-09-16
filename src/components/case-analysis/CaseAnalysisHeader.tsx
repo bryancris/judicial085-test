@@ -8,6 +8,7 @@ import { ExportButton } from "./export/ExportButton";
 interface CaseAnalysisHeaderProps {
   title: string;
   clientId: string;
+  caseId?: string;
   selectedTab: string;
   setSelectedTab: (tab: string) => void;
   isGenerating: boolean;
@@ -19,6 +20,7 @@ interface CaseAnalysisHeaderProps {
 const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
   title,
   clientId,
+  caseId,
   selectedTab,
   setSelectedTab,
   isGenerating,
@@ -26,6 +28,9 @@ const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
   caseType,
   hasUnincorporatedFindings = false
 }) => {
+  // Debug logging
+  console.log("Export Button Debug:", { selectedTab, clientId, caseId, isGenerating });
+
   const handleRegenerateClick = () => {
     console.log("Regenerating real-time analysis...");
     onGenerate();
@@ -51,11 +56,10 @@ const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
         
         {selectedTab === "analysis" && (
           <div className="flex flex-row gap-2 flex-shrink-0">
-            {/* Analysis Format Toggle */}
-            
             <div className="flex gap-2">
               <ExportButton
                 clientId={clientId}
+                caseId={caseId}
                 disabled={isGenerating}
               />
               

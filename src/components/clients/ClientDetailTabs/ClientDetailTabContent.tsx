@@ -497,6 +497,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
               <CaseAnalysisHeader
                 title="Case Analysis"
                 clientId={client.id}
+                caseId={currentCase?.id}
                 selectedTab={analysisTab}
                 setSelectedTab={setAnalysisTab}
                 isGenerating={isAnalysisLoading}
