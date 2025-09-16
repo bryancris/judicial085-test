@@ -39,7 +39,7 @@ const FollowUpQuestionsSection: React.FC<FollowUpQuestionsSectionProps> = ({
       <CollapsibleTrigger asChild>
         <Button 
           variant="ghost" 
-          className="flex w-full justify-between p-4 font-semibold" 
+          className="flex w-full justify-between p-3 font-semibold" 
           onClick={onToggle}
         >
           <span>Recommended Follow-up Questions</span>

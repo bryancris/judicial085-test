@@ -46,7 +46,7 @@ const LawReferencesSection: React.FC<LawReferencesSectionProps> = ({
         ) : (
           <div className="space-y-4">
             {references.map((ref, index) => (
-            <div key={index} className="border p-4 rounded-md bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
+            <div key={index} className="border p-3 rounded-md bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <h3 className="font-medium text-lg flex items-center">

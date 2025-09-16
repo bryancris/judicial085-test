@@ -80,7 +80,7 @@ const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
               <Scale className="h-4 w-4 text-blue-600" />
               <h4 className="text-base font-semibold text-foreground">⚖️ Rule</h4>
             </div>
-            <div className="pl-6 bg-blue-50/50 dark:bg-blue-950/20 rounded-lg p-4 border-l-2 border-blue-200 dark:border-blue-800">
+            <div className="pl-6 bg-blue-50/50 dark:bg-blue-950/20 rounded-lg p-3 border-l-2 border-blue-200 dark:border-blue-800">
               <div className="prose dark:prose-invert max-w-none legal-analysis-content">
                 {issue.rule.split('\n\n').map((paragraph, idx) => (
                   <EnhancedText 
@@ -105,7 +105,7 @@ const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
               <Search className="h-4 w-4 text-amber-600" />
               <h4 className="text-base font-semibold text-foreground">🔍 Application</h4>
             </div>
-            <div className="pl-6 bg-amber-50/50 dark:bg-amber-950/20 rounded-lg p-4 border-l-2 border-amber-200 dark:border-amber-800">
+            <div className="pl-6 bg-amber-50/50 dark:bg-amber-950/20 rounded-lg p-3 border-l-2 border-amber-200 dark:border-amber-800">
               <div className="prose dark:prose-invert max-w-none legal-analysis-content">
                 {issue.application.split('\n\n').map((paragraph, idx) => (
                   <EnhancedText 
@@ -130,7 +130,7 @@ const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
               <CheckCircle className="h-4 w-4 text-green-600" />
               <h4 className="text-base font-semibold text-foreground">✅ Conclusion</h4>
             </div>
-            <div className="pl-6 bg-green-50/50 dark:bg-green-950/20 rounded-lg p-4 border-l-2 border-green-200 dark:border-green-800">
+            <div className="pl-6 bg-green-50/50 dark:bg-green-950/20 rounded-lg p-3 border-l-2 border-green-200 dark:border-green-800">
               <div className="prose dark:prose-invert max-w-none legal-analysis-content">
                 {issue.conclusion.split('\n\n').map((paragraph, idx) => (
                   <EnhancedText 

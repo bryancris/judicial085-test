@@ -82,7 +82,7 @@ const AdditionalCaseLawSection: React.FC<AdditionalCaseLawSectionProps> = ({
       <div className="space-y-3">
         <h4 className="font-medium text-sm">{title}</h4>
         {cases.map((caseItem) => (
-          <div key={caseItem.id} className="border rounded-lg p-4 space-y-2">
+          <div key={caseItem.id} className="border rounded-lg p-3 space-y-2">
             <div className="flex items-start justify-between gap-2">
               <h5 className="font-medium text-sm">{caseItem.title}</h5>
               <Badge className={getTypeColor(caseItem.type)}>
