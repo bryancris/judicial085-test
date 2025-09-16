@@ -45,7 +45,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-2025-08-07',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
@@ -66,7 +66,7 @@ serve(async (req) => {
             content: `Please perform a comprehensive IRAC analysis based on all the information gathered:\n\n${combinedContent}`
           }
         ],
-        max_completion_tokens: 2500
+        max_tokens: 2500
       }),
     });
 

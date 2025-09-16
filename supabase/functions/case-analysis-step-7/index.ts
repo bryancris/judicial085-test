@@ -45,7 +45,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-2025-08-07',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
@@ -67,7 +67,7 @@ serve(async (req) => {
             content: `Create a comprehensive refined analysis that synthesizes all findings:\n\n${combinedContent}`
           }
         ],
-        max_completion_tokens: 2500
+        max_tokens: 2500
       }),
     });
 

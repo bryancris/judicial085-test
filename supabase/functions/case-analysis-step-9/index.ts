@@ -64,7 +64,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-2025-08-07',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
@@ -95,7 +95,7 @@ serve(async (req) => {
             content: `Create a comprehensive law reference compilation based on this analysis:\n\n${combinedContent}\n\nCitations found: ${JSON.stringify(allCitations, null, 2)}`
           }
         ],
-        max_completion_tokens: 2000
+        max_tokens: 2000
       }),
     });
 

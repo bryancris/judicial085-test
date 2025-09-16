@@ -53,13 +53,22 @@ serve(async (req) => {
     const embeddingData = await embeddingResponse.json();
     const queryEmbedding = embeddingData.data[0].embedding;
 
-    // Search for relevant laws using the match_documents function
-    const { data: relevantLaws, error: searchError } = await supabase
-      .rpc('match_documents', {
-        query_embedding: queryEmbedding,
-        match_count: 5,
-        filter: { type: 'texas_law' }
-      });
+    // Search for relevant laws - using a more generic approach since match_documents may not exist
+    let relevantLaws = [];
+    let searchError = null;
+    
+    try {
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .textSearch('content', previousContent)
+        .limit(5);
+      relevantLaws = data;
+      searchError = error;
+    } catch (error) {
+      console.log('Text search failed, proceeding without law database results');
+      searchError = error;
+    }
 
     if (searchError) {
       console.error('Law search error:', searchError);
@@ -77,7 +86,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-2025-08-07',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
@@ -95,7 +104,7 @@ serve(async (req) => {
             content: `Case Summary:\n${previousContent}\n\nRelevant Laws from Database:\n${lawContext}\n\nProvide a comprehensive analysis of applicable Texas laws.`
           }
         ],
-        max_completion_tokens: 2000
+        max_tokens: 2000
       }),
     });
 

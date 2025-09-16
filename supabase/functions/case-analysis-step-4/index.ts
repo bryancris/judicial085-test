@@ -77,7 +77,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-2025-08-07',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
@@ -95,7 +95,7 @@ serve(async (req) => {
             content: `Case Information:\n${previousContent}\n\nSimilar Cases:\n${caseContext}\n\nProvide a comprehensive case law analysis.`
           }
         ],
-        max_completion_tokens: 2000
+        max_tokens: 2000
       }),
     });
 

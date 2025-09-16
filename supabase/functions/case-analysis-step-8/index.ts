@@ -45,7 +45,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-2025-08-07',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
@@ -68,7 +68,7 @@ serve(async (req) => {
             content: `Generate strategic follow-up questions based on this analysis:\n\n${combinedContent}`
           }
         ],
-        max_completion_tokens: 1500
+        max_tokens: 1500
       }),
     });
 
