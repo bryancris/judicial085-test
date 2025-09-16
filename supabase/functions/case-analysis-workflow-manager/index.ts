@@ -43,6 +43,24 @@ serve(async (req) => {
     if (action === 'create_workflow') {
       console.log(`🚀 Creating new workflow for client ${clientId}`);
       
+      // Validate clientId
+      if (!clientId || typeof clientId !== 'string') {
+        throw new Error('Invalid client ID provided');
+      }
+      
+      // Check if client exists in the clients table
+      const { data: clientExists, error: clientError } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('id', clientId)
+        .single();
+        
+      if (clientError || !clientExists) {
+        throw new Error('Client not found in database');
+      }
+      
+      console.log(`✅ Client ${clientId} verified, creating workflow...`);
+      
       // Create workflow record
       const { data: workflow, error: workflowError } = await supabase
         .from('case_analysis_workflows')
@@ -62,6 +80,7 @@ serve(async (req) => {
         .single();
 
       if (workflowError) {
+        console.error('❌ Workflow creation error:', workflowError);
         throw new Error(`Failed to create workflow: ${workflowError.message}`);
       }
 

@@ -26,6 +26,7 @@ const ClientDetail = () => {
   const [activeTab, setActiveTab] = useState("client-intake");
   const [refreshAnalysis, setRefreshAnalysis] = useState<(() => void) | null>(null);
   const [isRefreshingAnalysis, setIsRefreshingAnalysis] = useState(false);
+  const [lastRefreshClick, setLastRefreshClick] = useState(0);
   
   console.log("ClientDetail render", { id, loading, hasSession: !!session, hasClient: !!client, error });
 
@@ -95,10 +96,33 @@ const ClientDetail = () => {
   };
 
   const handleRefreshAnalysis = async () => {
+    // Debounce clicks to prevent multiple concurrent requests
+    const now = Date.now();
+    if (now - lastRefreshClick < 2000) {
+      toast({
+        title: "Please wait",
+        description: "Please wait a moment before clicking refresh again",
+        variant: "default",
+      });
+      return;
+    }
+    setLastRefreshClick(now);
+
     if (refreshAnalysis) {
       setIsRefreshingAnalysis(true);
       try {
         await refreshAnalysis();
+        toast({
+          title: "Analysis Refreshed",
+          description: "Case analysis has been updated successfully",
+          variant: "default",
+        });
+      } catch (error: any) {
+        toast({
+          title: "Refresh Failed",
+          description: error.message || "Failed to refresh analysis",
+          variant: "destructive",
+        });
       } finally {
         setIsRefreshingAnalysis(false);
       }

@@ -39,6 +39,18 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
 
   const createWorkflow = async (): Promise<string | null> => {
     try {
+      console.log('🔄 Creating workflow for client:', clientId);
+      
+      // First cleanup any stuck workflows for this client
+      try {
+        await supabase.functions.invoke('cleanup-workflows', {
+          body: { clientId }
+        });
+        console.log('✅ Cleaned up existing workflows');
+      } catch (cleanupError) {
+        console.warn('⚠️ Cleanup failed, continuing anyway:', cleanupError);
+      }
+
       const { data, error } = await supabase.functions.invoke('case-analysis-workflow-manager', {
         body: {
           action: 'create_workflow',
@@ -47,15 +59,22 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
         }
       });
 
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error);
+      if (error) {
+        console.error('❌ Workflow manager error:', error);
+        throw error;
+      }
+      if (!data.success) {
+        console.error('❌ Workflow creation failed:', data.error);
+        throw new Error(data.error);
+      }
 
+      console.log('✅ Created workflow:', data.workflowId);
       return data.workflowId;
     } catch (error: any) {
-      console.error('Failed to create workflow:', error);
+      console.error('❌ Failed to create workflow:', error);
       toast({
-        title: "Workflow Error",
-        description: "Failed to initialize analysis workflow",
+        title: "Workflow Error", 
+        description: `Failed to initialize analysis workflow: ${error.message}`,
         variant: "destructive",
       });
       return null;
@@ -258,7 +277,23 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
     onAnalysisComplete?: (analysisData: any) => void
   ) => {
     if (!clientId) {
-      console.error('No client ID provided');
+      console.error('❌ No client ID provided');
+      toast({
+        title: "Error",
+        description: "No client ID provided for analysis",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Prevent multiple concurrent workflow creation attempts
+    if (isGeneratingAnalysis) {
+      console.warn('⚠️ Analysis already in progress, skipping');
+      toast({
+        title: "Analysis in Progress",
+        description: "Please wait for the current analysis to complete",
+        variant: "default",
+      });
       return;
     }
 
@@ -267,11 +302,12 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
       setCurrentStep(0);
       setStepResults({});
       
-      console.log('Starting enhanced case analysis workflow...');
+      console.log('🚀 Starting enhanced case analysis workflow...');
       
-      // Create workflow
+      // Create workflow with proper error handling
       const workflowId = await createWorkflow();
       if (!workflowId) {
+        console.error('❌ Current stepResults when failure occurred:', stepResults);
         throw new Error('Failed to create workflow');
       }
 
