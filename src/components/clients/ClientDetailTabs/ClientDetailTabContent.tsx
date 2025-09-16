@@ -65,6 +65,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
     currentStep: enhancedCurrentStep,
     workflowState,
     stepResults,
+    isLoadingExistingResults,
     generateRealTimeAnalysisWithQualityControl
   } = useEnhancedCaseAnalysis(client.id, currentCase?.id);
 
@@ -215,7 +216,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
         }
         
         // Default analysis flow for other case types
-        if (isAnalysisLoading || isEnhancedGenerating) {
+        if (isAnalysisLoading || isEnhancedGenerating || isLoadingExistingResults) {
           console.log("📊 Showing loading skeleton");
           return (
             <div className="space-y-6">
@@ -231,6 +232,8 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
               )}
             </div>
           );
+        }
+
         // PRIORITY 1: Show partial results if available (even without errors)  
         if (Object.keys(stepResults).length > 0) {
           console.log("📊 Showing step results, available steps:", Object.keys(stepResults));
@@ -297,7 +300,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
         }
         
         // PRIORITY 2: Show error state if there's an error and no partial results
-        } else if (analysisError) {
+        if (analysisError) {
           console.log("❌ Showing error state:", analysisError);
           console.log("📊 Checking for partial results. stepResults keys:", Object.keys(stepResults));
           
@@ -341,7 +344,10 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
               onRefresh={generateNewAnalysis}
             />
           );
-        } else if (!analysisData) {
+        }
+        
+        // PRIORITY 3: Show empty state if no analysis data and no step results
+        if (!analysisData) {
           console.log("📝 Showing empty analysis state");
           return (
             <EmptyAnalysisState 

@@ -7,7 +7,7 @@
  * 4. Database persistence of workflow and step states
  */
 
-import { useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -34,6 +34,7 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [workflowState, setWorkflowState] = useState<WorkflowState | null>(null);
   const [stepResults, setStepResults] = useState<Record<string, any>>({});
+  const [isLoadingExistingResults, setIsLoadingExistingResults] = useState(false);
   const { toast } = useToast();
 
   const createWorkflow = async (): Promise<string | null> => {
@@ -110,6 +111,92 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
 
     return messages?.map(msg => `${msg.role}: ${msg.content}`).join('\n\n') || '';
   };
+
+  const loadExistingStepResults = useCallback(async () => {
+    if (!clientId) return;
+
+    try {
+      setIsLoadingExistingResults(true);
+      console.log('🔍 Loading existing step results from database...');
+
+      // Get the most recent completed workflow for this client/case
+      let workflowQuery = supabase
+        .from('case_analysis_workflows')
+        .select('id, status, current_step, total_steps')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false });
+
+      if (caseId) {
+        workflowQuery = workflowQuery.eq('case_id', caseId);
+      }
+
+      const { data: workflows, error: workflowError } = await workflowQuery.limit(1);
+
+      if (workflowError) throw workflowError;
+
+      if (workflows && workflows.length > 0) {
+        const workflow = workflows[0];
+        console.log('📊 Found existing workflow:', workflow);
+
+        // Get all completed steps for this workflow
+        const { data: steps, error: stepsError } = await supabase
+          .from('case_analysis_steps')
+          .select('step_number, step_name, content, execution_time_ms, status')
+          .eq('workflow_id', workflow.id)
+          .eq('status', 'completed')
+          .order('step_number', { ascending: true });
+
+        if (stepsError) throw stepsError;
+
+        if (steps && steps.length > 0) {
+          console.log(`✅ Found ${steps.length} completed steps`);
+          
+          // Convert to stepResults format
+          const existingStepResults: Record<string, any> = {};
+          steps.forEach(step => {
+            existingStepResults[`step${step.step_number}`] = {
+              content: step.content,
+              executionTime: step.execution_time_ms,
+              stepName: step.step_name || getStepName(step.step_number)
+            };
+          });
+
+          setStepResults(existingStepResults);
+          
+          // Set workflow state
+          setWorkflowState({
+            id: workflow.id,
+            status: workflow.status as 'pending' | 'running' | 'completed' | 'failed',
+            current_step: workflow.current_step,
+            total_steps: workflow.total_steps,
+            steps: Array.from({ length: workflow.total_steps }, (_, i) => ({
+              step_number: i + 1,
+              step_name: getStepName(i + 1),
+              status: steps.find(s => s.step_number === i + 1) ? 'completed' : 'pending',
+              id: `step-${i + 1}`,
+            }))
+          });
+
+          console.log('🎯 Successfully loaded existing step results:', Object.keys(existingStepResults));
+        } else {
+          console.log('📝 No completed steps found for workflow');
+        }
+      } else {
+        console.log('📝 No existing workflows found');
+      }
+    } catch (error) {
+      console.error('❌ Failed to load existing step results:', error);
+    } finally {
+      setIsLoadingExistingResults(false);
+    }
+  }, [clientId, caseId]);
+
+  // Load existing results when clientId or caseId changes
+  React.useEffect(() => {
+    if (clientId && !isGeneratingAnalysis) {
+      loadExistingStepResults();
+    }
+  }, [clientId, caseId, loadExistingStepResults, isGeneratingAnalysis]);
 
   const executeStep = async (stepNumber: number, workflowId: string, allPreviousContent?: Record<string, string>): Promise<boolean> => {
     try {
@@ -315,6 +402,8 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
     currentStep,
     workflowState,
     stepResults,
+    isLoadingExistingResults,
+    loadExistingStepResults,
     generateRealTimeAnalysisWithQualityControl
   };
 };
