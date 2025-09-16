@@ -43,10 +43,10 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
       
       // First cleanup any stuck workflows for this client
       try {
-        await supabase.functions.invoke('cleanup-workflows', {
+        await supabase.functions.invoke('cleanup-stuck-workflows', {
           body: { clientId }
         });
-        console.log('✅ Cleaned up existing workflows');
+        console.log('✅ Cleaned up existing stuck workflows');
       } catch (cleanupError) {
         console.warn('⚠️ Cleanup failed, continuing anyway:', cleanupError);
       }
@@ -307,7 +307,7 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
       // Create workflow with proper error handling
       const workflowId = await createWorkflow();
       if (!workflowId) {
-        console.error('❌ Current stepResults when failure occurred:', stepResults);
+        console.error('❌ Failed to create workflow');
         throw new Error('Failed to create workflow');
       }
 
@@ -331,6 +331,7 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
       let allPreviousContent: Record<string, string> = {};
       
       for (let step = 1; step <= 9; step++) {
+        console.log(`🔄 Starting Step ${step}: ${getStepName(step)}`);
         setCurrentStep(step);
         
         // Update workflow state
@@ -347,8 +348,7 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
         const success = await executeStep(step, workflowId, allPreviousContent);
         
         if (!success) {
-          console.error(`Step ${step} failed - stopping workflow execution`);
-          console.log('📊 Current stepResults when failure occurred:', Object.keys(stepResults));
+          console.error(`❌ Step ${step} failed - stopping workflow execution`);
           
           // Update workflow state to show failure
           setWorkflowState(prev => ({
@@ -361,45 +361,40 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
             }))
           }));
           
-          // Show how many steps completed before failure
-          const completedSteps = Object.keys(stepResults).length;
-          const failureMessage = completedSteps > 0 
-            ? `${getStepName(step)} failed after ${completedSteps} step${completedSteps > 1 ? 's' : ''} completed successfully.`
-            : `${getStepName(step)} failed. No steps were completed.`;
-          
           toast({
             title: `Analysis Failed at Step ${step}`,
-            description: failureMessage,
+            description: `${getStepName(step)} failed. Please try again.`,
             variant: "destructive",
           });
           
-          // Stop execution - don't continue to next steps
-          // Note: stepResults are preserved and will be shown in the UI
           return;
         }
 
-        // CRITICAL: Update allPreviousContent immediately after step completion
-        // We need to wait for the stepResults state to be updated
-        await new Promise(resolve => setTimeout(resolve, 100)); // Small delay for state update
+        // Wait for state update and get the latest step result
+        await new Promise(resolve => setTimeout(resolve, 200));
         
-        // Get the fresh step result and update allPreviousContent
-        const updatedStepResults = stepResults;
+        // Update allPreviousContent with the completed step
+        const currentStepResults = stepResults;
         const stepResultKey = `step${step}`;
         
-        // Check if we have the result in current state or need to get it from the latest state
-        setStepResults(currentStepResults => {
-          const stepResult = currentStepResults[stepResultKey];
-          if (stepResult?.content) {
-            allPreviousContent[stepResultKey] = stepResult.content;
-            console.log(`✅ Added Step ${step} content to allPreviousContent for next step`);
-            onStepComplete?.(step, stepResult.content);
-          }
-          return currentStepResults;
-        });
+        // Ensure we have the step result before proceeding
+        let attempts = 0;
+        while (!currentStepResults[stepResultKey]?.content && attempts < 10) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
+        
+        if (currentStepResults[stepResultKey]?.content) {
+          allPreviousContent[stepResultKey] = currentStepResults[stepResultKey].content;
+          console.log(`✅ Step ${step} completed, content added to previous content`);
+          onStepComplete?.(step, currentStepResults[stepResultKey].content);
+        } else {
+          console.warn(`⚠️ Step ${step} completed but no content found`);
+        }
 
-        // Small delay between steps to prevent overwhelming the API
+        // Brief pause between steps
         if (step < 9) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
       }
 
@@ -411,6 +406,7 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
         steps: prev!.steps.map(s => ({ ...s, status: 'completed' }))
       }));
 
+      console.log('🎉 All 9 steps completed successfully');
       toast({
         title: "Analysis Complete",
         description: "Complete case analysis finished! All 9 steps completed.",
@@ -422,7 +418,7 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
       console.error('Analysis generation failed:', error);
       toast({
         title: "Analysis Failed",
-        description: 'Failed to generate complete analysis. Some steps may have completed.',
+        description: 'Failed to generate complete analysis. Please try again.',
         variant: "destructive",
       });
       
@@ -431,7 +427,7 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
       setIsGeneratingAnalysis(false);
       setCurrentStep(0);
     }
-  }, [clientId, caseId, executeStep, createWorkflow, stepResults]);
+  }, [clientId, caseId, executeStep, createWorkflow]);
 
   return {
     isGeneratingAnalysis,
