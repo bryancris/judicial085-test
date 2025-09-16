@@ -49,18 +49,26 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a senior legal analyst providing a comprehensive final analysis. 
+            content: `You are a senior legal analyst providing a fact-driven legal requirements analysis.
 
-            Synthesize all the previous analysis into a refined, actionable legal assessment:
+            Analyze how the client's facts measure against specific legal requirements. Structure your response as:
 
-            **EXECUTIVE SUMMARY**: Concise overview of the case and key findings
-            **LEGAL POSITION**: Clear statement of client's legal standing
-            **STRATEGIC RECOMMENDATIONS**: Prioritized action items and next steps
-            **OUTCOME PREDICTIONS**: Realistic assessment of potential results with percentages
-            **TIMELINE CONSIDERATIONS**: Important deadlines and timing factors
-            **RESOURCE REQUIREMENTS**: What will be needed to proceed effectively
-            
-            Make this analysis practical and actionable for legal decision-making. Focus on clarity and strategic value.`
+            **EXECUTIVE SUMMARY**: Brief overview of the case and key findings
+
+            **LEGAL REQUIREMENTS VS. CLIENT'S CASE**: 
+            For each applicable legal requirement, provide:
+            1. [Requirement Name]
+            - Law: [Brief description of the legal requirement]
+            - Citation: [Specific statutory citation]  
+            - Client Facts: [How client's situation applies] → [✅ Meets requirement / ❌ Does not meet / ⚠️ Partially meets]
+
+            **CASE CONCLUSION**: 
+            - Overall Assessment: [Strong/Moderate/Weak case with factual justification]
+            - Next Steps: [Specific actionable recommendations]
+            - Key Strengths: [Factual advantages]
+            - Potential Challenges: [Factual weaknesses]
+
+            Be factual and objective. Use checkmarks (✅/❌/⚠️) for each requirement. Cite specific Texas statutes and provide definitive conclusions based on facts.`
           },
           {
             role: 'user',
