@@ -1,8 +1,8 @@
-/* Unified Step Content System - Consistent formatting for all 9 analysis steps */
+/* Unified Step Content System - Ultra-Compact Legal Document Formatting */
 
 .step-content-unified {
-  /* Main content spacing - DRASTICALLY REDUCED */
-  @apply space-y-2;
+  /* Ultra-compact main content spacing */
+  @apply space-y-1;
 }
 
 .step-content-unified h1,
@@ -11,7 +11,7 @@
 .step-content-unified h4,
 .step-content-unified h5,
 .step-content-unified h6 {
-  @apply font-medium text-foreground mb-1;
+  @apply font-medium text-foreground mb-0;
 }
 
 .step-content-unified h1 { @apply text-base; }
@@ -22,21 +22,21 @@
 .step-content-unified h6 { @apply text-xs; }
 
 .step-content-unified p {
-  @apply text-sm text-foreground leading-relaxed mb-1;
+  @apply text-sm text-foreground leading-tight mb-0;
 }
 
 .step-content-unified ul,
 .step-content-unified ol {
-  @apply space-y-0.5 text-sm text-foreground;
+  @apply space-y-0 text-sm text-foreground;
 }
 
 .step-content-unified li {
   @apply text-foreground leading-relaxed;
 }
 
-/* Step sections with consistent spacing - DRASTICALLY REDUCED */
+/* Step sections with ultra-compact spacing */
 .step-section {
-  @apply space-y-1;
+  @apply space-y-0.5;
 }
 
 .step-section-header {
@@ -44,7 +44,7 @@
 }
 
 .step-section-content {
-  @apply pl-3;
+  @apply pl-2;
 }
 
 /* Step card title with number */

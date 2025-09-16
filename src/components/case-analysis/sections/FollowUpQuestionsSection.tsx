@@ -50,8 +50,8 @@ const FollowUpQuestionsSection: React.FC<FollowUpQuestionsSectionProps> = ({
           )}
         </Button>
       </CollapsibleTrigger>
-      <CollapsibleContent className="px-4 pb-4">
-        <ol className="list-decimal pl-5 space-y-2">
+      <CollapsibleContent className="px-2 pb-2">
+        <ol className="list-decimal pl-5 space-y-0">
           {questions.map((question, index) => (
             <li key={index}>{highlightSearch(question)}</li>
           ))}

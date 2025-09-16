@@ -45,7 +45,7 @@ const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
       id={`irac-issue-${issue.id}`}
       className="border-l-4 border-l-primary/20 hover:border-l-primary/40 transition-colors"
     >
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-2 p-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Scale className="h-5 w-5 text-primary" />
@@ -73,9 +73,9 @@ const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
       </CardHeader>
       
       {isExpanded && (
-        <CardContent className="pt-0 space-y-6">
+        <CardContent className="pt-0 step-content-unified">
           {/* Rule Section */}
-          <div className="space-y-2">
+          <div className="step-section">
             <div className="flex items-center gap-2">
               <Scale className="h-4 w-4 text-blue-600" />
               <h4 className="text-base font-semibold text-foreground">⚖️ Rule</h4>
@@ -86,7 +86,7 @@ const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
                   <EnhancedText 
                     key={idx} 
                     text={paragraph} 
-                    className="mb-3"
+                    className="mb-0"
                     citationMatches={citationMatches.filter(match => 
                       paragraph.includes(match.citation)
                     )}
@@ -100,7 +100,7 @@ const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
           <Separator className="my-4" />
 
           {/* Application Section */}
-          <div className="space-y-2">
+          <div className="step-section">
             <div className="flex items-center gap-2">
               <Search className="h-4 w-4 text-amber-600" />
               <h4 className="text-base font-semibold text-foreground">🔍 Application</h4>
@@ -111,7 +111,7 @@ const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
                   <EnhancedText 
                     key={idx} 
                     text={paragraph} 
-                    className="mb-3"
+                    className="mb-0"
                     citationMatches={citationMatches.filter(match => 
                       paragraph.includes(match.citation)
                     )}
@@ -125,7 +125,7 @@ const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
           <Separator className="my-4" />
 
           {/* Conclusion Section */}
-          <div className="space-y-2">
+          <div className="step-section">
             <div className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-green-600" />
               <h4 className="text-base font-semibold text-foreground">✅ Conclusion</h4>
@@ -136,7 +136,7 @@ const IracIssueCard: React.FC<IracIssueCardProps> = ({ issue, index }) => {
                   <EnhancedText 
                     key={idx} 
                     text={paragraph} 
-                    className="mb-3"
+                    className="mb-0"
                     citationMatches={citationMatches.filter(match => 
                       paragraph.includes(match.citation)
                     )}
@@ -183,18 +183,18 @@ const IracAnalysisSection: React.FC<IracAnalysisSectionProps> = ({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="p-2">
         <CardTitle className="step-card-title">
           <Scale className="h-5 w-5" />
           <span className="step-number">Step 5:</span>
           IRAC Legal Analysis
         </CardTitle>
       </CardHeader>
-      <CardContent className="step-content-unified">
+      <CardContent className="step-content-unified p-2">
         {/* IRAC Issues */}
         <div className="step-section">
           <h3 className="step-section-header">Legal Issues Analysis</h3>
-          <div className="space-y-4">
+          <div className="step-content-unified">
             {analysis.legalIssues.map((issue, index) => (
               <IracIssueCard key={issue.id} issue={issue} index={index} />
             ))}
@@ -222,7 +222,7 @@ const IracAnalysisSection: React.FC<IracAnalysisSectionProps> = ({
             <Separator />
             <div className="step-section">
               <h3 className="step-section-header">Recommended Follow-up Questions</h3>
-              <ol className="list-decimal list-inside space-y-1 text-sm">
+              <ol className="list-decimal list-inside space-y-0 text-sm">
                 {analysis.followUpQuestions.map((question, idx) => (
                   <li key={idx} className="text-foreground">{question}</li>
                 ))}
@@ -237,7 +237,7 @@ const IracAnalysisSection: React.FC<IracAnalysisSectionProps> = ({
             <Separator />
             <div className="step-section">
               <h3 className="step-section-header">Next Steps</h3>
-              <ul className="list-disc list-inside space-y-1 text-sm">
+              <ul className="list-disc list-inside space-y-0 text-sm">
                 {analysis.nextSteps.map((step, idx) => (
                   <li key={idx} className="text-foreground">{step}</li>
                 ))}

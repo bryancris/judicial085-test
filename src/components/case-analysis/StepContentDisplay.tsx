@@ -32,14 +32,14 @@ const StepContentDisplay: React.FC<StepContentDisplayProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="step-content-unified">
       {Object.entries(stepResults).map(([stepKey, result]) => {
         const stepNumber = parseInt(stepKey.replace('step', ''));
         const status = getStepStatus(stepKey, stepNumber);
         
         return (
           <Card key={stepKey} className="transition-all duration-300">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-2 p-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   {status === 'completed' && (
@@ -71,7 +71,7 @@ const StepContentDisplay: React.FC<StepContentDisplayProps> = ({
               </div>
             </CardHeader>
             
-            <CardContent>
+            <CardContent className="p-2">
               <div className="legal-document prose prose-sm max-w-none">
                 <div 
                   className="text-sm leading-relaxed"
@@ -88,13 +88,13 @@ const StepContentDisplay: React.FC<StepContentDisplayProps> = ({
       {/* Show placeholder for current step if running */}
       {currentStep > 0 && !stepResults[`step${currentStep}`] && (
         <Card className="border-dashed">
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-2 p-2">
             <CardTitle className="flex items-center gap-2 text-lg text-muted-foreground">
               <Clock className="w-5 h-5 animate-pulse" />
               Step {currentStep}: Processing...
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-2">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
               Analyzing case information and generating content...
