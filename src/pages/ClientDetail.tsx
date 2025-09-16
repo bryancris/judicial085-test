@@ -8,7 +8,7 @@ import ClientInformationAccordion from "@/components/clients/ClientInformationAc
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Trash2, Loader2 } from "lucide-react";
+import { ArrowLeft, Trash2, Loader2, RotateCcw } from "lucide-react";
 import ClientDetailTabContent from "@/components/clients/ClientDetailTabs/ClientDetailTabContent";
 import DeleteClientDialog from "@/components/clients/DeleteClientDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +24,8 @@ const ClientDetail = () => {
   const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("client-intake");
+  const [refreshAnalysis, setRefreshAnalysis] = useState<(() => void) | null>(null);
+  const [isRefreshingAnalysis, setIsRefreshingAnalysis] = useState(false);
   
   console.log("ClientDetail render", { id, loading, hasSession: !!session, hasClient: !!client, error });
 
@@ -92,6 +94,17 @@ const ClientDetail = () => {
     setActiveTab(value);
   };
 
+  const handleRefreshAnalysis = async () => {
+    if (refreshAnalysis) {
+      setIsRefreshingAnalysis(true);
+      try {
+        await refreshAnalysis();
+      } finally {
+        setIsRefreshingAnalysis(false);
+      }
+    }
+  };
+
   return (
     <CaseProvider>
       <div className="min-h-screen flex flex-col">
@@ -112,8 +125,27 @@ const ClientDetail = () => {
                     </h1>
                   </div>
                   <div className="flex items-center gap-2">
-
-                    <Button 
+                    {activeTab === "case-analysis" && (
+                      <Button 
+                        variant="outline" 
+                        className="flex items-center gap-2"
+                        onClick={handleRefreshAnalysis}
+                        disabled={isRefreshingAnalysis || !refreshAnalysis}
+                      >
+                        {isRefreshingAnalysis ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Refreshing...
+                          </>
+                        ) : (
+                          <>
+                            <RotateCcw className="h-4 w-4" />
+                            Refresh Case Analysis
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    <Button
                       variant="outline" 
                       className="flex items-center gap-2"
                       onClick={handleDeleteClick}
@@ -158,6 +190,7 @@ const ClientDetail = () => {
                       <ClientDetailTabContent 
                         client={client} 
                         activeTab={activeTab}
+                        onRefreshAnalysis={setRefreshAnalysis}
                       />
                     </div>
                   </main>

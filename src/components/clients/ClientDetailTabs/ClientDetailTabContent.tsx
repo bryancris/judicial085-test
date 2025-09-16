@@ -28,11 +28,13 @@ import { useCaseStrengthAnalysis } from "@/hooks/useCaseStrengthAnalysis";
 interface ClientDetailTabContentProps {
   client: Client;
   activeTab: string;
+  onRefreshAnalysis?: (refreshFn: () => void) => void;
 }
 
 const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
   client,
   activeTab,
+  onRefreshAnalysis,
 }) => {
   const { currentCase } = useCase();
   const [analysisRefreshTrigger, setAnalysisRefreshTrigger] = useState(0);
@@ -191,6 +193,13 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
 
     loadDocumentCount();
   }, [client.id]);
+
+  // Pass generateNewAnalysis function up to parent when activeTab is case-analysis
+  useEffect(() => {
+    if (activeTab === "case-analysis" && onRefreshAnalysis) {
+      onRefreshAnalysis(generateNewAnalysis);
+    }
+  }, [activeTab, generateNewAnalysis, onRefreshAnalysis]);
 
   // Helper function to generate source summary message
   const getSourceSummary = () => {
