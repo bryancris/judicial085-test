@@ -198,13 +198,12 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
     loadDocumentCount();
   }, [client.id]);
 
-  // Only set up the refresh function when we have analysis data (for the refresh button)
+  // Set up the refresh function for the case analysis tab
   useEffect(() => {
-    if (activeTab === "case-analysis" && onRefreshAnalysis && analysisData && generateNewAnalysis) {
-      // Only pass the function when there's existing data to refresh
+    if (activeTab === "case-analysis" && onRefreshAnalysis && generateNewAnalysis) {
       onRefreshAnalysis(generateNewAnalysis);
     }
-  }, [activeTab, analysisData, onRefreshAnalysis, generateNewAnalysis]);
+  }, [activeTab, onRefreshAnalysis, generateNewAnalysis]);
 
   // Helper function to generate source summary message
   const getSourceSummary = () => {
