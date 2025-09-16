@@ -184,15 +184,16 @@ const IracAnalysisSection: React.FC<IracAnalysisSectionProps> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="step-card-title">
           <Scale className="h-5 w-5" />
+          <span className="step-number">Step 5:</span>
           IRAC Legal Analysis
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="step-content-unified">
         {/* IRAC Issues */}
-        <div>
-          <h3 className="font-semibold text-base mb-4">Legal Issues Analysis</h3>
+        <div className="step-section">
+          <h3 className="step-section-header">Legal Issues Analysis</h3>
           <div className="space-y-4">
             {analysis.legalIssues.map((issue, index) => (
               <IracIssueCard key={issue.id} issue={issue} index={index} />
@@ -204,11 +205,11 @@ const IracAnalysisSection: React.FC<IracAnalysisSectionProps> = ({
         {analysis.overallConclusion && (
           <>
             <Separator />
-            <div>
-              <h3 className="font-semibold text-base mb-3">Overall Conclusion</h3>
+            <div className="step-section">
+              <h3 className="step-section-header">Overall Conclusion</h3>
               <div className="prose dark:prose-invert text-sm max-w-none">
                 {analysis.overallConclusion.split('\n\n').map((paragraph, idx) => (
-                  <p key={idx} className="mb-2 last:mb-0">{paragraph}</p>
+                  <p key={idx} className="mb-2 last:mb-0 text-foreground">{paragraph}</p>
                 ))}
               </div>
             </div>
@@ -219,11 +220,11 @@ const IracAnalysisSection: React.FC<IracAnalysisSectionProps> = ({
         {analysis.followUpQuestions.length > 0 && (
           <>
             <Separator />
-            <div>
-              <h3 className="font-semibold text-base mb-3">Recommended Follow-up Questions</h3>
+            <div className="step-section">
+              <h3 className="step-section-header">Recommended Follow-up Questions</h3>
               <ol className="list-decimal list-inside space-y-1 text-sm">
                 {analysis.followUpQuestions.map((question, idx) => (
-                  <li key={idx} className="text-muted-foreground">{question}</li>
+                  <li key={idx} className="text-foreground">{question}</li>
                 ))}
               </ol>
             </div>
@@ -234,11 +235,11 @@ const IracAnalysisSection: React.FC<IracAnalysisSectionProps> = ({
         {analysis.nextSteps.length > 0 && (
           <>
             <Separator />
-            <div>
-              <h3 className="font-semibold text-base mb-3">Next Steps</h3>
+            <div className="step-section">
+              <h3 className="step-section-header">Next Steps</h3>
               <ul className="list-disc list-inside space-y-1 text-sm">
                 {analysis.nextSteps.map((step, idx) => (
-                  <li key={idx} className="text-muted-foreground">{step}</li>
+                  <li key={idx} className="text-foreground">{step}</li>
                 ))}
               </ul>
             </div>

@@ -122,14 +122,14 @@ const AdditionalCaseLawSectionWithPersistence: React.FC<AdditionalCaseLawSection
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5" />
-            <span className="text-muted-foreground">Step 4:</span>
-            Additional Case Law (Precedent research)
-          </CardTitle>
+        <CardTitle className="step-card-title">
+          <BookOpen className="h-5 w-5" />
+          <span className="step-number">Step 4:</span>
+          Additional Case Law (Precedent research)
+        </CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground text-sm">No additional case law research available.</p>
+        <CardContent className="step-content-unified">
+          <p className="text-foreground text-sm">No additional case law research available.</p>
         </CardContent>
       </Card>
     );
@@ -151,12 +151,12 @@ const AdditionalCaseLawSectionWithPersistence: React.FC<AdditionalCaseLawSection
     if (cases.length === 0) return null;
     
     return (
-      <div className="space-y-3">
-        <h4 className="font-medium text-sm">{title}</h4>
+      <div className="step-section">
+        <h4 className="step-section-header">{title}</h4>
         {cases.map((caseItem) => (
-          <div key={caseItem.id} className="border rounded-lg p-4 space-y-2">
+          <div key={caseItem.id} className="border rounded-lg p-3 space-y-2">
             <div className="flex items-start justify-between gap-2">
-              <h5 className="font-medium text-sm">
+              <h5 className="font-medium text-sm text-foreground">
                 {caseItem.url ? (
                   <LawReferenceLink citation={caseItem.title} url={caseItem.url}>
                     {caseItem.title}
@@ -170,8 +170,8 @@ const AdditionalCaseLawSectionWithPersistence: React.FC<AdditionalCaseLawSection
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground font-mono">{caseItem.citation}</p>
-            <p className="text-sm"><strong>Holding:</strong> {caseItem.holding}</p>
-            <p className="text-sm"><strong>Relevance:</strong> {caseItem.relevance}</p>
+            <p className="text-sm text-foreground"><strong>Holding:</strong> {caseItem.holding}</p>
+            <p className="text-sm text-foreground"><strong>Relevance:</strong> {caseItem.relevance}</p>
           </div>
         ))}
       </div>
@@ -181,13 +181,13 @@ const AdditionalCaseLawSectionWithPersistence: React.FC<AdditionalCaseLawSection
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="step-card-title">
           <BookOpen className="h-5 w-5" />
-          <span className="text-muted-foreground">Step 4:</span>
+          <span className="step-number">Step 4:</span>
           Additional Case Law (Precedent research)
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="step-content-unified">
         {renderCaseGroup(favorableCases, "Favorable Precedents")}
         {renderCaseGroup(adverseCases, "Adverse Precedents")}
         {renderCaseGroup(neutralCases, "Additional Cases")}
