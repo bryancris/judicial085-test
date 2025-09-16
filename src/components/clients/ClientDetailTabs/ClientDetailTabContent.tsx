@@ -13,7 +13,9 @@ import { TemplatesTabContent } from "./TemplatesTabContent";
 import { Client } from "@/types/client";
 import { useCase } from "@/contexts/CaseContext";
 import { useCaseAnalysis } from "@/hooks/useCaseAnalysis";
+import { useEnhancedCaseAnalysis } from "@/hooks/useEnhancedCaseAnalysis";
 import EmptyAnalysisState from "@/components/case-analysis/EmptyAnalysisState";
+import StepContentDisplay from "@/components/case-analysis/StepContentDisplay";
 import CaseAnalysisLoadingSkeleton from "@/components/case-analysis/CaseAnalysisLoadingSkeleton";
 import CaseAnalysisErrorState from "@/components/case-analysis/CaseAnalysisErrorState";
 import CaseAnalysisHeader from "@/components/case-analysis/CaseAnalysisHeader";
@@ -56,6 +58,15 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
     isRegeneratingStep7,
     isRegeneratingStep8
   } = useCaseAnalysis(client.id, currentCase?.id);
+
+  // Enhanced step-by-step case analysis hook
+  const {
+    isGeneratingAnalysis: isEnhancedGenerating,
+    currentStep: enhancedCurrentStep,
+    workflowState,
+    stepResults,
+    generateRealTimeAnalysisWithQualityControl
+  } = useEnhancedCaseAnalysis(client.id, currentCase?.id);
 
   const [currentAnalysisId, setCurrentAnalysisId] = useState<string | undefined>();
   const [hasLoadedAnalysis, setHasLoadedAnalysis] = useState(false);
@@ -204,9 +215,22 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
         }
         
         // Default analysis flow for other case types
-        if (isAnalysisLoading) {
+        if (isAnalysisLoading || isEnhancedGenerating) {
           console.log("📊 Showing loading skeleton");
-          return <CaseAnalysisLoadingSkeleton />;
+          return (
+            <div className="space-y-6">
+              <CaseAnalysisLoadingSkeleton 
+                currentStep={enhancedCurrentStep} 
+                workflowState={workflowState}
+              />
+              {workflowState && Object.keys(stepResults).length > 0 && (
+                <StepContentDisplay 
+                  stepResults={stepResults}
+                  currentStep={enhancedCurrentStep}
+                />
+              )}
+            </div>
+          );
         } else if (analysisError) {
           console.log("❌ Showing error state:", analysisError);
           return (

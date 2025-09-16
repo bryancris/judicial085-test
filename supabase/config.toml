@@ -2,3 +2,33 @@ project_id = "ghpljdgecjmhkwkfctgy"
 
 [functions.analyze-pi-documents]
 verify_jwt = false
+
+[functions.case-analysis-workflow-manager]
+verify_jwt = false
+
+[functions.case-analysis-step-1]
+verify_jwt = false
+
+[functions.case-analysis-step-2]
+verify_jwt = false
+
+[functions.case-analysis-step-3]
+verify_jwt = false
+
+[functions.case-analysis-step-4]
+verify_jwt = false
+
+[functions.case-analysis-step-5]
+verify_jwt = false
+
+[functions.case-analysis-step-6]
+verify_jwt = false
+
+[functions.case-analysis-step-7]
+verify_jwt = false
+
+[functions.case-analysis-step-8]
+verify_jwt = false
+
+[functions.case-analysis-step-9]
+verify_jwt = false
