@@ -51,15 +51,68 @@ serve(async (req) => {
 
     const { client_id: clientId, case_id: caseId } = workflow;
 
-    // Get client context from client messages
+    // Get comprehensive client context
     const { data: clientMessages, error: messagesError } = await supabase
       .from('client_messages')
-      .select('message_content')
+      .select('content')
       .eq('client_id', clientId)
       .order('created_at', { ascending: false })
       .limit(10);
 
-    const existingContext = clientMessages?.map(m => m.message_content).join('\n\n') || 'No additional context provided';
+    // Get client information and case description
+    const { data: clientInfo, error: clientError } = await supabase
+      .from('clients')
+      .select('first_name, last_name, case_description')
+      .eq('id', clientId)
+      .single();
+
+    // Get case information if caseId exists
+    let caseInfo = null;
+    if (caseId) {
+      const { data, error: caseError } = await supabase
+        .from('cases')
+        .select('case_title, case_description')
+        .eq('id', caseId)
+        .single();
+      caseInfo = data;
+    }
+
+    // Build comprehensive context from all sources
+    let contextParts = [];
+    
+    if (clientInfo) {
+      contextParts.push(`CLIENT: ${clientInfo.first_name} ${clientInfo.last_name}`);
+      if (clientInfo.case_description) {
+        contextParts.push(`CLIENT CASE DESCRIPTION: ${clientInfo.case_description}`);
+      }
+    }
+
+    if (caseInfo) {
+      if (caseInfo.case_title) {
+        contextParts.push(`CASE TITLE: ${caseInfo.case_title}`);
+      }
+      if (caseInfo.case_description) {
+        contextParts.push(`CASE DESCRIPTION: ${caseInfo.case_description}`);
+      }
+    }
+
+    if (clientMessages && clientMessages.length > 0) {
+      contextParts.push(`CLIENT MESSAGES:`);
+      contextParts.push(clientMessages.map(m => m.content).join('\n\n'));
+    }
+
+    const existingContext = contextParts.join('\n\n');
+
+    // CRITICAL: Validate we have actual client data before proceeding
+    if (!existingContext || existingContext.trim() === '' || 
+        existingContext === 'No additional context provided' ||
+        (!clientMessages?.length && !clientInfo?.case_description && !caseInfo?.case_description)) {
+      console.error('❌ CRITICAL: No client context found - preventing hallucination');
+      throw new Error('Insufficient client data to perform analysis. Please ensure client intake has been completed with actual case information.');
+    }
+
+    console.log('📋 Client context validated - length:', existingContext.length);
+    console.log('📋 Context preview:', existingContext.substring(0, 200) + '...');
 
     // Update step status to running
     await supabase
