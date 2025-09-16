@@ -72,11 +72,12 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
   const [currentAnalysisId, setCurrentAnalysisId] = useState<string | undefined>();
   const [hasLoadedAnalysis, setHasLoadedAnalysis] = useState(false);
 
-  // Conversation and notes state
+  // Conversation, notes, and documents state
   const [conversation, setConversation] = useState<any[]>([]);
   const [conversationLoading, setConversationLoading] = useState(false);
   const [notes, setNotes] = useState<any[]>([]);
   const [notesLoading, setNotesLoading] = useState(false);
+  const [documentCount, setDocumentCount] = useState(0);
 
   // Auto-load existing analysis when case-analysis tab is accessed (one-time only)
   useEffect(() => {
@@ -170,6 +171,54 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
 
     loadNotes();
   }, [client.id]);
+
+  // Load document count
+  React.useEffect(() => {
+    const loadDocumentCount = async () => {
+      try {
+        const { count, error } = await supabase
+          .from("document_metadata")
+          .select("*", { count: 'exact', head: true })
+          .eq("client_id", client.id);
+
+        if (error) throw error;
+        setDocumentCount(count || 0);
+      } catch (error) {
+        console.error("Error loading document count:", error);
+        setDocumentCount(0);
+      }
+    };
+
+    loadDocumentCount();
+  }, [client.id]);
+
+  // Helper function to generate source summary message
+  const getSourceSummary = () => {
+    const sources = [];
+    
+    if (conversation.length > 0) {
+      sources.push(`${conversation.length} client intake statement${conversation.length === 1 ? '' : 's'}`);
+    }
+    
+    if (documentCount > 0) {
+      sources.push(`${documentCount} uploaded document${documentCount === 1 ? '' : 's'}`);
+    }
+
+    if (client.case_description && client.case_description.trim()) {
+      sources.push('case description');
+    }
+
+    if (sources.length === 0) {
+      return "Based on available client information";
+    }
+
+    if (sources.length === 1) {
+      return `Based on ${sources[0]}`;
+    }
+
+    const lastSource = sources.pop();
+    return `Based on ${sources.join(', ')} and ${lastSource}`;
+  };
   
   // Callback to trigger analysis refresh when findings are added
   const handleAnalysisRefresh = useCallback(() => {
@@ -299,7 +348,7 @@ const ClientDetailTabContent: React.FC<ClientDetailTabContentProps> = ({
                     <div>
                       <h3 className="font-semibold text-emerald-900 dark:text-emerald-100">Analysis Complete</h3>
                       <p className="text-sm text-emerald-700 dark:text-emerald-300">
-                        Comprehensive legal analysis has been generated successfully.
+                        {getSourceSummary()}.
                       </p>
                     </div>
                   </div>
