@@ -18,9 +18,9 @@ serve(async (req) => {
   }
 
   try {
-    const { workflowId, clientId, caseId, existingContext } = await req.json();
+    const { workflowId, stepNumber, previousContent } = await req.json();
     
-    if (!workflowId || !clientId) {
+    if (!workflowId || !stepNumber) {
       return new Response(
         JSON.stringify({ error: 'Missing required parameters' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -31,6 +31,29 @@ serve(async (req) => {
     const startTime = Date.now();
 
     console.log(`🚀 Step 1: CASE SUMMARY starting for workflow ${workflowId}`);
+
+    // Get workflow info to retrieve clientId and caseId
+    const { data: workflow, error: workflowError } = await supabase
+      .from('case_analysis_workflows')
+      .select('client_id, case_id')
+      .eq('id', workflowId)
+      .single();
+
+    if (workflowError || !workflow) {
+      throw new Error(`Failed to retrieve workflow: ${workflowError?.message}`);
+    }
+
+    const { client_id: clientId, case_id: caseId } = workflow;
+
+    // Get client context from client messages
+    const { data: clientMessages, error: messagesError } = await supabase
+      .from('client_messages')
+      .select('message_content')
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    const existingContext = clientMessages?.map(m => m.message_content).join('\n\n') || 'No additional context provided';
 
     // Update step status to running
     await supabase

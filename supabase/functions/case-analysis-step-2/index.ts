@@ -18,9 +18,9 @@ serve(async (req) => {
   }
 
   try {
-    const { workflowId, clientId, caseId, previousStepContent } = await req.json();
+    const { workflowId, stepNumber, previousContent } = await req.json();
     
-    if (!workflowId || !clientId || !previousStepContent) {
+    if (!workflowId || !stepNumber || !previousContent) {
       return new Response(
         JSON.stringify({ error: 'Missing required parameters' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -31,6 +31,19 @@ serve(async (req) => {
     const startTime = Date.now();
 
     console.log(`🚀 Step 2: PRELIMINARY ANALYSIS starting for workflow ${workflowId}`);
+
+    // Get workflow info to retrieve clientId and caseId
+    const { data: workflow, error: workflowError } = await supabase
+      .from('case_analysis_workflows')
+      .select('client_id, case_id')
+      .eq('id', workflowId)
+      .single();
+
+    if (workflowError || !workflow) {
+      throw new Error(`Failed to retrieve workflow: ${workflowError?.message}`);
+    }
+
+    const { client_id: clientId, case_id: caseId } = workflow;
 
     // Update step status to running
     await supabase
@@ -58,7 +71,7 @@ This is preliminary analysis - avoid making definitive legal conclusions. Focus 
     const userPrompt = `Based on the following case summary from Step 1, conduct a preliminary legal analysis:
 
 CASE SUMMARY:
-${previousStepContent}
+${previousContent}
 
 Please identify potential legal issues, causes of action, and areas requiring further legal research. Focus on issue spotting rather than conclusions.`;
 
