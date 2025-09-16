@@ -17,14 +17,14 @@
 
 /* Main section headers (like "Related Provisions", "KEY CASES") */
 .legal-analysis-content h2 {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.25rem;
+  font-weight: 600;
   color: hsl(var(--primary));
-  border-bottom: 2px solid hsl(var(--border));
-  background: linear-gradient(to right, hsl(var(--muted)), hsl(var(--accent)));
-  padding: 0.75rem 1rem;
-  margin: 2rem 0 1.5rem 0;
-  border-radius: 0.5rem 0.5rem 0 0;
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--muted));
+  padding: 0.5rem 0.75rem;
+  margin: 0.75rem 0 0.5rem 0;
+  border-radius: 0.375rem;
 }
 
 /* Subsection headers */
@@ -33,23 +33,23 @@
   font-weight: 600;
   color: hsl(var(--primary));
   border-bottom: 1px solid hsl(var(--border));
-  padding-bottom: 0.5rem;
-  margin: 1.5rem 0 1rem 0;
+  padding-bottom: 0.25rem;
+  margin: 0.75rem 0 0.5rem 0;
 }
 
 .legal-analysis-content h4 {
   font-size: 1rem;
   font-weight: 500;
   color: hsl(var(--primary));
-  margin: 1rem 0 0.75rem 0;
+  margin: 0.5rem 0 0.25rem 0;
 }
 
 /* Regular paragraphs */
 .legal-analysis-content p {
-  font-size: 1rem;
-  line-height: 1.7;
+  font-size: 0.95rem;
+  line-height: 1.6;
   color: hsl(var(--foreground));
-  margin: 1rem 0;
+  margin: 0.5rem 0;
 }
 
 /* ULTIMATE NUCLEAR: ULTRA-HIGH SPECIFICITY FOR STATUTE CONTENT */
@@ -215,8 +215,8 @@ html body div.legal-analysis-content strong[data-forced-size="true"] {
 /* Horizontal rules */
 .legal-analysis-content hr {
   border: none;
-  border-top: 2px solid hsl(var(--border));
-  margin: 2rem 0;
+  border-top: 1px solid hsl(var(--border));
+  margin: 0.75rem 0;
   width: 100%;
 }
 
