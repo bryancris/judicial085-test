@@ -17,6 +17,9 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
 }) => {
   const [showExportDialog, setShowExportDialog] = useState(false);
 
+  // Debug logging
+  console.log("ExportButton Debug:", { clientId, caseId, disabled, showExportDialog });
+
   return (
     <>
       <Button

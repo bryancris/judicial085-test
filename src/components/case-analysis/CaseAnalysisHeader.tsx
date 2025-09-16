@@ -28,8 +28,15 @@ const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
   caseType,
   hasUnincorporatedFindings = false
 }) => {
-  // Debug logging
-  console.log("Export Button Debug:", { selectedTab, clientId, caseId, isGenerating });
+  // Enhanced debug logging
+  console.log("CaseAnalysisHeader Debug:", { 
+    selectedTab, 
+    clientId, 
+    caseId, 
+    isGenerating,
+    showExportButton: selectedTab === "analysis",
+    component: "CaseAnalysisHeader"
+  });
 
   const handleRegenerateClick = () => {
     console.log("Regenerating real-time analysis...");
@@ -41,6 +48,10 @@ const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
     { id: "conversation", label: "Conversation", icon: MessageCircle },
     { id: "notes", label: "Notes", icon: StickyNote },
   ];
+
+  // Force show export button for debugging - will fix conditional later
+  const shouldShowExportButton = selectedTab === "analysis";
+  console.log("Should show export button:", shouldShowExportButton);
 
   return (
     <div className="mb-8">
@@ -54,58 +65,57 @@ const CaseAnalysisHeader: React.FC<CaseAnalysisHeaderProps> = ({
           )}
         </div>
         
-        {selectedTab === "analysis" && (
-          <div className="flex flex-row gap-2 flex-shrink-0">
-            <div className="flex gap-2">
-              <ExportButton
-                clientId={clientId}
-                caseId={caseId}
-                disabled={isGenerating}
-              />
-              
-              <Button
-                onClick={handleRegenerateClick}
-                disabled={isGenerating}
-                variant="outline"
-                size="sm"
-                className={cn(
-                  "flex items-center gap-2",
-                  hasUnincorporatedFindings && !isGenerating && "animate-pulse bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
-                )}
-              >
-                {isGenerating ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    Regenerating...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="h-4 w-4" />
-                    {hasUnincorporatedFindings ? "Update Analysis" : "Regenerate Analysis"}
-                  </>
-                )}
-              </Button>
-              
-              <Button
-                onClick={onGenerate}
-                disabled={isGenerating}
-                className="flex items-center gap-2"
-              >
-                {isGenerating ? (
-                  <>
-                    <Sparkles className="h-4 w-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4" />
-                    Generate Real-Time Analysis
-                  </>
-                )}
-              </Button>
-            </div>
+        {/* Temporarily always show buttons for debugging */}
+        <div className="flex flex-row gap-2 flex-shrink-0">
+          <div className="flex gap-2">
+            <ExportButton
+              clientId={clientId}
+              caseId={caseId}
+              disabled={isGenerating}
+            />
+            
+            <Button
+              onClick={handleRegenerateClick}
+              disabled={isGenerating}
+              variant="outline"
+              size="sm"
+              className={cn(
+                "flex items-center gap-2",
+                hasUnincorporatedFindings && !isGenerating && "animate-pulse bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
+              )}
+            >
+              {isGenerating ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  Regenerating...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4" />
+                  {hasUnincorporatedFindings ? "Update Analysis" : "Regenerate Analysis"}
+                </>
+              )}
+            </Button>
+            
+            <Button
+              onClick={onGenerate}
+              disabled={isGenerating}
+              className="flex items-center gap-2"
+            >
+              {isGenerating ? (
+                <>
+                  <Sparkles className="h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  Generate Real-Time Analysis
+                </>
+              )}
+            </Button>
           </div>
-        )}
+        </div>
       </div>
 
       <div className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full">
