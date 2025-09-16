@@ -224,9 +224,27 @@ export const useEnhancedCaseAnalysis = (clientId?: string, caseId?: string) => {
         const success = await executeStep(step, workflowId, allPreviousContent);
         
         if (!success) {
-          console.error(`Step ${step} failed, but continuing with remaining steps`);
-          // Continue with other steps even if one fails
-          continue;
+          console.error(`Step ${step} failed - stopping workflow execution`);
+          
+          // Update workflow state to show failure
+          setWorkflowState(prev => ({
+            ...prev!,
+            status: 'failed',
+            steps: prev!.steps.map(s => ({
+              ...s,
+              status: s.step_number === step ? 'failed' : 
+                     s.step_number < step ? 'completed' : 'pending'
+            }))
+          }));
+          
+          toast({
+            title: `Analysis Failed at Step ${step}`,
+            description: `${getStepName(step)} failed. Workflow stopped to prevent cascading errors.`,
+            variant: "destructive",
+          });
+          
+          // Stop execution - don't continue to next steps
+          return;
         }
 
         // Update allPreviousContent with the new step result

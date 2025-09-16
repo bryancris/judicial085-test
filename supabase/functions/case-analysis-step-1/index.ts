@@ -18,9 +18,15 @@ serve(async (req) => {
   }
 
   try {
-    const { workflowId, stepNumber, previousContent } = await req.json();
+    const requestBody = await req.json();
+    console.log('🔍 Step 1 received parameters:', JSON.stringify(requestBody, null, 2));
+    
+    const { workflowId, stepNumber, previousContent } = requestBody;
+    
+    console.log(`📋 Parsed parameters - workflowId: ${workflowId}, stepNumber: ${stepNumber}, previousContent length: ${previousContent?.length || 0}`);
     
     if (!workflowId || !stepNumber) {
+      console.error('❌ Missing required parameters:', { workflowId, stepNumber });
       return new Response(
         JSON.stringify({ error: 'Missing required parameters' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
